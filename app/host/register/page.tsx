@@ -38,6 +38,11 @@ function RegisterForm() {
     }
 
     try {
+      // Check env vars are configured
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        throw new Error('Supabase is not configured. Please contact support.')
+      }
+
       const supabase = createClient()
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -52,7 +57,24 @@ function RegisterForm() {
           },
         },
       })
-      if (error) throw error
+
+      // Check for explicit error from Supabase
+      if (error) {
+        throw error
+      }
+
+      // Check if user was actually created
+      // Supabase returns a fake user with empty identities if email already exists (security measure)
+      if (!data.user) {
+        throw new Error('Failed to create account. Please try again.')
+      }
+
+      // Check for existing user (identities will be empty array if user already exists with email confirmation enabled)
+      if (data.user.identities && data.user.identities.length === 0) {
+        throw new Error('An account with this email already exists. Please sign in instead.')
+      }
+
+      // If we have a session (email confirmation disabled), create host profile immediately
       if (data.session && data.user) {
         try {
           await ensureHostProfile(supabase, data.user)
@@ -60,9 +82,13 @@ function RegisterForm() {
           console.error('Could not create host profile after signup:', profileError)
         }
       }
+
+      // Only show success if we got here without errors
       setSuccess(true)
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : 'An error occurred')
+      const message = error instanceof Error ? error.message : 'An error occurred during signup'
+      setError(message)
+      setSuccess(false)
     } finally {
       setIsLoading(false)
     }
