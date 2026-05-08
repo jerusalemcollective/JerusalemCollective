@@ -437,9 +437,14 @@ const SearchForm = () => {
                   mode="range"
                   selected={dateRange}
                   onSelect={(range) => {
+                    // If user clicks the same date twice or clicks on the "from" date, reset to just that date
+                    if (range?.from && range?.to && range.from.getTime() === range.to.getTime()) {
+                      setDateRange({ from: range.from, to: undefined })
+                      return
+                    }
                     setDateRange(range || { from: undefined, to: undefined })
-                    // Auto-close when both dates selected
-                    if (range?.from && range?.to) {
+                    // Only auto-close when we have a proper range (different dates)
+                    if (range?.from && range?.to && range.from.getTime() !== range.to.getTime()) {
                       setTimeout(() => setShowCalendar(false), 300)
                     }
                   }}
