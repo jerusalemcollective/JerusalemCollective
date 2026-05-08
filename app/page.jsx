@@ -1,11 +1,10 @@
 'use client'
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { DayPicker } from 'react-day-picker'
 import { format, addDays } from 'date-fns'
 import { isSupabaseConfigured, supabase } from '@/lib/supabaseClient'
 import { sampleListings } from '@/lib/sample-listings'
-import 'react-day-picker/dist/style.css'
+import { Calendar } from '@/components/ui/calendar'
 
 /* ---------- Shared UI primitives ---------- */
 
@@ -415,86 +414,6 @@ const SearchForm = () => {
           {/* Calendar Dropdown */}
           {showCalendar && (
             <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-2xl shadow-stone-300/40 md:left-1/2 md:right-auto md:w-[390px] md:-translate-x-1/2">
-              <style>{`
-                .jlm-lux-calendar .rdp {
-                  margin: 0;
-                }
-                .jlm-lux-calendar .rdp-months {
-                  justify-content: center;
-                }
-                .jlm-lux-calendar .rdp-month {
-                  width: 100%;
-                }
-                .jlm-lux-calendar .rdp-caption {
-                  margin-bottom: 14px;
-                  padding: 0 4px;
-                }
-                .jlm-lux-calendar .rdp-caption_label {
-                  color: #1c1917;
-                  font-size: 16px;
-                  font-weight: 800;
-                  letter-spacing: 0;
-                }
-                .jlm-lux-calendar .rdp-nav_button {
-                  align-items: center;
-                  border: 1px solid #e7e5e4;
-                  border-radius: 999px;
-                  color: #57534e;
-                  display: inline-flex;
-                  height: 34px;
-                  justify-content: center;
-                  width: 34px;
-                }
-                .jlm-lux-calendar .rdp-nav_button:hover {
-                  background: #fafaf9;
-                  border-color: #c76f55;
-                  color: #c76f55;
-                }
-                .jlm-lux-calendar .rdp-table {
-                  width: 100%;
-                }
-                .jlm-lux-calendar .rdp-head_cell {
-                  color: #a8a29e;
-                  font-size: 10px;
-                  font-weight: 800;
-                  padding-bottom: 10px;
-                  text-transform: uppercase;
-                }
-                .jlm-lux-calendar .rdp-cell {
-                  height: 44px;
-                  padding: 2px 0;
-                }
-                .jlm-lux-calendar .rdp-button {
-                  border-radius: 999px;
-                  color: #292524;
-                  font-size: 14px;
-                  font-weight: 700;
-                  height: 40px;
-                  transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
-                  width: 40px;
-                }
-                .jlm-lux-calendar .rdp-button:hover:not([disabled]):not(.rdp-day_selected) {
-                  background: #f5f0eb;
-                  color: #9e4f39;
-                  transform: translateY(-1px);
-                }
-                .jlm-lux-calendar .rdp-day_selected:not([disabled]) {
-                  background-color: #c76f55;
-                  color: white;
-                  box-shadow: 0 8px 18px rgba(199,111,85,.26);
-                }
-                .jlm-lux-calendar .rdp-day_selected:hover:not([disabled]) {
-                  background-color: #b55f47;
-                }
-                .jlm-lux-calendar .rdp-day_range_middle {
-                  background-color: #fef3f0;
-                  color: #c76f55;
-                  border-radius: 0;
-                }
-                .jlm-lux-calendar .rdp-day_disabled {
-                  color: #d6d3d1;
-                }
-              `}</style>
               <div className="border-b border-stone-100 bg-[#fbf8f5] px-5 py-4">
                 <p className="text-[11px] font-bold uppercase tracking-widest text-[#c76f55]">Select your stay</p>
                 <div className="mt-3 grid grid-cols-2 gap-2">
@@ -513,8 +432,8 @@ const SearchForm = () => {
                 </div>
               </div>
 
-              <div className="jlm-lux-calendar p-5">
-                <DayPicker
+              <div className="p-5">
+                <Calendar
                   mode="range"
                   selected={dateRange}
                   onSelect={(range) => {
@@ -526,6 +445,7 @@ const SearchForm = () => {
                   numberOfMonths={1}
                   disabled={{ before: new Date() }}
                   showOutsideDays={false}
+                  className="w-full"
                 />
               </div>
 
