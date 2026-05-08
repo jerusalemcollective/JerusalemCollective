@@ -438,9 +438,6 @@ const SearchForm = () => {
                   selected={dateRange}
                   onSelect={(range) => {
                     setDateRange(range || { from: undefined, to: undefined })
-                    if (range?.to) {
-                      setShowCalendar(false)
-                    }
                   }}
                   numberOfMonths={1}
                   disabled={{ before: new Date() }}
@@ -449,31 +446,48 @@ const SearchForm = () => {
                 />
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 border-t border-stone-100 bg-white px-5 py-4">
-                <button
-                  onClick={() => {
-                    setDateRange({ from: new Date(), to: addDays(new Date(), 7) })
-                    setShowCalendar(false)
-                  }}
-                  className="rounded-full bg-stone-100 px-3 py-2 text-xs font-bold text-stone-700 hover:bg-stone-200"
-                >
-                  1 week
-                </button>
-                <button
-                  onClick={() => {
-                    setDateRange({ from: new Date(), to: addDays(new Date(), 14) })
-                    setShowCalendar(false)
-                  }}
-                  className="rounded-full bg-stone-100 px-3 py-2 text-xs font-bold text-stone-700 hover:bg-stone-200"
-                >
-                  2 weeks
-                </button>
-                <button
-                  onClick={() => setDateRange({ from: undefined, to: undefined })}
-                  className="ml-auto text-xs font-bold text-stone-500 hover:text-stone-800"
-                >
-                  Clear
-                </button>
+              <div className="border-t border-stone-100 bg-white px-5 py-4">
+                <p className="mb-3 text-xs text-stone-500">Quick select:</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => setDateRange({ from: new Date(), to: addDays(new Date(), 7) })}
+                    className="rounded-full bg-stone-100 px-3 py-2 text-xs font-bold text-stone-700 hover:bg-stone-200"
+                  >
+                    1 week
+                  </button>
+                  <button
+                    onClick={() => setDateRange({ from: new Date(), to: addDays(new Date(), 14) })}
+                    className="rounded-full bg-stone-100 px-3 py-2 text-xs font-bold text-stone-700 hover:bg-stone-200"
+                  >
+                    2 weeks
+                  </button>
+                  <button
+                    onClick={() => setDateRange({ from: new Date(), to: addDays(new Date(), 30) })}
+                    className="rounded-full bg-stone-100 px-3 py-2 text-xs font-bold text-stone-700 hover:bg-stone-200"
+                  >
+                    1 month
+                  </button>
+                </div>
+                
+                <div className="mt-4 flex items-center justify-between">
+                  <button
+                    onClick={() => setDateRange({ from: undefined, to: undefined })}
+                    className="text-xs font-bold text-stone-500 hover:text-stone-800"
+                  >
+                    Clear dates
+                  </button>
+                  <button
+                    onClick={() => setShowCalendar(false)}
+                    disabled={!dateRange.from}
+                    className={`rounded-full px-5 py-2.5 text-sm font-bold transition ${
+                      dateRange.from 
+                        ? 'bg-[#c76f55] text-white hover:bg-[#b55f47]' 
+                        : 'bg-stone-200 text-stone-400 cursor-not-allowed'
+                    }`}
+                  >
+                    {dateRange.from && dateRange.to ? 'Apply dates' : dateRange.from ? 'Select departure' : 'Select dates'}
+                  </button>
+                </div>
               </div>
             </div>
           )}
