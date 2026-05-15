@@ -29,7 +29,10 @@ function PrivacyPopup({ isOpen, onClose }: { isOpen: boolean, onClose: () => voi
       />
       
       {/* Modal */}
-      <div className="fixed left-1/2 top-1/2 z-50 w-[90vw] max-w-md -translate-x-1/2 -translate-y-1/2 transform">
+      <div 
+        className="fixed left-1/2 top-1/2 z-50 w-[90vw] max-w-md -translate-x-1/2 -translate-y-1/2 transform"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-2xl">
           {/* Header */}
           <div className="mb-4 flex items-start justify-between">
@@ -77,12 +80,12 @@ function PrivacyPopup({ isOpen, onClose }: { isOpen: boolean, onClose: () => voi
             >
               Close
             </button>
-            <Link
+            <a
               href="/privacy"
               className="rounded-full bg-[#c76f55] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#b55f47]"
             >
               Read full policy
-            </Link>
+            </a>
           </div>
         </div>
       </div>
