@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Header } from '@/components/header'
-import { Footer } from '@/components/footer'
 import { AvatarUpload } from '@/components/avatar-upload'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -111,10 +109,8 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F5F2]">
-      <Header />
-      
-      <main className="mx-auto max-w-4xl px-5 py-10 md:px-6">
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-4xl px-5 py-10 md:px-6">
         <h1 className="mb-8 text-3xl font-bold text-stone-900">Account</h1>
 
         <div className="grid gap-6 md:grid-cols-3">
@@ -276,9 +272,7 @@ export default function AccountPage() {
             </div>
           </div>
         </div>
-      </main>
-
-      <Footer />
+      </div>
     </div>
   )
 }

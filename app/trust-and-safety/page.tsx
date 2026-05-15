@@ -1,6 +1,3 @@
-import Link from 'next/link'
-import { Footer } from '@/components/footer'
-
 export const metadata = {
   title: 'Trust & Safety Policy | JLM Collective',
   description: 'Trust & Safety Policy for JLM Collective - our standards, review process, and how we protect users.',
@@ -8,28 +5,9 @@ export const metadata = {
 
 export default function TrustAndSafetyPage() {
   return (
-    <div className="min-h-screen bg-[#F8F5F2]">
-      {/* Header */}
-      <header className="border-b border-stone-200 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 md:px-6">
-          <Link href="/" className="shrink-0">
-            <img
-              src="/logos/JLM_Collective_Primary_Horizontal_Terracotta_Transparent.png"
-              alt="JLM Collective"
-              className="h-10 w-auto md:h-12"
-            />
-          </Link>
-          <Link
-            href="/"
-            className="text-sm font-semibold text-stone-600 transition hover:text-[#c76f55]"
-          >
-            Back to Home
-          </Link>
-        </div>
-      </header>
-
+    <div className="min-h-screen">
       {/* Content */}
-      <main className="mx-auto max-w-3xl px-5 py-12 md:px-6 md:py-16">
+      <div className="mx-auto max-w-3xl px-5 py-12 md:px-6 md:py-16">
         <article className="rounded-2xl border border-stone-200 bg-white p-8 md:p-12">
           <h1 className="mb-2 text-3xl font-bold text-stone-900 md:text-4xl">
             Trust &amp; Safety Policy
@@ -298,9 +276,7 @@ export default function TrustAndSafetyPage() {
             </section>
           </div>
         </article>
-      </main>
-
-      <Footer />
+      </div>
     </div>
   )
 }

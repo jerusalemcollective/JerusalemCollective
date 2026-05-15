@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Header } from '@/components/header'
-import { Footer } from '@/components/footer'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
@@ -34,10 +32,8 @@ export default function BookingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F5F2]">
-      <Header />
-      
-      <main className="mx-auto max-w-4xl px-5 py-10 md:px-6">
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-4xl px-5 py-10 md:px-6">
         <div className="mb-6 flex items-center gap-2 text-sm text-stone-500">
           <Link href="/account" className="hover:text-[#c76f55]">Account</Link>
           <span>/</span>
@@ -63,9 +59,7 @@ export default function BookingsPage() {
             Start exploring
           </Link>
         </div>
-      </main>
-
-      <Footer />
+      </div>
     </div>
   )
 }
