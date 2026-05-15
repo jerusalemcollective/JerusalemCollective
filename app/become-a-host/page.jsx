@@ -796,31 +796,55 @@ async function handleSubmit() {
                 </div>
 
                 <div className="mt-6">
-                  <p className="mb-3 text-sm font-semibold">
-                    Listing relationship
+                  <p className="mb-2 text-sm font-semibold text-stone-800">
+                    Your connection to this stay
+                  </p>
+                  <p className="mb-4 text-sm text-stone-600">
+                    How are you connected to this stay?
                   </p>
 
-                  <div className="grid gap-3 md:grid-cols-3">
+                  <div className="grid gap-3 md:grid-cols-2">
                     <ChoiceCard
                       active={form.host_type === 'owner'}
-                      title="Owner"
-                      onClick={() => updateField('host_type', 'owner')}
+                      title="I own this stay"
+                      onClick={() => {
+                        updateField('host_type', 'owner')
+                        updateField('host_role', '')
+                      }}
                     />
 
                     <ChoiceCard
-                      active={form.host_type === 'agent'}
-                      title="Agent"
-                      onClick={() => updateField('host_type', 'agent')}
-                    />
-
-                    <ChoiceCard
-                      active={form.host_type === 'property_manager'}
-                      title="Property manager"
-                      onClick={() =>
-                        updateField('host_type', 'property_manager')
-                      }
+                      active={form.host_type === 'representative'}
+                      title="I manage or represent this stay"
+                      onClick={() => updateField('host_type', 'representative')}
                     />
                   </div>
+
+                  {form.host_type === 'representative' && (
+                    <div className="mt-5">
+                      <Field label="Your role">
+                        <input
+                          value={form.host_role}
+                          onChange={(e) => updateField('host_role', e.target.value)}
+                          type="text"
+                          placeholder="Managing agent, representative, assistant, family member, etc."
+                          className={inputClass}
+                        />
+                      </Field>
+                    </div>
+                  )}
+
+                  <label className="mt-6 flex cursor-pointer items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={form.has_permission}
+                      onChange={(e) => updateField('has_permission', e.target.checked)}
+                      className="mt-1 h-5 w-5 rounded border-stone-300 text-[#c76f55] focus:ring-[#c76f55]"
+                    />
+                    <span className="text-sm text-stone-700">
+                      I confirm I have permission to submit this stay.
+                    </span>
+                  </label>
                 </div>
               </StepShell>
             )}
