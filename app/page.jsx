@@ -92,6 +92,7 @@ const ShieldIcon = ({ className = '' }) => (
 
 // All Jerusalem neighborhoods for autocomplete
 const allNeighborhoods = [
+  // Popular areas
   'Ramat Eshkol',
   'Gush 80',
   'Jerusalem Estates',
@@ -127,6 +128,56 @@ const allNeighborhoods = [
   'Neve Granot',
   'Neve Shaanan',
   'Beit Hakerem',
+  // Haredi/Religious neighborhoods
+  'Sorotzkin',
+  'Mattersdorf',
+  'Panim Meirot',
+  'Kiryat Belz',
+  'Kiryat Sanz',
+  'Zichron Moshe',
+  'Bucharim',
+  'Batei Ungarin',
+  'Batei Warsaw',
+  'Ezras Torah',
+  'Unsdorf',
+  'Kiryat Itri',
+  'Ramat Shlomo',
+  'Beitar Illit',
+  'Ramot',
+  'Ramot Aleph',
+  'Ramot Bet',
+  'Ramot Gimmel',
+  'Ramot Dalet',
+  'Kiryat Mattersdorf',
+  'Sanhedria Murchevet',
+  'Schneller',
+  'Makor Baruch',
+  'Kerem Avraham',
+  'Kiryat Zanz',
+  'Mekor Chaim',
+  'Ir Ganim',
+  'Kiryat Menachem',
+  'Kiryat Yovel',
+  'Givat Mordechai',
+  'Rasko',
+  'Shikun Chabad',
+  // Streets (common search terms)
+  'Sorotzkin Street',
+  'Panim Meirot Street',
+  'Bar Ilan',
+  'Bar Ilan Street',
+  'Shmuel Hanavi',
+  'Shmuel Hanavi Street',
+  'Malchei Yisrael',
+  'Malchei Yisrael Street',
+  'Strauss Street',
+  'Yaffo Street',
+  'King George Street',
+  'Ben Yehuda Street',
+  'Emek Refaim',
+  'Emek Refaim Street',
+  'Azza Street',
+  'Gaza Street',
 ]
 
 // Top 4 browsed neighborhoods (can be dynamic from analytics later)
@@ -286,14 +337,17 @@ const SearchForm = () => {
       const currentRequestId = ++requestIdRef.current
       
       try {
+        // Create a Circle for locationBias using the Google Maps API
+        const jerusalemCircle = new window.google.maps.Circle({
+          center: { lat: 31.7683, lng: 35.2137 },
+          radius: 25000, // 25km radius to cover greater Jerusalem area
+        })
+        
         const request = {
-          input: input,
+          input: input + ' Jerusalem',  // Append Jerusalem to help with local results
           sessionToken: sessionToken.current,
-          // Bias results toward Jerusalem area
-          locationBias: {
-            center: { lat: 31.7683, lng: 35.2137 },
-            radius: 20000,
-          },
+          // Bias results toward Jerusalem area using Circle
+          locationBias: jerusalemCircle,
           // Restrict to Israel
           includedRegionCodes: ['il'],
           // Language preference
