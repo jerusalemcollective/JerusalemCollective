@@ -79,7 +79,6 @@ function PrivacyPopup({ isOpen, onClose }: { isOpen: boolean, onClose: () => voi
             </button>
             <Link
               href="/privacy"
-              onClick={onClose}
               className="rounded-full bg-[#c76f55] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#b55f47]"
             >
               Read full policy
