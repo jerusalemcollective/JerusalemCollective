@@ -303,6 +303,8 @@ const initialForm = {
   phone: '',
   whatsapp_number: '',
   host_type: 'owner',
+  host_role: '',
+  has_permission: false,
 
 apartment_title: '',
   area: '',
