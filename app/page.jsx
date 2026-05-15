@@ -213,15 +213,22 @@ const SearchForm = () => {
   const neighbourhoodRef = useRef(null)
   const calendarRef = useRef(null)
   const guestRef = useRef(null)
-  const autocompleteService = useRef(null)
+  const placesLibrary = useRef(null)
   const sessionToken = useRef(null)
+  const requestIdRef = useRef(0)
 
-  // Initialize Google Places Autocomplete
+  // Initialize Google Places library (new API)
   useEffect(() => {
-    const initGooglePlaces = () => {
-      if (window.google && window.google.maps && window.google.maps.places) {
-        autocompleteService.current = new window.google.maps.places.AutocompleteService()
-        sessionToken.current = new window.google.maps.places.AutocompleteSessionToken()
+    const initGooglePlaces = async () => {
+      try {
+        if (window.google && window.google.maps) {
+          // Use the new importLibrary method for async loading
+          const places = await window.google.maps.importLibrary('places')
+          placesLibrary.current = places
+          sessionToken.current = new places.AutocompleteSessionToken()
+        }
+      } catch (error) {
+        console.log('[v0] Google Places library not available, using local fallback')
       }
     }
 
@@ -232,10 +239,12 @@ const SearchForm = () => {
       const existingScript = document.querySelector('script[src*="maps.googleapis.com"]')
       if (!existingScript) {
         const script = document.createElement('script')
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}&libraries=places`
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}&libraries=places&loading=async`
         script.async = true
         script.onload = initGooglePlaces
         document.head.appendChild(script)
+      } else {
+        existingScript.addEventListener('load', initGooglePlaces)
       }
     }
   }, [])
@@ -258,7 +267,7 @@ const SearchForm = () => {
   }, [])
 
   // Fetch Google Places predictions - Google Places is primary source, local neighborhoods as fallback
-  const fetchPlacePredictions = useCallback((input) => {
+  const fetchPlacePredictions = useCallback(async (input) => {
     if (!input || input.length < 2) {
       setPlacePredictions([])
       return
@@ -269,33 +278,46 @@ const SearchForm = () => {
       n.toLowerCase().includes(input.toLowerCase())
     )
 
-    // Google Places is the primary source
-    if (autocompleteService.current) {
+    // Google Places is the primary source (using new AutocompleteSuggestion API)
+    if (placesLibrary.current?.AutocompleteSuggestion) {
       setIsLoadingPlaces(true)
       
-      // Jerusalem center coordinates for location bias
-      const jerusalemCenter = new window.google.maps.LatLng(31.7683, 35.2137)
+      // Increment request ID to handle race conditions
+      const currentRequestId = ++requestIdRef.current
       
-      autocompleteService.current.getPlacePredictions(
-        {
+      try {
+        const request = {
           input: input,
           sessionToken: sessionToken.current,
-          // Bias results toward Jerusalem area (20km radius)
+          // Bias results toward Jerusalem area
           locationBias: {
-            center: jerusalemCenter,
+            center: { lat: 31.7683, lng: 35.2137 },
             radius: 20000,
           },
-          // Don't restrict types - allow neighbourhoods, streets, landmarks, addresses, etc.
-          // Only restrict to Israel
-          componentRestrictions: { country: 'il' },
-        },
-        (predictions, status) => {
-          setIsLoadingPlaces(false)
-          if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
-            // Google Places results are primary - format them nicely
-            const googlePlaces = predictions.map(p => {
+          // Restrict to Israel
+          includedRegionCodes: ['il'],
+          // Language preference
+          language: 'en',
+        }
+        
+        const { suggestions } = await placesLibrary.current.AutocompleteSuggestion.fetchAutocompleteSuggestions(request)
+        
+        // Check if this request is still the latest
+        if (currentRequestId !== requestIdRef.current) return
+        
+        setIsLoadingPlaces(false)
+        
+        if (suggestions && suggestions.length > 0) {
+          // Google Places results are primary - format them nicely
+          const googlePlaces = suggestions
+            .filter(s => s.placePrediction)
+            .map(s => {
+              const prediction = s.placePrediction
+              // Get the text representation
+              let description = prediction.text?.toString() || prediction.mainText?.toString() || ''
+              
               // Clean up the description - remove redundant ", Israel" and format nicely
-              let description = p.description
+              description = description
                 .replace(/, Israel$/, '')
                 .replace(/, ישראל$/, '')
               
@@ -309,26 +331,30 @@ const SearchForm = () => {
               return {
                 text: description,
                 isGoogle: true,
-                placeId: p.place_id,
+                placeId: prediction.placeId,
               }
             })
-            
-            // Add local matches that aren't already in Google results
-            const localOnly = localMatches
-              .filter(local => !googlePlaces.some(g => 
-                g.text.toLowerCase().includes(local.toLowerCase()) ||
-                local.toLowerCase().includes(g.text.toLowerCase().split(',')[0])
-              ))
-              .map(text => ({ text, isGoogle: false }))
-            
-            // Google results first, then local fallbacks
-            setPlacePredictions([...googlePlaces, ...localOnly].slice(0, 10))
-          } else {
-            // Fallback to local neighborhoods only
-            setPlacePredictions(localMatches.map(text => ({ text, isGoogle: false })))
-          }
+          
+          // Add local matches that aren't already in Google results
+          const localOnly = localMatches
+            .filter(local => !googlePlaces.some(g => 
+              g.text.toLowerCase().includes(local.toLowerCase()) ||
+              local.toLowerCase().includes(g.text.toLowerCase().split(',')[0])
+            ))
+            .map(text => ({ text, isGoogle: false }))
+          
+          // Google results first, then local fallbacks
+          setPlacePredictions([...googlePlaces, ...localOnly].slice(0, 10))
+        } else {
+          // No Google results - use local neighborhoods
+          setPlacePredictions(localMatches.map(text => ({ text, isGoogle: false })))
         }
-      )
+      } catch (error) {
+        console.log('[v0] Google Places error, using local fallback:', error.message)
+        setIsLoadingPlaces(false)
+        // Fallback to local neighborhoods only
+        setPlacePredictions(localMatches.map(text => ({ text, isGoogle: false })))
+      }
     } else {
       // No Google Places available - use local neighborhoods only
       setPlacePredictions(localMatches.map(text => ({ text, isGoogle: false })))
@@ -406,8 +432,8 @@ const SearchForm = () => {
                     setNeighbourhood(selectedText)
                     setShowNeighbourhoodSuggestions(false)
                     // Reset session token for next search
-                    if (window.google?.maps?.places) {
-                      sessionToken.current = new window.google.maps.places.AutocompleteSessionToken()
+                    if (placesLibrary.current?.AutocompleteSessionToken) {
+                      sessionToken.current = new placesLibrary.current.AutocompleteSessionToken()
                     }
                   }}
                   className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-stone-700 transition hover:bg-stone-50"
