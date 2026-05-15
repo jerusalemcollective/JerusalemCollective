@@ -107,7 +107,7 @@ export function Footer() {
           <nav className="flex flex-wrap items-center gap-x-5 gap-y-3 text-sm font-semibold sm:justify-end">
             <Link href="/host/login" className="text-stone-600 transition hover:text-[#c76f55]">Host login</Link>
             <Link href="/become-a-host" className="text-stone-600 transition hover:text-[#c76f55]">Trust & safety</Link>
-            <Link href="/become-a-host" className="text-stone-600 transition hover:text-[#c76f55]">Contact</Link>
+            <a href="mailto:info@jlmcollective.co" className="text-stone-600 transition hover:text-[#c76f55]">Contact</a>
             <button 
               onClick={() => setShowPrivacy(true)}
               className="text-stone-600 transition hover:text-[#c76f55]"
