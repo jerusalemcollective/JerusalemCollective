@@ -309,10 +309,20 @@ export default function PrivacyPolicyPage() {
               <p className="text-stone-700 leading-relaxed">
                 To exercise your privacy rights or contact us about this Privacy Policy, please use:
               </p>
-              <p className="mt-4 text-stone-700 leading-relaxed">
-                <strong>JLM Collective</strong><br />
-                Email: <a href="mailto:info@jlmcollective.co" className="text-[#c76f55] hover:underline">info@jlmcollective.co</a>
-              </p>
+              <div className="mt-4 text-stone-700 leading-relaxed">
+                <p><strong>JLM Collective</strong></p>
+                <p className="mt-2">
+                  Email:{' '}
+                  <a 
+                    href="mailto:info@jlmcollective.co" 
+                    className="text-[#c76f55] underline hover:text-[#b55f47]"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    info@jlmcollective.co
+                  </a>
+                </p>
+              </div>
             </section>
           </div>
         </article>
