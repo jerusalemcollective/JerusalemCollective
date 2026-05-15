@@ -257,43 +257,81 @@ const SearchForm = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Fetch Google Places predictions
+  // Fetch Google Places predictions - Google Places is primary source, local neighborhoods as fallback
   const fetchPlacePredictions = useCallback((input) => {
     if (!input || input.length < 2) {
       setPlacePredictions([])
       return
     }
 
-    // First filter local neighborhoods
+    // Local neighborhoods as fallback
     const localMatches = allNeighborhoods.filter(n => 
       n.toLowerCase().includes(input.toLowerCase())
     )
 
-    // If Google Places is available, fetch additional suggestions
+    // Google Places is the primary source
     if (autocompleteService.current) {
       setIsLoadingPlaces(true)
+      
+      // Jerusalem center coordinates for location bias
+      const jerusalemCenter = new window.google.maps.LatLng(31.7683, 35.2137)
+      
       autocompleteService.current.getPlacePredictions(
         {
-          input: input + ', Jerusalem, Israel',
+          input: input,
           sessionToken: sessionToken.current,
+          // Bias results toward Jerusalem area (20km radius)
+          locationBias: {
+            center: jerusalemCenter,
+            radius: 20000,
+          },
+          // Don't restrict types - allow neighbourhoods, streets, landmarks, addresses, etc.
+          // Only restrict to Israel
           componentRestrictions: { country: 'il' },
-          types: ['(regions)'],
         },
         (predictions, status) => {
           setIsLoadingPlaces(false)
           if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
-            // Combine local neighborhoods with Google predictions, avoiding duplicates
-            const googlePlaces = predictions
-              .map(p => p.description.replace(', Israel', '').replace(', Jerusalem', ''))
-              .filter(p => !localMatches.some(l => l.toLowerCase() === p.toLowerCase()))
-            setPlacePredictions([...localMatches, ...googlePlaces].slice(0, 8))
+            // Google Places results are primary - format them nicely
+            const googlePlaces = predictions.map(p => {
+              // Clean up the description - remove redundant ", Israel" and format nicely
+              let description = p.description
+                .replace(/, Israel$/, '')
+                .replace(/, ישראל$/, '')
+              
+              // If it's clearly in Jerusalem, we can keep it shorter
+              if (description.includes('Jerusalem') || description.includes('ירושלים')) {
+                description = description
+                  .replace(/, Jerusalem District$/, '')
+                  .replace(/, מחוז ירושלים$/, '')
+              }
+              
+              return {
+                text: description,
+                isGoogle: true,
+                placeId: p.place_id,
+              }
+            })
+            
+            // Add local matches that aren't already in Google results
+            const localOnly = localMatches
+              .filter(local => !googlePlaces.some(g => 
+                g.text.toLowerCase().includes(local.toLowerCase()) ||
+                local.toLowerCase().includes(g.text.toLowerCase().split(',')[0])
+              ))
+              .map(text => ({ text, isGoogle: false }))
+            
+            // Google results first, then local fallbacks
+            setPlacePredictions([...googlePlaces, ...localOnly].slice(0, 10))
           } else {
-            setPlacePredictions(localMatches)
+            // Fallback to local neighborhoods only
+            setPlacePredictions(localMatches.map(text => ({ text, isGoogle: false })))
           }
         }
       )
     } else {
-      setPlacePredictions(localMatches)
+      // No Google Places available - use local neighborhoods only
+      setPlacePredictions(localMatches.map(text => ({ text, isGoogle: false })))
     }
   }, [])
 
@@ -362,9 +400,10 @@ const SearchForm = () => {
               )}
               {placePredictions.map((place, idx) => (
                 <button
-                  key={`${place}-${idx}`}
+                  key={`${place.text || place}-${idx}`}
                   onClick={() => {
-                    setNeighbourhood(place)
+                    const selectedText = place.text || place
+                    setNeighbourhood(selectedText)
                     setShowNeighbourhoodSuggestions(false)
                     // Reset session token for next search
                     if (window.google?.maps?.places) {
@@ -377,10 +416,10 @@ const SearchForm = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  <span className="truncate">{place}</span>
+                  <span className="truncate">{place.text || place}</span>
                 </button>
               ))}
-              {neighbourhood && !placePredictions.some(p => p.toLowerCase() === neighbourhood.toLowerCase()) && (
+              {neighbourhood && !placePredictions.some(p => (p.text || p).toLowerCase() === neighbourhood.toLowerCase()) && (
                 <button
                   onClick={() => {
                     setShowNeighbourhoodSuggestions(false)
