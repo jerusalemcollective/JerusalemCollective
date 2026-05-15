@@ -19,12 +19,20 @@ const JLMLogo = ({ variant = 'terracotta', className = '' }) => {
 }
 
 const SavedStayIcon = ({ className = '' }) => (
-  <img
-    src="/icons/yemin-moshe-save.png"
-    alt=""
+  <svg
+    className={className}
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
     aria-hidden="true"
-    className={`object-contain ${className}`}
-  />
+  >
+    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+  </svg>
 )
 
 const UserIcon = ({ className = '' }) => (
@@ -141,34 +149,34 @@ export function Header() {
           </Link>
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <Link
             href="/become-a-host"
-            className="inline-flex rounded-full bg-[#252525] px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#111111] sm:px-4 sm:text-sm md:px-5"
+            className="hidden rounded-full bg-[#252525] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#111111] sm:inline-flex md:px-5"
           >
             List your stay
           </Link>
 
           <Link
-            href={user ? "/account/saved" : "/saved"}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-stone-300 bg-white text-stone-700 shadow-sm transition hover:border-stone-500 hover:bg-stone-50"
+            href={user ? "/account/saved" : "/login?redirect=/account/saved"}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 transition hover:border-stone-400 hover:bg-stone-50 sm:h-10 sm:w-10"
             aria-label="Saved stays"
             title="Saved stays"
           >
-            <SavedStayIcon className="h-7 w-7" />
+            <SavedStayIcon className="h-[18px] w-[18px] sm:h-5 sm:w-5" />
           </Link>
 
           {/* Account Button/Dropdown */}
           <div className="relative" ref={dropdownRef}>
             {isLoading ? (
-              <div className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-stone-300 bg-white">
+              <div className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 bg-white sm:h-10 sm:w-10">
                 <div className="h-4 w-4 animate-pulse rounded-full bg-stone-200" />
               </div>
             ) : user ? (
               <>
                 <button
                   onClick={() => setShowDropdown(!showDropdown)}
-                  className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-stone-300 bg-white shadow-sm transition hover:border-stone-500 hover:bg-stone-50"
+                  className="inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-stone-200 bg-white transition hover:border-stone-400 hover:bg-stone-50 sm:h-10 sm:w-10"
                   aria-label="Account menu"
                   title="Account"
                 >
@@ -179,7 +187,7 @@ export function Header() {
                       className="h-full w-full object-cover"
                     />
                   ) : (
-                    <UserIcon className="h-5 w-5" />
+                    <UserIcon className="h-[18px] w-[18px] sm:h-5 sm:w-5" />
                   )}
                 </button>
 
@@ -219,7 +227,7 @@ export function Header() {
                         className="flex items-center gap-3 px-4 py-2.5 text-sm text-stone-700 transition hover:bg-stone-50"
                       >
                         <svg className="h-4 w-4 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
                         </svg>
                         Saved
                       </Link>
@@ -280,11 +288,11 @@ export function Header() {
             ) : (
               <Link
                 href="/login"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-stone-300 bg-white text-stone-700 shadow-sm transition hover:border-stone-500 hover:bg-stone-50"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 transition hover:border-stone-400 hover:bg-stone-50 sm:h-10 sm:w-10"
                 aria-label="Sign in"
                 title="Sign in"
               >
-                <UserIcon className="h-5 w-5" />
+                <UserIcon className="h-[18px] w-[18px] sm:h-5 sm:w-5" />
               </Link>
             )}
           </div>

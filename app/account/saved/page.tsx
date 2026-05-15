@@ -43,10 +43,12 @@ export default function SavedPage() {
         <h1 className="mb-8 text-3xl font-bold text-stone-900">Saved Stays</h1>
 
         <div className="rounded-3xl bg-white p-8 text-center shadow-sm">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-stone-100">
-            <svg className="h-8 w-8 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
-            </svg>
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center">
+            <img 
+              src="/icons/yemin-moshe-save.png" 
+              alt="" 
+              className="h-20 w-20 object-contain opacity-40"
+            />
           </div>
           <h2 className="mb-2 text-xl font-bold text-stone-900">No saved stays</h2>
           <p className="mb-6 text-stone-600">
