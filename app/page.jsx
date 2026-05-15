@@ -161,23 +161,16 @@ const allNeighborhoods = [
   'Givat Mordechai',
   'Rasko',
   'Shikun Chabad',
-  // Streets (common search terms)
-  'Sorotzkin Street',
-  'Panim Meirot Street',
+  // Streets/Areas (no duplicates)
   'Bar Ilan',
-  'Bar Ilan Street',
   'Shmuel Hanavi',
-  'Shmuel Hanavi Street',
   'Malchei Yisrael',
-  'Malchei Yisrael Street',
-  'Strauss Street',
-  'Yaffo Street',
-  'King George Street',
-  'Ben Yehuda Street',
+  'Strauss',
+  'Yaffo',
+  'King George',
+  'Ben Yehuda',
   'Emek Refaim',
-  'Emek Refaim Street',
-  'Azza Street',
-  'Gaza Street',
+  'Azza',
 ]
 
 // Top 4 browsed neighborhoods (can be dynamic from analytics later)
