@@ -27,6 +27,7 @@ export function Footer() {
           <Link href="/host/login" className="text-stone-600 transition hover:text-[#c76f55]">Host login</Link>
           <Link href="/become-a-host" className="text-stone-600 transition hover:text-[#c76f55]">Trust & safety</Link>
           <Link href="/become-a-host" className="text-stone-600 transition hover:text-[#c76f55]">Contact</Link>
+          <Link href="/privacy" className="text-stone-600 transition hover:text-[#c76f55]">Privacy Policy</Link>
         </nav>
       </div>
     </footer>
