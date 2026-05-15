@@ -58,76 +58,78 @@ function BookingDateRangePicker({ dateRange, setDateRange }) {
 
       {/* Calendar Dropdown */}
       {showCalendar && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-2xl shadow-stone-300/40">
+        <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-3xl bg-[#faf8f6] shadow-lg shadow-stone-200/50">
           <style>{`
             .booking-lux-calendar .rdp {
               margin: 0;
             }
             .booking-lux-calendar .rdp-caption {
-              margin-bottom: 12px;
-              padding: 0 2px;
+              margin-bottom: 8px;
+              padding: 0;
             }
             .booking-lux-calendar .rdp-caption_label {
-              color: #1c1917;
-              font-size: 15px;
-              font-weight: 800;
-              letter-spacing: 0;
+              color: #44403c;
+              font-size: 14px;
+              font-weight: 600;
+              letter-spacing: -0.01em;
             }
             .booking-lux-calendar .rdp-nav_button {
               align-items: center;
-              border: 1px solid #e7e5e4;
-              border-radius: 999px;
-              color: #57534e;
+              background: transparent;
+              border: none;
+              border-radius: 50%;
+              color: #a8a29e;
               display: inline-flex;
-              height: 32px;
+              height: 28px;
               justify-content: center;
-              width: 32px;
+              width: 28px;
+              transition: color 150ms ease;
             }
             .booking-lux-calendar .rdp-nav_button:hover {
-              background: #fafaf9;
-              border-color: #c76f55;
+              background: transparent;
               color: #c76f55;
             }
             .booking-lux-calendar .rdp-table {
               width: 100%;
+              border-spacing: 2px;
             }
             .booking-lux-calendar .rdp-head_cell {
               color: #a8a29e;
-              font-size: 10px;
-              font-weight: 800;
-              padding-bottom: 8px;
+              font-size: 9px;
+              font-weight: 600;
+              padding-bottom: 6px;
               text-transform: uppercase;
+              letter-spacing: 0.05em;
             }
             .booking-lux-calendar .rdp-cell {
-              height: 40px;
-              padding: 1px 0;
+              height: 44px;
+              padding: 2px;
             }
             .booking-lux-calendar .rdp-button {
-              border-radius: 999px;
-              color: #292524;
+              border-radius: 50%;
+              color: #57534e;
               font-size: 13px;
-              font-weight: 700;
-              height: 36px;
-              transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
-              width: 36px;
+              font-weight: 500;
+              height: 40px;
+              width: 40px;
+              transition: background-color 120ms ease, color 120ms ease;
             }
             .booking-lux-calendar .rdp-button:hover:not([disabled]):not(.rdp-day_selected) {
               background: #f5f0eb;
-              color: #9e4f39;
-              transform: translateY(-1px);
+              color: #78716c;
             }
             .booking-lux-calendar .rdp-day_selected:not([disabled]) {
               background-color: #c76f55;
               color: white;
-              box-shadow: 0 8px 18px rgba(199,111,85,.24);
+              font-weight: 600;
             }
             .booking-lux-calendar .rdp-day_selected:hover:not([disabled]) {
-              background-color: #b55f47;
+              background-color: #b8624a;
             }
             .booking-lux-calendar .rdp-day_range_middle {
-              background-color: #fef3f0;
+              background-color: #fdf0ed;
               border-radius: 0;
-              color: #c76f55;
+              color: #b8624a;
             }
             .booking-lux-calendar .rdp-day_disabled {
               color: #d6d3d1;
@@ -135,26 +137,25 @@ function BookingDateRangePicker({ dateRange, setDateRange }) {
           `}</style>
 
           {/* Header with Arrival/Departure display */}
-          <div className="border-b border-stone-100 bg-[#fbf8f5] px-5 py-4">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-[#c76f55]">Select your stay</p>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <div className="rounded-2xl bg-white p-3 ring-1 ring-stone-200">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">Arrival</p>
-                <p className="mt-1 text-sm font-bold text-stone-950">
-                  {dateRange.from ? format(dateRange.from, 'EEE, d MMM') : 'Choose date'}
+          <div className="px-5 py-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl bg-white px-4 py-3">
+                <p className="text-[9px] font-semibold uppercase tracking-wider text-stone-400">Arrival</p>
+                <p className="mt-0.5 text-sm font-semibold text-stone-800">
+                  {dateRange.from ? format(dateRange.from, 'EEE, d MMM') : 'Select'}
                 </p>
               </div>
-              <div className="rounded-2xl bg-white p-3 ring-1 ring-stone-200">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">Departure</p>
-                <p className="mt-1 text-sm font-bold text-stone-950">
-                  {dateRange.to ? format(dateRange.to, 'EEE, d MMM') : 'Choose date'}
+              <div className="rounded-xl bg-white px-4 py-3">
+                <p className="text-[9px] font-semibold uppercase tracking-wider text-stone-400">Departure</p>
+                <p className="mt-0.5 text-sm font-semibold text-stone-800">
+                  {dateRange.to ? format(dateRange.to, 'EEE, d MMM') : 'Select'}
                 </p>
               </div>
             </div>
           </div>
 
           {/* Calendar */}
-          <div className="booking-lux-calendar p-5">
+          <div className="booking-lux-calendar mx-4 mb-4 rounded-2xl bg-white p-4">
             <DayPicker
               mode="range"
               selected={dateRange}
@@ -177,15 +178,15 @@ function BookingDateRangePicker({ dateRange, setDateRange }) {
           </div>
 
           {/* Quick actions footer */}
-          <div className="flex items-center justify-between border-t border-stone-100 bg-white px-5 py-4">
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center justify-between px-5 pb-5">
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => {
                   setDateRange({ from: new Date(), to: addDays(new Date(), 7) })
                   setTimeout(() => setShowCalendar(false), 300)
                 }}
-                className="rounded-full bg-stone-100 px-3 py-2 text-xs font-bold text-stone-700 hover:bg-stone-200"
+                className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-stone-600 transition hover:bg-stone-100"
               >
                 1 week
               </button>
@@ -195,7 +196,7 @@ function BookingDateRangePicker({ dateRange, setDateRange }) {
                   setDateRange({ from: new Date(), to: addDays(new Date(), 14) })
                   setTimeout(() => setShowCalendar(false), 300)
                 }}
-                className="rounded-full bg-stone-100 px-3 py-2 text-xs font-bold text-stone-700 hover:bg-stone-200"
+                className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-stone-600 transition hover:bg-stone-100"
               >
                 2 weeks
               </button>
@@ -203,7 +204,7 @@ function BookingDateRangePicker({ dateRange, setDateRange }) {
             <button
               type="button"
               onClick={() => setDateRange({ from: undefined, to: undefined })}
-              className="text-xs font-bold text-stone-500 hover:text-stone-800"
+              className="text-xs font-medium text-stone-400 transition hover:text-stone-600"
             >
               Clear
             </button>
