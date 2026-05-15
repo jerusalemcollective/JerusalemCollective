@@ -749,7 +749,7 @@ export default function JLMCollectiveHomePage() {
 <SearchForm />
 
           <a
-            href="#map"
+            href="/stays?view=map"
             className="mt-6 inline-flex items-center gap-2 rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-semibold text-stone-800 shadow-sm hover:border-stone-500"
           >
             <MapPinIcon className="text-[#c76f55]" />
