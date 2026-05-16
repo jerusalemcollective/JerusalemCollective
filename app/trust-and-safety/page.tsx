@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 export const metadata = {
   title: 'Trust & Safety Policy | JLM Collective',
   description: 'Trust & Safety Policy for JLM Collective - our standards, review process, and how we protect users.',
