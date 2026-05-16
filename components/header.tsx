@@ -19,29 +19,12 @@ const JLMLogo = ({ variant = 'terracotta', className = '' }) => {
 }
 
 const SavedStayIcon = ({ className = '' }: { className?: string }) => (
-  <svg
-    className={className}
-    viewBox="0 0 32 40"
-    fill="none"
+  <img
+    src="/icons/yemin-moshe-save-128.png"
+    alt=""
     aria-hidden="true"
-  >
-    {/* Bookmark shape */}
-    <path
-      d="M4 4a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v34l-12-7-12 7V4z"
-      fill="white"
-      stroke="#a8a29e"
-      strokeWidth="1.5"
-    />
-    {/* Windmill icon clipped inside */}
-    <image
-      href="/icons/yemin-moshe-save-128.png"
-      x="4"
-      y="2"
-      width="24"
-      height="24"
-      preserveAspectRatio="xMidYMid meet"
-    />
-  </svg>
+    className={`rounded-full object-cover ${className}`}
+  />
 )
 
 const UserIcon = ({ className = '' }) => (
@@ -168,11 +151,11 @@ export function Header() {
 
           <Link
             href={user ? "/account/saved" : "/login?redirect=/account/saved"}
-            className="inline-flex h-9 w-9 items-center justify-center transition-transform hover:scale-110 sm:h-10 sm:w-10"
+            className="inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-full transition-transform hover:scale-110 sm:h-10 sm:w-10"
             aria-label="Saved stays"
             title="Saved stays"
           >
-            <SavedStayIcon className="h-8 w-auto sm:h-9" />
+            <SavedStayIcon className="h-full w-full" />
           </Link>
 
           {/* Account Button/Dropdown */}
@@ -235,7 +218,7 @@ export function Header() {
                         onClick={() => setShowDropdown(false)}
                         className="flex items-center gap-3 px-4 py-2.5 text-sm text-stone-700 transition hover:bg-stone-50"
                       >
-                        <SavedStayIcon className="h-5 w-auto" />
+                        <img src="/icons/yemin-moshe-save-128.png" alt="" className="h-5 w-5 rounded-full object-cover" />
                         Saved
                       </Link>
                       <Link
