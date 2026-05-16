@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 const JLMLogo = ({ variant = 'terracotta', className = '' }) => {
   const src = variant === 'terracotta' 
     ? '/logos/JLM_Collective_Primary_Horizontal_Terracotta_Transparent.png'
-    : '/logos/JLM_Collective_Primary_Horizontal_Black_Transparent.png'
+    : '/logos/JLM_Collective_Horizontal_Black_Transparent.png'
   
   return (
     <img 
