@@ -29,7 +29,7 @@ const SavedStayIcon = ({ className = '' }) => {
       src="/icons/yemin-moshe-save-128.png"
       alt=""
       aria-hidden="true"
-      className={`object-contain ${className}`}
+      className={`rounded-full object-cover ${className}`}
     />
   )
 }
@@ -1081,8 +1081,8 @@ export default function JLMCollectiveHomePage() {
           <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-3">
-                <div className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-stone-200 bg-[#F8F5F2]">
-                  <SavedStayIcon className="h-5 w-5" />
+                <div className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full">
+                  <SavedStayIcon className="h-full w-full" />
                 </div>
 
                 <div>
