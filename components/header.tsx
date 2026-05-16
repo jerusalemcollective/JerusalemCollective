@@ -20,7 +20,7 @@ const JLMLogo = ({ variant = 'terracotta', className = '' }) => {
 
 const SavedStayIcon = ({ className = '' }) => (
   <img
-    src="/icons/yemin-moshe-save.png"
+    src="/icons/yemin-moshe-save-128.png"
     alt=""
     aria-hidden="true"
     className={`object-contain ${className}`}
