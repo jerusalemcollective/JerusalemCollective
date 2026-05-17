@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { isSupabaseConfigured, supabase } from '@/lib/supabaseClient'
@@ -50,7 +50,7 @@ function formatBookingType(type: string): string {
   }
 }
 
-export default function StaysPage() {
+function StaysPageContent() {
   const searchParams = useSearchParams()
   const initialView = searchParams.get('view') === 'map' ? 'map' : 'list'
   const initialArea = searchParams.get('neighborhood') || 'All'
@@ -229,5 +229,17 @@ export default function StaysPage() {
         />
       )}
     </div>
+  )
+}
+
+export default function StaysPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-stone-200 border-t-[#c76f55]" />
+      </div>
+    }>
+      <StaysPageContent />
+    </Suspense>
   )
 }
