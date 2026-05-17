@@ -1,0 +1,143 @@
+import { HostDashboardNav } from '@/components/host-dashboard-nav'
+import { requireHostDashboardAccess } from '@/lib/host-dashboard'
+import { updateHostPaymentPreferences } from './actions'
+
+export default async function HostPaymentsPage() {
+  const { supabase } = await requireHostDashboardAccess()
+  const { data: profile } = await supabase
+    .from('host_payment_profiles')
+    .select(
+      'accepts_direct_payment, direct_payment_instructions, preferred_currency, stripe_account_id, payout_setup_status, stripe_charges_enabled, stripe_payouts_enabled',
+    )
+    .maybeSingle()
+
+  return (
+    <main className="min-h-screen bg-[#F8F5F2] px-5 py-10 text-[#252525] md:px-6">
+      <section className="mx-auto max-w-6xl">
+        <HostDashboardNav />
+
+        <div className="mb-8">
+          <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Host dashboard</p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-stone-950">Payments</h1>
+          <p className="mt-2 max-w-2xl text-stone-600">
+            JLM Collective handles online checkout for guests. You only need to complete payout setup, and you can also offer direct-to-host payment if you want.
+          </p>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+          <form action={updateHostPaymentPreferences} className="rounded-3xl bg-white p-6 shadow-sm">
+            <div className="space-y-5">
+              <div className="rounded-2xl bg-[#F8F5F2] p-4">
+                <p className="font-bold text-stone-950">Online checkout</p>
+                <p className="mt-1 text-sm leading-6 text-stone-600">
+                  Guests will be able to pay JLM Collective online, and host payouts will be sent after the relevant booking milestone. At launch there is no JLM Collective commission; the host absorbs the payment processing fee.
+                </p>
+              </div>
+
+              <label className="flex items-start gap-3 rounded-2xl bg-[#F8F5F2] p-4">
+                <input
+                  type="checkbox"
+                  name="acceptsDirect"
+                  defaultChecked={profile?.accepts_direct_payment || false}
+                  className="mt-1"
+                />
+                <span>
+                  <span className="block font-bold text-stone-950">Accept direct payment to me</span>
+                  <span className="mt-1 block text-sm leading-6 text-stone-600">
+                    Offer a host-direct route as an alternative where you handle the payment yourself.
+                  </span>
+                </span>
+              </label>
+
+              <label className="block">
+                <span className="text-sm font-semibold text-stone-800">Preferred currency</span>
+                <select
+                  name="preferredCurrency"
+                  defaultValue={profile?.preferred_currency || 'USD'}
+                  className={inputClass}
+                >
+                  <option value="USD">USD</option>
+                  <option value="GBP">GBP</option>
+                  <option value="EUR">EUR</option>
+                  <option value="ILS">ILS</option>
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="text-sm font-semibold text-stone-800">Direct payment instructions</span>
+                <textarea
+                  name="instructions"
+                  defaultValue={profile?.direct_payment_instructions || ''}
+                  rows={7}
+                  placeholder="Explain how guests should pay you directly once a booking is approved."
+                  className={`${inputClass} resize-y`}
+                />
+              </label>
+
+              <div className="flex justify-end">
+                <button className="rounded-full bg-[#c76f55] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47]">
+                  Save payment settings
+                </button>
+              </div>
+            </div>
+          </form>
+
+          <aside className="space-y-4">
+            <div className="rounded-3xl bg-white p-5 shadow-sm">
+              <h2 className="text-lg font-bold text-stone-950">Payout setup</h2>
+              <div className="mt-4 space-y-3 text-sm">
+                <TextStatusRow label="Status" value={formatPayoutStatus(profile?.payout_setup_status)} />
+                <StatusRow label="Payout profile created" value={Boolean(profile?.stripe_account_id)} />
+                <StatusRow label="Charges enabled" value={profile?.stripe_charges_enabled || false} />
+                <StatusRow label="Payouts enabled" value={profile?.stripe_payouts_enabled || false} />
+              </div>
+            </div>
+
+            <div className="rounded-3xl bg-white p-5 shadow-sm">
+              <h2 className="text-lg font-bold text-stone-950">What comes next</h2>
+              <p className="mt-3 text-sm leading-6 text-stone-600">
+                Next, JLM Collective will add a simple guided payout setup so hosts can receive funds without needing to manage a separate Stripe account themselves.
+              </p>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </main>
+  )
+}
+
+function StatusRow({ label, value }: { label: string; value: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-stone-600">{label}</span>
+      <span
+        className={`rounded-full px-3 py-1 text-xs font-bold ${
+          value ? 'bg-green-100 text-green-700' : 'bg-stone-100 text-stone-700'
+        }`}
+      >
+        {value ? 'Yes' : 'Not yet'}
+      </span>
+    </div>
+  )
+}
+
+function TextStatusRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-stone-600">{label}</span>
+      <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-bold text-stone-700">
+        {value}
+      </span>
+    </div>
+  )
+}
+
+function formatPayoutStatus(status?: string | null) {
+  if (status === 'ready') return 'Ready'
+  if (status === 'pending') return 'Pending'
+  if (status === 'restricted') return 'Needs attention'
+  return 'Not started'
+}
+
+const inputClass =
+  'mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#c76f55]'

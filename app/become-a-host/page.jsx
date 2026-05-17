@@ -166,6 +166,63 @@ function NeighbourhoodAutocomplete({ value, onChange, placeholder, className }) 
   )
 }
 
+let googlePlacesPromise
+
+function loadGooglePlacesLibrary(apiKey) {
+  if (typeof window === 'undefined') {
+    return Promise.reject(new Error('Google Maps can only load in the browser.'))
+  }
+
+  if (window.google?.maps?.importLibrary) {
+    return window.google.maps.importLibrary('places')
+  }
+
+  if (!googlePlacesPromise) {
+    googlePlacesPromise = new Promise((resolve, reject) => {
+      const finishLoading = async () => {
+        try {
+          if (!window.google?.maps?.importLibrary) {
+            reject(new Error('Google Maps loaded without the Places library.'))
+            return
+          }
+
+          const places = await window.google.maps.importLibrary('places')
+          resolve(places)
+        } catch (error) {
+          reject(error)
+        }
+      }
+
+      const existingScript = document.querySelector('script[src*="maps.googleapis.com"]')
+
+      if (existingScript) {
+        if (window.google?.maps?.importLibrary) {
+          finishLoading()
+          return
+        }
+
+        existingScript.addEventListener('load', finishLoading, { once: true })
+        existingScript.addEventListener(
+          'error',
+          () => reject(new Error('Google Maps script failed to load.')),
+          { once: true },
+        )
+        return
+      }
+
+      const script = document.createElement('script')
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async`
+      script.async = true
+      script.defer = true
+      script.onload = finishLoading
+      script.onerror = () => reject(new Error('Google Maps script failed to load.'))
+      document.head.appendChild(script)
+    })
+  }
+
+  return googlePlacesPromise
+}
+
 // Address autocomplete using Google Places API
 function AddressAutocomplete({ value, onChange, onSelect, placeholder, className }) {
   const inputRef = useRef(null)
@@ -183,7 +240,8 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
   }, [value])
 
   useEffect(() => {
-    // Load Google Maps script
+    let isMounted = true
+
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
     if (!apiKey) {
       console.log('[v0] No Google Maps API key found')
@@ -192,76 +250,73 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
       return
     }
 
-    const initAutocomplete = () => {
-      if (!window.google || !window.google.maps || !window.google.maps.places) {
-        return false
-      }
-      
-      if (!inputRef.current || autocompleteRef.current) return true
-
+    async function initAutocomplete() {
       try {
-        const autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
-          types: ['address'],
-          componentRestrictions: { country: 'il' },
-          fields: ['formatted_address', 'geometry'],
-        })
+        const places = await loadGooglePlacesLibrary(apiKey)
 
-        autocomplete.addListener('place_changed', () => {
-          const place = autocomplete.getPlace()
-          
-          if (place && place.formatted_address) {
-            setInputValue(place.formatted_address)
-            setIsValidated(true)
-            onChange(place.formatted_address)
-            
-            if (place.geometry && place.geometry.location) {
-              onSelect({
-                address: place.formatted_address,
-                latitude: place.geometry.location.lat(),
-                longitude: place.geometry.location.lng(),
-              })
+        if (!isMounted || autocompleteRef.current) return
+
+        let attempts = 0
+        const attachAutocomplete = () => {
+          attempts += 1
+
+          if (!isMounted || autocompleteRef.current) return
+
+          if (!inputRef.current) {
+            if (attempts < 20) {
+              window.setTimeout(attachAutocomplete, 100)
+            } else {
+              setLoadError('Address lookup is unavailable right now. You can still type the address manually.')
+              setIsLoading(false)
             }
+            return
           }
-        })
 
-        autocompleteRef.current = autocomplete
-        setIsLoading(false)
-        return true
+          const autocomplete = new places.Autocomplete(inputRef.current, {
+            types: ['address'],
+            componentRestrictions: { country: 'il' },
+            fields: ['formatted_address', 'geometry'],
+          })
+
+          autocomplete.addListener('place_changed', () => {
+            const place = autocomplete.getPlace()
+
+            if (place?.formatted_address) {
+              setInputValue(place.formatted_address)
+              setIsValidated(true)
+              onChange(place.formatted_address)
+
+              if (place.geometry?.location) {
+                onSelect({
+                  address: place.formatted_address,
+                  latitude: place.geometry.location.lat(),
+                  longitude: place.geometry.location.lng(),
+                })
+              }
+            }
+          })
+
+          autocompleteRef.current = autocomplete
+          setLoadError('')
+          setIsLoading(false)
+        }
+
+        attachAutocomplete()
       } catch (err) {
         console.log('[v0] Error initializing autocomplete:', err)
-        setLoadError('Address lookup is unavailable right now. You can still type the address manually.')
-        setIsLoading(false)
-        return false
+
+        if (isMounted) {
+          setLoadError('Address lookup is unavailable right now. You can still type the address manually.')
+          setIsLoading(false)
+        }
       }
     }
 
-    // Check if already loaded
-    if (initAutocomplete()) return
+    initAutocomplete()
 
-    // Load script if not present
-    const existingScript = document.querySelector('script[src*="maps.googleapis.com"]')
-    if (existingScript) {
-      const checkLoaded = setInterval(() => {
-        if (initAutocomplete()) {
-          clearInterval(checkLoaded)
-        }
-      }, 100)
-      setTimeout(() => clearInterval(checkLoaded), 10000) // Timeout after 10s
-      return () => clearInterval(checkLoaded)
+    return () => {
+      isMounted = false
     }
-
-    const script = document.createElement('script')
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&language=en`
-    script.async = true
-    script.onload = () => {
-      setTimeout(initAutocomplete, 100)
-    }
-    script.onerror = () => {
-      console.log('[v0] Failed to load Google Maps script')
-      setLoadError('Address lookup could not load. You can still type the address manually.')
-      setIsLoading(false)
-    }
-    document.head.appendChild(script)
   }, [])
 
   const handleInputChange = (e) => {
@@ -290,9 +345,9 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
           <span>Address validated</span>
         </div>
       )}
-      {inputValue && !isValidated && !isLoading && (
+      {inputValue && !isValidated && !isLoading && !loadError && (
         <div className="mt-1 text-xs text-stone-500">
-          Select an address from the dropdown to validate
+          Choose the full address from the Google suggestions.
         </div>
       )}
       {loadError && (
@@ -543,6 +598,11 @@ if (step === 0 && !form.phone && !form.whatsapp_number) {
       return
     }
 
+    if (step === 1 && !form.description.trim()) {
+      setError('Please add a description before continuing.')
+      return
+    }
+
 if (step === 2 && (!form.area || !form.area.trim())) {
       setError('Please enter a neighbourhood before continuing.')
       return
@@ -550,6 +610,35 @@ if (step === 2 && (!form.area || !form.area.trim())) {
 
     if (step === 2 && (!form.exact_address || !form.exact_address.trim())) {
       setError('Please enter your address before continuing.')
+      return
+    }
+
+    if (step === 3 && (!form.bedrooms || Number(form.bedrooms) < 0)) {
+      setError('Please enter the number of bedrooms.')
+      return
+    }
+
+    if (step === 3 && (!form.bathrooms || Number(form.bathrooms) < 0)) {
+      setError('Please enter the number of bathrooms.')
+      return
+    }
+
+    if (step === 3 && (!form.sleeps || Number(form.sleeps) < 1)) {
+      setError('Please enter how many guests the stay sleeps.')
+      return
+    }
+
+    if (
+      step === 4 &&
+      (!form.price_ils || Number(form.price_ils) <= 0) &&
+      (!form.price_usd || Number(form.price_usd) <= 0)
+    ) {
+      setError('Please enter at least one nightly price.')
+      return
+    }
+
+    if (step === 5 && form.amenities.length === 0) {
+      setError('Please select at least one amenity before continuing.')
       return
     }
 
@@ -611,6 +700,24 @@ async function handleSubmit() {
 
     if (!form.confirmation) {
       setError('Please confirm the listing details before submitting.')
+      setLoading(false)
+      return
+    }
+
+    if (
+      !form.apartment_title.trim() ||
+      !form.description.trim() ||
+      !form.area.trim() ||
+      !form.exact_address.trim() ||
+      Number(form.bedrooms) < 0 ||
+      Number(form.bathrooms) < 0 ||
+      Number(form.sleeps) < 1 ||
+      ((!form.price_ils || Number(form.price_ils) <= 0) &&
+        (!form.price_usd || Number(form.price_usd) <= 0)) ||
+      form.amenities.length === 0 ||
+      form.photos.length < minimumPhotoCount
+    ) {
+      setError('Please complete all required listing details before submitting.')
       setLoading(false)
       return
     }
@@ -1067,7 +1174,7 @@ async function handleSubmit() {
                     />
                   </Field>
 
-<Field label="Exact address">
+<Field label="Exact address" required>
                     <AddressAutocomplete
                       value={form.exact_address}
                       onChange={(val) => updateField('exact_address', val)}

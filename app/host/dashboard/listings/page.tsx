@@ -8,6 +8,7 @@ type HostApplication = {
   area: string
   status: string
   verification_status: string
+  admin_feedback: string | null
   created_at: string
   bedrooms: number | null
   sleeps: number | null
@@ -38,7 +39,7 @@ export default async function HostListingsPage() {
   const [{ data: applications }, { data: listings }, { data: photos }] = await Promise.all([
     supabase
       .from('host_applications')
-      .select('id, apartment_title, area, status, verification_status, created_at, bedrooms, sleeps')
+      .select('id, apartment_title, area, status, verification_status, admin_feedback, created_at, bedrooms, sleeps')
       .order('created_at', { ascending: false }),
     supabase
       .from('listings')
@@ -203,6 +204,16 @@ export default async function HostListingsPage() {
                           {nextStepText(application.status, application.verification_status)}
                         </p>
                       </div>
+                      {application.admin_feedback && (
+                        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                          <p className="text-xs font-bold uppercase tracking-widest text-amber-700">
+                            Message from JLM Collective
+                          </p>
+                          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-amber-900">
+                            {application.admin_feedback}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </article>
                 ))}
@@ -281,6 +292,7 @@ function StatusBadge({
 
 function statusTone(status: string): 'green' | 'amber' | 'rose' | 'stone' {
   if (status === 'approved') return 'green'
+  if (status === 'changes_requested') return 'amber'
   if (status === 'rejected') return 'rose'
   if (status === 'in_review') return 'amber'
   return 'stone'
@@ -293,6 +305,10 @@ function nextStepText(status: string, verificationStatus: string) {
 
   if (status === 'rejected') {
     return 'This stay needs attention before it can go live. Contact support for the exact changes required.'
+  }
+
+  if (status === 'changes_requested') {
+    return 'JLM Collective has requested changes before this stay can move forward.'
   }
 
   if (verificationStatus === 'pending') {

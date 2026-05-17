@@ -4,6 +4,7 @@ const links = [
   { href: '/host/dashboard', label: 'Overview' },
   { href: '/host/dashboard/listings', label: 'Listings' },
   { href: '/host/dashboard/messages', label: 'Messages' },
+  { href: '/host/dashboard/payments', label: 'Payments' },
 ]
 
 export function HostDashboardNav() {

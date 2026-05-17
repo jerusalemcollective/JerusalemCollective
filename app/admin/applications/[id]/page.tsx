@@ -1,7 +1,11 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { requireAdmin } from '@/lib/admin'
-import { approveAndPublishApplication, updateApplicationStatus } from '@/app/admin/actions'
+import {
+  approveAndPublishApplication,
+  requestApplicationChanges,
+  updateApplicationStatus,
+} from '@/app/admin/actions'
 
 export default async function AdminApplicationPage({
   params,
@@ -100,6 +104,23 @@ export default async function AdminApplicationPage({
                   <input type="hidden" name="status" value="in_review" />
                   <button className="w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm font-bold text-stone-700 transition hover:border-stone-300">
                     Mark in review
+                  </button>
+                </form>
+
+                <form action={requestApplicationChanges} className="space-y-3">
+                  <input type="hidden" name="applicationId" value={application.id} />
+                  <p className="text-xs leading-5 text-stone-500">
+                    This will appear to the host as a message from JLM Collective.
+                  </p>
+                  <textarea
+                    name="feedback"
+                    required
+                    rows={5}
+                    placeholder="Tell the host exactly what needs fixing..."
+                    className="w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#c76f55]"
+                  />
+                  <button className="w-full rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800 transition hover:bg-amber-100">
+                    Send as JLM Collective
                   </button>
                 </form>
 
