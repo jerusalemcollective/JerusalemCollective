@@ -28,6 +28,7 @@ export default function AccountPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [hasStay, setHasStay] = useState(false)
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
   const router = useRouter()
@@ -57,6 +58,15 @@ export default function AccountPage() {
         setFullName(profileData.full_name || '')
         setPhone(profileData.phone || '')
       }
+
+      const { data: ownedStay } = await supabase
+        .from('host_applications')
+        .select('id')
+        .eq('host_id', user.id)
+        .limit(1)
+        .maybeSingle()
+
+      setHasStay(Boolean(ownedStay))
 
       setIsLoading(false)
     }
@@ -154,7 +164,7 @@ export default function AccountPage() {
             </Link>
 
             <div className="pt-4">
-              {profile?.is_host ? (
+              {hasStay ? (
                 <Link
                   href="/host/dashboard"
                   className="flex items-center gap-3 rounded-xl border border-[#c76f55] px-4 py-3 font-medium text-[#c76f55] transition hover:bg-[#fff4ef]"
@@ -193,7 +203,7 @@ export default function AccountPage() {
                 <div className="mt-4 text-center sm:mt-0 sm:text-left">
                   <h2 className="text-xl font-bold text-stone-900">{fullName || 'Your Name'}</h2>
                   <p className="text-stone-500">{user?.email}</p>
-                  {profile?.is_host && (
+                  {hasStay && (
                     <span className="mt-2 inline-block rounded-full bg-[#fff4ef] px-3 py-1 text-xs font-semibold text-[#c76f55]">
                       Host
                     </span>

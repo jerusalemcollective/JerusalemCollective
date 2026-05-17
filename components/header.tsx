@@ -50,7 +50,7 @@ type UserState = {
   email: string | undefined
   avatarUrl: string | null
   fullName: string | null
-  isHost: boolean
+  hasStay: boolean
   isAdmin: boolean
 } | null
 
@@ -74,12 +74,19 @@ export function Header() {
             .eq('id', authUser.id)
             .single()
 
+          const { data: ownedStay } = await supabase
+            .from('host_applications')
+            .select('id')
+            .eq('host_id', authUser.id)
+            .limit(1)
+            .maybeSingle()
+
           setUser({
             id: authUser.id,
             email: authUser.email,
             avatarUrl: profile?.avatar_url || null,
             fullName: profile?.full_name || null,
-            isHost: profile?.is_host || false,
+            hasStay: Boolean(ownedStay),
             isAdmin: profile?.is_admin || false,
           })
         }
@@ -246,7 +253,7 @@ export function Header() {
                           Admin dashboard
                         </Link>
                       )}
-                      {user.isHost ? (
+                      {user.hasStay ? (
                         <Link
                           href="/host/dashboard"
                           onClick={() => setShowDropdown(false)}

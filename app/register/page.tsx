@@ -113,16 +113,6 @@ function RegisterForm() {
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-[#F8F5F2] p-6">
       <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
-          <Link href="/" className="inline-block">
-            <img 
-              src="/logos/JLM_Collective_Primary_Horizontal_Terracotta_UI.webp" 
-              alt="JLM Collective" 
-              className="h-10"
-            />
-          </Link>
-        </div>
-
         <div className="rounded-3xl bg-white p-8 shadow-sm">
           <h1 className="mb-2 text-2xl font-bold text-stone-900">Create an account</h1>
           <p className="mb-6 text-sm text-stone-600">

@@ -10,6 +10,12 @@ export default function HostDashboardPage() {
           <p className="mt-2 max-w-2xl text-stone-600">
             Keep track of guest enquiries, listing status, and the practical work around each stay.
           </p>
+          <Link
+            href="/become-a-host"
+            className="mt-5 inline-flex rounded-full bg-[#252525] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#111111]"
+          >
+            Add another stay
+          </Link>
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
@@ -42,4 +48,3 @@ export default function HostDashboardPage() {
     </main>
   )
 }
-

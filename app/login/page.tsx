@@ -1,11 +1,10 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
-import { ensureProfile } from '@/lib/user-profile'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { useState, Suspense } from 'react'
 
 function LoginForm() {
@@ -13,7 +12,6 @@ function LoginForm() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
   const searchParams = useSearchParams()
   const redirect = searchParams.get('redirect') || '/account'
 
@@ -29,17 +27,8 @@ function LoginForm() {
         password,
       })
       if (error) throw error
-      
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        try {
-          await ensureProfile(supabase, user)
-        } catch (profileError) {
-          console.error('Could not create profile after login:', profileError)
-        }
-      }
-      router.push(redirect)
-      router.refresh()
+
+      window.location.href = redirect
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An error occurred')
     } finally {
@@ -50,16 +39,6 @@ function LoginForm() {
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-[#F8F5F2] p-6">
       <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
-          <Link href="/" className="inline-block">
-            <img 
-              src="/logos/JLM_Collective_Primary_Horizontal_Terracotta_UI.webp" 
-              alt="JLM Collective" 
-              className="h-10"
-            />
-          </Link>
-        </div>
-
         <div className="rounded-3xl bg-white p-8 shadow-sm">
           <h1 className="mb-2 text-2xl font-bold text-stone-900">Welcome back</h1>
           <p className="mb-6 text-sm text-stone-600">
