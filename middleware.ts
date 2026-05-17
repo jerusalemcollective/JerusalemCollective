@@ -49,11 +49,22 @@ function protectRoute(
     return NextResponse.redirect(url)
   }
 
+  if (
+    request.nextUrl.pathname === '/become-a-host' &&
+    !isAuthenticated
+  ) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    url.searchParams.set('redirect', request.nextUrl.pathname)
+    return NextResponse.redirect(url)
+  }
+
   return response
 }
 
 export const config = {
   matcher: [
+    '/become-a-host',
     '/host/portal/:path*',
   ],
 }
