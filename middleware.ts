@@ -44,7 +44,7 @@ function protectRoute(
     !isAuthenticated
   ) {
     const url = request.nextUrl.clone()
-    url.pathname = '/host/login'
+    url.pathname = '/login'
     url.searchParams.set('redirect', '/become-a-host')
     return NextResponse.redirect(url)
   }

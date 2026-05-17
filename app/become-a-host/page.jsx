@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { isSupabaseConfigured, supabase } from '@/lib/supabaseClient'
+import { createClient } from '@/lib/supabase/client'
 import { ensureHostProfile } from '@/lib/host-profile'
 
 // Jerusalem neighbourhoods for autocomplete suggestions
@@ -377,6 +377,10 @@ const steps = [
 ]
 
 const minimumPhotoCount = 5
+const isSupabaseConfigured = Boolean(
+  process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+)
 
 export default function BecomeAHostPage() {
   const [step, setStep] = useState(0)
@@ -397,17 +401,18 @@ export default function BecomeAHostPage() {
 
   useEffect(() => {
     async function loadHost() {
-      if (!isSupabaseConfigured || !supabase) {
+      if (!isSupabaseConfigured) {
         setCheckingHost(false)
         return
       }
 
+      const supabase = createClient()
       const {
         data: { user },
       } = await supabase.auth.getUser()
 
       if (!user) {
-        window.location.href = `/host/login?redirect=${encodeURIComponent('/become-a-host')}`
+        window.location.href = `/login?redirect=${encodeURIComponent('/become-a-host')}`
         return
       }
 
@@ -598,7 +603,7 @@ async function handleSubmit() {
     setError('')
     setSuccess(false)
 
-    if (!isSupabaseConfigured || !supabase) {
+    if (!isSupabaseConfigured) {
       setError('The live listing database is not connected yet. Add the Supabase environment variables before accepting submissions.')
       setLoading(false)
       return
@@ -615,6 +620,8 @@ async function handleSubmit() {
       setLoading(false)
       return
     }
+
+    const supabase = createClient()
 
     // First, create the host application to get an ID
     const payload = {
