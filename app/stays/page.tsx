@@ -6,8 +6,9 @@ import Link from 'next/link'
 import { isSupabaseConfigured, supabase } from '@/lib/supabaseClient'
 import dynamic from 'next/dynamic'
 import { sampleListings } from '@/lib/sample-listings'
+import { allNeighborhoods } from '@/lib/neighborhoods'
 
-const neighborhoods = ['All', 'Ramat Eshkol', 'Gush 80', 'Jerusalem Estates', 'Romema', 'Rechavia', 'Shaarei Chesed', 'Baka', 'German Colony', 'Mamilla', 'Katamon', 'Nachlaot']
+const neighborhoods = ['All', ...allNeighborhoods]
 
 interface Listing {
   id: string
@@ -48,6 +49,21 @@ function formatBookingType(type: string): string {
     case 'instant': return 'Instant Book'
     default: return 'Request to Book'
   }
+}
+
+async function trackNeighborhoodSearch(neighborhood: string, source: string) {
+  if (
+    neighborhood === 'All' ||
+    !isSupabaseConfigured ||
+    !supabase
+  ) {
+    return
+  }
+
+  await supabase.rpc('record_neighborhood_search', {
+    searched_neighborhood: neighborhood,
+    search_source: source,
+  })
 }
 
 function StaysPageContent() {
@@ -118,7 +134,10 @@ function StaysPageContent() {
             {neighborhoods.map((area) => (
               <button
                 key={area}
-                onClick={() => setSelectedArea(area)}
+                onClick={() => {
+                  setSelectedArea(area)
+                  void trackNeighborhoodSearch(area, 'stays_filter')
+                }}
                 className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition ${
                   selectedArea === area
                     ? 'bg-[#1A4B5A] text-white'

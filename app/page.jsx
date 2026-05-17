@@ -4,6 +4,10 @@ import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { format, addDays } from 'date-fns'
 import { isSupabaseConfigured, supabase } from '@/lib/supabaseClient'
 import { sampleListings } from '@/lib/sample-listings'
+import {
+  allNeighborhoods,
+  defaultExploreNeighborhoods,
+} from '@/lib/neighborhoods'
 import { Calendar } from '@/components/ui/calendar'
 
 /* ---------- Shared UI primitives ---------- */
@@ -90,97 +94,6 @@ const ShieldIcon = ({ className = '' }) => (
 
 /* ---------- Data ---------- */
 
-// All Jerusalem neighborhoods for autocomplete
-const allNeighborhoods = [
-  // Popular areas
-  'Ramat Eshkol',
-  'Gush 80',
-  'Jerusalem Estates',
-  'Romema',
-  'Minchas Yitzchok',
-  'Rechavia',
-  'Shaarei Chesed',
-  'Baka',
-  'German Colony',
-  'Katamon',
-  'Mamilla',
-  'Nachlaot',
-  'Talbiya',
-  'Ein Kerem',
-  'Old City',
-  'City Center',
-  'Givat Shaul',
-  'Har Nof',
-  'Bayit Vegan',
-  'Kiryat Moshe',
-  'Neve Yaakov',
-  'Pisgat Zeev',
-  'French Hill',
-  'Sanhedria',
-  'Mea Shearim',
-  'Geula',
-  'Armon Hanatziv',
-  'Abu Tor',
-  'Arnona',
-  'Malha',
-  'Gilo',
-  'Pat',
-  'Neve Granot',
-  'Neve Shaanan',
-  'Beit Hakerem',
-  // Haredi/Religious neighborhoods
-  'Sorotzkin',
-  'Mattersdorf',
-  'Panim Meirot',
-  'Kiryat Belz',
-  'Kiryat Sanz',
-  'Zichron Moshe',
-  'Bucharim',
-  'Batei Ungarin',
-  'Batei Warsaw',
-  'Ezras Torah',
-  'Unsdorf',
-  'Kiryat Itri',
-  'Ramat Shlomo',
-  'Beitar Illit',
-  'Ramot',
-  'Ramot Aleph',
-  'Ramot Bet',
-  'Ramot Gimmel',
-  'Ramot Dalet',
-  'Kiryat Mattersdorf',
-  'Sanhedria Murchevet',
-  'Schneller',
-  'Makor Baruch',
-  'Kerem Avraham',
-  'Kiryat Zanz',
-  'Mekor Chaim',
-  'Ir Ganim',
-  'Kiryat Menachem',
-  'Kiryat Yovel',
-  'Givat Mordechai',
-  'Rasko',
-  'Shikun Chabad',
-  // Streets/Areas (no duplicates)
-  'Bar Ilan',
-  'Shmuel Hanavi',
-  'Malchei Yisrael',
-  'Strauss',
-  'Yaffo',
-  'King George',
-  'Ben Yehuda',
-  'Emek Refaim',
-  'Azza',
-]
-
-// Top 4 browsed neighborhoods (can be dynamic from analytics later)
-const topNeighborhoods = [
-  'Ramat Eshkol',
-  'Rechavia',
-  'German Colony',
-  'Romema',
-]
-
 const toFeaturedStay = (listing) => ({
   id: listing.id,
   title: listing.title,
@@ -192,19 +105,7 @@ const toFeaturedStay = (listing) => ({
 
 const defaultFeatured = sampleListings.map(toFeaturedStay)
 
-const exploreBlocks = [
-  {
-    label: 'Neighbourhoods',
-    title: 'Popular areas',
-    items: [
-      'Ramat Eshkol',
-      'Gush 80',
-      'Romema',
-      'Jerusalem Estates',
-      'Minchas Yitzchok',
-      'Rechavia',
-    ],
-  },
+const baseExploreBlocks = [
   {
     label: 'Themes',
     title: 'Search by what matters',
@@ -239,6 +140,21 @@ const getExploreHref = (blockLabel, item) => {
   if (blockLabel === 'Stay types') params.set('type', item)
 
   return `/stays?${params.toString()}`
+}
+
+const trackNeighborhoodSearch = async (neighborhood, source) => {
+  if (!isSupabaseConfigured || !supabase || !neighborhood?.trim()) return
+
+  const canonicalNeighborhood = allNeighborhoods.find(
+    (item) => item.toLowerCase() === neighborhood.trim().toLowerCase(),
+  )
+
+  if (!canonicalNeighborhood) return
+
+  await supabase.rpc('record_neighborhood_search', {
+    searched_neighborhood: canonicalNeighborhood,
+    search_source: source,
+  })
 }
 
 /* ---------- Page ---------- */
@@ -442,6 +358,9 @@ const SearchForm = () => {
     if (dateRange.to) params.set('checkout', format(dateRange.to, 'yyyy-MM-dd'))
     if (adults > 0) params.set('adults', adults.toString())
     if (children > 0) params.set('children', children.toString())
+    if (neighbourhood) {
+      void trackNeighborhoodSearch(neighbourhood, 'hero_search')
+    }
     window.location.href = `/stays${params.toString() ? '?' + params.toString() : ''}`
   }
 
@@ -732,7 +651,7 @@ const SearchForm = () => {
   )
 }
 
-const NeighborhoodSearch = () => {
+const NeighborhoodSearch = ({ popularNeighborhoods }) => {
   const [query, setQuery] = useState('')
   const [isOpen, setIsOpen] = useState(false)
   const [selectedNeighborhood, setSelectedNeighborhood] = useState('')
@@ -759,6 +678,7 @@ const NeighborhoodSearch = () => {
     setSelectedNeighborhood(neighborhood)
     setQuery(neighborhood)
     setIsOpen(false)
+    void trackNeighborhoodSearch(neighborhood, 'featured_neighborhood')
     // Navigate to stays page with filter
     window.location.href = `/stays?neighborhood=${encodeURIComponent(neighborhood)}`
   }
@@ -766,7 +686,7 @@ const NeighborhoodSearch = () => {
   return (
     <div className="mb-5 flex flex-wrap items-center gap-2">
       {/* Quick select chips */}
-      {topNeighborhoods.map((n) => (
+      {popularNeighborhoods.map((n) => (
         <button
           key={n}
           onClick={() => handleSelect(n)}
@@ -826,6 +746,7 @@ const NeighborhoodSearch = () => {
 
 export default function JLMCollectiveHomePage() {
   const [featuredStays, setFeaturedStays] = useState(defaultFeatured)
+  const [popularNeighborhoods, setPopularNeighborhoods] = useState(defaultExploreNeighborhoods)
 
   useEffect(() => {
     async function fetchFeaturedStays() {
@@ -844,6 +765,41 @@ export default function JLMCollectiveHomePage() {
 
     fetchFeaturedStays()
   }, [])
+
+  useEffect(() => {
+    async function fetchPopularNeighborhoods() {
+      if (!isSupabaseConfigured || !supabase) return
+
+      const { data, error } = await supabase.rpc('popular_neighborhoods', {
+        result_limit: 6,
+        lookback_days: 30,
+      })
+
+      if (error || !data?.length) return
+
+      const liveNeighborhoods = data
+        .map((row) => row.neighborhood)
+        .filter(Boolean)
+
+      const mergedNeighborhoods = [
+        ...liveNeighborhoods,
+        ...defaultExploreNeighborhoods,
+      ].filter((item, index, items) => items.indexOf(item) === index)
+
+      setPopularNeighborhoods(mergedNeighborhoods.slice(0, 6))
+    }
+
+    fetchPopularNeighborhoods()
+  }, [])
+
+  const exploreBlocks = [
+    {
+      label: 'Neighbourhoods',
+      title: 'Popular areas',
+      items: popularNeighborhoods.slice(0, 6),
+    },
+    ...baseExploreBlocks,
+  ]
 
   return (
     <div className="min-h-screen bg-[#F8F5F2] text-[#2D2D2D] antialiased">
@@ -921,6 +877,11 @@ export default function JLMCollectiveHomePage() {
                     <a
                       key={item}
                       href={getExploreHref(block.label, item)}
+                      onClick={() => {
+                        if (block.label === 'Neighbourhoods') {
+                          void trackNeighborhoodSearch(item, 'explore_block')
+                        }
+                      }}
                       className="rounded-full bg-stone-100 px-3 py-1.5 text-xs font-semibold text-stone-800 hover:bg-stone-200"
                     >
                       {item}
@@ -986,7 +947,7 @@ export default function JLMCollectiveHomePage() {
               </div>
             </div>
 
-            <NeighborhoodSearch />
+            <NeighborhoodSearch popularNeighborhoods={popularNeighborhoods.slice(0, 4)} />
 
 <div className="grid gap-5 md:grid-cols-3">
               {featuredStays.map((stay) => (

@@ -20,7 +20,16 @@ export async function POST(request: Request) {
     )
   }
 
-  const input = (await request.json()) as ListingAssistantRequest
+  let input: ListingAssistantRequest
+
+  try {
+    input = (await request.json()) as ListingAssistantRequest
+  } catch {
+    return NextResponse.json(
+      { error: 'The listing details could not be read. Please try again.' },
+      { status: 400 },
+    )
+  }
 
   const response = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
@@ -75,8 +84,38 @@ export async function POST(request: Request) {
   })
 
   if (!response.ok) {
+    const errorBody = await response.json().catch(() => null)
+    const upstreamMessage =
+      typeof errorBody?.error?.message === 'string'
+        ? errorBody.error.message
+        : ''
+
+    if (response.status === 401) {
+      return NextResponse.json(
+        { error: 'The OpenAI API key is not accepted. Please check the key in Vercel.' },
+        { status: 502 },
+      )
+    }
+
+    if (response.status === 429) {
+      return NextResponse.json(
+        {
+          error:
+            upstreamMessage.toLowerCase().includes('quota') ||
+            upstreamMessage.toLowerCase().includes('billing')
+              ? 'The OpenAI account has no available API credit or billing enabled.'
+              : 'AI listing help is busy right now. Please try again in a moment.',
+        },
+        { status: 503 },
+      )
+    }
+
     return NextResponse.json(
-      { error: 'Unable to generate listing copy right now.' },
+      {
+        error:
+          upstreamMessage ||
+          'Unable to generate listing copy right now.',
+      },
       { status: 500 },
     )
   }
@@ -96,6 +135,12 @@ export async function POST(request: Request) {
     )
   }
 
-  return NextResponse.json(JSON.parse(outputText))
+  try {
+    return NextResponse.json(JSON.parse(outputText))
+  } catch {
+    return NextResponse.json(
+      { error: 'The AI response could not be read. Please try again.' },
+      { status: 500 },
+    )
+  }
 }
-
