@@ -50,7 +50,7 @@ export default async function HostDashboardPage() {
           <SummaryCard label="In review" value={reviewCount} />
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-4">
           <Link
             href="/host/dashboard/listings"
             className="rounded-3xl bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
@@ -69,6 +69,16 @@ export default async function HostDashboardPage() {
             <h2 className="mt-2 text-xl font-bold text-stone-950">Messages</h2>
             <p className="mt-2 text-sm leading-6 text-stone-600">
               Reply to guest enquiries and keep every conversation tied to its listing.
+            </p>
+          </Link>
+          <Link
+            href="/host/dashboard/payments"
+            className="rounded-3xl bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+          >
+            <p className="text-sm font-semibold text-stone-500">Get paid</p>
+            <h2 className="mt-2 text-xl font-bold text-stone-950">Payment setup</h2>
+            <p className="mt-2 text-sm leading-6 text-stone-600">
+              Add payout details separately from your stay listing so booking money can be sent to you.
             </p>
           </Link>
           <div className="rounded-3xl bg-white p-6 shadow-sm">

@@ -18,9 +18,9 @@ export default async function HostPaymentsPage() {
 
         <div className="mb-8">
           <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Host dashboard</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-stone-950">Payments</h1>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-stone-950">Payment setup</h1>
           <p className="mt-2 max-w-2xl text-stone-600">
-            JLM Collective handles online checkout for guests. You only need to complete payout setup, and you can also offer direct-to-host payment if you want.
+            This is separate from listing your stay. Add your payment details here so you can receive payouts from bookings, and choose whether to also offer direct-to-host payment.
           </p>
         </div>
 
@@ -28,9 +28,9 @@ export default async function HostPaymentsPage() {
           <form action={updateHostPaymentPreferences} className="rounded-3xl bg-white p-6 shadow-sm">
             <div className="space-y-5">
               <div className="rounded-2xl bg-[#F8F5F2] p-4">
-                <p className="font-bold text-stone-950">Online checkout</p>
+                <p className="font-bold text-stone-950">Receive online payments</p>
                 <p className="mt-1 text-sm leading-6 text-stone-600">
-                  Guests will be able to pay JLM Collective online, and host payouts will be sent after the relevant booking milestone. At launch there is no JLM Collective commission; the host absorbs the payment processing fee.
+                  Guests will be able to pay JLM Collective online, and your payout will be sent after the relevant booking milestone. At launch there is no JLM Collective commission; the host absorbs the payment processing fee.
                 </p>
               </div>
 
@@ -85,6 +85,9 @@ export default async function HostPaymentsPage() {
           <aside className="space-y-4">
             <div className="rounded-3xl bg-white p-5 shadow-sm">
               <h2 className="text-lg font-bold text-stone-950">Payout setup</h2>
+              <p className="mt-2 text-sm leading-6 text-stone-600">
+                Add your legal and bank details here when payout setup opens. This is not part of the stay listing form.
+              </p>
               <div className="mt-4 space-y-3 text-sm">
                 <TextStatusRow label="Status" value={formatPayoutStatus(profile?.payout_setup_status)} />
                 <StatusRow label="Payout profile created" value={Boolean(profile?.stripe_account_id)} />
@@ -96,7 +99,7 @@ export default async function HostPaymentsPage() {
             <div className="rounded-3xl bg-white p-5 shadow-sm">
               <h2 className="text-lg font-bold text-stone-950">What comes next</h2>
               <p className="mt-3 text-sm leading-6 text-stone-600">
-                Next, JLM Collective will add a simple guided payout setup so hosts can receive funds without needing to manage a separate Stripe account themselves.
+                Next, JLM Collective will add a simple guided setup here so hosts can enter the details needed to receive money without handling that during the listing process.
               </p>
             </div>
           </aside>
