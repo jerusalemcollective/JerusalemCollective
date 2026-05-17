@@ -45,7 +45,7 @@ export default function SavedPage() {
         <div className="rounded-3xl bg-white p-8 text-center shadow-sm">
           <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center">
             <img 
-              src="/icons/yemin-moshe-save-512.png" 
+              src="/icons/yemin-moshe-save-ui-large.webp" 
               alt="" 
               className="h-20 w-20 object-contain opacity-40"
             />

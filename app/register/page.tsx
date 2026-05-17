@@ -116,7 +116,7 @@ function RegisterForm() {
         <div className="mb-8 text-center">
           <Link href="/" className="inline-block">
             <img 
-              src="/logos/JLM_Collective_Primary_Horizontal_Terracotta_Transparent.png" 
+              src="/logos/JLM_Collective_Primary_Horizontal_Terracotta_UI.webp" 
               alt="JLM Collective" 
               className="h-10"
             />

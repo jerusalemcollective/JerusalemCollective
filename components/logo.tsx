@@ -1,8 +1,8 @@
 import Image from 'next/image'
 
 const logoMap = {
-  header: '/logos/JLM_Collective_Primary_Horizontal_Terracotta_Transparent.png',
-  footer: '/logos/JLM_Collective_Horizontal_Black_Transparent.png',
+  header: '/logos/JLM_Collective_Primary_Horizontal_Terracotta_UI.webp',
+  footer: '/logos/JLM_Collective_Horizontal_Black_UI.webp',
   icon: '/logos/JLM_Collective_Icon_Terracotta_Transparent.png',
   wordmarkBlack: '/logos/JLM_Collective_Wordmark_Black_Transparent.png',
 }

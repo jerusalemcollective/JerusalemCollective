@@ -6,8 +6,8 @@ import { createClient } from '@/lib/supabase/client'
 
 const JLMLogo = ({ variant = 'terracotta', className = '' }) => {
   const src = variant === 'terracotta' 
-    ? '/logos/JLM_Collective_Primary_Horizontal_Terracotta_Transparent.png'
-    : '/logos/JLM_Collective_Horizontal_Black_Transparent.png'
+    ? '/logos/JLM_Collective_Primary_Horizontal_Terracotta_UI.webp'
+    : '/logos/JLM_Collective_Horizontal_Black_UI.webp'
   
   return (
     <img 
@@ -20,7 +20,7 @@ const JLMLogo = ({ variant = 'terracotta', className = '' }) => {
 
 const SavedStayIcon = ({ className = '' }: { className?: string }) => (
   <img
-    src="/icons/yemin-moshe-save-128.png"
+    src="/icons/yemin-moshe-save-ui.webp"
     alt=""
     aria-hidden="true"
     className={`rounded-full object-cover ${className}`}
@@ -220,7 +220,7 @@ export function Header() {
                         onClick={() => setShowDropdown(false)}
                         className="flex items-center gap-3 px-4 py-2.5 text-sm text-stone-700 transition hover:bg-stone-50"
                       >
-                        <img src="/icons/yemin-moshe-save-128.png" alt="" className="h-5 w-5 rounded-full object-cover" />
+                        <img src="/icons/yemin-moshe-save-ui.webp" alt="" className="h-5 w-5 rounded-full object-cover" />
                         Saved
                       </Link>
                       <Link

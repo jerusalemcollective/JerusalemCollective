@@ -1,19 +1,18 @@
 'use client'
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { DayPicker } from 'react-day-picker'
 import { format, addDays } from 'date-fns'
 import { isSupabaseConfigured, supabase } from '@/lib/supabaseClient'
 import { sampleListings } from '@/lib/sample-listings'
-import 'react-day-picker/dist/style.css'
+import { Calendar } from '@/components/ui/calendar'
 
 /* ---------- Shared UI primitives ---------- */
 
 const JLMLogo = ({ className = '', variant = 'terracotta' }) => {
   const src =
     variant === 'black'
-      ? '/logos/JLM_Collective_Horizontal_Black_Transparent.png'
-      : '/logos/JLM_Collective_Primary_Horizontal_Terracotta_Transparent.png'
+      ? '/logos/JLM_Collective_Horizontal_Black_UI.webp'
+      : '/logos/JLM_Collective_Primary_Horizontal_Terracotta_UI.webp'
 
   return (
     <img
@@ -27,10 +26,10 @@ const JLMLogo = ({ className = '', variant = 'terracotta' }) => {
 const SavedStayIcon = ({ className = '' }) => {
   return (
     <img
-      src="/icons/yemin-moshe-save.png"
+      src="/icons/yemin-moshe-save-ui.webp"
       alt=""
       aria-hidden="true"
-      className={`object-contain ${className}`}
+      className={`rounded-full object-cover ${className}`}
     />
   )
 }
@@ -93,6 +92,7 @@ const ShieldIcon = ({ className = '' }) => (
 
 // All Jerusalem neighborhoods for autocomplete
 const allNeighborhoods = [
+  // Popular areas
   'Ramat Eshkol',
   'Gush 80',
   'Jerusalem Estates',
@@ -128,6 +128,49 @@ const allNeighborhoods = [
   'Neve Granot',
   'Neve Shaanan',
   'Beit Hakerem',
+  // Haredi/Religious neighborhoods
+  'Sorotzkin',
+  'Mattersdorf',
+  'Panim Meirot',
+  'Kiryat Belz',
+  'Kiryat Sanz',
+  'Zichron Moshe',
+  'Bucharim',
+  'Batei Ungarin',
+  'Batei Warsaw',
+  'Ezras Torah',
+  'Unsdorf',
+  'Kiryat Itri',
+  'Ramat Shlomo',
+  'Beitar Illit',
+  'Ramot',
+  'Ramot Aleph',
+  'Ramot Bet',
+  'Ramot Gimmel',
+  'Ramot Dalet',
+  'Kiryat Mattersdorf',
+  'Sanhedria Murchevet',
+  'Schneller',
+  'Makor Baruch',
+  'Kerem Avraham',
+  'Kiryat Zanz',
+  'Mekor Chaim',
+  'Ir Ganim',
+  'Kiryat Menachem',
+  'Kiryat Yovel',
+  'Givat Mordechai',
+  'Rasko',
+  'Shikun Chabad',
+  // Streets/Areas (no duplicates)
+  'Bar Ilan',
+  'Shmuel Hanavi',
+  'Malchei Yisrael',
+  'Strauss',
+  'Yaffo',
+  'King George',
+  'Ben Yehuda',
+  'Emek Refaim',
+  'Azza',
 ]
 
 // Top 4 browsed neighborhoods (can be dynamic from analytics later)
@@ -210,19 +253,29 @@ const SearchForm = () => {
   const [children, setChildren] = useState(0)
   const [showGuestPanel, setShowGuestPanel] = useState(false)
   const [isLoadingPlaces, setIsLoadingPlaces] = useState(false)
+  const [shouldLoadPlaces, setShouldLoadPlaces] = useState(false)
   
   const neighbourhoodRef = useRef(null)
   const calendarRef = useRef(null)
   const guestRef = useRef(null)
-  const autocompleteService = useRef(null)
+  const placesLibrary = useRef(null)
   const sessionToken = useRef(null)
+  const requestIdRef = useRef(0)
 
-  // Initialize Google Places Autocomplete
+  // Load Google Places only once the visitor starts using the neighbourhood field.
   useEffect(() => {
-    const initGooglePlaces = () => {
-      if (window.google && window.google.maps && window.google.maps.places) {
-        autocompleteService.current = new window.google.maps.places.AutocompleteService()
-        sessionToken.current = new window.google.maps.places.AutocompleteSessionToken()
+    if (!shouldLoadPlaces) return
+
+    const initGooglePlaces = async () => {
+      try {
+        if (window.google && window.google.maps) {
+          // Use the new importLibrary method for async loading
+          const places = await window.google.maps.importLibrary('places')
+          placesLibrary.current = places
+          sessionToken.current = new places.AutocompleteSessionToken()
+        }
+      } catch (error) {
+        console.log('[v0] Google Places library not available, using local fallback')
       }
     }
 
@@ -233,13 +286,15 @@ const SearchForm = () => {
       const existingScript = document.querySelector('script[src*="maps.googleapis.com"]')
       if (!existingScript) {
         const script = document.createElement('script')
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}&libraries=places`
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}&libraries=places&loading=async`
         script.async = true
         script.onload = initGooglePlaces
         document.head.appendChild(script)
+      } else {
+        existingScript.addEventListener('load', initGooglePlaces)
       }
     }
-  }, [])
+  }, [shouldLoadPlaces])
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -258,43 +313,101 @@ const SearchForm = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Fetch Google Places predictions
-  const fetchPlacePredictions = useCallback((input) => {
+  // Fetch Google Places predictions - Google Places is primary source, local neighborhoods as fallback
+  const fetchPlacePredictions = useCallback(async (input) => {
     if (!input || input.length < 2) {
       setPlacePredictions([])
       return
     }
 
-    // First filter local neighborhoods
+    // Local neighborhoods as fallback
     const localMatches = allNeighborhoods.filter(n => 
       n.toLowerCase().includes(input.toLowerCase())
     )
 
-    // If Google Places is available, fetch additional suggestions
-    if (autocompleteService.current) {
+    // Google Places is the primary source (using new AutocompleteSuggestion API)
+    if (placesLibrary.current?.AutocompleteSuggestion) {
       setIsLoadingPlaces(true)
-      autocompleteService.current.getPlacePredictions(
-        {
-          input: input + ', Jerusalem, Israel',
+      
+      // Increment request ID to handle race conditions
+      const currentRequestId = ++requestIdRef.current
+      
+      try {
+        // Create a Circle for locationBias using the Google Maps API
+        const jerusalemCircle = new window.google.maps.Circle({
+          center: { lat: 31.7683, lng: 35.2137 },
+          radius: 25000, // 25km radius to cover greater Jerusalem area
+        })
+        
+        const request = {
+          input: input + ' Jerusalem',  // Append Jerusalem to help with local results
           sessionToken: sessionToken.current,
-          componentRestrictions: { country: 'il' },
-          types: ['(regions)'],
-        },
-        (predictions, status) => {
-          setIsLoadingPlaces(false)
-          if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
-            // Combine local neighborhoods with Google predictions, avoiding duplicates
-            const googlePlaces = predictions
-              .map(p => p.description.replace(', Israel', '').replace(', Jerusalem', ''))
-              .filter(p => !localMatches.some(l => l.toLowerCase() === p.toLowerCase()))
-            setPlacePredictions([...localMatches, ...googlePlaces].slice(0, 8))
-          } else {
-            setPlacePredictions(localMatches)
-          }
+          // Bias results toward Jerusalem area using Circle
+          locationBias: jerusalemCircle,
+          // Restrict to Israel
+          includedRegionCodes: ['il'],
+          // Language preference
+          language: 'en',
         }
-      )
+        
+        const { suggestions } = await placesLibrary.current.AutocompleteSuggestion.fetchAutocompleteSuggestions(request)
+        
+        // Check if this request is still the latest
+        if (currentRequestId !== requestIdRef.current) return
+        
+        setIsLoadingPlaces(false)
+        
+        if (suggestions && suggestions.length > 0) {
+          // Google Places results are primary - format them nicely
+          const googlePlaces = suggestions
+            .filter(s => s.placePrediction)
+            .map(s => {
+              const prediction = s.placePrediction
+              // Get the text representation
+              let description = prediction.text?.toString() || prediction.mainText?.toString() || ''
+              
+              // Clean up the description - remove redundant ", Israel" and format nicely
+              description = description
+                .replace(/, Israel$/, '')
+                .replace(/, ישראל$/, '')
+              
+              // If it's clearly in Jerusalem, we can keep it shorter
+              if (description.includes('Jerusalem') || description.includes('ירושלים')) {
+                description = description
+                  .replace(/, Jerusalem District$/, '')
+                  .replace(/, מחוז ירושלים$/, '')
+              }
+              
+              return {
+                text: description,
+                isGoogle: true,
+                placeId: prediction.placeId,
+              }
+            })
+          
+          // Add local matches that aren't already in Google results
+          const localOnly = localMatches
+            .filter(local => !googlePlaces.some(g => 
+              g.text.toLowerCase().includes(local.toLowerCase()) ||
+              local.toLowerCase().includes(g.text.toLowerCase().split(',')[0])
+            ))
+            .map(text => ({ text, isGoogle: false }))
+          
+          // Google results first, then local fallbacks
+          setPlacePredictions([...googlePlaces, ...localOnly].slice(0, 10))
+        } else {
+          // No Google results - use local neighborhoods
+          setPlacePredictions(localMatches.map(text => ({ text, isGoogle: false })))
+        }
+      } catch (error) {
+        console.log('[v0] Google Places error, using local fallback:', error.message)
+        setIsLoadingPlaces(false)
+        // Fallback to local neighborhoods only
+        setPlacePredictions(localMatches.map(text => ({ text, isGoogle: false })))
+      }
     } else {
-      setPlacePredictions(localMatches)
+      // No Google Places available - use local neighborhoods only
+      setPlacePredictions(localMatches.map(text => ({ text, isGoogle: false })))
     }
   }, [])
 
@@ -348,8 +461,12 @@ const SearchForm = () => {
               onChange={(e) => {
                 setNeighbourhood(e.target.value)
                 setShowNeighbourhoodSuggestions(true)
+                setShouldLoadPlaces(true)
               }}
-              onFocus={() => setShowNeighbourhoodSuggestions(true)}
+              onFocus={() => {
+                setShowNeighbourhoodSuggestions(true)
+                setShouldLoadPlaces(true)
+              }}
               placeholder="Start typing a neighbourhood"
               className="mt-1 w-full border-0 bg-transparent p-0 text-sm text-stone-900 placeholder:text-stone-500 focus:outline-none focus:ring-0"
             />
@@ -363,13 +480,14 @@ const SearchForm = () => {
               )}
               {placePredictions.map((place, idx) => (
                 <button
-                  key={`${place}-${idx}`}
+                  key={`${place.text || place}-${idx}`}
                   onClick={() => {
-                    setNeighbourhood(place)
+                    const selectedText = place.text || place
+                    setNeighbourhood(selectedText)
                     setShowNeighbourhoodSuggestions(false)
                     // Reset session token for next search
-                    if (window.google?.maps?.places) {
-                      sessionToken.current = new window.google.maps.places.AutocompleteSessionToken()
+                    if (placesLibrary.current?.AutocompleteSessionToken) {
+                      sessionToken.current = new placesLibrary.current.AutocompleteSessionToken()
                     }
                   }}
                   className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-stone-700 transition hover:bg-stone-50"
@@ -378,10 +496,10 @@ const SearchForm = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  <span className="truncate">{place}</span>
+                  <span className="truncate">{place.text || place}</span>
                 </button>
               ))}
-              {neighbourhood && !placePredictions.some(p => p.toLowerCase() === neighbourhood.toLowerCase()) && (
+              {neighbourhood && !placePredictions.some(p => (p.text || p).toLowerCase() === neighbourhood.toLowerCase()) && (
                 <button
                   onClick={() => {
                     setShowNeighbourhoodSuggestions(false)
@@ -415,86 +533,6 @@ const SearchForm = () => {
           {/* Calendar Dropdown */}
           {showCalendar && (
             <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-2xl shadow-stone-300/40 md:left-1/2 md:right-auto md:w-[390px] md:-translate-x-1/2">
-              <style>{`
-                .jlm-lux-calendar .rdp {
-                  margin: 0;
-                }
-                .jlm-lux-calendar .rdp-months {
-                  justify-content: center;
-                }
-                .jlm-lux-calendar .rdp-month {
-                  width: 100%;
-                }
-                .jlm-lux-calendar .rdp-caption {
-                  margin-bottom: 14px;
-                  padding: 0 4px;
-                }
-                .jlm-lux-calendar .rdp-caption_label {
-                  color: #1c1917;
-                  font-size: 16px;
-                  font-weight: 800;
-                  letter-spacing: 0;
-                }
-                .jlm-lux-calendar .rdp-nav_button {
-                  align-items: center;
-                  border: 1px solid #e7e5e4;
-                  border-radius: 999px;
-                  color: #57534e;
-                  display: inline-flex;
-                  height: 34px;
-                  justify-content: center;
-                  width: 34px;
-                }
-                .jlm-lux-calendar .rdp-nav_button:hover {
-                  background: #fafaf9;
-                  border-color: #c76f55;
-                  color: #c76f55;
-                }
-                .jlm-lux-calendar .rdp-table {
-                  width: 100%;
-                }
-                .jlm-lux-calendar .rdp-head_cell {
-                  color: #a8a29e;
-                  font-size: 10px;
-                  font-weight: 800;
-                  padding-bottom: 10px;
-                  text-transform: uppercase;
-                }
-                .jlm-lux-calendar .rdp-cell {
-                  height: 44px;
-                  padding: 2px 0;
-                }
-                .jlm-lux-calendar .rdp-button {
-                  border-radius: 999px;
-                  color: #292524;
-                  font-size: 14px;
-                  font-weight: 700;
-                  height: 40px;
-                  transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
-                  width: 40px;
-                }
-                .jlm-lux-calendar .rdp-button:hover:not([disabled]):not(.rdp-day_selected) {
-                  background: #f5f0eb;
-                  color: #9e4f39;
-                  transform: translateY(-1px);
-                }
-                .jlm-lux-calendar .rdp-day_selected:not([disabled]) {
-                  background-color: #c76f55;
-                  color: white;
-                  box-shadow: 0 8px 18px rgba(199,111,85,.26);
-                }
-                .jlm-lux-calendar .rdp-day_selected:hover:not([disabled]) {
-                  background-color: #b55f47;
-                }
-                .jlm-lux-calendar .rdp-day_range_middle {
-                  background-color: #fef3f0;
-                  color: #c76f55;
-                  border-radius: 0;
-                }
-                .jlm-lux-calendar .rdp-day_disabled {
-                  color: #d6d3d1;
-                }
-              `}</style>
               <div className="border-b border-stone-100 bg-[#fbf8f5] px-5 py-4">
                 <p className="text-[11px] font-bold uppercase tracking-widest text-[#c76f55]">Select your stay</p>
                 <div className="mt-3 grid grid-cols-2 gap-2">
@@ -513,44 +551,53 @@ const SearchForm = () => {
                 </div>
               </div>
 
-              <div className="jlm-lux-calendar p-5">
-                <DayPicker
+              <div className="p-5">
+                <Calendar
                   mode="range"
                   selected={dateRange}
                   onSelect={(range) => {
+                    // If user clicks the same date twice or clicks on the "from" date, reset to just that date
+                    if (range?.from && range?.to && range.from.getTime() === range.to.getTime()) {
+                      setDateRange({ from: range.from, to: undefined })
+                      return
+                    }
                     setDateRange(range || { from: undefined, to: undefined })
-                    if (range?.to) {
-                      setShowCalendar(false)
+                    // Only auto-close when we have a proper range (different dates)
+                    if (range?.from && range?.to && range.from.getTime() !== range.to.getTime()) {
+                      setTimeout(() => setShowCalendar(false), 300)
                     }
                   }}
                   numberOfMonths={1}
                   disabled={{ before: new Date() }}
                   showOutsideDays={false}
+                  className="w-full"
                 />
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 border-t border-stone-100 bg-white px-5 py-4">
-                <button
-                  onClick={() => {
-                    setDateRange({ from: new Date(), to: addDays(new Date(), 7) })
-                    setShowCalendar(false)
-                  }}
-                  className="rounded-full bg-stone-100 px-3 py-2 text-xs font-bold text-stone-700 hover:bg-stone-200"
-                >
-                  1 week
-                </button>
-                <button
-                  onClick={() => {
-                    setDateRange({ from: new Date(), to: addDays(new Date(), 14) })
-                    setShowCalendar(false)
-                  }}
-                  className="rounded-full bg-stone-100 px-3 py-2 text-xs font-bold text-stone-700 hover:bg-stone-200"
-                >
-                  2 weeks
-                </button>
+              <div className="flex items-center justify-between border-t border-stone-100 bg-white px-5 py-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setDateRange({ from: new Date(), to: addDays(new Date(), 7) })
+                      setTimeout(() => setShowCalendar(false), 300)
+                    }}
+                    className="rounded-full bg-stone-100 px-3 py-2 text-xs font-bold text-stone-700 hover:bg-stone-200"
+                  >
+                    1 week
+                  </button>
+                  <button
+                    onClick={() => {
+                      setDateRange({ from: new Date(), to: addDays(new Date(), 14) })
+                      setTimeout(() => setShowCalendar(false), 300)
+                    }}
+                    className="rounded-full bg-stone-100 px-3 py-2 text-xs font-bold text-stone-700 hover:bg-stone-200"
+                  >
+                    2 weeks
+                  </button>
+                </div>
                 <button
                   onClick={() => setDateRange({ from: undefined, to: undefined })}
-                  className="ml-auto text-xs font-bold text-stone-500 hover:text-stone-800"
+                  className="text-xs font-bold text-stone-500 hover:text-stone-800"
                 >
                   Clear
                 </button>
@@ -821,7 +868,7 @@ export default function JLMCollectiveHomePage() {
 <SearchForm />
 
           <a
-            href="#map"
+            href="/stays?view=map"
             className="mt-6 inline-flex items-center gap-2 rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-semibold text-stone-800 shadow-sm hover:border-stone-500"
           >
             <MapPinIcon className="text-[#c76f55]" />
@@ -1041,8 +1088,8 @@ export default function JLMCollectiveHomePage() {
           <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-3">
-                <div className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-stone-200 bg-[#F8F5F2]">
-                  <SavedStayIcon className="h-5 w-5" />
+                <div className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full">
+                  <SavedStayIcon className="h-full w-full" />
                 </div>
 
                 <div>

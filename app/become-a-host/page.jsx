@@ -771,7 +771,7 @@ async function handleSubmit() {
         <div className="mb-10 grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
           <div>
             <img
-              src="/logos/JLM_Collective_Primary_Horizontal_Terracotta_Transparent.png"
+              src="/logos/JLM_Collective_Primary_Horizontal_Terracotta_UI.webp"
               alt="JLM Collective"
               className="h-14 w-auto"
             />

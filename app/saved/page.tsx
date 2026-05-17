@@ -5,7 +5,7 @@ export default function SavedPage() {
     <main className="min-h-screen bg-[#F8F5F2] px-5 py-12 text-[#252525]">
       <section className="mx-auto max-w-2xl rounded-3xl border border-stone-200 bg-white p-8 text-center shadow-sm">
         <img
-          src="/icons/yemin-moshe-save.png"
+          src="/icons/yemin-moshe-save-ui-large.webp"
           alt=""
           aria-hidden="true"
           className="mx-auto h-12 w-12 object-contain"

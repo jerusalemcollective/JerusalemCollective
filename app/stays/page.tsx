@@ -57,8 +57,8 @@ function StaysPageContent() {
   const activeFeature = searchParams.get('feature') || searchParams.get('type') || searchParams.get('season')
   const [view, setView] = useState<'list' | 'map'>(initialView)
   const [selectedArea, setSelectedArea] = useState(initialArea)
-  const [listings, setListings] = useState<Listing[]>([])
-  const [loading, setLoading] = useState(true)
+  const [listings, setListings] = useState<Listing[]>(sampleListings)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     async function fetchListings() {
