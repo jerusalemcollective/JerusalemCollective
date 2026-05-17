@@ -173,6 +173,7 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
   const [inputValue, setInputValue] = useState(value || '')
   const [isValidated, setIsValidated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
 
   // Sync external value changes
   useEffect(() => {
@@ -186,6 +187,7 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
     if (!apiKey) {
       console.log('[v0] No Google Maps API key found')
+      setLoadError('Address lookup is not configured yet. You can still type the address manually.')
       setIsLoading(false)
       return
     }
@@ -227,6 +229,7 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
         return true
       } catch (err) {
         console.log('[v0] Error initializing autocomplete:', err)
+        setLoadError('Address lookup is unavailable right now. You can still type the address manually.')
         setIsLoading(false)
         return false
       }
@@ -255,6 +258,7 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
     }
     script.onerror = () => {
       console.log('[v0] Failed to load Google Maps script')
+      setLoadError('Address lookup could not load. You can still type the address manually.')
       setIsLoading(false)
     }
     document.head.appendChild(script)
@@ -277,7 +281,6 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
         placeholder={isLoading ? 'Loading address lookup...' : placeholder}
         className={className}
         autoComplete="off"
-        disabled={isLoading}
       />
       {inputValue && isValidated && (
         <div className="mt-1 flex items-center gap-1 text-xs text-green-600">
@@ -290,6 +293,11 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
       {inputValue && !isValidated && !isLoading && (
         <div className="mt-1 text-xs text-stone-500">
           Select an address from the dropdown to validate
+        </div>
+      )}
+      {loadError && (
+        <div className="mt-1 text-xs text-amber-700">
+          {loadError}
         </div>
       )}
     </div>
@@ -368,6 +376,8 @@ const steps = [
   'Confirm',
 ]
 
+const minimumPhotoCount = 5
+
 export default function BecomeAHostPage() {
   const [step, setStep] = useState(0)
   const [form, setForm] = useState(initialForm)
@@ -376,6 +386,7 @@ export default function BecomeAHostPage() {
   const [error, setError] = useState('')
   const [hostId, setHostId] = useState(null)
   const [checkingHost, setCheckingHost] = useState(true)
+  const [accountUser, setAccountUser] = useState(null)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
   const [aiSuggestion, setAiSuggestion] = useState(null)
@@ -403,6 +414,22 @@ export default function BecomeAHostPage() {
       try {
         const hostProfile = await ensureHostProfile(supabase, user)
         setHostId(hostProfile.id)
+        setAccountUser(user)
+        setForm((current) => ({
+          ...current,
+          host_name:
+            user.user_metadata?.full_name ||
+            user.user_metadata?.name ||
+            current.host_name,
+          email: user.email || current.email,
+          display_name:
+            current.display_name ||
+            hostProfile.display_name ||
+            user.user_metadata?.full_name?.split(' ')[0] ||
+            user.user_metadata?.name?.split(' ')[0] ||
+            user.email?.split('@')[0] ||
+            '',
+        }))
       } catch (profileError) {
         console.error('Could not load host profile:', profileError)
         setError('We could not load your host profile. Please sign in again and retry.')
@@ -487,13 +514,22 @@ export default function BecomeAHostPage() {
   function nextStep() {
     setError('')
 
-    if (step === 0 && (!form.host_name || !form.email)) {
-      setError('Please add your name and email before continuing.')
+    if (step === 0 && !form.display_name) {
+      setError('Please add the public display name guests should see.')
       return
     }
 
 if (step === 0 && !form.phone && !form.whatsapp_number) {
       setError('Please provide either a phone number or WhatsApp number.')
+      return
+    }
+
+    if (
+      step === 0 &&
+      form.host_type === 'representative' &&
+      !form.has_permission
+    ) {
+      setError('Please confirm you have permission to submit this stay.')
       return
     }
 
@@ -509,6 +545,11 @@ if (step === 2 && (!form.area || !form.area.trim())) {
 
     if (step === 2 && (!form.exact_address || !form.exact_address.trim())) {
       setError('Please enter your address before continuing.')
+      return
+    }
+
+    if (step === 6 && form.photos.length < minimumPhotoCount) {
+      setError(`Please upload at least ${minimumPhotoCount} photos before continuing.`)
       return
     }
 
@@ -814,20 +855,10 @@ async function handleSubmit() {
             {step === 0 && (
               <StepShell
                 eyebrow="Contact details"
-                title="Add your contact details"
-                description="These details are used for listing communication and are not shown publicly."
+                title="Set your public host details"
+                description="Your account already provides your private name and email. Add the public name guests should see and the best number for listing communication."
               >
                 <div className="grid gap-5 md:grid-cols-2">
-<Field label="Your full name" required>
-                    <input
-                      value={form.host_name}
-                      onChange={(e) => updateField('host_name', e.target.value)}
-                      type="text"
-                      placeholder="Full name (private)"
-                      className={inputClass}
-                    />
-                  </Field>
-
                   <Field label="Public display name" required>
                     <input
                       value={form.display_name}
@@ -839,29 +870,7 @@ async function handleSubmit() {
                     <p className="mt-1 text-xs text-stone-500">This is what guests will see (e.g. "David" or "Jerusalem Stays Ltd")</p>
                   </Field>
 
-                  <div className="md:col-span-2">
-                    <label className="flex cursor-pointer items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={form.show_full_name}
-                        onChange={(e) => updateField('show_full_name', e.target.checked)}
-                        className="h-5 w-5 rounded border-stone-300 text-[#c76f55] focus:ring-[#c76f55]"
-                      />
-                      <span className="text-sm text-stone-700">Show my full name publicly instead of display name</span>
-                    </label>
-                  </div>
-
-                  <Field label="Email" required>
-                    <input
-                      value={form.email}
-                      onChange={(e) => updateField('email', e.target.value)}
-                      type="email"
-                      placeholder="you@example.com"
-                      className={inputClass}
-                    />
-                  </Field>
-
-<Field label="Phone">
+                  <Field label="Phone">
                     <input
                       value={form.phone}
                       onChange={(e) => updateField('phone', e.target.value)}
@@ -886,6 +895,12 @@ async function handleSubmit() {
                   <div className="md:col-span-2">
                     <p className="text-xs text-stone-500">* At least one contact number (Phone or WhatsApp) is required</p>
                   </div>
+
+                  <div className="md:col-span-2 rounded-2xl bg-[#F8F5F2] p-4 text-sm text-stone-600">
+                    <p>
+                      Signed in as <span className="font-semibold text-stone-900">{accountUser?.email || form.email}</span>
+                    </p>
+                  </div>
                 </div>
 
                 <div className="mt-6">
@@ -903,6 +918,7 @@ async function handleSubmit() {
                       onClick={() => {
                         updateField('host_type', 'owner')
                         updateField('host_role', '')
+                        updateField('has_permission', false)
                       }}
                     />
 
@@ -927,17 +943,19 @@ async function handleSubmit() {
                     </div>
                   )}
 
-                  <label className="mt-6 flex cursor-pointer items-start gap-3">
-                    <input
-                      type="checkbox"
-                      checked={form.has_permission}
-                      onChange={(e) => updateField('has_permission', e.target.checked)}
-                      className="mt-1 h-5 w-5 rounded border-stone-300 text-[#c76f55] focus:ring-[#c76f55]"
-                    />
-                    <span className="text-sm text-stone-700">
-                      I confirm I have permission to submit this stay.
-                    </span>
-                  </label>
+                  {form.host_type === 'representative' && (
+                    <label className="mt-6 flex cursor-pointer items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={form.has_permission}
+                        onChange={(e) => updateField('has_permission', e.target.checked)}
+                        className="mt-1 h-5 w-5 rounded border-stone-300 text-[#c76f55] focus:ring-[#c76f55]"
+                      />
+                      <span className="text-sm text-stone-700">
+                        I confirm I have permission to submit this stay.
+                      </span>
+                    </label>
+                  )}
                 </div>
               </StepShell>
             )}
@@ -1178,9 +1196,9 @@ async function handleSubmit() {
               <StepShell
                 eyebrow="Photos"
                 title="Add photos of your stay"
-                description="Upload photos to showcase your property. You'll be able to manage availability and block out dates from your Host Portal after approval."
+                description={`Upload at least ${minimumPhotoCount} clear photos to showcase your property. You'll be able to manage availability and block out dates from your Host Portal after approval.`}
               >
-                <Field label="Upload photos (JPG, PNG, WebP - max 5MB each)">
+                <Field label={`Upload photos (minimum ${minimumPhotoCount}, JPG, PNG, WebP - max 5MB each)`}>
                   <div className="space-y-4">
                     <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-stone-300 bg-[#F8F5F2] p-8 transition hover:border-[#c76f55] hover:bg-[#F5F0EB]">
                       <svg className="mb-3 h-10 w-10 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1250,7 +1268,12 @@ async function handleSubmit() {
                     )}
 
                     <p className="text-xs text-stone-500">
-                      {form.photos.length} photo{form.photos.length !== 1 ? 's' : ''} selected
+                    {form.photos.length} photo{form.photos.length !== 1 ? 's' : ''} selected
+                    {form.photos.length < minimumPhotoCount && (
+                      <span className="ml-2 text-amber-700">
+                        {minimumPhotoCount - form.photos.length} more required
+                      </span>
+                    )}
                     </p>
                   </div>
                 </Field>
