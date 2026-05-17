@@ -3,6 +3,11 @@
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from '@/lib/admin'
 
+export type AdminGrantState = {
+  status: 'idle' | 'success' | 'error'
+  message: string
+}
+
 export async function updateApplicationStatus(formData: FormData) {
   const applicationId = String(formData.get('applicationId') || '')
   const status = String(formData.get('status') || '')
@@ -166,4 +171,38 @@ export async function updateReviewApproval(formData: FormData) {
   if (error) throw error
   revalidatePath('/admin')
   revalidatePath('/admin/reviews')
+}
+
+export async function grantAdminByEmail(
+  _previousState: AdminGrantState,
+  formData: FormData,
+): Promise<AdminGrantState> {
+  const email = String(formData.get('email') || '').trim().toLowerCase()
+
+  if (!email || !email.includes('@')) {
+    return {
+      status: 'error',
+      message: 'Please enter a valid email address.',
+    }
+  }
+
+  const { supabase } = await requireAdmin()
+  const { error } = await supabase.rpc('grant_admin_by_email', {
+    target_email: email,
+  })
+
+  if (error) {
+    return {
+      status: 'error',
+      message: error.message,
+    }
+  }
+
+  revalidatePath('/admin')
+  revalidatePath('/admin/admins')
+
+  return {
+    status: 'success',
+    message: `${email} is now an admin.`,
+  }
 }

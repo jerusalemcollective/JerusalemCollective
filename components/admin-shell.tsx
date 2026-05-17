@@ -6,6 +6,7 @@ const adminLinks = [
   { href: '/admin/listings', label: 'Listings' },
   { href: '/admin/hosts', label: 'Hosts' },
   { href: '/admin/reviews', label: 'Reviews' },
+  { href: '/admin/admins', label: 'Admins' },
 ]
 
 export function AdminShell({

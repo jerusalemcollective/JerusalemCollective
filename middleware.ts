@@ -40,16 +40,6 @@ function protectRoute(
   isAuthenticated: boolean,
 ) {
   if (
-    request.nextUrl.pathname.startsWith('/become-a-host') &&
-    !isAuthenticated
-  ) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    url.searchParams.set('redirect', '/become-a-host')
-    return NextResponse.redirect(url)
-  }
-
-  if (
     request.nextUrl.pathname.startsWith('/host/portal') &&
     !isAuthenticated
   ) {
@@ -64,7 +54,6 @@ function protectRoute(
 
 export const config = {
   matcher: [
-    '/become-a-host/:path*',
     '/host/portal/:path*',
   ],
 }
