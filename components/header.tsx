@@ -74,19 +74,27 @@ export function Header() {
             .eq('id', authUser.id)
             .single()
 
-          const { data: ownedStay } = await supabase
-            .from('host_applications')
-            .select('id')
-            .eq('host_id', authUser.id)
-            .limit(1)
-            .maybeSingle()
+          const [{ data: ownedApplication }, { data: ownedListing }] = await Promise.all([
+            supabase
+              .from('host_applications')
+              .select('id')
+              .eq('host_id', authUser.id)
+              .limit(1)
+              .maybeSingle(),
+            supabase
+              .from('listings')
+              .select('id')
+              .eq('host_id', authUser.id)
+              .limit(1)
+              .maybeSingle(),
+          ])
 
           setUser({
             id: authUser.id,
             email: authUser.email,
             avatarUrl: profile?.avatar_url || null,
             fullName: profile?.full_name || null,
-            hasStay: Boolean(ownedStay),
+            hasStay: Boolean(ownedApplication || ownedListing),
             isAdmin: profile?.is_admin || false,
           })
         }

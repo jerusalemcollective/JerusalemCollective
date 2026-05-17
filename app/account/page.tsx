@@ -59,14 +59,22 @@ export default function AccountPage() {
         setPhone(profileData.phone || '')
       }
 
-      const { data: ownedStay } = await supabase
-        .from('host_applications')
-        .select('id')
-        .eq('host_id', user.id)
-        .limit(1)
-        .maybeSingle()
+      const [{ data: ownedApplication }, { data: ownedListing }] = await Promise.all([
+        supabase
+          .from('host_applications')
+          .select('id')
+          .eq('host_id', user.id)
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from('listings')
+          .select('id')
+          .eq('host_id', user.id)
+          .limit(1)
+          .maybeSingle(),
+      ])
 
-      setHasStay(Boolean(ownedStay))
+      setHasStay(Boolean(ownedApplication || ownedListing))
 
       setIsLoading(false)
     }
