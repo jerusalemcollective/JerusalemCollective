@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { isSupabaseConfigured, supabase } from '@/lib/supabaseClient'
+import { ensureHostProfile } from '@/lib/host-profile'
 
 // Jerusalem neighbourhoods for autocomplete suggestions
 const neighbourhoods = [
@@ -303,6 +304,8 @@ const initialForm = {
   phone: '',
   whatsapp_number: '',
   host_type: 'owner',
+  host_role: '',
+  has_permission: false,
 
 apartment_title: '',
   area: '',
@@ -371,10 +374,45 @@ export default function BecomeAHostPage() {
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
+  const [hostId, setHostId] = useState(null)
+  const [checkingHost, setCheckingHost] = useState(true)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState('')
+  const [aiSuggestion, setAiSuggestion] = useState(null)
 
   const progress = useMemo(() => {
     return Math.round(((step + 1) / steps.length) * 100)
   }, [step])
+
+  useEffect(() => {
+    async function loadHost() {
+      if (!isSupabaseConfigured || !supabase) {
+        setCheckingHost(false)
+        return
+      }
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        window.location.href = `/host/login?redirect=${encodeURIComponent('/become-a-host')}`
+        return
+      }
+
+      try {
+        const hostProfile = await ensureHostProfile(supabase, user)
+        setHostId(hostProfile.id)
+      } catch (profileError) {
+        console.error('Could not load host profile:', profileError)
+        setError('We could not load your host profile. Please sign in again and retry.')
+      } finally {
+        setCheckingHost(false)
+      }
+    }
+
+    loadHost()
+  }, [])
 
   function updateField(name, value) {
     setForm((current) => ({
@@ -394,6 +432,56 @@ export default function BecomeAHostPage() {
           : [...current.amenities, item],
       }
     })
+  }
+
+  async function generateListingCopy() {
+    setAiLoading(true)
+    setAiError('')
+    setAiSuggestion(null)
+
+    try {
+      const response = await fetch('/api/listing-assistant', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          apartment_title: form.apartment_title,
+          area: form.area,
+          bedrooms: form.bedrooms,
+          bathrooms: form.bathrooms,
+          sleeps: form.sleeps,
+          amenities: form.amenities,
+          description: form.description,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Unable to improve the listing right now.')
+      }
+
+      setAiSuggestion(data)
+    } catch (generationError) {
+      setAiError(
+        generationError instanceof Error
+          ? generationError.message
+          : 'Unable to improve the listing right now.',
+      )
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  function applyAiSuggestion() {
+    if (!aiSuggestion) return
+
+    setForm((current) => ({
+      ...current,
+      apartment_title: aiSuggestion.title || current.apartment_title,
+      description: aiSuggestion.description || current.description,
+    }))
   }
 
   function nextStep() {
@@ -481,8 +569,15 @@ async function handleSubmit() {
       return
     }
 
+    if (!hostId) {
+      setError('Your host profile is still loading. Please wait a moment and try again.')
+      setLoading(false)
+      return
+    }
+
     // First, create the host application to get an ID
     const payload = {
+      host_id: hostId,
       host_name: form.host_name,
       display_name: form.display_name || form.host_name.split(' ')[0],
       show_full_name: form.show_full_name,
@@ -794,42 +889,120 @@ async function handleSubmit() {
                 </div>
 
                 <div className="mt-6">
-                  <p className="mb-3 text-sm font-semibold">
-                    Listing relationship
+                  <p className="mb-2 text-sm font-semibold text-stone-800">
+                    Your connection to this stay
+                  </p>
+                  <p className="mb-4 text-sm text-stone-600">
+                    How are you connected to this stay?
                   </p>
 
-                  <div className="grid gap-3 md:grid-cols-3">
+                  <div className="grid gap-3 md:grid-cols-2">
                     <ChoiceCard
                       active={form.host_type === 'owner'}
-                      title="Owner"
-                      onClick={() => updateField('host_type', 'owner')}
+                      title="I own this stay"
+                      onClick={() => {
+                        updateField('host_type', 'owner')
+                        updateField('host_role', '')
+                      }}
                     />
 
                     <ChoiceCard
-                      active={form.host_type === 'agent'}
-                      title="Agent"
-                      onClick={() => updateField('host_type', 'agent')}
-                    />
-
-                    <ChoiceCard
-                      active={form.host_type === 'property_manager'}
-                      title="Property manager"
-                      onClick={() =>
-                        updateField('host_type', 'property_manager')
-                      }
+                      active={form.host_type === 'representative'}
+                      title="I manage or represent this stay"
+                      onClick={() => updateField('host_type', 'representative')}
                     />
                   </div>
+
+                  {form.host_type === 'representative' && (
+                    <div className="mt-5">
+                      <Field label="Your role">
+                        <input
+                          value={form.host_role}
+                          onChange={(e) => updateField('host_role', e.target.value)}
+                          type="text"
+                          placeholder="Managing agent, representative, assistant, family member, etc."
+                          className={inputClass}
+                        />
+                      </Field>
+                    </div>
+                  )}
+
+                  <label className="mt-6 flex cursor-pointer items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={form.has_permission}
+                      onChange={(e) => updateField('has_permission', e.target.checked)}
+                      className="mt-1 h-5 w-5 rounded border-stone-300 text-[#c76f55] focus:ring-[#c76f55]"
+                    />
+                    <span className="text-sm text-stone-700">
+                      I confirm I have permission to submit this stay.
+                    </span>
+                  </label>
                 </div>
               </StepShell>
             )}
 
-            {step === 1 && (
-              <StepShell
-                eyebrow="Stay details"
-                title="Start with the basics"
-                description="Add a clear name and description for the stay."
-              >
-                <Field label="Give your stay a name" required>
+              {step === 1 && (
+                <StepShell
+                  eyebrow="Stay details"
+                  title="Start with the basics"
+                  description="Add a clear name and description for the stay."
+                >
+                  <div className="mb-6 rounded-3xl border border-stone-200 bg-[#fcfaf8] p-5">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="text-sm font-bold text-stone-950">AI listing assistant</p>
+                        <p className="mt-1 max-w-xl text-sm leading-6 text-stone-600">
+                          Add the facts first, then generate polished wording you can review and edit before submitting.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={generateListingCopy}
+                        disabled={aiLoading}
+                        className="rounded-full bg-[#252525] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#111111] disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {aiLoading ? 'Improving...' : 'Improve with AI'}
+                      </button>
+                    </div>
+
+                    {aiError && (
+                      <p className="mt-4 text-sm text-red-600">{aiError}</p>
+                    )}
+
+                    {aiSuggestion && (
+                      <div className="mt-5 rounded-2xl bg-white p-4 ring-1 ring-stone-200">
+                        <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
+                          Suggested copy
+                        </p>
+                        <h3 className="mt-3 text-lg font-bold text-stone-950">
+                          {aiSuggestion.title}
+                        </h3>
+                        <p className="mt-3 whitespace-pre-line text-sm leading-6 text-stone-700">
+                          {aiSuggestion.description}
+                        </p>
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {aiSuggestion.highlights?.map((highlight) => (
+                            <span
+                              key={highlight}
+                              className="rounded-full bg-stone-100 px-3 py-1.5 text-xs font-semibold text-stone-700"
+                            >
+                              {highlight}
+                            </span>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={applyAiSuggestion}
+                          className="mt-5 rounded-full border border-stone-300 px-4 py-2 text-sm font-bold text-stone-800 transition hover:border-stone-500"
+                        >
+                          Use this wording
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <Field label="Give your stay a name" required>
                   <input
                     value={form.apartment_title}
                     onChange={(e) =>
@@ -1440,10 +1613,10 @@ async function handleSubmit() {
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  disabled={loading}
+                  disabled={loading || checkingHost}
                   className="rounded-full bg-[#c76f55] px-8 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {loading ? 'Submitting...' : 'Submit listing'}
+                  {checkingHost ? 'Loading...' : loading ? 'Submitting...' : 'Submit listing'}
                 </button>
               )}
             </div>

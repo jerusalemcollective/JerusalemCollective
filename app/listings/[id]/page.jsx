@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { DayPicker } from 'react-day-picker'
 import { format, addDays } from 'date-fns'
 import { isSupabaseConfigured, supabase } from '@/lib/supabaseClient'
 import { getSampleListing } from '@/lib/sample-listings'
+import { MessageHostDialog } from '@/components/message-host-dialog'
 import 'react-day-picker/dist/style.css'
 
 // Helper to get the public display name for a host
@@ -18,132 +19,199 @@ function getPublicName(host) {
 }
 
 function BookingDateRangePicker({ dateRange, setDateRange }) {
+  const [showCalendar, setShowCalendar] = useState(false)
+  const calendarRef = useRef(null)
+
+  // Close calendar when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (calendarRef.current && !calendarRef.current.contains(event.target)) {
+        setShowCalendar(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
   return (
-    <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white">
-      <style>{`
-        .booking-lux-calendar .rdp {
-          margin: 0;
-        }
-        .booking-lux-calendar .rdp-caption {
-          margin-bottom: 12px;
-          padding: 0 2px;
-        }
-        .booking-lux-calendar .rdp-caption_label {
-          color: #1c1917;
-          font-size: 15px;
-          font-weight: 800;
-          letter-spacing: 0;
-        }
-        .booking-lux-calendar .rdp-nav_button {
-          align-items: center;
-          border: 1px solid #e7e5e4;
-          border-radius: 999px;
-          color: #57534e;
-          display: inline-flex;
-          height: 32px;
-          justify-content: center;
-          width: 32px;
-        }
-        .booking-lux-calendar .rdp-nav_button:hover {
-          background: #fafaf9;
-          border-color: #c76f55;
-          color: #c76f55;
-        }
-        .booking-lux-calendar .rdp-table {
-          width: 100%;
-        }
-        .booking-lux-calendar .rdp-head_cell {
-          color: #a8a29e;
-          font-size: 10px;
-          font-weight: 800;
-          padding-bottom: 8px;
-          text-transform: uppercase;
-        }
-        .booking-lux-calendar .rdp-cell {
-          height: 40px;
-          padding: 1px 0;
-        }
-        .booking-lux-calendar .rdp-button {
-          border-radius: 999px;
-          color: #292524;
-          font-size: 13px;
-          font-weight: 700;
-          height: 36px;
-          transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
-          width: 36px;
-        }
-        .booking-lux-calendar .rdp-button:hover:not([disabled]):not(.rdp-day_selected) {
-          background: #f5f0eb;
-          color: #9e4f39;
-          transform: translateY(-1px);
-        }
-        .booking-lux-calendar .rdp-day_selected:not([disabled]) {
-          background-color: #c76f55;
-          color: white;
-          box-shadow: 0 8px 18px rgba(199,111,85,.24);
-        }
-        .booking-lux-calendar .rdp-day_selected:hover:not([disabled]) {
-          background-color: #b55f47;
-        }
-        .booking-lux-calendar .rdp-day_range_middle {
-          background-color: #fef3f0;
-          border-radius: 0;
-          color: #c76f55;
-        }
-        .booking-lux-calendar .rdp-day_disabled {
-          color: #d6d3d1;
-        }
-      `}</style>
-
-      <div className="grid grid-cols-2 border-b border-stone-100 bg-[#fbf8f5]">
-        <div className="border-r border-stone-100 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">Check-in</p>
-          <p className="mt-1 text-sm font-bold text-stone-950">
-            {dateRange.from ? format(dateRange.from, 'EEE, d MMM') : 'Choose date'}
-          </p>
+    <div className="relative" ref={calendarRef}>
+      {/* Date Display - Click to open calendar */}
+      <button
+        type="button"
+        onClick={() => setShowCalendar(!showCalendar)}
+        className="w-full overflow-hidden rounded-2xl border border-stone-200 bg-white transition hover:border-stone-300"
+      >
+        <div className="grid grid-cols-2">
+          <div className="border-r border-stone-100 p-4 text-left">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">Check-in</p>
+            <p className="mt-1 text-sm font-bold text-stone-950">
+              {dateRange.from ? format(dateRange.from, 'EEE, d MMM') : 'Choose date'}
+            </p>
+          </div>
+          <div className="p-4 text-left">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">Check-out</p>
+            <p className="mt-1 text-sm font-bold text-stone-950">
+              {dateRange.to ? format(dateRange.to, 'EEE, d MMM') : 'Choose date'}
+            </p>
+          </div>
         </div>
-        <div className="p-4">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">Check-out</p>
-          <p className="mt-1 text-sm font-bold text-stone-950">
-            {dateRange.to ? format(dateRange.to, 'EEE, d MMM') : 'Choose date'}
-          </p>
+      </button>
+
+      {/* Calendar Dropdown */}
+      {showCalendar && (
+        <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-3xl bg-[#faf8f6] shadow-lg shadow-stone-200/50">
+          <style>{`
+            .booking-lux-calendar .rdp {
+              margin: 0;
+            }
+            .booking-lux-calendar .rdp-caption {
+              margin-bottom: 8px;
+              padding: 0;
+            }
+            .booking-lux-calendar .rdp-caption_label {
+              color: #44403c;
+              font-size: 14px;
+              font-weight: 600;
+              letter-spacing: -0.01em;
+            }
+            .booking-lux-calendar .rdp-nav_button {
+              align-items: center;
+              background: transparent;
+              border: none;
+              border-radius: 50%;
+              color: #a8a29e;
+              display: inline-flex;
+              height: 28px;
+              justify-content: center;
+              width: 28px;
+              transition: color 150ms ease;
+            }
+            .booking-lux-calendar .rdp-nav_button:hover {
+              background: transparent;
+              color: #c76f55;
+            }
+            .booking-lux-calendar .rdp-table {
+              width: 100%;
+              border-spacing: 2px;
+            }
+            .booking-lux-calendar .rdp-head_cell {
+              color: #a8a29e;
+              font-size: 9px;
+              font-weight: 600;
+              padding-bottom: 6px;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+            }
+            .booking-lux-calendar .rdp-cell {
+              height: 44px;
+              padding: 2px;
+            }
+            .booking-lux-calendar .rdp-button {
+              border-radius: 50%;
+              color: #57534e;
+              font-size: 13px;
+              font-weight: 500;
+              height: 40px;
+              width: 40px;
+              transition: background-color 120ms ease, color 120ms ease;
+            }
+            .booking-lux-calendar .rdp-button:hover:not([disabled]):not(.rdp-day_selected) {
+              background: #f5f0eb;
+              color: #78716c;
+            }
+            .booking-lux-calendar .rdp-day_selected:not([disabled]) {
+              background-color: #c76f55;
+              color: white;
+              font-weight: 600;
+            }
+            .booking-lux-calendar .rdp-day_selected:hover:not([disabled]) {
+              background-color: #b8624a;
+            }
+            .booking-lux-calendar .rdp-day_range_middle {
+              background-color: #fdf0ed;
+              border-radius: 0;
+              color: #b8624a;
+            }
+            .booking-lux-calendar .rdp-day_disabled {
+              color: #d6d3d1;
+            }
+          `}</style>
+
+          {/* Header with Arrival/Departure display */}
+          <div className="px-5 py-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl bg-white px-4 py-3">
+                <p className="text-[9px] font-semibold uppercase tracking-wider text-stone-400">Arrival</p>
+                <p className="mt-0.5 text-sm font-semibold text-stone-800">
+                  {dateRange.from ? format(dateRange.from, 'EEE, d MMM') : 'Select'}
+                </p>
+              </div>
+              <div className="rounded-xl bg-white px-4 py-3">
+                <p className="text-[9px] font-semibold uppercase tracking-wider text-stone-400">Departure</p>
+                <p className="mt-0.5 text-sm font-semibold text-stone-800">
+                  {dateRange.to ? format(dateRange.to, 'EEE, d MMM') : 'Select'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Calendar */}
+          <div className="booking-lux-calendar mx-4 mb-4 rounded-2xl bg-white p-4">
+            <DayPicker
+              mode="range"
+              selected={dateRange}
+              onSelect={(range) => {
+                // If user clicks the same date twice, reset to just that date
+                if (range?.from && range?.to && range.from.getTime() === range.to.getTime()) {
+                  setDateRange({ from: range.from, to: undefined })
+                  return
+                }
+                setDateRange(range || { from: undefined, to: undefined })
+                // Auto-close when both dates are selected (different dates)
+                if (range?.from && range?.to && range.from.getTime() !== range.to.getTime()) {
+                  setTimeout(() => setShowCalendar(false), 300)
+                }
+              }}
+              numberOfMonths={1}
+              disabled={{ before: new Date() }}
+              showOutsideDays={false}
+            />
+          </div>
+
+          {/* Quick actions footer */}
+          <div className="flex items-center justify-between px-5 pb-5">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setDateRange({ from: new Date(), to: addDays(new Date(), 7) })
+                  setTimeout(() => setShowCalendar(false), 300)
+                }}
+                className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-stone-600 transition hover:bg-stone-100"
+              >
+                1 week
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDateRange({ from: new Date(), to: addDays(new Date(), 14) })
+                  setTimeout(() => setShowCalendar(false), 300)
+                }}
+                className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-stone-600 transition hover:bg-stone-100"
+              >
+                2 weeks
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => setDateRange({ from: undefined, to: undefined })}
+              className="text-xs font-medium text-stone-400 transition hover:text-stone-600"
+            >
+              Clear
+            </button>
+          </div>
         </div>
-      </div>
-
-      <div className="booking-lux-calendar p-4">
-        <DayPicker
-          mode="range"
-          selected={dateRange}
-          onSelect={(range) => setDateRange(range || { from: undefined, to: undefined })}
-          numberOfMonths={1}
-          disabled={{ before: new Date() }}
-          showOutsideDays={false}
-        />
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2 border-t border-stone-100 px-4 py-3">
-        <button
-          type="button"
-          onClick={() => setDateRange({ from: new Date(), to: addDays(new Date(), 7) })}
-          className="rounded-full bg-stone-100 px-3 py-2 text-xs font-bold text-stone-700 hover:bg-stone-200"
-        >
-          1 week
-        </button>
-        <button
-          type="button"
-          onClick={() => setDateRange({ from: new Date(), to: addDays(new Date(), 14) })}
-          className="rounded-full bg-stone-100 px-3 py-2 text-xs font-bold text-stone-700 hover:bg-stone-200"
-        >
-          2 weeks
-        </button>
-        <button
-          type="button"
-          onClick={() => setDateRange({ from: undefined, to: undefined })}
-          className="ml-auto text-xs font-bold text-stone-500 hover:text-stone-800"
-        >
-          Clear
-        </button>
-      </div>
+      )}
     </div>
   )
 }
@@ -461,12 +529,11 @@ export default function ListingDetailPage() {
 
               {/* Secondary Actions */}
               <div className="space-y-2 border-t border-stone-100 pt-4">
-                <button className="flex w-full items-center justify-center gap-2 rounded-xl border border-stone-200 bg-white py-3 text-sm font-semibold text-stone-700 transition hover:border-stone-300 hover:bg-stone-50">
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
-                  Ask a question
-                </button>
+                <MessageHostDialog
+                  listingId={listing.id}
+                  listingTitle={listing.title}
+                  hostId={listing.host_id}
+                />
                 <button className="flex w-full items-center justify-center gap-2 rounded-xl border border-stone-200 bg-white py-3 text-sm font-semibold text-stone-700 transition hover:border-stone-300 hover:bg-stone-50">
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -598,12 +665,11 @@ export default function ListingDetailPage() {
                 <button className="w-full rounded-xl bg-[#c76f55] py-4 font-semibold text-white transition hover:bg-[#b55f47]">
                   Request to book
                 </button>
-                <button className="flex w-full items-center justify-center gap-2 rounded-xl border border-stone-200 bg-white py-4 font-semibold text-stone-700 transition hover:border-stone-300 hover:bg-stone-50">
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
-                  Ask a question
-                </button>
+                <MessageHostDialog
+                  listingId={listing.id}
+                  listingTitle={listing.title}
+                  hostId={listing.host_id}
+                />
                 <button className="flex w-full items-center justify-center gap-2 rounded-xl border border-stone-200 bg-white py-4 font-semibold text-stone-700 transition hover:border-stone-300 hover:bg-stone-50">
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
