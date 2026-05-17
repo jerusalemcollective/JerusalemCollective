@@ -1,6 +1,5 @@
-'use client'
-
 import Link from 'next/link'
+import { Suspense } from 'react'
 import { MessagesInbox } from '@/components/messages-inbox'
 
 export default function MessagesPage() {
@@ -14,7 +13,9 @@ export default function MessagesPage() {
         </div>
 
         <h1 className="mb-8 text-3xl font-bold text-stone-900">Messages</h1>
-        <MessagesInbox mode="guest" />
+        <Suspense fallback={<div className="rounded-3xl bg-white p-8 text-stone-600 shadow-sm">Loading messages...</div>}>
+          <MessagesInbox mode="guest" />
+        </Suspense>
       </div>
     </div>
   )

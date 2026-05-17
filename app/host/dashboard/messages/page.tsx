@@ -1,5 +1,4 @@
-'use client'
-
+import { Suspense } from 'react'
 import { MessagesInbox } from '@/components/messages-inbox'
 
 export default function HostMessagesPage() {
@@ -13,9 +12,10 @@ export default function HostMessagesPage() {
             Reply to enquiries across all of your listings from one place.
           </p>
         </div>
-        <MessagesInbox mode="host" />
+        <Suspense fallback={<div className="rounded-3xl bg-white p-8 text-stone-600 shadow-sm">Loading messages...</div>}>
+          <MessagesInbox mode="host" />
+        </Suspense>
       </section>
     </main>
   )
 }
-
