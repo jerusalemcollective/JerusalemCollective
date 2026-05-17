@@ -76,7 +76,7 @@ export default async function HostListingsPage() {
     ['new', 'in_review'].includes(application.status),
   ).length
   const needsActionCount = pendingApplications.filter(
-    (application) => application.status === 'rejected',
+    (application) => ['rejected', 'changes_requested'].includes(application.status),
   ).length
 
   return (
@@ -212,6 +212,16 @@ export default async function HostListingsPage() {
                           <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-amber-900">
                             {application.admin_feedback}
                           </p>
+                        </div>
+                      )}
+                      {['changes_requested', 'rejected'].includes(application.status) && (
+                        <div className="mt-5">
+                          <Link
+                            href={`/host/dashboard/applications/${application.id}`}
+                            className="inline-flex rounded-full bg-[#252525] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#111111]"
+                          >
+                            Edit and resubmit
+                          </Link>
                         </div>
                       )}
                     </div>

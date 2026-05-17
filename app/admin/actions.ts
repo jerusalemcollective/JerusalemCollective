@@ -8,6 +8,11 @@ export type AdminGrantState = {
   message: string
 }
 
+export type RequestChangesState = {
+  status: 'idle' | 'success' | 'error'
+  message: string
+}
+
 export async function updateApplicationStatus(formData: FormData) {
   const applicationId = String(formData.get('applicationId') || '')
   const status = String(formData.get('status') || '')
@@ -27,38 +32,56 @@ export async function updateApplicationStatus(formData: FormData) {
   revalidatePath(`/admin/applications/${applicationId}`)
 }
 
-export async function requestApplicationChanges(formData: FormData) {
+export async function requestApplicationChanges(
+  _previousState: RequestChangesState,
+  formData: FormData,
+): Promise<RequestChangesState> {
   const applicationId = String(formData.get('applicationId') || '')
   const feedback = String(formData.get('feedback') || '').trim()
 
   if (!applicationId || !feedback) {
-    throw new Error('Please add the changes needed before sending.')
+    return {
+      status: 'error',
+      message: 'Please add the changes needed before sending.',
+    }
   }
 
-  const { supabase } = await requireAdmin()
-  const { data: application, error: applicationError } = await supabase
-    .from('host_applications')
-    .select('id, host_id')
-    .eq('id', applicationId)
-    .single()
+  try {
+    const { supabase } = await requireAdmin()
+    const { data: application, error: applicationError } = await supabase
+      .from('host_applications')
+      .select('id, host_id')
+      .eq('id', applicationId)
+      .single()
 
-  if (applicationError || !application?.host_id) {
-    throw applicationError || new Error('Application not found.')
+    if (applicationError || !application?.host_id) {
+      throw applicationError || new Error('Application not found.')
+    }
+
+    const { error: updateError } = await supabase
+      .from('host_applications')
+      .update({
+        status: 'changes_requested',
+        admin_feedback: feedback,
+        changes_requested_at: new Date().toISOString(),
+      })
+      .eq('id', applicationId)
+
+    if (updateError) throw updateError
+
+    revalidatePath('/admin')
+    revalidatePath(`/admin/applications/${applicationId}`)
+
+    return {
+      status: 'success',
+      message: 'Message sent to the host as JLM Collective.',
+    }
+  } catch (error) {
+    return {
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Unable to send the message.',
+    }
   }
-
-  const { error: updateError } = await supabase
-    .from('host_applications')
-    .update({
-      status: 'changes_requested',
-      admin_feedback: feedback,
-      changes_requested_at: new Date().toISOString(),
-    })
-    .eq('id', applicationId)
-
-  if (updateError) throw updateError
-
-  revalidatePath('/admin')
-  revalidatePath(`/admin/applications/${applicationId}`)
 }
 
 export async function approveAndPublishApplication(formData: FormData) {
