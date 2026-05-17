@@ -138,9 +138,6 @@ export function Header() {
           <Link href="/stays" className="text-stone-600 transition hover:text-[#c76f55]">
             Stays
           </Link>
-          <Link href="/stays?view=map" className="text-stone-600 transition hover:text-[#c76f55]">
-            Map
-          </Link>
         </nav>
 
         <div className="flex items-center gap-1.5 sm:gap-2">
