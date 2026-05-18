@@ -205,7 +205,11 @@ function BookingDateRangePicker({ dateRange, setDateRange }) {
               disabled={{ before: new Date() }}
               showOutsideDays={false}
               components={{
-                CaptionLabel: CalendarCaptionLabel,
+                CaptionLabel: (props) => (
+                  <CalendarCaptionLabel {...props}>
+                    {String(props.children).replace(' Â· ', '|')}
+                  </CalendarCaptionLabel>
+                ),
               }}
               formatters={{
                 formatCaption: (date) =>

@@ -343,7 +343,18 @@ export async function sendListingMessage(
       message_body: message,
     })
 
-    if (error) throw error
+    if (error) {
+      if (
+        error.message.includes('Could not find the function') ||
+        error.message.includes('send_listing_admin_message')
+      ) {
+        throw new Error(
+          'Listing messaging is not installed in Supabase yet. Run the listing message SQL and try again.',
+        )
+      }
+
+      throw error
+    }
 
     revalidatePath('/admin/listings')
     revalidatePath(`/admin/listings/${listingId}`)

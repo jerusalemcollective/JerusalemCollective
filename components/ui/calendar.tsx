@@ -43,7 +43,7 @@ function Calendar({
           `${date.toLocaleString('default', {
             month: 'long',
             year: 'numeric',
-          })} · ${formatHebrewMonthSpan(date)}`,
+          })}|${formatHebrewMonthSpan(date)}`,
         ...formatters,
       }}
       classNames={{
@@ -68,7 +68,7 @@ function Calendar({
           defaultClassNames.button_next,
         ),
         month_caption: cn(
-          'flex items-center justify-center h-(--cell-size) w-full px-(--cell-size)',
+          'flex min-h-(--cell-size) items-center justify-center w-full px-(--cell-size)',
           defaultClassNames.month_caption,
         ),
         dropdowns: cn(
@@ -184,8 +184,7 @@ function CalendarCaptionLabel({
   className,
   ...props
 }: React.ComponentProps<'span'>) {
-  const [gregorianMonth, ...hebrewMonthParts] = String(children ?? '').split('·')
-  const hebrewMonth = hebrewMonthParts.join('·').trim()
+  const [gregorianMonth, hebrewMonth = ''] = String(children ?? '').split('|')
 
   return (
     <span
@@ -195,7 +194,7 @@ function CalendarCaptionLabel({
       <span>{gregorianMonth.trim()}</span>
       {hebrewMonth ? (
         <span className="mt-0.5 text-[11px] font-medium text-muted-foreground">
-          {hebrewMonth}
+          {hebrewMonth.trim()}
         </span>
       ) : null}
     </span>
@@ -237,7 +236,9 @@ function CalendarDayButton({
       )}
       {...props}
     >
-      <span className="text-[13px] font-semibold leading-none">{day.date.getDate()}</span>
+      <span className="text-[13px] font-semibold leading-none">
+        {day.date.getDate()}
+      </span>
       <span className="text-[9px] font-medium leading-none text-current opacity-60">
         {formatHebrewDay(day.date)}
       </span>
