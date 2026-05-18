@@ -1,5 +1,5 @@
 export const metadata = {
-  title: 'Privacy Policy | JLM Collective',
+  title: 'Privacy Policy',
   description: 'Privacy Policy for JLM Collective - how we collect, use, and protect your information.',
 }
 

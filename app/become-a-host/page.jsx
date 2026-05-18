@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { ensureHostProfile } from '@/lib/host-profile'
 
@@ -400,6 +401,7 @@ description: '',
   id_doc_type: '',
   
   confirmation: false,
+  host_terms_accepted: false,
 }
 
 const idDocTypes = [
@@ -432,6 +434,7 @@ const steps = [
 ]
 
 const minimumPhotoCount = 5
+const hostTermsVersion = '2026-05-18'
 const isSupabaseConfigured = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL &&
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -446,6 +449,7 @@ export default function BecomeAHostPage() {
   const [hostId, setHostId] = useState(null)
   const [checkingHost, setCheckingHost] = useState(true)
   const [accountUser, setAccountUser] = useState(null)
+  const [requiresHostTermsAcceptance, setRequiresHostTermsAcceptance] = useState(true)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
   const [aiSuggestion, setAiSuggestion] = useState(null)
@@ -475,6 +479,7 @@ export default function BecomeAHostPage() {
         const hostProfile = await ensureHostProfile(supabase, user)
         setHostId(hostProfile.id)
         setAccountUser(user)
+        setRequiresHostTermsAcceptance(!hostProfile.host_terms_accepted_at)
         setForm((current) => ({
           ...current,
           host_name:
@@ -489,6 +494,7 @@ export default function BecomeAHostPage() {
             user.user_metadata?.name?.split(' ')[0] ||
             user.email?.split('@')[0] ||
             '',
+          host_terms_accepted: Boolean(hostProfile.host_terms_accepted_at),
         }))
       } catch (profileError) {
         console.error('Could not load host profile:', profileError)
@@ -672,6 +678,11 @@ if (step === 7 && !form.verification_doc_type) {
       return
     }
 
+    if (step === 8 && requiresHostTermsAcceptance && !form.host_terms_accepted) {
+      setError('Please agree to the host terms and conditions before submitting.')
+      return
+    }
+
     if (step < steps.length - 1) {
       setStep((current) => current + 1)
       window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -704,6 +715,12 @@ async function handleSubmit() {
       return
     }
 
+    if (requiresHostTermsAcceptance && !form.host_terms_accepted) {
+      setError('Please agree to the host terms and conditions before submitting.')
+      setLoading(false)
+      return
+    }
+
     if (
       !form.apartment_title.trim() ||
       !form.description.trim() ||
@@ -729,6 +746,21 @@ async function handleSubmit() {
     }
 
     const supabase = createClient()
+
+    if (requiresHostTermsAcceptance) {
+      const { error: termsError } = await supabase.rpc('accept_current_host_terms', {
+        accepted_version: hostTermsVersion,
+      })
+
+      if (termsError) {
+        console.error(termsError)
+        setError('We could not record your host terms acceptance. Please try again.')
+        setLoading(false)
+        return
+      }
+
+      setRequiresHostTermsAcceptance(false)
+    }
 
     // First, create the host application to get an ID
     const payload = {
@@ -1725,6 +1757,27 @@ async function handleSubmit() {
                     I confirm that the listing details are accurate.
                   </span>
                 </label>
+
+                {requiresHostTermsAcceptance && (
+                  <label className="mt-4 flex items-start gap-3 rounded-2xl border border-stone-200 bg-white p-4 text-sm text-stone-600">
+                    <input
+                      checked={form.host_terms_accepted}
+                      onChange={(e) =>
+                        updateField('host_terms_accepted', e.target.checked)
+                      }
+                      type="checkbox"
+                      className="mt-1"
+                    />
+
+                    <span>
+                      I agree to the{' '}
+                      <Link href="/terms" target="_blank" rel="noopener noreferrer" className="font-semibold text-[#c76f55] hover:underline">
+                        Host Terms and Conditions
+                      </Link>{' '}
+                      and confirm that I am authorised to list this stay.
+                    </span>
+                  </label>
+                )}
               </StepShell>
             )}
 

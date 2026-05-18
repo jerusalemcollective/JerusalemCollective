@@ -8,6 +8,8 @@ import { format, addDays } from 'date-fns'
 import { isSupabaseConfigured, supabase } from '@/lib/supabaseClient'
 import { getSampleListing } from '@/lib/sample-listings'
 import { MessageHostDialog } from '@/components/message-host-dialog'
+import { SaveListingButton } from '@/components/save-listing-button'
+import { recordListingEngagement } from '@/lib/listing-engagement'
 import 'react-day-picker/dist/style.css'
 
 // Helper to get the public display name for a host
@@ -258,6 +260,7 @@ export default function ListingDetailPage() {
       }
 
       setListing(listingData)
+      await recordListingEngagement(supabase, listingId, 'view')
 
       // Fetch photos ordered by sort_order
       const { data: photosData } = await supabase
@@ -340,6 +343,9 @@ export default function ListingDetailPage() {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-8 pb-28 lg:pb-8">
+        <div className="mb-5 flex justify-end">
+          <SaveListingButton listingId={listing.id} />
+        </div>
         {/* Photo Gallery */}
         <section className="mb-8">
           {photos.length > 0 ? (

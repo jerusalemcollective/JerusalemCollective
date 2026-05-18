@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { getOrCreateConversation, sendConversationMessage } from '@/lib/messaging'
+import { recordListingEngagement } from '@/lib/listing-engagement'
 
 type MessageHostDialogProps = {
   listingId: string
@@ -56,6 +57,7 @@ export function MessageHostDialog({
 
       const conversationId = await getOrCreateConversation(supabase, user.id, hostId, listingId)
       await sendConversationMessage(supabase, conversationId, user.id, message.trim())
+      await recordListingEngagement(supabase, listingId, 'enquiry')
       router.push(`/account/messages?conversation=${conversationId}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to send your message.')

@@ -7,6 +7,7 @@ import { isSupabaseConfigured, supabase } from '@/lib/supabaseClient'
 import dynamic from 'next/dynamic'
 import { sampleListings } from '@/lib/sample-listings'
 import { allNeighborhoods } from '@/lib/neighborhoods'
+import { filterListings } from '@/lib/marketplace-rules'
 
 const neighborhoods = ['All', ...allNeighborhoods]
 
@@ -21,8 +22,18 @@ interface Listing {
   booking_type: string
   latitude: number
   longitude: number
+  amenities: string[]
   cover_photo_url?: string | null
 }
+
+const amenityFilters = [
+  'Sukkah balcony',
+  'Kosher kitchen',
+  'Shabbat-friendly',
+  'Near synagogues',
+  'Elevator',
+  'Parking',
+]
 
 // Dynamically import Google Maps component
 const JerusalemMap = dynamic(() => import('@/components/jerusalem-map'), { 
@@ -75,6 +86,8 @@ function StaysPageContent() {
   const [selectedArea, setSelectedArea] = useState(initialArea)
   const [listings, setListings] = useState<Listing[]>(sampleListings)
   const [loading, setLoading] = useState(false)
+  const [minimumBedrooms, setMinimumBedrooms] = useState(0)
+  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([])
 
   useEffect(() => {
     async function fetchListings() {
@@ -87,7 +100,7 @@ function StaysPageContent() {
       // Fetch listings with their cover photos
       const { data: listingsData, error } = await supabase
         .from('listings')
-        .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, latitude, longitude')
+        .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, latitude, longitude, amenities')
         .order('is_featured', { ascending: false })
 
       if (!error && listingsData && listingsData.length > 0) {
@@ -113,9 +126,26 @@ function StaysPageContent() {
     fetchListings()
   }, [])
 
-  const filteredListings = selectedArea === 'All' 
-    ? listings 
-    : listings.filter(l => l.area === selectedArea)
+  const filteredListings = filterListings(listings, {
+    selectedArea,
+    minimumBedrooms,
+    selectedAmenities,
+  })
+
+  const toggleAmenity = (amenity: string) => {
+    setSelectedAmenities((current) =>
+      current.includes(amenity)
+        ? current.filter((item) => item !== amenity)
+        : [...current, amenity],
+    )
+  }
+
+  const clearFilters = () => {
+    setMinimumBedrooms(0)
+    setSelectedAmenities([])
+  }
+
+  const hasExtraFilters = minimumBedrooms > 0 || selectedAmenities.length > 0
 
   if (loading) {
     return (
@@ -168,6 +198,54 @@ function StaysPageContent() {
             </button>
           </div>
         </div>
+
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 pb-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700">
+              <span className="font-semibold">Bedrooms</span>
+              <select
+                value={minimumBedrooms}
+                onChange={(event) => setMinimumBedrooms(Number(event.target.value))}
+                className="bg-transparent text-sm font-semibold text-stone-900 outline-none"
+              >
+                <option value={0}>Any</option>
+                <option value={1}>1+</option>
+                <option value={2}>2+</option>
+                <option value={3}>3+</option>
+                <option value={4}>4+</option>
+              </select>
+            </label>
+
+            {amenityFilters.map((amenity) => {
+              const active = selectedAmenities.includes(amenity)
+
+              return (
+                <button
+                  key={amenity}
+                  type="button"
+                  onClick={() => toggleAmenity(amenity)}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    active
+                      ? 'bg-[#c76f55] text-white'
+                      : 'border border-stone-200 bg-white text-stone-700 hover:border-[#c76f55] hover:text-[#c76f55]'
+                  }`}
+                >
+                  {amenity}
+                </button>
+              )
+            })}
+          </div>
+
+          {hasExtraFilters && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="w-fit text-sm font-semibold text-[#c76f55] hover:underline"
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
       </div>
 
       {view === 'list' ? (
@@ -187,12 +265,15 @@ function StaysPageContent() {
           {filteredListings.length === 0 ? (
             <div className="rounded-3xl border border-stone-200 bg-white p-8 text-center shadow-sm">
               <h2 className="text-xl font-bold text-stone-950">No stays found here yet</h2>
-              <p className="mt-2 text-sm text-stone-500">Try another neighbourhood or view all Jerusalem stays.</p>
+              <p className="mt-2 text-sm text-stone-500">Try another neighbourhood or clear some filters.</p>
               <button
-                onClick={() => setSelectedArea('All')}
+                onClick={() => {
+                  setSelectedArea('All')
+                  clearFilters()
+                }}
                 className="mt-5 rounded-full bg-[#c76f55] px-5 py-3 text-sm font-bold text-white hover:bg-[#b85f47]"
               >
-                View all stays
+                Clear filters
               </button>
             </div>
           ) : (

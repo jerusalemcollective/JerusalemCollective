@@ -170,6 +170,15 @@ export default function AccountPage() {
               </svg>
               Messages
             </Link>
+            <Link
+              href="/account/support"
+              className="flex items-center gap-3 rounded-xl px-4 py-3 font-medium text-stone-600 transition hover:bg-white hover:shadow-sm"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 4.5l.75-.75.75.75m-1.5 0V15m8.25-6.75v10.5A2.25 2.25 0 0117.25 21H6.75A2.25 2.25 0 014.5 18.75V8.25m15 0L12 3.75 4.5 8.25m15 0H15a3 3 0 00-3 3v3.75" />
+              </svg>
+              Support
+            </Link>
 
             <div className="pt-4">
               {hasStay ? (

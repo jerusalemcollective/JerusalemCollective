@@ -39,7 +39,7 @@ export default async function AdminOverviewPage() {
         <SummaryCard label="Hosts" value={hostCount || 0} />
       </div>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
+      <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Link
           href="/admin/applications"
           className="rounded-3xl bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
@@ -58,6 +58,26 @@ export default async function AdminOverviewPage() {
           <h3 className="mt-2 text-xl font-bold text-stone-950">Listings</h3>
           <p className="mt-2 text-sm leading-6 text-stone-600">
             Publish, hide, and feature live inventory.
+          </p>
+        </Link>
+        <Link
+          href="/admin/analytics"
+          className="rounded-3xl bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+        >
+          <p className="text-sm font-semibold text-stone-500">Measure</p>
+          <h3 className="mt-2 text-xl font-bold text-stone-950">Analytics</h3>
+          <p className="mt-2 text-sm leading-6 text-stone-600">
+            Follow searches, saves, enquiries, and listing interest.
+          </p>
+        </Link>
+        <Link
+          href="/admin/cases"
+          className="rounded-3xl bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+        >
+          <p className="text-sm font-semibold text-stone-500">Resolve</p>
+          <h3 className="mt-2 text-xl font-bold text-stone-950">Cases</h3>
+          <p className="mt-2 text-sm leading-6 text-stone-600">
+            Manage disputes, refund requests, and case outcomes.
           </p>
         </Link>
       </div>
@@ -122,4 +142,3 @@ function StatusBadge({ status }: { status: string }) {
     </span>
   )
 }
-

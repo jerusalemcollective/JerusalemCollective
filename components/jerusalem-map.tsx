@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import React, { useState, useCallback, Component, ReactNode } from 'react'
 import { GoogleMap, useJsApiLoader, OverlayView } from '@react-google-maps/api'
 import Link from 'next/link'
 
@@ -13,6 +13,7 @@ interface Listing {
   sleeps: number
   lat: number
   lng: number
+  amenities?: string[]
 }
 
 interface JerusalemMapProps {
@@ -35,7 +36,40 @@ const mapOptions: google.maps.MapOptions = {
   ],
 }
 
-export default function JerusalemMap({ listings }: JerusalemMapProps) {
+function MapFallback() {
+  return (
+    <div className="flex h-[calc(100vh-90px)] w-full items-center justify-center bg-[#F8F5F2]">
+      <div className="max-w-md rounded-3xl border border-stone-200 bg-white p-6 text-center shadow-xl">
+        <h2 className="text-xl font-bold text-stone-950">Map temporarily unavailable</h2>
+        <p className="mt-2 text-sm text-stone-500">The map could not be loaded. You can still browse listings in list view.</p>
+        <Link href="/stays" className="mt-5 inline-flex rounded-full bg-[#c76f55] px-5 py-3 text-sm font-bold text-white hover:bg-[#b85f47]">
+          Browse stays
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+// Error boundary wrapper
+class MapErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode }) {
+    super(props)
+    this.state = { hasError: false }
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <MapFallback />
+    }
+    return this.props.children
+  }
+}
+
+function JerusalemMapInner({ listings }: JerusalemMapProps) {
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null)
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const hasGoogleMapsKey = Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY)
@@ -173,5 +207,13 @@ export default function JerusalemMap({ listings }: JerusalemMapProps) {
         </div>
       )}
     </div>
+  )
+}
+
+export default function JerusalemMap({ listings }: JerusalemMapProps) {
+  return (
+    <MapErrorBoundary>
+      <JerusalemMapInner listings={listings} />
+    </MapErrorBoundary>
   )
 }

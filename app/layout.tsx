@@ -12,8 +12,24 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'JLM Collective - Jerusalem Short-term Rentals',
-  description: 'Find verified short-term apartments in Jerusalem with clear availability and simple booking.',
+  metadataBase: new URL('https://jlmcollective.co'),
+  title: {
+    default: 'JLM Collective | Jerusalem Short-Term Stays',
+    template: '%s | JLM Collective',
+  },
+  description:
+    'Find verified short-term apartments and stays in Jerusalem with clear details, local neighbourhood search, and simple booking enquiries.',
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    title: 'JLM Collective | Jerusalem Short-Term Stays',
+    description:
+      'Find verified short-term apartments and stays in Jerusalem with clear details, local neighbourhood search, and simple booking enquiries.',
+    url: 'https://jlmcollective.co',
+    siteName: 'JLM Collective',
+    type: 'website',
+  },
 }
 
 export const viewport: Viewport = {
