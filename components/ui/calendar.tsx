@@ -9,7 +9,7 @@ import {
 import { DayButton, DayPicker, getDefaultClassNames } from 'react-day-picker'
 
 import { cn } from '@/lib/utils'
-import { formatHebrewDay } from '@/lib/hebrew-date'
+import { formatHebrewDay, formatHebrewMonthSpan } from '@/lib/hebrew-date'
 import { Button, buttonVariants } from '@/components/ui/button'
 
 function Calendar({
@@ -39,6 +39,11 @@ function Calendar({
       formatters={{
         formatMonthDropdown: (date) =>
           date.toLocaleString('default', { month: 'short' }),
+        formatCaption: (date) =>
+          `${date.toLocaleString('default', {
+            month: 'long',
+            year: 'numeric',
+          })} · ${formatHebrewMonthSpan(date)}`,
         ...formatters,
       }}
       classNames={{
@@ -81,7 +86,7 @@ function Calendar({
         caption_label: cn(
           'select-none font-medium',
           captionLayout === 'label'
-            ? 'text-sm'
+            ? 'text-center text-sm'
             : 'rounded-md pl-2 pr-1 flex items-center gap-1 text-sm h-8 [&>svg]:text-muted-foreground [&>svg]:size-3.5',
           defaultClassNames.caption_label,
         ),

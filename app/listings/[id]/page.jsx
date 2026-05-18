@@ -10,7 +10,7 @@ import { getSampleListing } from '@/lib/sample-listings'
 import { MessageHostDialog } from '@/components/message-host-dialog'
 import { SaveListingButton } from '@/components/save-listing-button'
 import { recordListingEngagement } from '@/lib/listing-engagement'
-import { formatHebrewShortDate } from '@/lib/hebrew-date'
+import { formatHebrewMonthSpan, formatHebrewShortDate } from '@/lib/hebrew-date'
 import 'react-day-picker/dist/style.css'
 
 // Helper to get the public display name for a host
@@ -203,6 +203,13 @@ function BookingDateRangePicker({ dateRange, setDateRange }) {
               numberOfMonths={1}
               disabled={{ before: new Date() }}
               showOutsideDays={false}
+              formatters={{
+                formatCaption: (date) =>
+                  `${date.toLocaleString('default', {
+                    month: 'long',
+                    year: 'numeric',
+                  })} · ${formatHebrewMonthSpan(date)}`,
+              }}
             />
           </div>
 
