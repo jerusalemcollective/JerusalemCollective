@@ -10,7 +10,7 @@ export default async function AdminListingDetailPage({
 }) {
   const { id } = await params
   const { supabase } = await requireAdmin()
-  const [{ data: listing }, { data: messages }] = await Promise.all([
+  const [{ data: listing }, { data: messages, error: messagesError }] = await Promise.all([
     supabase
       .from('listings')
       .select('id, title, area, host_id, is_published, is_featured, hosts(name)')
@@ -47,6 +47,11 @@ export default async function AdminListingDetailPage({
           <div className="mt-8">
             <h2 className="text-lg font-bold text-stone-950">Previous messages</h2>
             <div className="mt-4 space-y-3">
+              {messagesError && (
+                <p className="rounded-2xl bg-red-50 p-4 text-sm text-red-700">
+                  We could not load previous listing messages: {messagesError.message}
+                </p>
+              )}
               {(messages || []).map((message) => (
                 <article key={message.id} className="rounded-2xl bg-[#F8F5F2] p-4">
                   <p className="text-xs font-bold uppercase tracking-widest text-stone-400">

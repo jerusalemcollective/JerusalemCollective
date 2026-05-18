@@ -161,6 +161,7 @@ function Calendar({
             <ChevronDownIcon className={cn('size-4', className)} {...props} />
           )
         },
+        CaptionLabel: CalendarCaptionLabel,
         DayButton: CalendarDayButton,
         WeekNumber: ({ children, ...props }) => {
           return (
@@ -175,6 +176,29 @@ function Calendar({
       }}
       {...props}
     />
+  )
+}
+
+function CalendarCaptionLabel({
+  children,
+  className,
+  ...props
+}: React.ComponentProps<'span'>) {
+  const [gregorianMonth, ...hebrewMonthParts] = String(children ?? '').split('·')
+  const hebrewMonth = hebrewMonthParts.join('·').trim()
+
+  return (
+    <span
+      className={cn('flex flex-col items-center leading-tight', className)}
+      {...props}
+    >
+      <span>{gregorianMonth.trim()}</span>
+      {hebrewMonth ? (
+        <span className="mt-0.5 text-[11px] font-medium text-muted-foreground">
+          {hebrewMonth}
+        </span>
+      ) : null}
+    </span>
   )
 }
 
@@ -221,4 +245,4 @@ function CalendarDayButton({
   )
 }
 
-export { Calendar, CalendarDayButton }
+export { Calendar, CalendarCaptionLabel, CalendarDayButton }

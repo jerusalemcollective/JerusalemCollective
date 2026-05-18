@@ -7,6 +7,7 @@ import { DayPicker } from 'react-day-picker'
 import { format, addDays } from 'date-fns'
 import { isSupabaseConfigured, supabase } from '@/lib/supabaseClient'
 import { getSampleListing } from '@/lib/sample-listings'
+import { CalendarCaptionLabel } from '@/components/ui/calendar'
 import { MessageHostDialog } from '@/components/message-host-dialog'
 import { SaveListingButton } from '@/components/save-listing-button'
 import { recordListingEngagement } from '@/lib/listing-engagement'
@@ -203,6 +204,9 @@ function BookingDateRangePicker({ dateRange, setDateRange }) {
               numberOfMonths={1}
               disabled={{ before: new Date() }}
               showOutsideDays={false}
+              components={{
+                CaptionLabel: CalendarCaptionLabel,
+              }}
               formatters={{
                 formatCaption: (date) =>
                   `${date.toLocaleString('default', {
