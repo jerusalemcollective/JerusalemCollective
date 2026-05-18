@@ -1,65 +1,109 @@
-'use client'
-
-import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { redirect } from 'next/navigation'
+import { CalendarDays } from 'lucide-react'
+import { createClient } from '@/lib/supabase/server'
 
-export default function BookingsPage() {
-  const [isLoading, setIsLoading] = useState(true)
-  const router = useRouter()
+type BookingRow = {
+  id: string
+  check_in: string | null
+  check_out: string | null
+  listings?: {
+    id: string
+    title: string
+    area: string | null
+  } | null
+}
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (!user) {
-        router.push('/login?redirect=/account/bookings')
-        return
-      }
-      setIsLoading(false)
-    }
-    checkAuth()
-  }, [router])
+export default async function BookingsPage() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F8F5F2]">
-        <div className="text-stone-600">Loading...</div>
-      </div>
-    )
+  if (!user) {
+    redirect('/login?redirect=/account/bookings')
   }
+
+  const { data } = await supabase
+    .from('bookings')
+    .select('id, check_in, check_out, listings(id, title, area)')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+
+  const bookings = (data || []) as BookingRow[]
 
   return (
     <div className="min-h-screen">
-      <div className="mx-auto max-w-4xl px-5 py-10 md:px-6">
-        <div className="mb-6 flex items-center gap-2 text-sm text-stone-500">
-          <Link href="/account" className="hover:text-[#c76f55]">Account</Link>
-          <span>/</span>
-          <span className="text-stone-900">My Trips</span>
-        </div>
+      <div className="mx-auto max-w-5xl px-5 py-10 md:px-6">
+        <Breadcrumb current="My trips" />
 
-        <h1 className="mb-8 text-3xl font-bold text-stone-900">My Trips</h1>
+        <header className="mb-8 border-b border-stone-200 pb-6">
+          <h1 className="text-3xl font-bold tracking-tight text-stone-950">My trips</h1>
+          <p className="mt-2 text-stone-600">Upcoming and past stays in one place.</p>
+        </header>
 
-        <div className="rounded-3xl bg-white p-8 text-center shadow-sm">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-stone-100">
-            <svg className="h-8 w-8 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
-            </svg>
+        {bookings.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <div className="divide-y divide-stone-200 border-y border-stone-200">
+            {bookings.map((booking) => (
+              <Link
+                key={booking.id}
+                href={booking.listings?.id ? `/listings/${booking.listings.id}` : '/stays'}
+                className="grid gap-3 py-5 transition hover:bg-white/50 md:grid-cols-[1fr_auto] md:items-center"
+              >
+                <div>
+                  <p className="font-bold text-stone-950">{booking.listings?.title || 'Stay'}</p>
+                  <p className="mt-1 text-sm text-stone-600">{booking.listings?.area || 'Jerusalem'}</p>
+                  <p className="mt-2 text-sm font-medium text-stone-700">
+                    {formatDate(booking.check_in)} to {formatDate(booking.check_out)}
+                  </p>
+                </div>
+                <span className="w-fit rounded-full bg-stone-200 px-3 py-1 text-xs font-bold capitalize text-stone-700">
+                  Booking
+                </span>
+              </Link>
+            ))}
           </div>
-          <h2 className="mb-2 text-xl font-bold text-stone-900">No trips yet</h2>
-          <p className="mb-6 text-stone-600">
-            When you book a stay, it will appear here.
-          </p>
-          <Link
-            href="/stays"
-            className="inline-flex rounded-full bg-[#c76f55] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#b5624a]"
-          >
-            Start exploring
-          </Link>
-        </div>
+        )}
       </div>
     </div>
   )
+}
+
+function Breadcrumb({ current }: { current: string }) {
+  return (
+    <div className="mb-6 flex items-center gap-2 text-sm text-stone-500">
+      <Link href="/account" className="hover:text-[#c76f55]">Account</Link>
+      <span>/</span>
+      <span className="text-stone-900">{current}</span>
+    </div>
+  )
+}
+
+function EmptyState() {
+  return (
+    <div className="rounded-lg bg-white p-8 text-center shadow-sm">
+      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-stone-100">
+        <CalendarDays className="h-8 w-8 text-stone-400" />
+      </div>
+      <h2 className="mb-2 text-xl font-bold text-stone-900">No trips yet</h2>
+      <p className="mb-6 text-stone-600">When you book a stay, it will appear here.</p>
+      <Link
+        href="/stays"
+        className="inline-flex rounded-full bg-[#c76f55] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#b5624a]"
+      >
+        Start exploring
+      </Link>
+    </div>
+  )
+}
+
+function formatDate(value?: string | null) {
+  if (!value) return 'TBC'
+  return new Date(`${value}T12:00:00`).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
 }

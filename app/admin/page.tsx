@@ -1,8 +1,8 @@
 import Link from 'next/link'
-import { requireAdmin } from '@/lib/admin'
+import { requireAdminPermission } from '@/lib/admin'
 
 export default async function AdminOverviewPage() {
-  const { supabase } = await requireAdmin()
+  const { supabase } = await requireAdminPermission('overview')
   const [
     { count: applicationCount },
     { count: newApplicationCount },
@@ -20,109 +20,114 @@ export default async function AdminOverviewPage() {
       .from('host_applications')
       .select('id, host_name, apartment_title, area, status, created_at')
       .order('created_at', { ascending: false })
-      .limit(5),
+      .limit(6),
   ])
 
   return (
     <div>
-      <div className="mb-8">
+      <header className="border-b border-stone-200 pb-6">
         <h2 className="text-3xl font-bold tracking-tight text-stone-950">Overview</h2>
         <p className="mt-2 text-stone-600">
-          Monitor submissions, listings, and host activity from one place.
+          A quick read on what needs review and what is already live.
         </p>
+      </header>
+
+      <div className="grid gap-4 border-b border-stone-200 py-5 sm:grid-cols-2 xl:grid-cols-5">
+        <Metric label="Applications" value={applicationCount || 0} />
+        <Metric label="New submissions" value={newApplicationCount || 0} />
+        <Metric label="Published" value={publishedListingCount || 0} />
+        <Metric label="Hidden drafts" value={draftListingCount || 0} />
+        <Metric label="Hosts" value={hostCount || 0} />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard label="Applications" value={applicationCount || 0} />
-        <SummaryCard label="New submissions" value={newApplicationCount || 0} />
-        <SummaryCard label="Published listings" value={publishedListingCount || 0} />
-        <SummaryCard label="Hosts" value={hostCount || 0} />
-      </div>
-
-      <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Link
-          href="/admin/applications"
-          className="rounded-3xl bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-        >
-          <p className="text-sm font-semibold text-stone-500">Review</p>
-          <h3 className="mt-2 text-xl font-bold text-stone-950">Applications</h3>
-          <p className="mt-2 text-sm leading-6 text-stone-600">
-            Approve, reject, and publish incoming host submissions.
-          </p>
-        </Link>
-        <Link
-          href="/admin/listings"
-          className="rounded-3xl bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-        >
-          <p className="text-sm font-semibold text-stone-500">Manage</p>
-          <h3 className="mt-2 text-xl font-bold text-stone-950">Listings</h3>
-          <p className="mt-2 text-sm leading-6 text-stone-600">
-            Publish, hide, and feature live inventory.
-          </p>
-        </Link>
-        <Link
-          href="/admin/analytics"
-          className="rounded-3xl bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-        >
-          <p className="text-sm font-semibold text-stone-500">Measure</p>
-          <h3 className="mt-2 text-xl font-bold text-stone-950">Analytics</h3>
-          <p className="mt-2 text-sm leading-6 text-stone-600">
-            Follow searches, saves, enquiries, and listing interest.
-          </p>
-        </Link>
-        <Link
-          href="/admin/cases"
-          className="rounded-3xl bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-        >
-          <p className="text-sm font-semibold text-stone-500">Resolve</p>
-          <h3 className="mt-2 text-xl font-bold text-stone-950">Cases</h3>
-          <p className="mt-2 text-sm leading-6 text-stone-600">
-            Manage disputes, refund requests, and case outcomes.
-          </p>
-        </Link>
-      </div>
-
-      <div className="mt-8 overflow-hidden rounded-3xl bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b border-stone-100 px-6 py-4">
-          <h3 className="text-lg font-bold text-stone-950">Recent applications</h3>
-          <Link href="/admin/applications" className="text-sm font-semibold text-[#c76f55] hover:underline">
-            View all
-          </Link>
-        </div>
-        <div className="divide-y divide-stone-100">
-          {(recentApplications || []).map((application) => (
-            <Link
-              key={application.id}
-              href={`/admin/applications/${application.id}`}
-              className="grid gap-2 px-6 py-4 transition hover:bg-stone-50 md:grid-cols-[1.2fr_1fr_0.7fr]"
-            >
-              <div>
-                <p className="font-bold text-stone-950">{application.apartment_title}</p>
-                <p className="mt-1 text-sm text-stone-500">{application.host_name}</p>
-              </div>
-              <p className="text-sm text-stone-700">{application.area}</p>
-              <StatusBadge status={application.status} />
+      <div className="grid gap-8 py-8 xl:grid-cols-[1.35fr_0.75fr]">
+        <section>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-xl font-bold text-stone-950">Recent applications</h3>
+              <p className="mt-1 text-sm text-stone-600">
+                The newest host submissions, ready to review in order.
+              </p>
+            </div>
+            <Link href="/admin/applications" className="text-sm font-semibold text-[#c76f55] hover:underline">
+              View all
             </Link>
-          ))}
-          {!recentApplications?.length && (
-            <div className="px-6 py-10 text-center text-stone-500">No applications yet.</div>
-          )}
-        </div>
-      </div>
+          </div>
 
-      <div className="mt-4 text-sm text-stone-500">
-        Draft listings: {draftListingCount || 0}
+          <div className="mt-4 divide-y divide-stone-200 border-y border-stone-200">
+            {(recentApplications || []).map((application) => (
+              <Link
+                key={application.id}
+                href={`/admin/applications/${application.id}`}
+                className="grid gap-3 py-4 transition hover:bg-white/50 md:grid-cols-[1.25fr_0.8fr_auto] md:items-center"
+              >
+                <div>
+                  <p className="font-bold text-stone-950">{application.apartment_title}</p>
+                  <p className="mt-1 text-sm text-stone-500">{application.host_name}</p>
+                </div>
+                <p className="text-sm text-stone-700">{application.area}</p>
+                <StatusBadge status={application.status} />
+              </Link>
+            ))}
+            {!recentApplications?.length && (
+              <div className="py-8 text-sm text-stone-500">No applications yet.</div>
+            )}
+          </div>
+        </section>
+
+        <aside>
+          <h3 className="text-xl font-bold text-stone-950">Work queue</h3>
+          <div className="mt-4 divide-y divide-stone-200 border-y border-stone-200">
+            <QueueLink
+              href="/admin/applications"
+              title="Review applications"
+              detail={`${newApplicationCount || 0} new waiting`}
+            />
+            <QueueLink
+              href="/admin/listings"
+              title="Manage listings"
+              detail={`${draftListingCount || 0} hidden or not yet live`}
+            />
+            <QueueLink
+              href="/admin/cases"
+              title="Handle disputes"
+              detail="Refunds and support cases"
+            />
+            <QueueLink
+              href="/admin/analytics"
+              title="Check analytics"
+              detail="Searches, saves, and enquiries"
+            />
+          </div>
+        </aside>
       </div>
     </div>
   )
 }
 
-function SummaryCard({ label, value }: { label: string; value: number }) {
+function Metric({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-3xl bg-white p-5 shadow-sm">
-      <p className="text-sm font-semibold text-stone-500">{label}</p>
-      <p className="mt-2 text-3xl font-bold text-stone-950">{value}</p>
+    <div>
+      <p className="text-sm font-medium text-stone-500">{label}</p>
+      <p className="mt-1 text-3xl font-bold tracking-tight text-stone-950">{value}</p>
     </div>
+  )
+}
+
+function QueueLink({
+  href,
+  title,
+  detail,
+}: {
+  href: string
+  title: string
+  detail: string
+}) {
+  return (
+    <Link href={href} className="block py-4 transition hover:text-[#c76f55]">
+      <p className="font-semibold text-stone-950">{title}</p>
+      <p className="mt-1 text-sm text-stone-600">{detail}</p>
+    </Link>
   )
 }
 
@@ -134,7 +139,7 @@ function StatusBadge({ status }: { status: string }) {
         ? 'bg-red-100 text-red-700'
         : status === 'in_review'
           ? 'bg-amber-100 text-amber-700'
-          : 'bg-stone-100 text-stone-700'
+          : 'bg-stone-200 text-stone-700'
 
   return (
     <span className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-bold ${styles}`}>

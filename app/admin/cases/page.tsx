@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { requireAdmin } from '@/lib/admin'
+import { requireAdminPermission } from '@/lib/admin'
 import { SupportCaseForm } from './support-case-form'
 import { summarizeSupportCases } from '@/lib/marketplace-rules'
 
@@ -30,7 +30,7 @@ type SupportCase = {
 }
 
 export default async function AdminCasesPage() {
-  const { supabase } = await requireAdmin()
+  const { supabase } = await requireAdminPermission('cases')
   const { data } = await supabase
     .from('support_cases')
     .select(`

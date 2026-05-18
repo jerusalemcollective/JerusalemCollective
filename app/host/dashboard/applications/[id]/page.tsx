@@ -27,13 +27,14 @@ export default async function HostApplicationEditPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const { supabase } = await requireHostDashboardAccess()
+  const { supabase, hostIds } = await requireHostDashboardAccess()
   const { data: application } = await supabase
     .from('host_applications')
     .select(
       'id, apartment_title, area, exact_address, latitude, longitude, bedrooms, bathrooms, sleeps, price_ils, price_usd, amenities, description, status, admin_feedback',
     )
     .eq('id', id)
+    .in('host_id', hostIds)
     .single()
 
   if (!application) notFound()

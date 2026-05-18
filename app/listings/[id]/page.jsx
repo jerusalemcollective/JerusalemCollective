@@ -10,6 +10,7 @@ import { getSampleListing } from '@/lib/sample-listings'
 import { CalendarCaptionLabel } from '@/components/ui/calendar'
 import { MessageHostDialog } from '@/components/message-host-dialog'
 import { SaveListingButton } from '@/components/save-listing-button'
+import { BookingDateRangePicker as UnifiedBookingDateRangePicker } from '@/components/booking-date-range-picker'
 import { recordListingEngagement } from '@/lib/listing-engagement'
 import { formatHebrewMonthSpan, formatHebrewShortDate } from '@/lib/hebrew-date'
 import 'react-day-picker/dist/style.css'
@@ -553,7 +554,7 @@ export default function ListingDetailPage() {
 
               {/* Date and Guest Selection */}
               <div className="mb-4 space-y-3">
-                <BookingDateRangePicker
+                <UnifiedBookingDateRangePicker
                   dateRange={bookingDateRange}
                   setDateRange={setBookingDateRange}
                 />
@@ -693,7 +694,7 @@ export default function ListingDetailPage() {
 
               {/* Date and Guest Selection */}
               <div className="mb-6 space-y-3">
-                <BookingDateRangePicker
+                <UnifiedBookingDateRangePicker
                   dateRange={bookingDateRange}
                   setDateRange={setBookingDateRange}
                 />

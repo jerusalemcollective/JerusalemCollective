@@ -17,10 +17,21 @@ export async function addUnavailableRange(formData: FormData) {
     throw new Error('End date must be after start date.')
   }
 
-  const { supabase, user } = await requireHostDashboardAccess()
+  const { supabase, host, hostIds } = await requireHostDashboardAccess()
+  const { data: listing } = await supabase
+    .from('listings')
+    .select('id')
+    .eq('id', listingId)
+    .in('host_id', hostIds)
+    .maybeSingle()
+
+  if (!listing) {
+    throw new Error('Listing not found.')
+  }
+
   const { error } = await supabase.from('listing_unavailable_ranges').insert({
     listing_id: listingId,
-    host_id: user.id,
+    host_id: host.id,
     start_date: startDate,
     end_date: endDate,
     reason: reason || null,
@@ -38,11 +49,12 @@ export async function removeUnavailableRange(formData: FormData) {
     throw new Error('Missing unavailable range id.')
   }
 
-  const { supabase } = await requireHostDashboardAccess()
+  const { supabase, hostIds } = await requireHostDashboardAccess()
   const { error } = await supabase
     .from('listing_unavailable_ranges')
     .delete()
     .eq('id', rangeId)
+    .in('host_id', hostIds)
 
   if (error) throw error
 

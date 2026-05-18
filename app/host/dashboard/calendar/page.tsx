@@ -20,15 +20,17 @@ type UnavailableRange = {
 }
 
 export default async function HostCalendarPage() {
-  const { supabase } = await requireHostDashboardAccess()
+  const { supabase, hostIds } = await requireHostDashboardAccess()
   const [{ data: listings }, { data: ranges }] = await Promise.all([
     supabase
       .from('listings')
       .select('id, title')
+      .in('host_id', hostIds)
       .order('created_at', { ascending: false }),
     supabase
       .from('listing_unavailable_ranges')
       .select('id, listing_id, start_date, end_date, reason, listings(title)')
+      .in('host_id', hostIds)
       .order('start_date', { ascending: true }),
   ])
 

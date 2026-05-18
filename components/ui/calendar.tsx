@@ -9,7 +9,11 @@ import {
 import { DayButton, DayPicker, getDefaultClassNames } from 'react-day-picker'
 
 import { cn } from '@/lib/utils'
-import { formatHebrewDay, formatHebrewMonthSpan } from '@/lib/hebrew-date'
+import {
+  formatHebrewDay,
+  formatHebrewMonthSpan,
+  getJewishHoliday,
+} from '@/lib/hebrew-date'
 import { Button, buttonVariants } from '@/components/ui/button'
 
 function Calendar({
@@ -184,7 +188,13 @@ function CalendarCaptionLabel({
   className,
   ...props
 }: React.ComponentProps<'span'>) {
-  const [gregorianMonth, hebrewMonth = ''] = String(children ?? '').split('|')
+  const captionText = String(children ?? '')
+    .replace('Ã‚Â·', '·')
+    .replace('Â·', '·')
+
+  const [gregorianMonth, hebrewMonth = ''] = captionText.includes('|')
+    ? captionText.split('|')
+    : captionText.split('·')
 
   return (
     <span
@@ -208,6 +218,7 @@ function CalendarDayButton({
   ...props
 }: React.ComponentProps<typeof DayButton>) {
   const defaultClassNames = getDefaultClassNames()
+  const holiday = getJewishHoliday(day.date)
 
   const ref = React.useRef<HTMLButtonElement>(null)
   React.useEffect(() => {
@@ -229,8 +240,10 @@ function CalendarDayButton({
       data-range-start={modifiers.range_start}
       data-range-end={modifiers.range_end}
       data-range-middle={modifiers.range_middle}
+      data-holiday={Boolean(holiday)}
+      title={holiday || undefined}
       className={cn(
-        'data-[selected-single=true]:bg-primary data-[selected-single=true]:text-primary-foreground data-[range-middle=true]:bg-accent data-[range-middle=true]:text-accent-foreground data-[range-start=true]:bg-primary data-[range-start=true]:text-primary-foreground data-[range-end=true]:bg-primary data-[range-end=true]:text-primary-foreground group-data-[focused=true]/day:border-ring group-data-[focused=true]/day:ring-ring/50 dark:hover:text-accent-foreground flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-0.5 leading-none font-normal group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:ring-[3px] data-[range-end=true]:rounded-md data-[range-end=true]:rounded-r-md data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-md data-[range-start=true]:rounded-l-md',
+        'data-[holiday=true]:bg-[#fff3df] data-[holiday=true]:text-[#9a5a00] data-[holiday=true]:ring-1 data-[holiday=true]:ring-[#efd28c] data-[selected-single=true]:bg-primary data-[selected-single=true]:text-primary-foreground data-[selected-single=true]:ring-0 data-[range-middle=true]:bg-accent data-[range-middle=true]:text-accent-foreground data-[range-middle=true]:ring-0 data-[range-start=true]:bg-primary data-[range-start=true]:text-primary-foreground data-[range-start=true]:ring-0 data-[range-end=true]:bg-primary data-[range-end=true]:text-primary-foreground data-[range-end=true]:ring-0 group-data-[focused=true]/day:border-ring group-data-[focused=true]/day:ring-ring/50 dark:hover:text-accent-foreground flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-0.5 leading-none font-normal group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:ring-[3px] data-[range-end=true]:rounded-md data-[range-end=true]:rounded-r-md data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-md data-[range-start=true]:rounded-l-md',
         defaultClassNames.day,
         className,
       )}

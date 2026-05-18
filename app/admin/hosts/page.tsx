@@ -1,61 +1,73 @@
 import Link from 'next/link'
-import { requireAdmin } from '@/lib/admin'
+import { requireAdminPermission } from '@/lib/admin'
 import { updateHostVerification } from '@/app/admin/actions'
 
-type HostRow = {
-  id: string
-  name: string
+type PersonRow = {
+  user_id: string
   email: string | null
-  host_type: string
-  is_verified: boolean
+  full_name: string | null
+  host_id: string | null
+  host_name: string | null
+  host_type: string | null
+  host_is_verified: boolean | null
+  listing_count: number
+  application_count: number
   created_at: string
+  last_sign_in_at: string | null
 }
 
 export default async function AdminHostsPage() {
-  const { supabase } = await requireAdmin()
-  const { data } = await supabase
-    .from('hosts')
-    .select('id, name, email, host_type, is_verified, created_at')
-    .order('created_at', { ascending: false })
+  const { supabase } = await requireAdminPermission('hosts')
+  const { data, error } = await supabase.rpc('list_platform_people')
 
-  const hosts = (data || []) as HostRow[]
+  if (error) {
+    throw error
+  }
+
+  const hosts = ((data || []) as PersonRow[]).filter((person) => person.host_id)
 
   return (
     <div>
       <div className="mb-8">
         <h2 className="text-3xl font-bold tracking-tight text-stone-950">Hosts</h2>
-        <p className="mt-2 text-stone-600">Review host accounts and manage verification status.</p>
+        <p className="mt-2 text-stone-600">
+          All host accounts, their contact details, verification, and inventory.
+        </p>
       </div>
 
-      <div className="overflow-hidden rounded-3xl bg-white shadow-sm">
-        <div className="grid gap-4 border-b border-stone-100 px-6 py-4 text-xs font-bold uppercase tracking-widest text-stone-400 md:grid-cols-[1.2fr_1fr_0.8fr_0.8fr_0.8fr]">
+      <div className="overflow-hidden border-y border-stone-200">
+        <div className="grid gap-4 border-b border-stone-200 py-4 text-xs font-bold uppercase tracking-widest text-stone-400 md:grid-cols-[1.2fr_1fr_0.75fr_0.85fr_0.8fr_0.8fr]">
           <span>Host</span>
           <span>Email</span>
           <span>Type</span>
+          <span>Inventory</span>
           <span>Status</span>
           <span>Action</span>
         </div>
 
         {hosts.length === 0 ? (
-          <div className="px-6 py-12 text-center text-stone-500">No hosts yet.</div>
+          <div className="py-12 text-center text-stone-500">No hosts yet.</div>
         ) : (
-          <div className="divide-y divide-stone-100">
+          <div className="divide-y divide-stone-200">
             {hosts.map((host) => (
               <div
-                key={host.id}
-                className="grid gap-4 px-6 py-5 md:grid-cols-[1.2fr_1fr_0.8fr_0.8fr_0.8fr] md:items-center"
+                key={host.host_id}
+                className="grid gap-4 py-5 md:grid-cols-[1.2fr_1fr_0.75fr_0.85fr_0.8fr_0.8fr] md:items-center"
               >
-                <Link href={`/hosts/${host.id}`} className="font-bold text-stone-950 hover:underline">
-                  {host.name}
+                <Link href={`/hosts/${host.host_id}`} className="font-bold text-stone-950 hover:underline">
+                  {host.host_name || host.full_name || 'Host'}
                 </Link>
                 <p className="text-sm text-stone-700">{host.email || 'No email'}</p>
-                <p className="text-sm text-stone-700">{host.host_type}</p>
-                <BooleanBadge value={host.is_verified} yes="Verified" no="Unverified" />
+                <p className="text-sm text-stone-700">{host.host_type || 'owner'}</p>
+                <p className="text-sm text-stone-700">
+                  {Number(host.listing_count || 0)} live / {Number(host.application_count || 0)} submitted
+                </p>
+                <BooleanBadge value={Boolean(host.host_is_verified)} yes="Verified" no="Unverified" />
                 <form action={updateHostVerification}>
-                  <input type="hidden" name="hostId" value={host.id} />
-                  <input type="hidden" name="value" value={String(!host.is_verified)} />
+                  <input type="hidden" name="hostId" value={host.host_id || ''} />
+                  <input type="hidden" name="value" value={String(!host.host_is_verified)} />
                   <button className="rounded-full border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-300">
-                    {host.is_verified ? 'Remove' : 'Verify'}
+                    {host.host_is_verified ? 'Remove' : 'Verify'}
                   </button>
                 </form>
               </div>
@@ -79,11 +91,10 @@ function BooleanBadge({
   return (
     <span
       className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-bold ${
-        value ? 'bg-green-100 text-green-700' : 'bg-stone-100 text-stone-700'
+        value ? 'bg-green-100 text-green-700' : 'bg-stone-200 text-stone-700'
       }`}
     >
       {value ? yes : no}
     </span>
   )
 }
-

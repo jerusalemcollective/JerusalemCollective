@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { requireAdmin } from '@/lib/admin'
+import { requireAdminPermission } from '@/lib/admin'
 import { updateListingVisibility } from '@/app/admin/actions'
 
 type ListingRow = {
@@ -16,7 +16,7 @@ type ListingRow = {
 }
 
 export default async function AdminListingsPage() {
-  const { supabase } = await requireAdmin()
+  const { supabase } = await requireAdminPermission('listings')
   const { data } = await supabase
     .from('listings')
     .select('id, title, area, host_id, is_published, is_featured, created_at, hosts(name)')

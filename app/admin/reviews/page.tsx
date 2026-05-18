@@ -1,4 +1,4 @@
-import { requireAdmin } from '@/lib/admin'
+import { requireAdminPermission } from '@/lib/admin'
 import { updateReviewApproval } from '@/app/admin/actions'
 
 type ReviewRow = {
@@ -15,7 +15,7 @@ type ReviewRow = {
 }
 
 export default async function AdminReviewsPage() {
-  const { supabase } = await requireAdmin()
+  const { supabase } = await requireAdminPermission('reviews')
   const { data } = await supabase
     .from('reviews')
     .select('id, reviewer_name, rating, title, content, is_approved, created_at, listings(title)')
@@ -89,4 +89,3 @@ function BooleanBadge({
     </span>
   )
 }
-

@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { requireAdmin } from '@/lib/admin'
+import { requireAdminPermission } from '@/lib/admin'
 
 export type AdminGrantState = {
   status: 'idle' | 'success' | 'error'
@@ -9,6 +9,11 @@ export type AdminGrantState = {
 }
 
 export type RequestChangesState = {
+  status: 'idle' | 'success' | 'error'
+  message: string
+}
+
+export type ApplicationStatusState = {
   status: 'idle' | 'success' | 'error'
   message: string
 }
@@ -27,19 +32,40 @@ export async function updateApplicationStatus(formData: FormData) {
   const applicationId = String(formData.get('applicationId') || '')
   const status = String(formData.get('status') || '')
 
-  if (!applicationId || !['in_review', 'rejected'].includes(status)) {
+  if (!applicationId || !isApplicationReviewStatus(status)) {
     throw new Error('Invalid application update.')
   }
 
-  const { supabase } = await requireAdmin()
-  const { error } = await supabase
-    .from('host_applications')
-    .update({ status })
-    .eq('id', applicationId)
+  await setApplicationStatus(applicationId, status)
+}
 
-  if (error) throw error
-  revalidatePath('/admin')
-  revalidatePath(`/admin/applications/${applicationId}`)
+export async function updateApplicationStatusWithFeedback(
+  _previousState: ApplicationStatusState,
+  formData: FormData,
+): Promise<ApplicationStatusState> {
+  const applicationId = String(formData.get('applicationId') || '')
+  const status = String(formData.get('status') || '')
+
+  if (!applicationId || !isApplicationReviewStatus(status)) {
+    return {
+      status: 'error',
+      message: 'This application update is missing required details.',
+    }
+  }
+
+  try {
+    await setApplicationStatus(applicationId, status)
+
+    return {
+      status: 'success',
+      message: status === 'rejected' ? 'Listing rejected.' : 'Listing marked in review.',
+    }
+  } catch (error) {
+    return {
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Unable to update this listing.',
+    }
+  }
 }
 
 export async function requestApplicationChanges(
@@ -57,7 +83,7 @@ export async function requestApplicationChanges(
   }
 
   try {
-    const { supabase } = await requireAdmin()
+    const { supabase } = await requireAdminPermission('applications')
     const { data: application, error: applicationError } = await supabase
       .from('host_applications')
       .select('id, host_id')
@@ -99,6 +125,50 @@ export async function requestApplicationChanges(
   }
 }
 
+function isApplicationReviewStatus(status: string): status is 'in_review' | 'rejected' {
+  return ['in_review', 'rejected'].includes(status)
+}
+
+async function setApplicationStatus(
+  applicationId: string,
+  status: 'in_review' | 'rejected',
+) {
+  const { supabase } = await requireAdminPermission('applications')
+  const update =
+    status === 'rejected'
+      ? {
+          status,
+          verification_status: 'rejected',
+          admin_feedback: null,
+          changes_requested_at: null,
+        }
+      : {
+          status,
+          verification_status: 'pending',
+          admin_feedback: null,
+          changes_requested_at: null,
+        }
+
+  const { data, error } = await supabase
+    .from('host_applications')
+    .update(update)
+    .eq('id', applicationId)
+    .select('id')
+    .maybeSingle()
+
+  if (error) throw error
+
+  if (!data?.id) {
+    throw new Error('No listing was updated. Check that this application still exists.')
+  }
+
+  revalidatePath('/admin')
+  revalidatePath('/admin/applications')
+  revalidatePath(`/admin/applications/${applicationId}`)
+  revalidatePath('/host/dashboard')
+  revalidatePath('/host/dashboard/listings')
+}
+
 export async function approveAndPublishApplication(formData: FormData) {
   const applicationId = String(formData.get('applicationId') || '')
 
@@ -106,7 +176,7 @@ export async function approveAndPublishApplication(formData: FormData) {
     throw new Error('Missing application id.')
   }
 
-  const { supabase } = await requireAdmin()
+  const { supabase } = await requireAdminPermission('applications')
   const { data: application, error: applicationError } = await supabase
     .from('host_applications')
     .select('*')
@@ -193,7 +263,7 @@ export async function updateListingVisibility(formData: FormData) {
     throw new Error('Invalid listing update.')
   }
 
-  const { supabase } = await requireAdmin()
+  const { supabase } = await requireAdminPermission('listings')
   const { error } = await supabase
     .from('listings')
     .update({ [field]: value })
@@ -214,7 +284,7 @@ export async function updateHostVerification(formData: FormData) {
     throw new Error('Missing host id.')
   }
 
-  const { supabase } = await requireAdmin()
+  const { supabase } = await requireAdminPermission('hosts')
   const { error } = await supabase
     .from('hosts')
     .update({ is_verified: value })
@@ -234,7 +304,7 @@ export async function updateReviewApproval(formData: FormData) {
     throw new Error('Missing review id.')
   }
 
-  const { supabase } = await requireAdmin()
+  const { supabase } = await requireAdminPermission('reviews')
   const { error } = await supabase
     .from('reviews')
     .update({ is_approved: value })
@@ -250,6 +320,7 @@ export async function grantAdminByEmail(
   formData: FormData,
 ): Promise<AdminGrantState> {
   const email = String(formData.get('email') || '').trim().toLowerCase()
+  const role = String(formData.get('role') || 'operations').trim()
 
   if (!email || !email.includes('@')) {
     return {
@@ -258,9 +329,17 @@ export async function grantAdminByEmail(
     }
   }
 
-  const { supabase } = await requireAdmin()
-  const { error } = await supabase.rpc('grant_admin_by_email', {
+  if (!['owner', 'operations', 'support', 'content', 'analyst', 'none'].includes(role)) {
+    return {
+      status: 'error',
+      message: 'Please choose a valid admin role.',
+    }
+  }
+
+  const { supabase } = await requireAdminPermission('admins')
+  const { data, error } = await supabase.rpc('set_admin_role_by_email', {
     target_email: email,
+    target_role: role === 'none' ? '' : role,
   })
 
   if (error) {
@@ -273,9 +352,13 @@ export async function grantAdminByEmail(
   revalidatePath('/admin')
   revalidatePath('/admin/admins')
 
+  const assignedRole = data?.[0]?.admin_role
+
   return {
     status: 'success',
-    message: `${email} is now an admin.`,
+    message: assignedRole
+      ? `${email} is now ${assignedRole}.`
+      : `${email} no longer has admin access.`,
   }
 }
 
@@ -299,7 +382,7 @@ export async function updateSupportCase(
   }
 
   try {
-    const { supabase } = await requireAdmin()
+    const { supabase } = await requireAdminPermission('cases')
     const { error } = await supabase
       .from('support_cases')
       .update({
@@ -342,7 +425,7 @@ export async function sendListingMessage(
   }
 
   try {
-    const { supabase } = await requireAdmin()
+    const { supabase } = await requireAdminPermission('listings')
     const { error } = await supabase.rpc('send_listing_admin_message', {
       target_listing_id: listingId,
       message_body: message,

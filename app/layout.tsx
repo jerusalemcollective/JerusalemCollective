@@ -19,6 +19,14 @@ export const metadata: Metadata = {
   },
   description:
     'Find verified short-term apartments and stays in Jerusalem with clear details, local neighbourhood search, and simple booking enquiries.',
+  icons: {
+    icon: [
+      { url: '/favicon.png', sizes: '64x64', type: 'image/png' },
+      { url: '/icon-light-32x32.png', sizes: '32x32', type: 'image/png' },
+    ],
+    shortcut: '/favicon.png',
+    apple: '/apple-icon.png',
+  },
   alternates: {
     canonical: '/',
   },

@@ -1,11 +1,11 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { requireAdmin } from '@/lib/admin'
+import { requireAdminPermission } from '@/lib/admin'
 import {
   approveAndPublishApplication,
-  updateApplicationStatus,
 } from '@/app/admin/actions'
 import { AdminRequestChangesForm } from '@/components/admin-request-changes-form'
+import { AdminApplicationStatusForm } from '@/components/admin-application-status-form'
 
 export default async function AdminApplicationPage({
   params,
@@ -13,7 +13,7 @@ export default async function AdminApplicationPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const { supabase } = await requireAdmin()
+  const { supabase } = await requireAdminPermission('applications')
   const [{ data: application }, { data: photos }] = await Promise.all([
     supabase.from('host_applications').select('*').eq('id', id).single(),
     supabase
@@ -99,23 +99,21 @@ export default async function AdminApplicationPage({
                   </button>
                 </form>
 
-                <form action={updateApplicationStatus}>
-                  <input type="hidden" name="applicationId" value={application.id} />
-                  <input type="hidden" name="status" value="in_review" />
-                  <button className="w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm font-bold text-stone-700 transition hover:border-stone-300">
-                    Mark in review
-                  </button>
-                </form>
+                <AdminApplicationStatusForm
+                  applicationId={application.id}
+                  status="in_review"
+                  label="Mark in review"
+                  tone="neutral"
+                />
 
                 <AdminRequestChangesForm applicationId={application.id} />
 
-                <form action={updateApplicationStatus}>
-                  <input type="hidden" name="applicationId" value={application.id} />
-                  <input type="hidden" name="status" value="rejected" />
-                  <button className="w-full rounded-2xl border border-red-200 px-4 py-3 text-sm font-bold text-red-700 transition hover:bg-red-50">
-                    Reject
-                  </button>
-                </form>
+                <AdminApplicationStatusForm
+                  applicationId={application.id}
+                  status="rejected"
+                  label="Reject"
+                  tone="danger"
+                />
               </div>
             </div>
           </aside>

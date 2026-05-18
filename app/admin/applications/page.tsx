@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { requireAdmin } from '@/lib/admin'
+import { requireAdminPermission } from '@/lib/admin'
 
 type ApplicationRow = {
   id: string
@@ -12,7 +12,7 @@ type ApplicationRow = {
 }
 
 export default async function AdminApplicationsPage() {
-  const { supabase } = await requireAdmin()
+  const { supabase } = await requireAdminPermission('applications')
   const { data } = await supabase
     .from('host_applications')
     .select('id, host_name, apartment_title, area, status, verification_status, created_at')
@@ -81,4 +81,3 @@ function StatusBadge({ status }: { status: string }) {
     </span>
   )
 }
-

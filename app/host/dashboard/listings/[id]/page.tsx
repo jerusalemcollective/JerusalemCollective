@@ -27,7 +27,7 @@ export default async function HostListingEditPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const { supabase } = await requireHostDashboardAccess()
+  const { supabase, hostIds } = await requireHostDashboardAccess()
   const [{ data: listing }, { data: adminMessages }] = await Promise.all([
     supabase
       .from('listings')
@@ -35,6 +35,7 @@ export default async function HostListingEditPage({
         'id, title, area, bedrooms, bathrooms, max_guests, price_ils, price_usd, booking_type, amenities, description, is_published',
       )
       .eq('id', id)
+      .in('host_id', hostIds)
       .single(),
     supabase
       .from('listing_admin_messages')

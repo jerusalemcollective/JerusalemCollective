@@ -74,17 +74,25 @@ export function Header() {
             .eq('id', authUser.id)
             .single()
 
+          const { data: host } = await supabase
+            .from('hosts')
+            .select('id')
+            .or(`id.eq.${authUser.id},user_id.eq.${authUser.id}`)
+            .limit(1)
+            .maybeSingle()
+
+          const hostIds = Array.from(new Set([host?.id, authUser.id].filter(Boolean))) as string[]
           const [{ data: ownedApplication }, { data: ownedListing }] = await Promise.all([
             supabase
               .from('host_applications')
               .select('id')
-              .eq('host_id', authUser.id)
+              .in('host_id', hostIds)
               .limit(1)
               .maybeSingle(),
             supabase
               .from('listings')
               .select('id')
-              .eq('host_id', authUser.id)
+              .in('host_id', hostIds)
               .limit(1)
               .maybeSingle(),
           ])
@@ -157,7 +165,7 @@ export function Header() {
 
         <div className="flex items-center gap-1.5 sm:gap-2">
           <Link
-            href="/become-a-host"
+            href={user ? '/become-a-host' : '/login?redirect=/become-a-host'}
             className="hidden rounded-full bg-[#252525] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#111111] sm:inline-flex md:px-5"
           >
             List your stay

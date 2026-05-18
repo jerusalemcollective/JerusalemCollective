@@ -19,7 +19,7 @@ type HostSupportCase = {
 }
 
 export default async function HostCasesPage() {
-  const { supabase } = await requireHostDashboardAccess()
+  const { supabase, hostIds } = await requireHostDashboardAccess()
   const { data } = await supabase
     .from('support_cases')
     .select(`
@@ -34,6 +34,7 @@ export default async function HostCasesPage() {
       listings(title),
       guest:profiles!support_cases_guest_id_fkey(full_name)
     `)
+    .in('host_id', hostIds)
     .order('created_at', { ascending: false })
 
   const cases = (data || []) as HostSupportCase[]

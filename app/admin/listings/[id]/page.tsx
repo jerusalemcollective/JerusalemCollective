@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { requireAdmin } from '@/lib/admin'
+import { requireAdminPermission } from '@/lib/admin'
 import { AdminListingMessageForm } from '@/components/admin-listing-message-form'
 
 export default async function AdminListingDetailPage({
@@ -9,7 +9,7 @@ export default async function AdminListingDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const { supabase } = await requireAdmin()
+  const { supabase } = await requireAdminPermission('listings')
   const [{ data: listing }, { data: messages, error: messagesError }] = await Promise.all([
     supabase
       .from('listings')

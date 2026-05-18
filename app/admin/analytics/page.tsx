@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { requireAdmin } from '@/lib/admin'
+import { requireAdminPermission } from '@/lib/admin'
 
 type PopularNeighborhood = {
   neighborhood: string
@@ -21,7 +21,7 @@ type ListingTitle = {
 }
 
 export default async function AdminAnalyticsPage() {
-  const { supabase } = await requireAdmin()
+  const { supabase } = await requireAdminPermission('analytics')
   const [
     { count: views },
     { count: saves },

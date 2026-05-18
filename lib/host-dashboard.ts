@@ -11,24 +11,46 @@ export async function requireHostDashboardAccess() {
     redirect('/login?redirect=/host/dashboard')
   }
 
+  const { data: host } = await supabase
+    .from('hosts')
+    .select('id, user_id, name, display_name, email, host_type, is_verified')
+    .or(`id.eq.${user.id},user_id.eq.${user.id}`)
+    .limit(1)
+    .maybeSingle()
+
+  const hostIds = Array.from(new Set([host?.id, user.id].filter(Boolean))) as string[]
+
   const [{ data: application }, { data: listing }] = await Promise.all([
     supabase
       .from('host_applications')
       .select('id')
-      .eq('host_id', user.id)
+      .in('host_id', hostIds)
       .limit(1)
       .maybeSingle(),
     supabase
       .from('listings')
       .select('id')
-      .eq('host_id', user.id)
+      .in('host_id', hostIds)
       .limit(1)
       .maybeSingle(),
   ])
 
-  if (!application && !listing) {
+  if (!host && !application && !listing) {
     redirect('/become-a-host')
   }
 
-  return { supabase, user }
+  return {
+    supabase,
+    user,
+    host: host || {
+      id: user.id,
+      user_id: user.id,
+      name: user.user_metadata?.full_name || user.email || 'Host',
+      display_name: user.user_metadata?.name || null,
+      email: user.email || null,
+      host_type: null,
+      is_verified: false,
+    },
+    hostIds,
+  }
 }

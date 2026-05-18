@@ -3,12 +3,14 @@ import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { updateHostPaymentPreferences } from './actions'
 
 export default async function HostPaymentsPage() {
-  const { supabase } = await requireHostDashboardAccess()
+  const { supabase, hostIds } = await requireHostDashboardAccess()
   const { data: profile } = await supabase
     .from('host_payment_profiles')
     .select(
       'accepts_direct_payment, direct_payment_instructions, preferred_currency, stripe_account_id, payout_setup_status, stripe_charges_enabled, stripe_payouts_enabled',
     )
+    .in('host_id', hostIds)
+    .limit(1)
     .maybeSingle()
 
   return (
