@@ -1,6 +1,20 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
+.jlm-place-autocomplete {
+  display: block;
+  width: 100%;
+  margin-top: 0.5rem;
+  border-radius: 1rem;
+  border: 1px solid #e7e5e4;
+  background: #fff;
+  color: #1c1917;
+  --gmpx-color-surface: #fff;
+  --gmpx-color-on-surface: #1c1917;
+  --gmpx-color-primary: #c76f55;
+  --gmpx-font-family-base: inherit;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 :root {

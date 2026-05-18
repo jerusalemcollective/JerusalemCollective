@@ -15,6 +15,7 @@ function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const searchParams = useSearchParams()
   const redirect = searchParams.get('redirect') || '/account'
+  const sessionExpired = searchParams.get('reason') === 'session-expired'
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -45,6 +46,12 @@ function LoginForm() {
           <p className="mb-6 text-sm text-stone-600">
             Sign in to your account
           </p>
+
+          {sessionExpired && (
+            <div className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">
+              You were signed out after 30 minutes of inactivity.
+            </div>
+          )}
 
           <GoogleAuthButton redirect={redirect} />
 

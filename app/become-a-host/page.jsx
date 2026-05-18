@@ -225,18 +225,12 @@ function loadGooglePlacesLibrary(apiKey) {
 
 // Address autocomplete using Google Places API
 function AddressAutocomplete({ value, onChange, onSelect, placeholder, className }) {
-  const inputRef = useRef(null)
-  const placesLibraryRef = useRef(null)
-  const sessionTokenRef = useRef(null)
-  const requestIdRef = useRef(0)
+  const widgetContainerRef = useRef(null)
+  const widgetRef = useRef(null)
   const [inputValue, setInputValue] = useState(value || '')
   const [isValidated, setIsValidated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false)
   const [loadError, setLoadError] = useState('')
-  const [suggestions, setSuggestions] = useState([])
-  const [isOpen, setIsOpen] = useState(false)
-  const [highlightedIndex, setHighlightedIndex] = useState(-1)
 
   // Sync external value changes
   useEffect(() => {
@@ -260,10 +254,52 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
       try {
         const places = await loadGooglePlacesLibrary(apiKey)
 
-        if (!isMounted) return
+        if (!isMounted || widgetRef.current || !widgetContainerRef.current) return
 
-        placesLibraryRef.current = places
-        sessionTokenRef.current = new places.AutocompleteSessionToken()
+        const placeAutocomplete = new places.PlaceAutocompleteElement({
+          includedPrimaryTypes: ['street_address', 'route', 'premise'],
+          includedRegionCodes: ['il'],
+          locationRestriction: {
+            west: 35.10,
+            south: 31.68,
+            east: 35.32,
+            north: 31.86,
+          },
+          requestedLanguage: 'en',
+          requestedRegion: 'il',
+        })
+
+        placeAutocomplete.placeholder = placeholder
+        placeAutocomplete.value = inputValue
+        placeAutocomplete.className = 'jlm-place-autocomplete'
+        placeAutocomplete.addEventListener('gmp-select', async ({ placePrediction }) => {
+          const place = placePrediction.toPlace()
+          await place.fetchFields({
+            fields: ['formattedAddress', 'location'],
+          })
+
+          const address = place.formattedAddress || placePrediction.text?.toString() || ''
+          if (!address) return
+
+          setInputValue(address)
+          setIsValidated(true)
+          onChange(address)
+
+          if (place.location) {
+            onSelect({
+              address,
+              latitude: place.location.lat(),
+              longitude: place.location.lng(),
+            })
+          }
+        })
+        placeAutocomplete.addEventListener('gmp-error', () => {
+          setLoadError('Address lookup is unavailable right now. You can still type the address manually.')
+        })
+
+        widgetContainerRef.current.innerHTML = ''
+        widgetContainerRef.current.appendChild(placeAutocomplete)
+        widgetRef.current = placeAutocomplete
         setLoadError('')
         setIsLoading(false)
       } catch (err) {
@@ -284,155 +320,22 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
   }, [])
 
   useEffect(() => {
-    if (
-      !placesLibraryRef.current?.AutocompleteSuggestion ||
-      !inputValue.trim() ||
-      inputValue.trim().length < 3 ||
-      isValidated
-    ) {
-      setSuggestions([])
-      setIsFetchingSuggestions(false)
-      return
+    if (widgetRef.current && value !== inputValue) {
+      widgetRef.current.value = value || ''
     }
-
-    const timer = window.setTimeout(async () => {
-      const currentRequestId = ++requestIdRef.current
-      setIsFetchingSuggestions(true)
-
-      try {
-        const { suggestions: nextSuggestions } =
-          await placesLibraryRef.current.AutocompleteSuggestion.fetchAutocompleteSuggestions({
-            input: `${inputValue}, Jerusalem`,
-            sessionToken: sessionTokenRef.current,
-            locationRestriction: {
-              west: 35.10,
-              south: 31.68,
-              east: 35.32,
-              north: 31.86,
-            },
-            includedRegionCodes: ['il'],
-            includedPrimaryTypes: ['street_address', 'route', 'premise'],
-            language: 'en',
-            region: 'il',
-          })
-
-        if (currentRequestId !== requestIdRef.current) return
-
-        const formattedSuggestions = (nextSuggestions || [])
-          .filter((suggestion) => suggestion.placePrediction)
-          .map((suggestion) => {
-            const prediction = suggestion.placePrediction
-            const description =
-              prediction.text?.toString() ||
-              prediction.mainText?.toString() ||
-              ''
-
-            return {
-              key: prediction.placeId || description,
-              description,
-              prediction,
-            }
-          })
-
-        setSuggestions(formattedSuggestions)
-        setIsOpen(formattedSuggestions.length > 0)
-      } catch (err) {
-        console.log('[v0] Address suggestion lookup failed:', err)
-        setSuggestions([])
-      } finally {
-        if (currentRequestId === requestIdRef.current) {
-          setIsFetchingSuggestions(false)
-        }
-      }
-    }, 250)
-
-    return () => window.clearTimeout(timer)
-  }, [inputValue, isValidated])
-
-  const handleInputChange = (e) => {
-    const val = e.target.value
-    setInputValue(val)
-    setIsValidated(false)
-    onChange(val)
-    setHighlightedIndex(-1)
-  }
-
-  const handleSelect = async (suggestion) => {
-    try {
-      const place = suggestion.prediction.toPlace()
-      await place.fetchFields({
-        fields: ['formattedAddress', 'location'],
-      })
-
-      const address = place.formattedAddress || suggestion.description
-      setInputValue(address)
-      setIsValidated(true)
-      setSuggestions([])
-      setIsOpen(false)
-      onChange(address)
-
-      if (place.location) {
-        onSelect({
-          address,
-          latitude: place.location.lat(),
-          longitude: place.location.lng(),
-        })
-      }
-
-      if (placesLibraryRef.current?.AutocompleteSessionToken) {
-        sessionTokenRef.current = new placesLibraryRef.current.AutocompleteSessionToken()
-      }
-    } catch (err) {
-      console.log('[v0] Address selection failed:', err)
-      setLoadError('Address lookup could not confirm that selection. Please try again.')
-    }
-  }
-
-  const handleKeyDown = (e) => {
-    if (!isOpen || suggestions.length === 0) return
-
-    if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      setHighlightedIndex((current) =>
-        current < suggestions.length - 1 ? current + 1 : 0,
-      )
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      setHighlightedIndex((current) =>
-        current > 0 ? current - 1 : suggestions.length - 1,
-      )
-    } else if (e.key === 'Enter' && highlightedIndex >= 0) {
-      e.preventDefault()
-      handleSelect(suggestions[highlightedIndex])
-    } else if (e.key === 'Escape') {
-      setIsOpen(false)
-    }
-  }
-
-  const handleBlur = () => {
-    window.setTimeout(() => setIsOpen(false), 150)
-  }
+  }, [value, inputValue])
 
   return (
     <div className="relative">
-      <input
-        ref={inputRef}
-        type="text"
-        value={inputValue}
-        onChange={handleInputChange}
-        onFocus={() => suggestions.length > 0 && setIsOpen(true)}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-        placeholder={isLoading ? 'Loading address lookup...' : placeholder}
-        className={className}
-        autoComplete="off"
-        role="combobox"
-        aria-expanded={isOpen && suggestions.length > 0}
-        aria-haspopup="listbox"
-        aria-autocomplete="list"
-      />
-      {isFetchingSuggestions && (
-        <div className="mt-1 text-xs text-stone-500">Looking up addresses...</div>
+      <div ref={widgetContainerRef} className={isLoading ? 'hidden' : ''} />
+      {isLoading && (
+        <input
+          type="text"
+          value=""
+          readOnly
+          placeholder="Loading address lookup..."
+          className={className}
+        />
       )}
       {inputValue && isValidated && (
         <div className="mt-1 flex items-center gap-1 text-xs text-green-600">
@@ -451,32 +354,6 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
         <div className="mt-1 text-xs text-amber-700">
           {loadError}
         </div>
-      )}
-      {isOpen && suggestions.length > 0 && (
-        <ul
-          className="absolute left-0 right-0 top-full z-50 mt-1 max-h-60 overflow-y-auto rounded-2xl border border-stone-200 bg-white py-2 shadow-lg"
-          role="listbox"
-        >
-          {suggestions.map((suggestion, index) => (
-            <li
-              key={suggestion.key}
-              role="option"
-              aria-selected={index === highlightedIndex}
-              className={`cursor-pointer px-4 py-3 text-sm transition ${
-                index === highlightedIndex
-                  ? 'bg-[#F8F5F2] text-stone-900'
-                  : 'text-stone-700 hover:bg-stone-50'
-              }`}
-              onMouseEnter={() => setHighlightedIndex(index)}
-              onMouseDown={(e) => {
-                e.preventDefault()
-                handleSelect(suggestion)
-              }}
-            >
-              {suggestion.description}
-            </li>
-          ))}
-        </ul>
       )}
     </div>
   )
