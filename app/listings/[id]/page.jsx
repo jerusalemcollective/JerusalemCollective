@@ -10,6 +10,7 @@ import { getSampleListing } from '@/lib/sample-listings'
 import { MessageHostDialog } from '@/components/message-host-dialog'
 import { SaveListingButton } from '@/components/save-listing-button'
 import { recordListingEngagement } from '@/lib/listing-engagement'
+import { HebrewCalendarDayButton } from '@/components/hebrew-calendar-day'
 import 'react-day-picker/dist/style.css'
 
 // Helper to get the public display name for a host
@@ -117,6 +118,11 @@ function BookingDateRangePicker({ dateRange, setDateRange }) {
               width: 40px;
               transition: background-color 120ms ease, color 120ms ease;
             }
+            .booking-lux-calendar .rdp-button span:last-child {
+              font-size: 9px;
+              line-height: 1;
+              opacity: 0.62;
+            }
             .booking-lux-calendar .rdp-button:hover:not([disabled]):not(.rdp-day_selected) {
               background: #f5f0eb;
               color: #78716c;
@@ -177,6 +183,9 @@ function BookingDateRangePicker({ dateRange, setDateRange }) {
               numberOfMonths={1}
               disabled={{ before: new Date() }}
               showOutsideDays={false}
+              components={{
+                DayButton: HebrewCalendarDayButton,
+              }}
             />
           </div>
 

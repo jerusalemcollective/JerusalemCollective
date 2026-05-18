@@ -50,7 +50,7 @@ export default async function AdminListingsPage() {
                 className="grid gap-4 px-6 py-5 md:grid-cols-[1.3fr_1fr_0.7fr_0.7fr_1fr] md:items-center"
               >
                 <div>
-                  <Link href={`/listings/${listing.id}`} className="font-bold text-stone-950 hover:underline">
+                  <Link href={`/admin/listings/${listing.id}`} className="font-bold text-stone-950 hover:underline">
                     {listing.title}
                   </Link>
                   <p className="mt-1 text-sm text-stone-500">{listing.area}</p>
@@ -75,6 +75,12 @@ export default async function AdminListingsPage() {
                       {listing.is_featured ? 'Unfeature' : 'Feature'}
                     </button>
                   </form>
+                  <Link
+                    href={`/admin/listings/${listing.id}`}
+                    className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800 transition hover:bg-amber-100"
+                  >
+                    Message host
+                  </Link>
                 </div>
               </div>
             ))}
@@ -104,4 +110,3 @@ function BooleanBadge({
     </span>
   )
 }
-

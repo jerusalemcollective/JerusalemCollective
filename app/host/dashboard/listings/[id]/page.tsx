@@ -28,13 +28,20 @@ export default async function HostListingEditPage({
 }) {
   const { id } = await params
   const { supabase } = await requireHostDashboardAccess()
-  const { data: listing } = await supabase
-    .from('listings')
-    .select(
-      'id, title, area, bedrooms, bathrooms, max_guests, price_ils, price_usd, booking_type, amenities, description, is_published',
-    )
-    .eq('id', id)
-    .single()
+  const [{ data: listing }, { data: adminMessages }] = await Promise.all([
+    supabase
+      .from('listings')
+      .select(
+        'id, title, area, bedrooms, bathrooms, max_guests, price_ils, price_usd, booking_type, amenities, description, is_published',
+      )
+      .eq('id', id)
+      .single(),
+    supabase
+      .from('listing_admin_messages')
+      .select('id, body, created_at')
+      .eq('listing_id', id)
+      .order('created_at', { ascending: false }),
+  ])
 
   if (!listing) notFound()
 
@@ -136,6 +143,23 @@ export default async function HostListingEditPage({
                 className={`${inputClass} resize-y`}
               />
             </EditorSection>
+
+            {!!adminMessages?.length && (
+              <EditorSection title="Messages from JLM Collective">
+                <div className="space-y-3">
+                  {adminMessages.map((message) => (
+                    <article key={message.id} className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                      <p className="text-xs font-bold uppercase tracking-widest text-amber-700">
+                        Message from JLM Collective
+                      </p>
+                      <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-amber-900">
+                        {message.body}
+                      </p>
+                    </article>
+                  ))}
+                </div>
+              </EditorSection>
+            )}
 
             <div className="flex justify-end">
               <button className="rounded-full bg-[#c76f55] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47]">

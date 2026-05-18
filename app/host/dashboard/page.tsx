@@ -72,6 +72,16 @@ export default async function HostDashboardPage() {
             </p>
           </Link>
           <Link
+            href="/host/dashboard/calendar"
+            className="rounded-3xl bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+          >
+            <p className="text-sm font-semibold text-stone-500">Availability</p>
+            <h2 className="mt-2 text-xl font-bold text-stone-950">Calendar</h2>
+            <p className="mt-2 text-sm leading-6 text-stone-600">
+              Block dates that are unavailable and keep each stay accurate.
+            </p>
+          </Link>
+          <Link
             href="/host/dashboard/payments"
             className="rounded-3xl bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
           >
@@ -81,7 +91,7 @@ export default async function HostDashboardPage() {
               Add payout details separately from your stay listing so booking money can be sent to you.
             </p>
           </Link>
-          <div className="rounded-3xl bg-white p-6 shadow-sm">
+          <div className="rounded-3xl bg-white p-6 shadow-sm md:col-span-2 xl:col-span-1">
             <p className="text-sm font-semibold text-stone-500">Coming next</p>
             <h2 className="mt-2 text-xl font-bold text-stone-950">Booking requests</h2>
             <p className="mt-2 text-sm leading-6 text-stone-600">
