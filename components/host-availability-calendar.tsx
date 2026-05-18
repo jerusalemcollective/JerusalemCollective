@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { format } from 'date-fns'
 import { Calendar } from '@/components/ui/calendar'
-import { HebrewCalendarDayButton } from '@/components/hebrew-calendar-day'
+import { formatHebrewShortDate } from '@/lib/hebrew-date'
 
 type ListingOption = {
   id: string
@@ -75,6 +75,13 @@ export function HostAvailabilityCalendar({
               {' - '}
               {dateRange.to ? format(dateRange.to, 'EEE, d MMM yyyy') : 'choose an end date'}
             </p>
+            {(dateRange.from || dateRange.to) && (
+              <p className="mt-1 text-xs font-medium text-stone-500">
+                {dateRange.from ? formatHebrewShortDate(dateRange.from) : 'Hebrew start date'}
+                {' - '}
+                {dateRange.to ? formatHebrewShortDate(dateRange.to) : 'Hebrew end date'}
+              </p>
+            )}
           </div>
 
           <button
@@ -103,9 +110,6 @@ export function HostAvailabilityCalendar({
               disabled={{ before: new Date() }}
               showOutsideDays={false}
               className="w-full"
-              components={{
-                DayButton: HebrewCalendarDayButton,
-              }}
             />
           </div>
         </div>

@@ -9,6 +9,7 @@ import {
   defaultExploreNeighborhoods,
 } from '@/lib/neighborhoods'
 import { Calendar } from '@/components/ui/calendar'
+import { formatHebrewShortDate } from '@/lib/hebrew-date'
 
 /* ---------- Shared UI primitives ---------- */
 
@@ -460,12 +461,22 @@ const SearchForm = () => {
                     <p className="mt-1 text-sm font-bold text-stone-950">
                       {dateRange.from ? format(dateRange.from, 'EEE, d MMM') : 'Choose date'}
                     </p>
+                    {dateRange.from && (
+                      <p className="mt-1 text-[11px] font-medium text-stone-500">
+                        {formatHebrewShortDate(dateRange.from)}
+                      </p>
+                    )}
                   </div>
                   <div className="rounded-2xl bg-white p-3 ring-1 ring-stone-200">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">Departure</p>
                     <p className="mt-1 text-sm font-bold text-stone-950">
                       {dateRange.to ? format(dateRange.to, 'EEE, d MMM') : 'Choose date'}
                     </p>
+                    {dateRange.to && (
+                      <p className="mt-1 text-[11px] font-medium text-stone-500">
+                        {formatHebrewShortDate(dateRange.to)}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

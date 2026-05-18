@@ -10,7 +10,7 @@ import { getSampleListing } from '@/lib/sample-listings'
 import { MessageHostDialog } from '@/components/message-host-dialog'
 import { SaveListingButton } from '@/components/save-listing-button'
 import { recordListingEngagement } from '@/lib/listing-engagement'
-import { HebrewCalendarDayButton } from '@/components/hebrew-calendar-day'
+import { formatHebrewShortDate } from '@/lib/hebrew-date'
 import 'react-day-picker/dist/style.css'
 
 // Helper to get the public display name for a host
@@ -50,12 +50,22 @@ function BookingDateRangePicker({ dateRange, setDateRange }) {
             <p className="mt-1 text-sm font-bold text-stone-950">
               {dateRange.from ? format(dateRange.from, 'EEE, d MMM') : 'Choose date'}
             </p>
+            {dateRange.from && (
+              <p className="mt-1 text-[11px] font-medium text-stone-500">
+                {formatHebrewShortDate(dateRange.from)}
+              </p>
+            )}
           </div>
           <div className="p-4 text-left">
             <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">Check-out</p>
             <p className="mt-1 text-sm font-bold text-stone-950">
               {dateRange.to ? format(dateRange.to, 'EEE, d MMM') : 'Choose date'}
             </p>
+            {dateRange.to && (
+              <p className="mt-1 text-[11px] font-medium text-stone-500">
+                {formatHebrewShortDate(dateRange.to)}
+              </p>
+            )}
           </div>
         </div>
       </button>
@@ -153,12 +163,22 @@ function BookingDateRangePicker({ dateRange, setDateRange }) {
                 <p className="mt-0.5 text-sm font-semibold text-stone-800">
                   {dateRange.from ? format(dateRange.from, 'EEE, d MMM') : 'Select'}
                 </p>
+                {dateRange.from && (
+                  <p className="mt-1 text-[11px] font-medium text-stone-500">
+                    {formatHebrewShortDate(dateRange.from)}
+                  </p>
+                )}
               </div>
               <div className="rounded-xl bg-white px-4 py-3">
                 <p className="text-[9px] font-semibold uppercase tracking-wider text-stone-400">Departure</p>
                 <p className="mt-0.5 text-sm font-semibold text-stone-800">
                   {dateRange.to ? format(dateRange.to, 'EEE, d MMM') : 'Select'}
                 </p>
+                {dateRange.to && (
+                  <p className="mt-1 text-[11px] font-medium text-stone-500">
+                    {formatHebrewShortDate(dateRange.to)}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -183,9 +203,6 @@ function BookingDateRangePicker({ dateRange, setDateRange }) {
               numberOfMonths={1}
               disabled={{ before: new Date() }}
               showOutsideDays={false}
-              components={{
-                DayButton: HebrewCalendarDayButton,
-              }}
             />
           </div>
 
