@@ -147,7 +147,7 @@ export function Header() {
         </Link>
 
         <nav className="hidden items-center gap-7 text-sm font-semibold lg:flex">
-          <Link href="/stays" className="text-stone-600 transition hover:text-[#c76f55]">
+          <Link href="/explore" className="text-stone-600 transition hover:text-[#c76f55]">
             Explore
           </Link>
           <Link href="/stays" className="text-stone-600 transition hover:text-[#c76f55]">
