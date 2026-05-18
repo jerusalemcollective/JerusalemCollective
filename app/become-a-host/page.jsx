@@ -300,18 +300,20 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
       setIsFetchingSuggestions(true)
 
       try {
-        const jerusalemCircle = new window.google.maps.Circle({
-          center: { lat: 31.7683, lng: 35.2137 },
-          radius: 25000,
-        })
-
         const { suggestions: nextSuggestions } =
           await placesLibraryRef.current.AutocompleteSuggestion.fetchAutocompleteSuggestions({
-            input: inputValue,
+            input: `${inputValue}, Jerusalem`,
             sessionToken: sessionTokenRef.current,
-            locationBias: jerusalemCircle,
+            locationRestriction: {
+              west: 35.10,
+              south: 31.68,
+              east: 35.32,
+              north: 31.86,
+            },
             includedRegionCodes: ['il'],
+            includedPrimaryTypes: ['street_address', 'route', 'premise'],
             language: 'en',
+            region: 'il',
           })
 
         if (currentRequestId !== requestIdRef.current) return

@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import { ensureHostProfile } from '@/lib/host-profile'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { GoogleAuthButton } from '@/components/google-auth-button'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, Suspense } from 'react'
@@ -65,6 +66,14 @@ function LoginForm() {
           <p className="mb-6 text-sm text-stone-600">
             Sign in to manage your listings
           </p>
+
+          <GoogleAuthButton redirect={redirect} isHost />
+
+          <div className="my-6 flex items-center gap-3">
+            <span className="h-px flex-1 bg-stone-200" />
+            <span className="text-xs font-medium uppercase tracking-widest text-stone-400">or</span>
+            <span className="h-px flex-1 bg-stone-200" />
+          </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
