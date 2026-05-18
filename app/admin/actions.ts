@@ -89,7 +89,12 @@ export async function requestApplicationChanges(
   } catch (error) {
     return {
       status: 'error',
-      message: error instanceof Error ? error.message : 'Unable to send the message.',
+      message:
+        error instanceof Error
+          ? error.message
+          : typeof error === 'string'
+            ? error
+            : JSON.stringify(error) || 'Unable to send the message.',
     }
   }
 }
