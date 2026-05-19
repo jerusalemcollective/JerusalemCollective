@@ -11,7 +11,6 @@ type ApplicationRow = {
   apartment_title: string
   area: string
   status: string
-  verification_status: string
   created_at: string
 }
 
@@ -26,7 +25,7 @@ export default async function AdminApplicationsPage({
   const [{ data }, { count }] = await Promise.all([
     supabase
       .from('host_applications')
-      .select('id, host_name, apartment_title, area, status, verification_status, created_at')
+      .select('id, host_name, apartment_title, area, status, created_at')
       .order('created_at', { ascending: false })
       .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1),
     supabase.from('host_applications').select('*', { count: 'exact', head: true }),

@@ -7,7 +7,7 @@ type HostApplication = {
   apartment_title: string
   area: string
   status: string
-  verification_status: string
+  verification_status?: string | null
   admin_feedback: string | null
   created_at: string
   bedrooms: number | null
@@ -39,7 +39,7 @@ export default async function HostListingsPage() {
   const [{ data: applications }, { data: listings }] = await Promise.all([
     supabase
       .from('host_applications')
-      .select('id, apartment_title, area, status, verification_status, admin_feedback, created_at, bedrooms, sleeps')
+      .select('id, apartment_title, area, status, admin_feedback, created_at, bedrooms, sleeps')
       .in('host_id', hostIds)
       .order('created_at', { ascending: false }),
     supabase
@@ -325,7 +325,7 @@ function hostStatusLabel(status: string) {
   return status.replaceAll('_', ' ')
 }
 
-function nextStepText(status: string, verificationStatus: string) {
+function nextStepText(status: string, verificationStatus?: string | null) {
   if (status === 'approved') return 'Approved and ready for publication.'
   if (status === 'rejected') return 'This stay needs attention before it can move forward.'
   if (status === 'changes_requested') return 'Changes were requested before review can continue.'

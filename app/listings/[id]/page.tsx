@@ -35,10 +35,27 @@ function getPublicName(host: HostRecord): string {
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
-  const { data } = await supabase.from('listings').select('title, area').eq('id', id).single()
+  const [{ data }, { data: photoData }] = await Promise.all([
+    supabase.from('listings').select('title, area').eq('id', id).single(),
+    supabase
+      .from('listing_photos')
+      .select('photo_url')
+      .eq('listing_id', id)
+      .eq('is_cover', true)
+      .limit(1)
+      .maybeSingle(),
+  ])
+  const title = data ? `${data.title} | JLM Collective` : 'Stay | JLM Collective'
+  const description = data ? `View ${data.title}, a curated stay in ${data.area}, Jerusalem.` : 'View a curated Jerusalem stay on JLM Collective.'
 
   return {
-    title: data ? `${data.title} | JLM Collective` : 'Stay | JLM Collective',
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: photoData?.photo_url ? [{ url: photoData.photo_url }] : [],
+    },
   }
 }
 
@@ -133,15 +150,100 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
       }
     : null
 
+  const photos = (photosData || []) as ListingDetailPhoto[]
+  const reviews = (reviewsData || []) as ListingDetailReview[]
+  const jsonLd = buildListingJsonLd({
+    listing,
+    photos,
+    reviews,
+    publicHostName,
+  })
+
   return (
-    <ListingDetailClient
-      listing={listing}
-      host={host}
-      publicHostName={publicHostName}
-      photos={(photosData || []) as ListingDetailPhoto[]}
-      reviews={(reviewsData || []) as ListingDetailReview[]}
-      blockedRanges={(blockedRangesData || []) as ListingBlockedRange[]}
-      fromStays={fromStays}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <ListingDetailClient
+        listing={listing}
+        host={host}
+        publicHostName={publicHostName}
+        photos={photos}
+        reviews={reviews}
+        blockedRanges={(blockedRangesData || []) as ListingBlockedRange[]}
+        fromStays={fromStays}
+      />
+    </>
   )
+}
+
+function buildListingJsonLd({
+  listing,
+  photos,
+  reviews,
+  publicHostName,
+}: {
+  listing: ListingDetailListing
+  photos: ListingDetailPhoto[]
+  reviews: ListingDetailReview[]
+  publicHostName: string | null
+}) {
+  const coverPhoto = photos.find((photo) => photo.is_cover) || photos[0]
+  const jsonLd: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'LodgingBusiness',
+    name: listing.title,
+    description: listing.description || `Curated stay in ${listing.area}, Jerusalem.`,
+    url: `https://jlmcollective.co/listings/${listing.id}`,
+    image: coverPhoto?.photo_url ? [coverPhoto.photo_url] : undefined,
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: listing.area,
+      addressRegion: 'Jerusalem',
+      addressCountry: 'IL',
+    },
+    numberOfRooms: listing.bedrooms,
+    maximumAttendeeCapacity: listing.max_guests,
+    amenityFeature: listing.amenities?.map((amenity) => ({
+      '@type': 'LocationFeatureSpecification',
+      name: amenity,
+      value: true,
+    })),
+    priceRange: listing.price_usd
+      ? `$${listing.price_usd.toLocaleString()}`
+      : listing.price_ils
+        ? `₪${listing.price_ils.toLocaleString()}`
+        : 'Price on request',
+    provider: publicHostName
+      ? {
+          '@type': 'Person',
+          name: publicHostName,
+        }
+      : undefined,
+  }
+
+  if (reviews.length > 0) {
+    const ratingValue = reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
+    jsonLd.aggregateRating = {
+      '@type': 'AggregateRating',
+      ratingValue: Number(ratingValue.toFixed(1)),
+      reviewCount: reviews.length,
+    }
+    jsonLd.review = reviews.slice(0, 5).map((review) => ({
+      '@type': 'Review',
+      author: {
+        '@type': 'Person',
+        name: review.reviewer_name,
+      },
+      reviewRating: {
+        '@type': 'Rating',
+        ratingValue: review.rating,
+        bestRating: 5,
+      },
+      reviewBody: review.content || undefined,
+    }))
+  }
+
+  return jsonLd
 }

@@ -4,6 +4,24 @@ import { HostDashboardNav } from '@/components/host-dashboard-nav'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { updateHostApplication } from '../../listings/actions'
 
+type HostApplication = {
+  id: string
+  apartment_title: string
+  area: string
+  exact_address: string | null
+  latitude?: number | null
+  longitude?: number | null
+  bedrooms: number | null
+  bathrooms: number | null
+  sleeps: number | null
+  price_ils: number | null
+  price_usd: number | null
+  amenities: string[] | null
+  description: string | null
+  status: string
+  admin_feedback?: string | null
+}
+
 const amenityOptions = [
   'WiFi',
   'Air conditioning',
@@ -30,14 +48,13 @@ export default async function HostApplicationEditPage({
   const { supabase, hostIds } = await requireHostDashboardAccess()
   const { data: application } = await supabase
     .from('host_applications')
-    .select(
-      'id, apartment_title, area, exact_address, latitude, longitude, bedrooms, bathrooms, sleeps, price_ils, price_usd, amenities, description, status, admin_feedback',
-    )
+    .select('*')
     .eq('id', id)
     .in('host_id', hostIds)
     .single()
 
   if (!application) notFound()
+  const hostApplication = application as HostApplication
 
   return (
     <main className="min-h-screen bg-[#F8F5F2] px-5 py-10 text-[#252525] md:px-6">
@@ -49,14 +66,14 @@ export default async function HostApplicationEditPage({
             Listings
           </Link>
           <span>/</span>
-          <span className="text-stone-900">{application.apartment_title}</span>
+          <span className="text-stone-900">{hostApplication.apartment_title}</span>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           <form action={updateHostApplication} className="space-y-6">
-            <input type="hidden" name="applicationId" value={application.id} />
-            <input type="hidden" name="latitude" value={application.latitude ?? ''} />
-            <input type="hidden" name="longitude" value={application.longitude ?? ''} />
+            <input type="hidden" name="applicationId" value={hostApplication.id} />
+            <input type="hidden" name="latitude" value={hostApplication.latitude ?? ''} />
+            <input type="hidden" name="longitude" value={hostApplication.longitude ?? ''} />
 
             <section className="rounded-3xl bg-white p-6 shadow-sm">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -67,18 +84,18 @@ export default async function HostApplicationEditPage({
                   <h1 className="mt-2 text-3xl font-bold text-stone-950">Edit and resubmit</h1>
                 </div>
                 <span className="inline-flex w-fit rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
-                  {hostStatusLabel(application.status)}
+                  {hostStatusLabel(hostApplication.status)}
                 </span>
               </div>
             </section>
 
-            {application.admin_feedback && (
+            {hostApplication.admin_feedback && (
               <section className="rounded-3xl border border-amber-200 bg-amber-50 p-6 shadow-sm">
                 <p className="text-xs font-bold uppercase tracking-widest text-amber-700">
                   Message from JLM Collective
                 </p>
                 <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-amber-900">
-                  {application.admin_feedback}
+                  {hostApplication.admin_feedback}
                 </p>
               </section>
             )}
@@ -86,30 +103,30 @@ export default async function HostApplicationEditPage({
             <EditorSection title="Basics">
               <div className="grid gap-4 md:grid-cols-2">
                 <Field label="Title">
-                  <input name="title" defaultValue={application.apartment_title} required className={inputClass} />
+                  <input name="title" defaultValue={hostApplication.apartment_title} required className={inputClass} />
                 </Field>
                 <Field label="Neighbourhood">
-                  <input name="area" defaultValue={application.area} required className={inputClass} />
+                  <input name="area" defaultValue={hostApplication.area} required className={inputClass} />
                 </Field>
               </div>
             </EditorSection>
 
             <EditorSection title="Location">
               <Field label="Exact address">
-                <input name="exactAddress" defaultValue={application.exact_address || ''} required className={inputClass} />
+                <input name="exactAddress" defaultValue={hostApplication.exact_address || ''} required className={inputClass} />
               </Field>
             </EditorSection>
 
             <EditorSection title="Capacity">
               <div className="grid gap-4 md:grid-cols-3">
                 <Field label="Bedrooms">
-                  <input name="bedrooms" type="number" min="0" defaultValue={application.bedrooms ?? ''} className={inputClass} />
+                  <input name="bedrooms" type="number" min="0" defaultValue={hostApplication.bedrooms ?? ''} className={inputClass} />
                 </Field>
                 <Field label="Bathrooms">
-                  <input name="bathrooms" type="number" min="0" step="0.5" defaultValue={application.bathrooms ?? ''} className={inputClass} />
+                  <input name="bathrooms" type="number" min="0" step="0.5" defaultValue={hostApplication.bathrooms ?? ''} className={inputClass} />
                 </Field>
                 <Field label="Sleeps">
-                  <input name="sleeps" type="number" min="1" defaultValue={application.sleeps ?? ''} className={inputClass} />
+                  <input name="sleeps" type="number" min="1" defaultValue={hostApplication.sleeps ?? ''} className={inputClass} />
                 </Field>
               </div>
             </EditorSection>
@@ -117,10 +134,10 @@ export default async function HostApplicationEditPage({
             <EditorSection title="Pricing">
               <div className="grid gap-4 md:grid-cols-2">
                 <Field label="Price ILS">
-                  <input name="priceIls" type="number" min="0" defaultValue={application.price_ils ?? ''} className={inputClass} />
+                  <input name="priceIls" type="number" min="0" defaultValue={hostApplication.price_ils ?? ''} className={inputClass} />
                 </Field>
                 <Field label="Price USD">
-                  <input name="priceUsd" type="number" min="0" defaultValue={application.price_usd ?? ''} className={inputClass} />
+                  <input name="priceUsd" type="number" min="0" defaultValue={hostApplication.price_usd ?? ''} className={inputClass} />
                 </Field>
               </div>
             </EditorSection>
@@ -133,7 +150,7 @@ export default async function HostApplicationEditPage({
                       type="checkbox"
                       name="amenities"
                       value={amenity}
-                      defaultChecked={(application.amenities || []).includes(amenity)}
+                      defaultChecked={(hostApplication.amenities || []).includes(amenity)}
                     />
                     <span>{amenity}</span>
                   </label>
@@ -144,7 +161,7 @@ export default async function HostApplicationEditPage({
             <EditorSection title="Description">
               <textarea
                 name="description"
-                defaultValue={application.description || ''}
+                defaultValue={hostApplication.description || ''}
                 rows={8}
                 required
                 className={`${inputClass} resize-y`}

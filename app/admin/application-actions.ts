@@ -14,6 +14,42 @@ export type ApplicationStatusState = {
   message: string
 }
 
+type ListingWritePayload = {
+  host_id: string
+  title: string
+  area: string
+  exact_address: string | null
+  latitude: number | null
+  longitude: number | null
+  bedrooms: number
+  bathrooms: number | null
+  max_guests: number
+  price_ils: number | null
+  price_usd: number | null
+  amenities: string[]
+  description: string | null
+  booking_type?: string
+  is_published: boolean
+  application_id?: string
+}
+
+type HostApplicationRecord = {
+  id: string
+  host_id: string
+  apartment_title: string
+  area: string
+  exact_address: string | null
+  latitude?: number | null
+  longitude?: number | null
+  bedrooms: number | null
+  bathrooms: number | null
+  sleeps: number | null
+  price_ils: number | null
+  price_usd: number | null
+  amenities: string[] | null
+  description: string | null
+}
+
 export async function updateApplicationStatusWithFeedback(
   _previousState: ApplicationStatusState,
   formData: FormData,
@@ -84,6 +120,9 @@ export async function requestApplicationChanges(
 
     revalidatePath('/admin')
     revalidatePath(`/admin/applications/${applicationId}`)
+    revalidatePath('/host/dashboard')
+    revalidatePath('/host/dashboard/listings')
+    revalidatePath(`/host/dashboard/applications/${applicationId}`)
 
     return {
       status: 'success',
@@ -120,62 +159,91 @@ export async function approveAndPublishApplication(formData: FormData) {
     throw applicationError || new Error('Application not found.')
   }
 
-  const { data: existingListing } = await supabase
+  const hostApplication = application as HostApplicationRecord
+  if (!hostApplication.host_id) {
+    throw new Error('This application is missing a host id.')
+  }
+
+  const { data: existingListing, error: existingListingError } = await supabase
     .from('listings')
     .select('id')
     .eq('application_id', applicationId)
     .maybeSingle()
 
-  let listingId = existingListing?.id
+  if (existingListingError && !isMissingColumnError(existingListingError, 'application_id')) {
+    throw existingListingError
+  }
+
+  let listingId: string | null = existingListing?.id ?? null
+  const listingPayload: ListingWritePayload = {
+    host_id: hostApplication.host_id,
+    title: hostApplication.apartment_title,
+    area: hostApplication.area,
+    exact_address: hostApplication.exact_address,
+    latitude: hostApplication.latitude ?? null,
+    longitude: hostApplication.longitude ?? null,
+    bedrooms: hostApplication.bedrooms || 0,
+    bathrooms: hostApplication.bathrooms,
+    max_guests: hostApplication.sleeps || 1,
+    price_ils: hostApplication.price_ils,
+    price_usd: hostApplication.price_usd,
+    amenities: hostApplication.amenities || [],
+    description: hostApplication.description,
+    is_published: true,
+  }
 
   if (!listingId) {
     const { data: listing, error: listingError } = await supabase
       .from('listings')
       .insert({
-        host_id: application.host_id,
-        title: application.apartment_title,
-        area: application.area,
-        exact_address: application.exact_address,
-        latitude: application.latitude,
-        longitude: application.longitude,
-        bedrooms: application.bedrooms || 0,
-        bathrooms: application.bathrooms,
-        max_guests: application.sleeps || 1,
-        price_ils: application.price_ils,
-        price_usd: application.price_usd,
+        ...listingPayload,
         application_id: applicationId,
-        amenities: application.amenities || [],
-        description: application.description,
         booking_type: 'request',
-        is_published: true,
       })
       .select('id')
       .single()
 
-    if (listingError) throw listingError
-    listingId = listing.id
+    if (listingError && isMissingColumnError(listingError, 'application_id')) {
+      const { data: fallbackListing, error: fallbackListingError } = await supabase
+        .from('listings')
+        .insert({
+          ...listingPayload,
+          booking_type: 'request',
+        })
+        .select('id')
+        .single()
+
+      if (fallbackListingError) throw fallbackListingError
+      if (!fallbackListing?.id) throw new Error('Listing was not created.')
+      listingId = fallbackListing.id
+    } else {
+      if (listingError) throw listingError
+      if (!listing?.id) throw new Error('Listing was not created.')
+      listingId = listing.id
+    }
   } else {
     const { error: listingUpdateError } = await supabase
       .from('listings')
       .update({
-        title: application.apartment_title,
-        area: application.area,
-        exact_address: application.exact_address,
-        latitude: application.latitude,
-        longitude: application.longitude,
-        bedrooms: application.bedrooms || 0,
-        bathrooms: application.bathrooms,
-        max_guests: application.sleeps || 1,
-        price_ils: application.price_ils,
-        price_usd: application.price_usd,
-        amenities: application.amenities || [],
-        description: application.description,
+        ...listingPayload,
         application_id: applicationId,
-        is_published: true,
       })
       .eq('id', listingId)
 
-    if (listingUpdateError) throw listingUpdateError
+    if (listingUpdateError && isMissingColumnError(listingUpdateError, 'application_id')) {
+      const { error: fallbackListingUpdateError } = await supabase
+        .from('listings')
+        .update(listingPayload)
+        .eq('id', listingId)
+
+      if (fallbackListingUpdateError) throw fallbackListingUpdateError
+    } else if (listingUpdateError) {
+      throw listingUpdateError
+    }
+  }
+
+  if (!listingId) {
+    throw new Error('Listing was not created.')
   }
 
   const { error: photoUpdateError } = await supabase
@@ -194,12 +262,25 @@ export async function approveAndPublishApplication(formData: FormData) {
     })
     .eq('id', applicationId)
 
-  if (approvalError) throw approvalError
+  if (approvalError && isMissingOptionalApplicationColumnError(approvalError)) {
+    const { error: fallbackApprovalError } = await supabase
+      .from('host_applications')
+      .update({ status: 'approved' })
+      .eq('id', applicationId)
+
+    if (fallbackApprovalError) throw fallbackApprovalError
+  } else if (approvalError) {
+    throw approvalError
+  }
 
   await logAdminAction(supabase, 'approve_application', 'application', applicationId)
 
   revalidatePath('/admin')
   revalidatePath(`/admin/applications/${applicationId}`)
+  revalidatePath('/admin/applications')
+  revalidatePath('/host/dashboard')
+  revalidatePath('/host/dashboard/listings')
+  revalidatePath(`/host/dashboard/applications/${applicationId}`)
   revalidatePath('/stays')
   revalidatePath(`/listings/${listingId}`)
 }
@@ -235,6 +316,31 @@ async function setApplicationStatus(
     .select('id')
     .maybeSingle()
 
+  if (error && isMissingOptionalApplicationColumnError(error)) {
+    const { data: fallbackData, error: fallbackError } = await supabase
+      .from('host_applications')
+      .update({ status })
+      .eq('id', applicationId)
+      .select('id')
+      .maybeSingle()
+
+    if (fallbackError) throw fallbackError
+
+    if (!fallbackData?.id) {
+      throw new Error('No listing was updated. Check that this application still exists.')
+    }
+
+    await logAdminAction(supabase, `set_status_${status}`, 'application', applicationId)
+
+    revalidatePath('/admin')
+    revalidatePath('/admin/applications')
+    revalidatePath(`/admin/applications/${applicationId}`)
+    revalidatePath('/host/dashboard')
+    revalidatePath('/host/dashboard/listings')
+    revalidatePath(`/host/dashboard/applications/${applicationId}`)
+    return
+  }
+
   if (error) throw error
 
   if (!data?.id) {
@@ -248,4 +354,25 @@ async function setApplicationStatus(
   revalidatePath(`/admin/applications/${applicationId}`)
   revalidatePath('/host/dashboard')
   revalidatePath('/host/dashboard/listings')
+  revalidatePath(`/host/dashboard/applications/${applicationId}`)
+}
+
+function isMissingColumnError(error: unknown, column: string) {
+  const message = getErrorMessage(error).toLowerCase()
+  return message.includes(column.toLowerCase()) && message.includes('column')
+}
+
+function isMissingOptionalApplicationColumnError(error: unknown) {
+  return ['verification_status', 'id_verified', 'admin_feedback', 'changes_requested_at'].some(
+    (column) => isMissingColumnError(error, column),
+  )
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    const message = (error as { message?: unknown }).message
+    return typeof message === 'string' ? message : ''
+  }
+  return ''
 }

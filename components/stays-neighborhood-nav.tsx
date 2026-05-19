@@ -20,7 +20,7 @@ export function StaysNeighborhoodNav({
           key={area}
           href={buildNeighborhoodHref(baseQuery, area)}
           onClick={() => {
-            if (area !== 'All') {
+            if (area !== 'All' && area !== selectedArea) {
               void fetch('/api/neighborhood-search', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

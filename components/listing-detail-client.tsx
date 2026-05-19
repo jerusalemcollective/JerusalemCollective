@@ -96,6 +96,27 @@ export function ListingDetailClient({
     }
   }, [listing.id])
 
+  useEffect(() => {
+    if (!showGallery || photos.length === 0) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowGallery(false)
+      }
+
+      if (event.key === 'ArrowLeft') {
+        setSelectedPhoto((previous) => (previous > 0 ? previous - 1 : photos.length - 1))
+      }
+
+      if (event.key === 'ArrowRight') {
+        setSelectedPhoto((previous) => (previous < photos.length - 1 ? previous + 1 : 0))
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [photos.length, showGallery])
+
   const handleCopyListingLink = async () => {
     await navigator.clipboard.writeText(window.location.href)
     setCopiedLink(true)
