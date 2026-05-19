@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Breadcrumb } from '@/components/breadcrumb'
 import {
@@ -13,7 +14,7 @@ export default async function AccountSupportPage() {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    return null
+    redirect('/login?redirect=/account/support')
   }
 
   const [{ data: bookingRows }, { data: caseRows }] = await Promise.all([

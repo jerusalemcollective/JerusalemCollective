@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
+  type BookingRequestSummary,
   type ConversationMessage,
   type ConversationSummary,
   loadConversationMessages,
@@ -17,6 +18,88 @@ type MessagesInboxProps = {
 
 type CurrentUser = {
   id: string
+}
+
+type ListingPreview = {
+  id: string
+  title: string
+  area: string
+}
+
+type ParticipantProfile = {
+  id: string
+  full_name: string | null
+  avatar_url: string | null
+}
+
+type LatestMessagePreview = {
+  conversation_id: string
+  content: string
+  sender_id: string
+  created_at: string
+}
+
+type ConversationRealtimeRow = {
+  id: string
+  listing_id: string | null
+  participant_1: string
+  participant_2: string
+  created_at: string
+  updated_at: string
+}
+
+type LastMessagePreview = NonNullable<ConversationSummary['last_message']>
+
+type RealtimeConversationMessage = Omit<ConversationMessage, 'read'> & {
+  read: boolean | null
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === 'string'
+}
+
+function isBoolean(value: unknown): value is boolean {
+  return typeof value === 'boolean'
+}
+
+function isNullableString(value: unknown): value is string | null {
+  return value === null || isString(value)
+}
+
+function isRealtimeConversationMessage(value: unknown): value is RealtimeConversationMessage {
+  if (!isRecord(value)) return false
+
+  return (
+    isString(value.id) &&
+    isString(value.conversation_id) &&
+    isString(value.sender_id) &&
+    isString(value.content) &&
+    (isBoolean(value.read) || value.read === null) &&
+    isString(value.created_at)
+  )
+}
+
+function isConversationRealtimeRow(value: unknown): value is ConversationRealtimeRow {
+  if (!isRecord(value)) return false
+
+  return (
+    isString(value.id) &&
+    isNullableString(value.listing_id) &&
+    isString(value.participant_1) &&
+    isString(value.participant_2) &&
+    isString(value.created_at) &&
+    isString(value.updated_at)
+  )
+}
+
+function isLastMessagePreview(value: unknown): value is LastMessagePreview {
+  if (!isRecord(value)) return false
+
+  return isString(value.content) && isString(value.sender_id) && isString(value.created_at)
 }
 
 function formatTimestamp(value: string) {
@@ -78,7 +161,7 @@ export function MessagesInbox({ mode }: MessagesInboxProps) {
         const participantColumn = mode === 'host' ? 'participant_2' : 'participant_1'
         const { data: conversationRows, error: conversationError } = await supabase
           .from('conversations')
-          .select('*')
+          .select('id, listing_id, participant_1, participant_2, created_at, updated_at')
           .eq(participantColumn, authUser.id)
           .order('updated_at', { ascending: false })
 
@@ -119,17 +202,22 @@ export function MessagesInbox({ mode }: MessagesInboxProps) {
             : Promise.resolve({ data: [] }),
         ])
 
+        const latestMessageRows: LatestMessagePreview[] = latestMessages || []
+        const listingRows: ListingPreview[] = listings || []
+        const profileRows: ParticipantProfile[] = profiles || []
+        const requestRows: BookingRequestSummary[] = requests || []
+
         const latestByConversation = new Map<string, ConversationSummary['last_message']>()
-        ;(latestMessages || []).forEach((message: any) => {
+        latestMessageRows.forEach((message) => {
           if (!latestByConversation.has(message.conversation_id)) {
             latestByConversation.set(message.conversation_id, message)
           }
         })
 
-        const listingMap = new Map((listings || []).map((listing: any) => [listing.id, listing]))
-        const profileMap = new Map((profiles || []).map((profile: any) => [profile.id, profile]))
-        const requestByConversation = new Map()
-        ;(requests || []).forEach((request: any) => {
+        const listingMap = new Map(listingRows.map((listing) => [listing.id, listing]))
+        const profileMap = new Map(profileRows.map((profile) => [profile.id, profile]))
+        const requestByConversation = new Map<string, BookingRequestSummary>()
+        requestRows.forEach((request) => {
           if (request.conversation_id && !requestByConversation.has(request.conversation_id)) {
             requestByConversation.set(request.conversation_id, request)
           }
@@ -169,18 +257,144 @@ export function MessagesInbox({ mode }: MessagesInboxProps) {
       return
     }
 
+    const supabase = createClient()
+
+    let isActive = true
+
     const loadMessages = async () => {
       try {
-        const supabase = createClient()
         const rows = await loadConversationMessages(supabase, selectedConversationId)
-        setMessages(rows)
+        if (isActive) {
+          setMessages(rows)
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unable to load conversation.')
+        if (isActive) {
+          setError(err instanceof Error ? err.message : 'Unable to load conversation.')
+        }
       }
     }
 
     loadMessages()
-  }, [selectedConversationId])
+
+    const refreshConversation = async (conversationId: string, updatedAt: string) => {
+      const { data, error: latestMessageError } = await supabase
+        .from('messages')
+        .select('content, sender_id, created_at')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (latestMessageError) {
+        if (isActive) {
+          setError(latestMessageError.message)
+        }
+        return
+      }
+
+      const latestMessage = isLastMessagePreview(data) ? data : null
+
+      if (!isActive) return
+
+      setConversations((current) =>
+        current
+          .map((conversation) =>
+            conversation.id === conversationId
+              ? {
+                  ...conversation,
+                  updated_at: updatedAt,
+                  last_message: latestMessage || conversation.last_message,
+                }
+              : conversation,
+          )
+          .sort((first, second) => Date.parse(second.updated_at) - Date.parse(first.updated_at)),
+      )
+    }
+
+    const messagesChannel = supabase
+      .channel(`messages-${selectedConversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${selectedConversationId}`,
+        },
+        (payload) => {
+          if (!isRealtimeConversationMessage(payload.new)) return
+
+          const nextMessage: ConversationMessage = {
+            ...payload.new,
+            read: payload.new.read ?? false,
+          }
+
+          setMessages((current) => {
+            if (current.some((message) => message.id === nextMessage.id)) return current
+            return [...current, nextMessage]
+          })
+
+          setConversations((current) =>
+            current
+              .map((conversation) =>
+                conversation.id === nextMessage.conversation_id
+                  ? {
+                      ...conversation,
+                      updated_at: nextMessage.created_at,
+                      last_message: {
+                        content: nextMessage.content,
+                        sender_id: nextMessage.sender_id,
+                        created_at: nextMessage.created_at,
+                      },
+                    }
+                  : conversation,
+              )
+              .sort((first, second) => Date.parse(second.updated_at) - Date.parse(first.updated_at)),
+          )
+        },
+      )
+      .subscribe()
+
+    const conversationsChannel = user?.id
+      ? supabase
+          .channel(`conversations-${user.id}-${selectedConversationId}`)
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'conversations',
+              filter: `participant_1=eq.${user.id}`,
+            },
+            (payload) => {
+              if (!isConversationRealtimeRow(payload.new)) return
+              void refreshConversation(payload.new.id, payload.new.updated_at)
+            },
+          )
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'conversations',
+              filter: `participant_2=eq.${user.id}`,
+            },
+            (payload) => {
+              if (!isConversationRealtimeRow(payload.new)) return
+              void refreshConversation(payload.new.id, payload.new.updated_at)
+            },
+          )
+          .subscribe()
+      : null
+
+    return () => {
+      isActive = false
+      void supabase.removeChannel(messagesChannel)
+      if (conversationsChannel) {
+        void supabase.removeChannel(conversationsChannel)
+      }
+    }
+  }, [selectedConversationId, user?.id])
 
   const selectedConversation = useMemo(
     () => conversations.find((conversation) => conversation.id === selectedConversationId) || null,
@@ -192,11 +406,15 @@ export function MessagesInbox({ mode }: MessagesInboxProps) {
 
     setSending(true)
     setError(null)
+    const shouldUpdateRequestStatus =
+      mode === 'host' &&
+      Boolean(selectedConversation?.request?.id) &&
+      selectedConversation?.request?.status === 'new'
 
     try {
       const supabase = createClient()
       await sendConversationMessage(supabase, selectedConversationId, user.id, draft.trim())
-      if (mode === 'host' && selectedConversation?.request?.id && selectedConversation.request.status === 'new') {
+      if (shouldUpdateRequestStatus && selectedConversation?.request?.id) {
         await updateBookingRequestStatus(supabase, selectedConversation.request.id, 'host_replied')
       }
       const nextMessages = await loadConversationMessages(supabase, selectedConversationId)
@@ -216,7 +434,7 @@ export function MessagesInbox({ mode }: MessagesInboxProps) {
             : conversation,
         ),
       )
-      if (mode === 'host' && selectedConversation?.request?.id && selectedConversation.request.status === 'new') {
+      if (shouldUpdateRequestStatus) {
         setConversations((current) =>
           current.map((conversation) =>
             conversation.id === selectedConversationId

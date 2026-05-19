@@ -18,6 +18,8 @@ export async function requireHostDashboardAccess() {
     .limit(1)
     .maybeSingle()
 
+  // host.id may differ from user.id when the host record has its own PK.
+  // We query by both to cover direct ownership and delegated host accounts.
   const hostIds = Array.from(new Set([host?.id, user.id].filter(Boolean))) as string[]
 
   const [{ data: application }, { data: listing }] = await Promise.all([

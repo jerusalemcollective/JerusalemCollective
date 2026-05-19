@@ -40,7 +40,7 @@ function protectRoute(
   isAuthenticated: boolean,
 ) {
   if (
-    request.nextUrl.pathname.startsWith('/host/portal') &&
+    request.nextUrl.pathname.startsWith('/host/dashboard') &&
     !isAuthenticated
   ) {
     const url = request.nextUrl.clone()
@@ -65,6 +65,6 @@ function protectRoute(
 export const config = {
   matcher: [
     '/become-a-host',
-    '/host/portal/:path*',
+    '/host/dashboard/:path*',
   ],
 }

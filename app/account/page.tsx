@@ -35,6 +35,8 @@ export default async function AccountPage() {
     .limit(1)
     .maybeSingle()
 
+  // host.id may differ from user.id when the host record has its own PK.
+  // We query by both to cover direct ownership and delegated host accounts.
   const hostIds = Array.from(new Set([host?.id, user.id].filter(Boolean))) as string[]
   const [{ data: ownedApplication }, { data: ownedListing }] = await Promise.all([
     supabase

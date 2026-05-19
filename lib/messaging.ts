@@ -130,10 +130,12 @@ export async function sendConversationMessage(
 
   if (error) throw error
 
-  await supabase
+  const { error: updateError } = await supabase
     .from('conversations')
     .update({ updated_at: new Date().toISOString() })
     .eq('id', conversationId)
+
+  if (updateError) throw updateError
 }
 
 export async function loadConversationMessages(

@@ -9,6 +9,7 @@ import {
   Home,
   LifeBuoy,
   MessageCircle,
+  MessageSquare,
   Plus,
   ShieldCheck,
   UserRound,
@@ -21,6 +22,7 @@ export function AccountMenu({ hasStay, isAdmin }: { hasStay: boolean; isAdmin: b
     <nav className="space-y-1">
       <MenuLink href="/account" label="Profile" icon={<UserRound className="h-5 w-5" />} active={pathname === '/account'} />
       <MenuLink href="/account/bookings" label="My trips" icon={<CalendarDays className="h-5 w-5" />} active={pathname === '/account/bookings'} />
+      <MenuLink href="/account/enquiries" label="Enquiries" icon={<MessageSquare className="h-5 w-5" />} active={pathname === '/account/enquiries'} />
       <MenuLink href="/account/saved" label="Saved" icon={<Heart className="h-5 w-5" />} active={pathname === '/account/saved'} />
       <MenuLink href="/account/messages" label="Messages" icon={<MessageCircle className="h-5 w-5" />} active={pathname === '/account/messages'} />
       <MenuLink href="/account/support" label="Support" icon={<LifeBuoy className="h-5 w-5" />} active={pathname === '/account/support'} />

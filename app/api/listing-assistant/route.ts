@@ -38,7 +38,7 @@ export async function POST(request: Request) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: process.env.OPENAI_LISTING_MODEL || 'gpt-5-mini',
+      model: process.env.OPENAI_LISTING_MODEL || 'gpt-4o-mini',
       instructions:
         'You are an expert vacation rental editor for JLM Collective, a curated Jerusalem stays marketplace. Write polished, trustworthy copy that feels warm, precise, and professional. Use only facts supplied by the host. Do not invent amenities, views, distances, religious facilities, accessibility, or claims that are not provided. Avoid hype, cliches, and salesy language.',
       input: JSON.stringify({
