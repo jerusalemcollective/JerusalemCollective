@@ -1,4 +1,5 @@
 import { requireAdminPermission } from '@/lib/admin'
+import { StatusBadge } from '@/components/status-badge'
 
 type EnquiryRow = {
   id: string
@@ -30,34 +31,16 @@ export default async function AdminEnquiriesPage() {
   const { supabase } = await requireAdminPermission('messages')
   const { data } = await supabase
     .from('booking_requests')
-    .select('id, listing_id, host_id, guest_id, status, check_in, check_out, guests, message, conversation_id, created_at')
+    .select(`
+      id, listing_id, host_id, guest_id, status, check_in, check_out,
+      guests, message, conversation_id, created_at,
+      listings(title, area),
+      hosts(name, email),
+      guest:profiles!booking_requests_guest_id_fkey(full_name, phone)
+    `)
     .order('created_at', { ascending: false })
 
-  const requestRows = (data || []) as EnquiryRow[]
-  const listingIds = requestRows.map((request) => request.listing_id).filter(Boolean) as string[]
-  const hostIds = requestRows.map((request) => request.host_id).filter(Boolean) as string[]
-  const guestIds = requestRows.map((request) => request.guest_id).filter(Boolean) as string[]
-  const [{ data: listings }, { data: hosts }, { data: guests }] = await Promise.all([
-    listingIds.length
-      ? supabase.from('listings').select('id, title, area').in('id', listingIds)
-      : Promise.resolve({ data: [] }),
-    hostIds.length
-      ? supabase.from('hosts').select('id, name, email').in('id', hostIds)
-      : Promise.resolve({ data: [] }),
-    guestIds.length
-      ? supabase.from('profiles').select('id, full_name, phone').in('id', guestIds)
-      : Promise.resolve({ data: [] }),
-  ])
-
-  const listingMap = new Map((listings || []).map((listing: any) => [listing.id, listing]))
-  const hostMap = new Map((hosts || []).map((host: any) => [host.id, host]))
-  const guestMap = new Map((guests || []).map((guest: any) => [guest.id, guest]))
-  const enquiries = requestRows.map((request) => ({
-    ...request,
-    listings: request.listing_id ? listingMap.get(request.listing_id) || null : null,
-    hosts: request.host_id ? hostMap.get(request.host_id) || null : null,
-    guest: request.guest_id ? guestMap.get(request.guest_id) || null : null,
-  }))
+  const enquiries = (data || []) as EnquiryRow[]
   const newCount = enquiries.filter((enquiry) => enquiry.status === 'new').length
   const activeCount = enquiries.filter((enquiry) =>
     ['new', 'host_replied'].includes(enquiry.status),
@@ -86,7 +69,7 @@ export default async function AdminEnquiriesPage() {
           >
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <StatusBadge status={enquiry.status} />
+                <StatusBadge status={enquiry.status} scheme="enquiry" />
                 <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
                   {enquiry.listings?.area || 'Jerusalem'}
                 </p>
@@ -138,25 +121,6 @@ function Metric({ label, value }: { label: string; value: number }) {
       <p className="text-sm font-medium text-stone-500">{label}</p>
       <p className="mt-1 text-3xl font-bold tracking-tight text-stone-950">{value}</p>
     </div>
-  )
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const styles =
-    status === 'accepted'
-      ? 'bg-green-100 text-green-700'
-      : status === 'declined'
-        ? 'bg-red-100 text-red-700'
-        : status === 'host_replied'
-          ? 'bg-amber-100 text-amber-700'
-          : status === 'closed'
-            ? 'bg-stone-100 text-stone-700'
-            : 'bg-[#fff4ef] text-[#c76f55]'
-
-  return (
-    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold capitalize ${styles}`}>
-      {status.replaceAll('_', ' ')}
-    </span>
   )
 }
 

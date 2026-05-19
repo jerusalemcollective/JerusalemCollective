@@ -1,5 +1,37 @@
 import Link from 'next/link'
 import { requireAdminPermission } from '@/lib/admin'
+import { StatusBadge } from '@/components/status-badge'
+
+type RecentApplication = {
+  id: string
+  host_name: string
+  apartment_title: string
+  area: string
+  status: string
+  created_at: string
+}
+
+type RecentEnquiry = {
+  id: string
+  listing_id: string | null
+  guest_id: string | null
+  status: string
+  check_in: string | null
+  check_out: string | null
+  guests: number
+  created_at: string
+}
+
+type EnquiryListing = {
+  id: string
+  title: string
+  area: string
+}
+
+type EnquiryGuest = {
+  id: string
+  full_name: string | null
+}
 
 export default async function AdminOverviewPage() {
   const { supabase } = await requireAdminPermission('overview')
@@ -30,8 +62,14 @@ export default async function AdminOverviewPage() {
       .order('created_at', { ascending: false })
       .limit(5),
   ])
-  const recentListingIds = (recentEnquiries || []).map((request: any) => request.listing_id).filter(Boolean)
-  const recentGuestIds = (recentEnquiries || []).map((request: any) => request.guest_id).filter(Boolean)
+  const typedRecentApplications = (recentApplications || []) as RecentApplication[]
+  const typedRecentEnquiries = (recentEnquiries || []) as RecentEnquiry[]
+  const recentListingIds = typedRecentEnquiries
+    .map((request) => request.listing_id)
+    .filter((listingId): listingId is string => Boolean(listingId))
+  const recentGuestIds = typedRecentEnquiries
+    .map((request) => request.guest_id)
+    .filter((guestId): guestId is string => Boolean(guestId))
   const [{ data: enquiryListings }, { data: enquiryGuests }] = await Promise.all([
     recentListingIds.length
       ? supabase.from('listings').select('id, title, area').in('id', recentListingIds)
@@ -40,8 +78,12 @@ export default async function AdminOverviewPage() {
       ? supabase.from('profiles').select('id, full_name').in('id', recentGuestIds)
       : Promise.resolve({ data: [] }),
   ])
-  const enquiryListingMap = new Map((enquiryListings || []).map((listing: any) => [listing.id, listing]))
-  const enquiryGuestMap = new Map((enquiryGuests || []).map((guest: any) => [guest.id, guest]))
+  const enquiryListingMap = new Map(
+    ((enquiryListings || []) as EnquiryListing[]).map((listing) => [listing.id, listing]),
+  )
+  const enquiryGuestMap = new Map(
+    ((enquiryGuests || []) as EnquiryGuest[]).map((guest) => [guest.id, guest]),
+  )
 
   return (
     <div>
@@ -76,7 +118,7 @@ export default async function AdminOverviewPage() {
           </div>
 
           <div className="mt-4 divide-y divide-stone-200 border-y border-stone-200">
-            {(recentApplications || []).map((application) => (
+            {typedRecentApplications.map((application) => (
               <Link
                 key={application.id}
                 href={`/admin/applications/${application.id}`}
@@ -87,7 +129,7 @@ export default async function AdminOverviewPage() {
                   <p className="mt-1 text-sm text-stone-500">{application.host_name}</p>
                 </div>
                 <p className="text-sm text-stone-700">{application.area}</p>
-                <StatusBadge status={application.status} />
+                <StatusBadge status={application.status} scheme="application" />
               </Link>
             ))}
             {!recentApplications?.length && (
@@ -128,7 +170,7 @@ export default async function AdminOverviewPage() {
 
           <h3 className="mt-8 text-xl font-bold text-stone-950">Recent enquiries</h3>
           <div className="mt-4 divide-y divide-stone-200 border-y border-stone-200">
-            {(recentEnquiries || []).map((request: any) => (
+            {typedRecentEnquiries.map((request) => (
               <Link key={request.id} href="/admin/enquiries" className="block py-4 transition hover:text-[#c76f55]">
                 <p className="font-semibold text-stone-950">
                   {enquiryListingMap.get(request.listing_id)?.title || 'Stay enquiry'}
@@ -171,22 +213,5 @@ function QueueLink({
       <p className="font-semibold text-stone-950">{title}</p>
       <p className="mt-1 text-sm text-stone-600">{detail}</p>
     </Link>
-  )
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const styles =
-    status === 'approved'
-      ? 'bg-green-100 text-green-700'
-      : status === 'rejected'
-        ? 'bg-red-100 text-red-700'
-        : status === 'in_review'
-          ? 'bg-amber-100 text-amber-700'
-          : 'bg-stone-200 text-stone-700'
-
-  return (
-    <span className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-bold ${styles}`}>
-      {status.replace('_', ' ')}
-    </span>
   )
 }

@@ -208,5 +208,5 @@ const inputClass =
 function hostStatusLabel(status: string) {
   if (status === 'new') return 'In review'
   if (status === 'changes_requested') return 'Changes requested'
-  return status.replace('_', ' ')
+  return status.replaceAll('_', ' ')
 }

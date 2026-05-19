@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { requireAdminPermission } from '@/lib/admin'
-import { updateHostVerification } from '@/app/admin/actions'
+import { updateHostVerification } from '@/app/admin/host-actions'
+import { ConfirmSubmitButton } from '@/components/confirm-submit-button'
+import { BooleanBadge } from '@/components/boolean-badge'
 
 type PersonRow = {
   user_id: string
@@ -62,13 +64,16 @@ export default async function AdminHostsPage() {
                 <p className="text-sm text-stone-700">
                   {Number(host.listing_count || 0)} live / {Number(host.application_count || 0)} submitted
                 </p>
-                <BooleanBadge value={Boolean(host.host_is_verified)} yes="Verified" no="Unverified" />
+                <BooleanBadge value={Boolean(host.host_is_verified)} yes="Verified" no="Unverified" falseTone="strong" />
                 <form action={updateHostVerification}>
                   <input type="hidden" name="hostId" value={host.host_id || ''} />
                   <input type="hidden" name="value" value={String(!host.host_is_verified)} />
-                  <button className="rounded-full border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-300">
+                  <ConfirmSubmitButton
+                    message="Are you sure?"
+                    className="rounded-full border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-300"
+                  >
                     {host.host_is_verified ? 'Remove' : 'Verify'}
-                  </button>
+                  </ConfirmSubmitButton>
                 </form>
               </div>
             ))}
@@ -76,25 +81,5 @@ export default async function AdminHostsPage() {
         )}
       </div>
     </div>
-  )
-}
-
-function BooleanBadge({
-  value,
-  yes,
-  no,
-}: {
-  value: boolean
-  yes: string
-  no: string
-}) {
-  return (
-    <span
-      className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-bold ${
-        value ? 'bg-green-100 text-green-700' : 'bg-stone-200 text-stone-700'
-      }`}
-    >
-      {value ? yes : no}
-    </span>
   )
 }

@@ -1,5 +1,6 @@
 import { requireAdminPermission } from '@/lib/admin'
-import { updateReviewApproval } from '@/app/admin/actions'
+import { updateReviewApproval } from '@/app/admin/review-actions'
+import { BooleanBadge } from '@/components/boolean-badge'
 
 type ReviewRow = {
   id: string
@@ -67,25 +68,5 @@ export default async function AdminReviewsPage() {
         )}
       </div>
     </div>
-  )
-}
-
-function BooleanBadge({
-  value,
-  yes,
-  no,
-}: {
-  value: boolean
-  yes: string
-  no: string
-}) {
-  return (
-    <span
-      className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-bold ${
-        value ? 'bg-green-100 text-green-700' : 'bg-stone-100 text-stone-700'
-      }`}
-    >
-      {value ? yes : no}
-    </span>
   )
 }

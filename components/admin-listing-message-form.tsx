@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState } from 'react'
-import { sendListingMessage, type ListingMessageState } from '@/app/admin/actions'
+import { sendListingMessage, type ListingMessageState } from '@/app/admin/listing-actions'
 
 const initialState: ListingMessageState = {
   status: 'idle',

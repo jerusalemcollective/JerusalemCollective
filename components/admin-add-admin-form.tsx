@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState } from 'react'
-import { grantAdminByEmail, type AdminGrantState } from '@/app/admin/actions'
+import { grantAdminByEmail, type AdminGrantState } from '@/app/admin/admin-actions'
 
 const initialState: AdminGrantState = {
   status: 'idle',

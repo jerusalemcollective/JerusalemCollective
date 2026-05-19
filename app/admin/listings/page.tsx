@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { requireAdminPermission } from '@/lib/admin'
-import { updateListingVisibility } from '@/app/admin/actions'
+import { updateListingVisibility } from '@/app/admin/listing-actions'
+import { ConfirmSubmitButton } from '@/components/confirm-submit-button'
+import { BooleanBadge } from '@/components/boolean-badge'
 
 type ListingRow = {
   id: string
@@ -63,17 +65,23 @@ export default async function AdminListingsPage() {
                     <input type="hidden" name="listingId" value={listing.id} />
                     <input type="hidden" name="field" value="is_published" />
                     <input type="hidden" name="value" value={String(!listing.is_published)} />
-                    <button className="rounded-full border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-300">
+                    <ConfirmSubmitButton
+                      message="Are you sure?"
+                      className="rounded-full border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-300"
+                    >
                       {listing.is_published ? 'Hide' : 'Publish'}
-                    </button>
+                    </ConfirmSubmitButton>
                   </form>
                   <form action={updateListingVisibility}>
                     <input type="hidden" name="listingId" value={listing.id} />
                     <input type="hidden" name="field" value="is_featured" />
                     <input type="hidden" name="value" value={String(!listing.is_featured)} />
-                    <button className="rounded-full bg-[#252525] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#111111]">
+                    <ConfirmSubmitButton
+                      message="Are you sure?"
+                      className="rounded-full bg-[#252525] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#111111]"
+                    >
                       {listing.is_featured ? 'Unfeature' : 'Feature'}
-                    </button>
+                    </ConfirmSubmitButton>
                   </form>
                   <Link
                     href={`/admin/listings/${listing.id}`}
@@ -88,25 +96,5 @@ export default async function AdminListingsPage() {
         )}
       </div>
     </div>
-  )
-}
-
-function BooleanBadge({
-  value,
-  yes,
-  no,
-}: {
-  value: boolean
-  yes: string
-  no: string
-}) {
-  return (
-    <span
-      className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-bold ${
-        value ? 'bg-green-100 text-green-700' : 'bg-stone-100 text-stone-700'
-      }`}
-    >
-      {value ? yes : no}
-    </span>
   )
 }

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { requireAdminPermission } from '@/lib/admin'
 import { SupportCaseForm } from './support-case-form'
 import { summarizeSupportCases } from '@/lib/marketplace-rules'
+import { StatusBadge } from '@/components/status-badge'
 
 type SupportCase = {
   id: string
@@ -76,7 +77,7 @@ export default async function AdminCasesPage() {
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <StatusBadge status={supportCase.status} />
+                  <StatusBadge status={supportCase.status} scheme="support" />
                   <TypeBadge type={supportCase.case_type} />
                 </div>
                 <h3 className="mt-4 text-xl font-bold text-stone-950">{supportCase.reason}</h3>
@@ -124,23 +125,6 @@ function SummaryCard({ label, value }: { label: string; value: number }) {
       <p className="text-sm font-semibold text-stone-500">{label}</p>
       <p className="mt-2 text-3xl font-bold text-stone-950">{value}</p>
     </div>
-  )
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const styles =
-    status === 'resolved'
-      ? 'bg-green-100 text-green-700'
-      : status === 'closed'
-        ? 'bg-stone-100 text-stone-700'
-        : status === 'under_review'
-          ? 'bg-amber-100 text-amber-700'
-          : 'bg-rose-100 text-rose-700'
-
-  return (
-    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold capitalize ${styles}`}>
-      {status.replaceAll('_', ' ')}
-    </span>
   )
 }
 

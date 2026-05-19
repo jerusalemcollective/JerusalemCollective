@@ -1,9 +1,10 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { requireAdminPermission } from '@/lib/admin'
+import { StatusBadge } from '@/components/status-badge'
 import {
   approveAndPublishApplication,
-} from '@/app/admin/actions'
+} from '@/app/admin/application-actions'
 import { AdminRequestChangesForm } from '@/components/admin-request-changes-form'
 import { AdminApplicationStatusForm } from '@/components/admin-application-status-form'
 
@@ -42,7 +43,7 @@ export default async function AdminApplicationPage({
                   <h1 className="mt-2 text-3xl font-bold text-stone-950">{application.apartment_title}</h1>
                   <p className="mt-2 text-stone-600">{application.area}</p>
                 </div>
-                <StatusBadge status={application.status} />
+                <StatusBadge status={application.status} scheme="application" />
               </div>
             </section>
 
@@ -143,22 +144,5 @@ function InfoRow({ label, value }: { label: string; value: string }) {
       <p className="text-xs font-bold uppercase tracking-widest text-stone-400">{label}</p>
       <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-stone-800">{value}</p>
     </div>
-  )
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const styles =
-    status === 'approved'
-      ? 'bg-green-100 text-green-700'
-      : status === 'rejected'
-        ? 'bg-red-100 text-red-700'
-        : status === 'in_review'
-          ? 'bg-amber-100 text-amber-700'
-          : 'bg-stone-100 text-stone-700'
-
-  return (
-    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${styles}`}>
-      {status.replace('_', ' ')}
-    </span>
   )
 }

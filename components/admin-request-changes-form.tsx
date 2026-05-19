@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState } from 'react'
-import { requestApplicationChanges, type RequestChangesState } from '@/app/admin/actions'
+import { requestApplicationChanges, type RequestChangesState } from '@/app/admin/application-actions'
 
 const initialState: RequestChangesState = {
   status: 'idle',

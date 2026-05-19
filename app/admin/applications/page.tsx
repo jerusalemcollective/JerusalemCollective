@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { requireAdminPermission } from '@/lib/admin'
+import { StatusBadge } from '@/components/status-badge'
 
 type ApplicationRow = {
   id: string
@@ -51,7 +52,7 @@ export default async function AdminApplicationsPage() {
                 </div>
                 <p className="text-sm text-stone-700">{application.area}</p>
                 <div>
-                  <StatusBadge status={application.status} />
+                  <StatusBadge status={application.status} scheme="application" />
                 </div>
                 <p className="text-sm text-stone-500">
                   {new Date(application.created_at).toLocaleDateString('en-GB')}
@@ -62,22 +63,5 @@ export default async function AdminApplicationsPage() {
         )}
       </div>
     </div>
-  )
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const styles =
-    status === 'approved'
-      ? 'bg-green-100 text-green-700'
-      : status === 'rejected'
-        ? 'bg-red-100 text-red-700'
-        : status === 'in_review'
-          ? 'bg-amber-100 text-amber-700'
-          : 'bg-stone-100 text-stone-700'
-
-  return (
-    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${styles}`}>
-      {status.replace('_', ' ')}
-    </span>
   )
 }

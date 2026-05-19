@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState } from 'react'
-import { updateSupportCase, type SupportCaseState } from '@/app/admin/actions'
+import { updateSupportCase, type SupportCaseState } from '@/app/admin/case-actions'
 
 type SupportCaseFormProps = {
   supportCase: {

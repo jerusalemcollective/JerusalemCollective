@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { CalendarDays } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
+import { Breadcrumb } from '@/components/breadcrumb'
 
 type BookingRow = {
   id: string
@@ -35,7 +36,7 @@ export default async function BookingsPage() {
   return (
     <div className="min-h-screen">
       <div className="mx-auto max-w-5xl px-5 py-10 md:px-6">
-        <Breadcrumb current="My trips" />
+        <Breadcrumb items={[{ label: 'Account', href: '/account' }, { label: 'My trips' }]} />
 
         <header className="mb-8 border-b border-stone-200 pb-6">
           <h1 className="text-3xl font-bold tracking-tight text-stone-950">My trips</h1>
@@ -67,16 +68,6 @@ export default async function BookingsPage() {
           </div>
         )}
       </div>
-    </div>
-  )
-}
-
-function Breadcrumb({ current }: { current: string }) {
-  return (
-    <div className="mb-6 flex items-center gap-2 text-sm text-stone-500">
-      <Link href="/account" className="hover:text-[#c76f55]">Account</Link>
-      <span>/</span>
-      <span className="text-stone-900">{current}</span>
     </div>
   )
 }

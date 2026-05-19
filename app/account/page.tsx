@@ -1,17 +1,6 @@
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import type { ReactNode } from 'react'
-import {
-  CalendarDays,
-  Heart,
-  Home,
-  LifeBuoy,
-  MessageCircle,
-  Plus,
-  ShieldCheck,
-  UserRound,
-} from 'lucide-react'
 import { AccountProfileForm } from '@/components/account-profile-form'
+import { AccountMenu } from '@/components/account-menu'
 import { createClient } from '@/lib/supabase/server'
 
 type Profile = {
@@ -64,6 +53,7 @@ export default async function AccountPage() {
 
   const hasStay = Boolean(ownedApplication || ownedListing)
   const userEmail = user.email || ''
+  const typedProfile = profile as Profile | null
 
   return (
     <div className="min-h-screen">
@@ -74,67 +64,14 @@ export default async function AccountPage() {
         </header>
 
         <div className="grid gap-6 md:grid-cols-[240px_1fr]">
-          <AccountMenu hasStay={hasStay} isAdmin={Boolean((profile as Profile | null)?.is_admin)} />
+          <AccountMenu hasStay={hasStay} isAdmin={Boolean(typedProfile?.is_admin)} />
           <AccountProfileForm
             user={{ id: user.id, email: userEmail }}
-            profile={(profile as Profile | null) || null}
+            profile={typedProfile}
             hasStay={hasStay}
           />
         </div>
       </div>
     </div>
-  )
-}
-
-function AccountMenu({ hasStay, isAdmin }: { hasStay: boolean; isAdmin: boolean }) {
-  return (
-    <nav className="space-y-1">
-      <MenuLink href="/account" label="Profile" icon={<UserRound className="h-5 w-5" />} active />
-      <MenuLink href="/account/bookings" label="My trips" icon={<CalendarDays className="h-5 w-5" />} />
-      <MenuLink href="/account/saved" label="Saved" icon={<Heart className="h-5 w-5" />} />
-      <MenuLink href="/account/messages" label="Messages" icon={<MessageCircle className="h-5 w-5" />} />
-      <MenuLink href="/account/support" label="Support" icon={<LifeBuoy className="h-5 w-5" />} />
-
-      <div className="pt-4">
-        {hasStay ? (
-          <MenuLink href="/host/dashboard" label="Host dashboard" icon={<Home className="h-5 w-5" />} accent />
-        ) : (
-          <MenuLink href="/become-a-host" label="Become a host" icon={<Plus className="h-5 w-5" />} accent />
-        )}
-        {isAdmin && (
-          <MenuLink href="/admin" label="Admin workspace" icon={<ShieldCheck className="h-5 w-5" />} accent />
-        )}
-      </div>
-    </nav>
-  )
-}
-
-function MenuLink({
-  href,
-  label,
-  icon,
-  active = false,
-  accent = false,
-}: {
-  href: string
-  label: string
-  icon: ReactNode
-  active?: boolean
-  accent?: boolean
-}) {
-  return (
-    <Link
-      href={href}
-      className={`flex items-center gap-3 rounded-lg px-4 py-3 font-medium transition ${
-        active
-          ? 'bg-white text-stone-950 shadow-sm'
-          : accent
-            ? 'border border-[#c76f55] text-[#c76f55] hover:bg-[#fff4ef]'
-            : 'text-stone-600 hover:bg-white hover:text-stone-950 hover:shadow-sm'
-      }`}
-    >
-      {icon}
-      {label}
-    </Link>
   )
 }

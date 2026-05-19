@@ -322,7 +322,7 @@ function statusTone(status: string): 'green' | 'amber' | 'rose' | 'stone' {
 function hostStatusLabel(status: string) {
   if (status === 'new') return 'In review'
   if (status === 'changes_requested') return 'Changes requested'
-  return status.replace('_', ' ')
+  return status.replaceAll('_', ' ')
 }
 
 function nextStepText(status: string, verificationStatus: string) {

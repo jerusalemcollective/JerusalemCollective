@@ -22,6 +22,7 @@ type ListingTitle = {
 
 export default async function AdminAnalyticsPage() {
   const { supabase } = await requireAdminPermission('analytics')
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
   const [
     { count: views },
     { count: saves },
@@ -30,10 +31,10 @@ export default async function AdminAnalyticsPage() {
     { data: neighborhoods },
     { data: popularity },
   ] = await Promise.all([
-    supabase.from('listing_engagement_events').select('*', { count: 'exact', head: true }).eq('event_type', 'view'),
-    supabase.from('listing_engagement_events').select('*', { count: 'exact', head: true }).eq('event_type', 'save'),
-    supabase.from('listing_engagement_events').select('*', { count: 'exact', head: true }).eq('event_type', 'enquiry'),
-    supabase.from('listing_engagement_events').select('*', { count: 'exact', head: true }).eq('event_type', 'booking_request'),
+    supabase.from('listing_engagement_events').select('*', { count: 'exact', head: true }).eq('event_type', 'view').gte('created_at', thirtyDaysAgo),
+    supabase.from('listing_engagement_events').select('*', { count: 'exact', head: true }).eq('event_type', 'save').gte('created_at', thirtyDaysAgo),
+    supabase.from('listing_engagement_events').select('*', { count: 'exact', head: true }).eq('event_type', 'enquiry').gte('created_at', thirtyDaysAgo),
+    supabase.from('listing_engagement_events').select('*', { count: 'exact', head: true }).eq('event_type', 'booking_request').gte('created_at', thirtyDaysAgo),
     supabase.rpc('popular_neighborhoods', { result_limit: 8, lookback_days: 30 }),
     supabase.rpc('listing_popularity_summary', { result_limit: 8, lookback_days: 30 }),
   ])

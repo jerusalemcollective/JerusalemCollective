@@ -4,7 +4,7 @@ import { useActionState } from 'react'
 import {
   updateApplicationStatusWithFeedback,
   type ApplicationStatusState,
-} from '@/app/admin/actions'
+} from '@/app/admin/application-actions'
 
 const initialState: ApplicationStatusState = {
   status: 'idle',
