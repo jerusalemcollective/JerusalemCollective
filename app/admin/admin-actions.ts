@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireAdminPermission } from '@/lib/admin'
+import { logAdminAction } from '@/lib/audit'
 
 export type AdminGrantState = {
   status: 'idle' | 'success' | 'error'
@@ -46,6 +47,7 @@ export async function grantAdminByEmail(
   revalidatePath('/admin/admins')
 
   const assignedRole = data?.[0]?.admin_role
+  await logAdminAction(supabase, 'grant_admin_role', 'user', email, role)
 
   return {
     status: 'success',

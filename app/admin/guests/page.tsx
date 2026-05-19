@@ -1,4 +1,7 @@
 import { requireAdminPermission } from '@/lib/admin'
+import { Pagination } from '@/components/pagination'
+
+const PAGE_SIZE = 25
 
 type PersonRow = {
   user_id: string
@@ -14,8 +17,13 @@ type PersonRow = {
   last_sign_in_at: string | null
 }
 
-export default async function AdminGuestsPage() {
+export default async function AdminGuestsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>
+}) {
   const { supabase } = await requireAdminPermission('guests')
+  const page = Math.max(1, Number((await searchParams).page) || 1)
   const { data, error } = await supabase.rpc('list_platform_people')
 
   if (error) {
@@ -23,6 +31,8 @@ export default async function AdminGuestsPage() {
   }
 
   const guests = ((data || []) as PersonRow[]).filter((person) => !person.is_host)
+  const paged = guests.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const total = guests.length
 
   return (
     <div>
@@ -43,11 +53,11 @@ export default async function AdminGuestsPage() {
           <span>Status</span>
         </div>
 
-        {guests.length === 0 ? (
+        {paged.length === 0 ? (
           <div className="py-12 text-center text-stone-500">No guest accounts yet.</div>
         ) : (
           <div className="divide-y divide-stone-200">
-            {guests.map((guest) => (
+            {paged.map((guest) => (
               <div
                 key={guest.user_id}
                 className="grid gap-4 py-5 md:grid-cols-[1.1fr_1fr_0.8fr_0.65fr_0.65fr_0.8fr] md:items-center"
@@ -66,6 +76,7 @@ export default async function AdminGuestsPage() {
           </div>
         )}
       </div>
+      <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} basePath="/admin/guests" />
     </div>
   )
 }

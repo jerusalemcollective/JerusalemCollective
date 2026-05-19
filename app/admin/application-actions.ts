@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireAdminPermission } from '@/lib/admin'
+import { logAdminAction } from '@/lib/audit'
 
 export type RequestChangesState = {
   status: 'idle' | 'success' | 'error'
@@ -78,6 +79,8 @@ export async function requestApplicationChanges(
       .eq('id', applicationId)
 
     if (updateError) throw updateError
+
+    await logAdminAction(supabase, 'request_changes', 'application', applicationId)
 
     revalidatePath('/admin')
     revalidatePath(`/admin/applications/${applicationId}`)
@@ -193,6 +196,8 @@ export async function approveAndPublishApplication(formData: FormData) {
 
   if (approvalError) throw approvalError
 
+  await logAdminAction(supabase, 'approve_application', 'application', applicationId)
+
   revalidatePath('/admin')
   revalidatePath(`/admin/applications/${applicationId}`)
   revalidatePath('/stays')
@@ -235,6 +240,8 @@ async function setApplicationStatus(
   if (!data?.id) {
     throw new Error('No listing was updated. Check that this application still exists.')
   }
+
+  await logAdminAction(supabase, `set_status_${status}`, 'application', applicationId)
 
   revalidatePath('/admin')
   revalidatePath('/admin/applications')

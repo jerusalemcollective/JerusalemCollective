@@ -3,6 +3,9 @@ import { requireAdminPermission } from '@/lib/admin'
 import { SupportCaseForm } from './support-case-form'
 import { summarizeSupportCases } from '@/lib/marketplace-rules'
 import { StatusBadge } from '@/components/status-badge'
+import { Pagination } from '@/components/pagination'
+
+const PAGE_SIZE = 25
 
 type SupportCase = {
   id: string
@@ -30,29 +33,39 @@ type SupportCase = {
   } | null
 }
 
-export default async function AdminCasesPage() {
+export default async function AdminCasesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>
+}) {
   const { supabase } = await requireAdminPermission('cases')
-  const { data } = await supabase
-    .from('support_cases')
-    .select(`
-      id,
-      case_type,
-      status,
-      reason,
-      requested_amount,
-      approved_refund_amount,
-      currency,
-      resolution_notes,
-      created_at,
-      resolved_at,
-      bookings(id),
-      listings(id, title),
-      guest:profiles!support_cases_guest_id_fkey(full_name),
-      host:hosts!support_cases_host_id_fkey(name)
-    `)
-    .order('created_at', { ascending: false })
+  const page = Math.max(1, Number((await searchParams).page) || 1)
+  const [{ data }, { count }] = await Promise.all([
+    supabase
+      .from('support_cases')
+      .select(`
+        id,
+        case_type,
+        status,
+        reason,
+        requested_amount,
+        approved_refund_amount,
+        currency,
+        resolution_notes,
+        created_at,
+        resolved_at,
+        bookings(id),
+        listings(id, title),
+        guest:profiles!support_cases_guest_id_fkey(full_name),
+        host:hosts!support_cases_host_id_fkey(name)
+      `)
+      .order('created_at', { ascending: false })
+      .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1),
+    supabase.from('support_cases').select('*', { count: 'exact', head: true }),
+  ])
 
   const cases = (data || []) as SupportCase[]
+  const total = count || 0
   const summary = summarizeSupportCases(cases)
 
   return (
@@ -115,6 +128,7 @@ export default async function AdminCasesPage() {
           </div>
         )}
       </div>
+      <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} basePath="/admin/cases" />
     </div>
   )
 }

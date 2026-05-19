@@ -1,6 +1,9 @@
 import { requireAdminPermission } from '@/lib/admin'
 import { updateReviewApproval } from '@/app/admin/review-actions'
 import { BooleanBadge } from '@/components/boolean-badge'
+import { Pagination } from '@/components/pagination'
+
+const PAGE_SIZE = 25
 
 type ReviewRow = {
   id: string
@@ -15,14 +18,24 @@ type ReviewRow = {
   } | null
 }
 
-export default async function AdminReviewsPage() {
+export default async function AdminReviewsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>
+}) {
   const { supabase } = await requireAdminPermission('reviews')
-  const { data } = await supabase
-    .from('reviews')
-    .select('id, reviewer_name, rating, title, content, is_approved, created_at, listings(title)')
-    .order('created_at', { ascending: false })
+  const page = Math.max(1, Number((await searchParams).page) || 1)
+  const [{ data }, { count }] = await Promise.all([
+    supabase
+      .from('reviews')
+      .select('id, reviewer_name, rating, title, content, is_approved, created_at, listings(title)')
+      .order('created_at', { ascending: false })
+      .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1),
+    supabase.from('reviews').select('*', { count: 'exact', head: true }),
+  ])
 
   const reviews = (data || []) as ReviewRow[]
+  const total = count || 0
 
   return (
     <div>
@@ -67,6 +80,7 @@ export default async function AdminReviewsPage() {
           ))
         )}
       </div>
+      <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} basePath="/admin/reviews" />
     </div>
   )
 }

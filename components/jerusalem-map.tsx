@@ -9,6 +9,8 @@ interface Listing {
   title: string
   area: string
   price: string
+  price_ils?: number | null
+  price_usd?: number | null
   bedrooms: number
   sleeps: number
   lat: number
@@ -26,6 +28,22 @@ const mapContainerStyle = {
 }
 
 const center = { lat: 31.7683, lng: 35.2137 }
+
+function formatListingPrice(listing: Pick<Listing, 'price' | 'price_ils' | 'price_usd'>) {
+  const prices = []
+
+  if (listing.price_ils) {
+    prices.push(`\u20aa${Number(listing.price_ils).toLocaleString()}`)
+  }
+
+  if (listing.price_usd) {
+    prices.push(`$${Number(listing.price_usd).toLocaleString()}`)
+  }
+
+  if (prices.length > 0) return prices.join(' / ')
+
+  return listing.price || 'Price on request'
+}
 
 const mapOptions: google.maps.MapOptions = {
   disableDefaultUI: false,
@@ -147,7 +165,7 @@ function JerusalemMapInner({ listings }: JerusalemMapProps) {
               <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">{listing.area}</p>
               <h3 className="mt-1 font-bold text-stone-950">{listing.title}</h3>
               <p className="mt-1 text-sm text-stone-500">{listing.bedrooms} bedrooms · sleeps {listing.sleeps}</p>
-              <p className="mt-2 font-bold text-stone-950">{listing.price}</p>
+              <p className="mt-2 font-bold text-stone-950">{formatListingPrice(listing)}</p>
             </button>
           ))}
         </div>
@@ -199,8 +217,8 @@ function JerusalemMapInner({ listings }: JerusalemMapProps) {
           <h3 className="mt-1 text-lg font-bold text-stone-950">{selectedListing.title}</h3>
           <p className="mt-1 text-sm text-stone-500">{selectedListing.bedrooms} bedrooms · sleeps {selectedListing.sleeps}</p>
           <div className="mt-4 flex items-center justify-between">
-            <p className="font-bold text-stone-950">{selectedListing.price}</p>
-            <a href={`/listings/${selectedListing.id}`} className="rounded-full bg-[#c76f55] px-4 py-2 text-sm font-bold text-white hover:bg-[#b85f47]">
+            <p className="font-bold text-stone-950">{formatListingPrice(selectedListing)}</p>
+            <a href={`/listings/${selectedListing.id}?from=stays`} className="rounded-full bg-[#c76f55] px-4 py-2 text-sm font-bold text-white hover:bg-[#b85f47]">
               View stay
             </a>
           </div>

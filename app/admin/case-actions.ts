@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireAdminPermission } from '@/lib/admin'
+import { logAdminAction } from '@/lib/audit'
 
 export type SupportCaseState = {
   status: 'idle' | 'success' | 'error'
@@ -40,6 +41,8 @@ export async function updateSupportCase(
       .eq('id', caseId)
 
     if (error) throw error
+
+    await logAdminAction(supabase, `set_status_${status}`, 'case', caseId)
 
     revalidatePath('/admin')
     revalidatePath('/admin/cases')

@@ -483,7 +483,7 @@ export function MessagesInbox({ mode }: MessagesInboxProps) {
   }
 
   if (loading) {
-    return <div className="rounded-3xl bg-white p-8 text-stone-600 shadow-sm">Loading messages...</div>
+    return <MessagesInboxSkeleton />
   }
 
   if (conversations.length === 0) {
@@ -628,6 +628,34 @@ export function MessagesInbox({ mode }: MessagesInboxProps) {
                 {sending ? 'Sending...' : 'Send'}
               </button>
             </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  )
+}
+
+export function MessagesInboxSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-3xl bg-white shadow-sm">
+      <div className="grid min-h-[420px] lg:grid-cols-[320px_1fr]">
+        <aside className="border-b border-stone-200 lg:border-b-0 lg:border-r">
+          <div className="space-y-4 p-5">
+            {[0, 1, 2].map((item) => (
+              <div key={item} className="animate-pulse rounded-2xl border border-stone-100 p-4">
+                <div className="h-4 w-32 rounded bg-stone-200" />
+                <div className="mt-3 h-3 w-44 rounded bg-stone-200" />
+                <div className="mt-4 h-3 w-full rounded bg-stone-200" />
+              </div>
+            ))}
+          </div>
+        </aside>
+        <section className="hidden p-6 lg:block">
+          <div className="animate-pulse space-y-5">
+            <div className="h-5 w-48 rounded bg-stone-200" />
+            <div className="h-24 rounded-3xl bg-stone-200" />
+            <div className="ml-auto h-14 w-64 rounded-2xl bg-stone-200" />
+            <div className="h-14 w-72 rounded-2xl bg-stone-200" />
           </div>
         </section>
       </div>

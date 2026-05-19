@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireAdminPermission } from '@/lib/admin'
+import { logAdminAction } from '@/lib/audit'
 
 export async function updateHostVerification(formData: FormData) {
   const hostId = String(formData.get('hostId') || '')
@@ -24,6 +25,8 @@ export async function updateHostVerification(formData: FormData) {
     .eq('id', hostId)
 
   if (error) throw error
+  await logAdminAction(supabase, `set_verified_${value}`, 'host', hostId)
+
   revalidatePath('/admin')
   revalidatePath('/admin/hosts')
   revalidatePath(`/hosts/${hostId}`)

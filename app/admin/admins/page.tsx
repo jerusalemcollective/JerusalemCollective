@@ -1,5 +1,8 @@
 import { AdminAddAdminForm } from '@/components/admin-add-admin-form'
 import { describeAdminRole, requireAdminPermission } from '@/lib/admin'
+import { Pagination } from '@/components/pagination'
+
+const PAGE_SIZE = 25
 
 type AdminUser = {
   user_id: string
@@ -10,8 +13,13 @@ type AdminUser = {
   last_sign_in_at: string | null
 }
 
-export default async function AdminUsersPage() {
+export default async function AdminUsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>
+}) {
   const { supabase } = await requireAdminPermission('admins')
+  const page = Math.max(1, Number((await searchParams).page) || 1)
   const { data, error } = await supabase.rpc('list_admin_users')
 
   if (error) {
@@ -19,6 +27,8 @@ export default async function AdminUsersPage() {
   }
 
   const admins = (data || []) as AdminUser[]
+  const paged = admins.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const total = admins.length
 
   return (
     <div>
@@ -47,11 +57,11 @@ export default async function AdminUsersPage() {
             <span>Last sign in</span>
           </div>
 
-          {admins.length === 0 ? (
+          {paged.length === 0 ? (
             <div className="py-12 text-center text-stone-500">No admins found.</div>
           ) : (
             <div className="divide-y divide-stone-200">
-              {admins.map((admin) => (
+              {paged.map((admin) => (
                 <div
                   key={admin.user_id}
                   className="grid gap-2 py-4 md:grid-cols-[1fr_1fr_0.7fr_0.8fr] md:items-center"
@@ -69,6 +79,7 @@ export default async function AdminUsersPage() {
             </div>
           )}
         </div>
+        <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} basePath="/admin/admins" />
       </section>
     </div>
   )

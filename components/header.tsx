@@ -2,6 +2,8 @@
 
 import Link from 'next/link'
 import { useState, useEffect, useRef } from 'react'
+import { usePathname } from 'next/navigation'
+import { Menu, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 const JLMLogo = ({ variant = 'terracotta', className = '' }) => {
@@ -57,8 +59,10 @@ type UserState = {
 export function Header() {
   const [user, setUser] = useState<UserState>(null)
   const [showDropdown, setShowDropdown] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const pathname = usePathname()
 
   useEffect(() => {
     const loadUser = async () => {
@@ -139,11 +143,16 @@ export function Header() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  useEffect(() => {
+    setMobileOpen(false)
+  }, [pathname])
+
   const handleSignOut = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
     setUser(null)
     setShowDropdown(false)
+    setMobileOpen(false)
     window.location.href = '/'
   }
 
@@ -320,8 +329,103 @@ export function Header() {
               </Link>
             )}
           </div>
+
+          <button
+            type="button"
+            onClick={() => setMobileOpen((open) => !open)}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-700 transition hover:border-stone-400 hover:bg-stone-50 md:hidden"
+            aria-label="Open navigation menu"
+            aria-expanded={mobileOpen}
+          >
+            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
         </div>
       </div>
+
+      {mobileOpen && (
+        <div className="border-t border-stone-200 bg-white md:hidden">
+          <nav className="divide-y divide-stone-100">
+            <Link
+              href="/explore"
+              onClick={() => setMobileOpen(false)}
+              className="block px-5 py-4 font-medium text-stone-900"
+            >
+              Explore
+            </Link>
+            <Link
+              href="/stays"
+              onClick={() => setMobileOpen(false)}
+              className="block px-5 py-4 font-medium text-stone-900"
+            >
+              Stays
+            </Link>
+            <Link
+              href={user ? '/become-a-host' : '/login?redirect=/become-a-host'}
+              onClick={() => setMobileOpen(false)}
+              className="block px-5 py-4 font-medium text-stone-900"
+            >
+              List your stay
+            </Link>
+            <Link
+              href={user ? '/account/saved' : '/login?redirect=/account/saved'}
+              onClick={() => setMobileOpen(false)}
+              className="block px-5 py-4 font-medium text-stone-900"
+            >
+              Saved stays
+            </Link>
+
+            {user ? (
+              <>
+                <Link
+                  href="/account"
+                  onClick={() => setMobileOpen(false)}
+                  className="block px-5 py-4 font-medium text-stone-900"
+                >
+                  Account
+                </Link>
+                <Link
+                  href="/account/messages"
+                  onClick={() => setMobileOpen(false)}
+                  className="block px-5 py-4 font-medium text-stone-900"
+                >
+                  Messages
+                </Link>
+                <Link
+                  href="/account/bookings"
+                  onClick={() => setMobileOpen(false)}
+                  className="block px-5 py-4 font-medium text-stone-900"
+                >
+                  My trips
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="block w-full px-5 py-4 text-left font-medium text-stone-900"
+                >
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  onClick={() => setMobileOpen(false)}
+                  className="block px-5 py-4 font-medium text-stone-900"
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/register"
+                  onClick={() => setMobileOpen(false)}
+                  className="block px-5 py-4 font-medium text-stone-900"
+                >
+                  Register
+                </Link>
+              </>
+            )}
+          </nav>
+        </div>
+      )}
     </header>
   )
 }

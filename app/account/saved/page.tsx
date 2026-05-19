@@ -96,7 +96,17 @@ function EmptyState() {
 }
 
 function formatPrice(listing: SavedListing) {
-  if (listing.price_usd) return `$${Number(listing.price_usd).toLocaleString()}`
-  if (listing.price_ils) return `₪${Number(listing.price_ils).toLocaleString()}`
+  const prices = []
+
+  if (listing.price_ils) {
+    prices.push(`\u20aa${Number(listing.price_ils).toLocaleString()}`)
+  }
+
+  if (listing.price_usd) {
+    prices.push(`$${Number(listing.price_usd).toLocaleString()}`)
+  }
+
+  if (prices.length > 0) return prices.join(' / ')
+
   return 'Price on request'
 }

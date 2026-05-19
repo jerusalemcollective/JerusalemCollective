@@ -15,6 +15,7 @@ const adminLinks = [
   { href: '/admin/hosts', label: 'Hosts', permission: 'hosts' },
   { href: '/admin/reviews', label: 'Reviews', permission: 'reviews' },
   { href: '/admin/admins', label: 'Admins', permission: 'admins' },
+  { href: '/admin/audit', label: 'Audit log', permission: 'admins' },
 ] satisfies { href: string; label: string; permission: AdminPermission }[]
 
 export function AdminNav({ adminRole }: { adminRole: AdminRole }) {

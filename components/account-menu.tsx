@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import type { ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import {
   CalendarDays,
@@ -12,19 +13,65 @@ import {
   MessageSquare,
   Plus,
   ShieldCheck,
+  Star,
   UserRound,
 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 export function AccountMenu({ hasStay, isAdmin }: { hasStay: boolean; isAdmin: boolean }) {
   const pathname = usePathname()
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  useEffect(() => {
+    let isActive = true
+
+    async function loadUnreadCount() {
+      const supabase = createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) return
+
+      const { data: conversations } = await supabase
+        .from('conversations')
+        .select('id')
+        .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`)
+
+      const conversationIds = (conversations || [])
+        .map((conversation: { id: string }) => conversation.id)
+        .filter(Boolean)
+
+      if (conversationIds.length === 0) {
+        if (isActive) setUnreadCount(0)
+        return
+      }
+
+      const { count } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .in('conversation_id', conversationIds)
+        .eq('read', false)
+        .neq('sender_id', user.id)
+
+      if (isActive) setUnreadCount(count || 0)
+    }
+
+    void loadUnreadCount()
+
+    return () => {
+      isActive = false
+    }
+  }, [])
 
   return (
     <nav className="space-y-1">
       <MenuLink href="/account" label="Profile" icon={<UserRound className="h-5 w-5" />} active={pathname === '/account'} />
       <MenuLink href="/account/bookings" label="My trips" icon={<CalendarDays className="h-5 w-5" />} active={pathname === '/account/bookings'} />
+      <MenuLink href="/account/reviews" label="Reviews" icon={<Star className="h-5 w-5" />} active={pathname === '/account/reviews'} />
       <MenuLink href="/account/enquiries" label="Enquiries" icon={<MessageSquare className="h-5 w-5" />} active={pathname === '/account/enquiries'} />
       <MenuLink href="/account/saved" label="Saved" icon={<Heart className="h-5 w-5" />} active={pathname === '/account/saved'} />
-      <MenuLink href="/account/messages" label="Messages" icon={<MessageCircle className="h-5 w-5" />} active={pathname === '/account/messages'} />
+      <MenuLink href="/account/messages" label="Messages" icon={<MessageCircle className="h-5 w-5" />} active={pathname === '/account/messages'} badge={unreadCount} />
       <MenuLink href="/account/support" label="Support" icon={<LifeBuoy className="h-5 w-5" />} active={pathname === '/account/support'} />
 
       <div className="pt-4">
@@ -47,12 +94,14 @@ function MenuLink({
   icon,
   active = false,
   accent = false,
+  badge = 0,
 }: {
   href: string
   label: string
   icon: ReactNode
   active?: boolean
   accent?: boolean
+  badge?: number
 }) {
   return (
     <Link
@@ -66,7 +115,14 @@ function MenuLink({
       }`}
     >
       {icon}
-      {label}
+      <span className="flex flex-1 items-center gap-2">
+        <span>{label}</span>
+        {badge > 0 && (
+          <span className="inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-[11px] font-bold leading-none text-white">
+            {badge}
+          </span>
+        )}
+      </span>
     </Link>
   )
 }

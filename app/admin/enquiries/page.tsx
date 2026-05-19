@@ -1,5 +1,8 @@
 import { requireAdminPermission } from '@/lib/admin'
 import { StatusBadge } from '@/components/status-badge'
+import { Pagination } from '@/components/pagination'
+
+const PAGE_SIZE = 25
 
 type EnquiryRow = {
   id: string
@@ -27,24 +30,32 @@ type EnquiryRow = {
   } | null
 }
 
-export default async function AdminEnquiriesPage() {
+export default async function AdminEnquiriesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>
+}) {
   const { supabase } = await requireAdminPermission('messages')
-  const { data } = await supabase
-    .from('booking_requests')
-    .select(`
-      id, listing_id, host_id, guest_id, status, check_in, check_out,
-      guests, message, conversation_id, created_at,
-      listings(title, area),
-      hosts(name, email),
-      guest:profiles!booking_requests_guest_id_fkey(full_name, phone)
-    `)
-    .order('created_at', { ascending: false })
+  const page = Math.max(1, Number((await searchParams).page) || 1)
+  const [{ data }, { count }] = await Promise.all([
+    supabase
+      .from('booking_requests')
+      .select(`
+        id, listing_id, host_id, guest_id, status, check_in, check_out,
+        guests, message, conversation_id, created_at,
+        listings(title, area),
+        hosts(name, email),
+        guest:profiles!booking_requests_guest_id_fkey(full_name, phone)
+      `)
+      .order('created_at', { ascending: false })
+      .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1),
+    supabase.from('booking_requests').select('*', { count: 'exact', head: true }),
+  ])
 
   const enquiries = (data || []) as EnquiryRow[]
+  const total = count || 0
   const newCount = enquiries.filter((enquiry) => enquiry.status === 'new').length
-  const activeCount = enquiries.filter((enquiry) =>
-    ['new', 'host_replied'].includes(enquiry.status),
-  ).length
+  const activeCount = enquiries.filter((enquiry) => ['new', 'host_replied'].includes(enquiry.status)).length
 
   return (
     <div>
@@ -56,7 +67,7 @@ export default async function AdminEnquiriesPage() {
       </header>
 
       <div className="grid gap-4 border-b border-stone-200 py-5 sm:grid-cols-3">
-        <Metric label="Total" value={enquiries.length} />
+        <Metric label="Total" value={total} />
         <Metric label="New" value={newCount} />
         <Metric label="Active" value={activeCount} />
       </div>
@@ -111,6 +122,7 @@ export default async function AdminEnquiriesPage() {
           <div className="py-12 text-center text-stone-500">No enquiries yet.</div>
         )}
       </div>
+      <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} basePath="/admin/enquiries" />
     </div>
   )
 }

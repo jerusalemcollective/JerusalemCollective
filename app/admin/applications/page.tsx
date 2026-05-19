@@ -1,6 +1,9 @@
 import Link from 'next/link'
 import { requireAdminPermission } from '@/lib/admin'
 import { StatusBadge } from '@/components/status-badge'
+import { Pagination } from '@/components/pagination'
+
+const PAGE_SIZE = 25
 
 type ApplicationRow = {
   id: string
@@ -12,14 +15,24 @@ type ApplicationRow = {
   created_at: string
 }
 
-export default async function AdminApplicationsPage() {
+export default async function AdminApplicationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>
+}) {
   const { supabase } = await requireAdminPermission('applications')
-  const { data } = await supabase
-    .from('host_applications')
-    .select('id, host_name, apartment_title, area, status, verification_status, created_at')
-    .order('created_at', { ascending: false })
+  const page = Math.max(1, Number((await searchParams).page) || 1)
+  const [{ data }, { count }] = await Promise.all([
+    supabase
+      .from('host_applications')
+      .select('id, host_name, apartment_title, area, status, verification_status, created_at')
+      .order('created_at', { ascending: false })
+      .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1),
+    supabase.from('host_applications').select('*', { count: 'exact', head: true }),
+  ])
 
   const applications = (data || []) as ApplicationRow[]
+  const total = count || 0
 
   return (
     <div>
@@ -62,6 +75,7 @@ export default async function AdminApplicationsPage() {
           </div>
         )}
       </div>
+      <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} basePath="/admin/applications" />
     </div>
   )
 }

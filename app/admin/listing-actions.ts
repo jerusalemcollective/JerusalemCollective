@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireAdminPermission } from '@/lib/admin'
+import { logAdminAction } from '@/lib/audit'
 
 export type ListingMessageState = {
   status: 'idle' | 'success' | 'error'
@@ -30,6 +31,8 @@ export async function updateListingVisibility(formData: FormData) {
     .eq('id', listingId)
 
   if (error) throw error
+  await logAdminAction(supabase, `set_${field}_${value}`, 'listing', listingId)
+
   revalidatePath('/admin')
   revalidatePath('/admin/listings')
   revalidatePath(`/listings/${listingId}`)

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireAdminPermission } from '@/lib/admin'
+import { logAdminAction } from '@/lib/audit'
 
 export async function updateReviewApproval(formData: FormData) {
   const reviewId = String(formData.get('reviewId') || '')
@@ -18,6 +19,8 @@ export async function updateReviewApproval(formData: FormData) {
     .eq('id', reviewId)
 
   if (error) throw error
+  await logAdminAction(supabase, `set_approved_${value}`, 'review', reviewId)
+
   revalidatePath('/admin')
   revalidatePath('/admin/reviews')
 }

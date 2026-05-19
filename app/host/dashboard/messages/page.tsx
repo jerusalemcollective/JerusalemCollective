@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { MessagesInbox } from '@/components/messages-inbox'
+import { MessagesInbox, MessagesInboxSkeleton } from '@/components/messages-inbox'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { HostDashboardNav } from '@/components/host-dashboard-nav'
 
@@ -17,7 +17,7 @@ export default async function HostMessagesPage() {
             Reply to enquiries across all of your listings from one place.
           </p>
         </div>
-        <Suspense fallback={<div className="rounded-3xl bg-white p-8 text-stone-600 shadow-sm">Loading messages...</div>}>
+        <Suspense fallback={<MessagesInboxSkeleton />}>
           <MessagesInbox mode="host" />
         </Suspense>
       </section>

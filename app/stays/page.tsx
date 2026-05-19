@@ -8,6 +8,7 @@ import dynamic from 'next/dynamic'
 import { sampleListings } from '@/lib/sample-listings'
 import { allNeighborhoods } from '@/lib/neighborhoods'
 import { filterListings } from '@/lib/marketplace-rules'
+import { StaysFilterBar, getAmenityLabel } from '@/components/stays-filter-bar'
 
 const neighborhoods = ['All', ...allNeighborhoods]
 
@@ -17,23 +18,14 @@ interface Listing {
   area: string
   bedrooms: number
   max_guests: number
-  price_ils: number
-  price_usd: number
+  price_ils: number | null
+  price_usd: number | null
   booking_type: string
   latitude: number
   longitude: number
   amenities: string[]
   cover_photo_url?: string | null
 }
-
-const amenityFilters = [
-  'Sukkah balcony',
-  'Kosher kitchen',
-  'Shabbat-friendly',
-  'Near synagogues',
-  'Elevator',
-  'Parking',
-]
 
 // Dynamically import Google Maps component
 const JerusalemMap = dynamic(() => import('@/components/jerusalem-map'), { 
@@ -62,6 +54,22 @@ function formatBookingType(type: string): string {
   }
 }
 
+function formatPrice(listing: Pick<Listing, 'price_ils' | 'price_usd'>) {
+  const prices = []
+
+  if (listing.price_ils) {
+    prices.push(`\u20aa${Number(listing.price_ils).toLocaleString()}`)
+  }
+
+  if (listing.price_usd) {
+    prices.push(`$${Number(listing.price_usd).toLocaleString()}`)
+  }
+
+  if (prices.length > 0) return prices.join(' / ')
+
+  return 'Price on request'
+}
+
 async function trackNeighborhoodSearch(neighborhood: string, source: string) {
   if (
     neighborhood === 'All' ||
@@ -77,38 +85,131 @@ async function trackNeighborhoodSearch(neighborhood: string, source: string) {
   })
 }
 
+type BlockedListingRow = {
+  listing_id: string | null
+}
+
+function parsePositiveNumber(value: string | null) {
+  const numberValue = Number(value)
+  return Number.isFinite(numberValue) && numberValue > 0 ? numberValue : null
+}
+
+function parseAmenityLabels(value: string | null) {
+  if (!value) return []
+
+  return value
+    .split(',')
+    .map((item) => getAmenityLabel(item.trim()))
+    .filter((item): item is string => Boolean(item))
+}
+
+function applyClientUrlFilters(
+  listingRows: Listing[],
+  filters: {
+    guests: number | null
+    minPrice: number | null
+    maxPrice: number | null
+    amenityLabels: string[]
+    blockedListingIds: string[]
+  },
+) {
+  return listingRows.filter((listing) => {
+    if (filters.guests && listing.max_guests < filters.guests) return false
+    if (filters.minPrice && Number(listing.price_usd || 0) < filters.minPrice) return false
+    if (filters.maxPrice && Number(listing.price_usd || 0) > filters.maxPrice) return false
+    if (filters.blockedListingIds.includes(listing.id)) return false
+
+    return filters.amenityLabels.every((amenity) => listing.amenities?.includes(amenity))
+  })
+}
+
 function StaysPageContent() {
   const searchParams = useSearchParams()
   const initialView = searchParams.get('view') === 'map' ? 'map' : 'list'
   const initialArea = searchParams.get('neighborhood') || 'All'
   const activeFeature = searchParams.get('feature') || searchParams.get('type') || searchParams.get('season')
+  const checkIn = searchParams.get('checkIn')
+  const checkOut = searchParams.get('checkOut')
+  const guests = parsePositiveNumber(searchParams.get('guests'))
+  const minPrice = parsePositiveNumber(searchParams.get('minPrice'))
+  const maxPrice = parsePositiveNumber(searchParams.get('maxPrice'))
+  const amenityLabels = parseAmenityLabels(searchParams.get('amenities'))
+  const amenityKey = amenityLabels.join('|')
   const [view, setView] = useState<'list' | 'map'>(initialView)
   const [selectedArea, setSelectedArea] = useState(initialArea)
   const [listings, setListings] = useState<Listing[]>(sampleListings)
   const [loading, setLoading] = useState(false)
-  const [minimumBedrooms, setMinimumBedrooms] = useState(0)
-  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([])
 
   useEffect(() => {
     async function fetchListings() {
+      setLoading(true)
       if (!isSupabaseConfigured || !supabase) {
-        setListings(sampleListings)
+        setListings(
+          applyClientUrlFilters(sampleListings, {
+            guests,
+            minPrice,
+            maxPrice,
+            amenityLabels,
+            blockedListingIds: [],
+          }),
+        )
         setLoading(false)
         return
       }
 
-      // Fetch listings with their cover photos
-      const { data: listingsData, error } = await supabase
+      let blockedListingIds: string[] = []
+
+      if (checkIn && checkOut) {
+        const { data: blockedRanges } = await supabase
+          .from('listing_unavailable_ranges')
+          .select('listing_id')
+          .lte('start_date', checkOut)
+          .gte('end_date', checkIn)
+
+        blockedListingIds = Array.from(
+          new Set(
+            ((blockedRanges || []) as BlockedListingRow[])
+              .map((range) => range.listing_id)
+              .filter((id): id is string => Boolean(id)),
+          ),
+        )
+      }
+
+      let listingsQuery = supabase
         .from('listings')
         .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, latitude, longitude, amenities')
         .order('is_featured', { ascending: false })
 
-      if (!error && listingsData && listingsData.length > 0) {
-        // Fetch cover photos for each listing
-        const { data: photosData } = await supabase
-          .from('listing_photos')
-          .select('listing_id, photo_url')
-          .eq('is_cover', true)
+      if (guests) {
+        listingsQuery = listingsQuery.gte('max_guests', guests)
+      }
+
+      if (minPrice) {
+        listingsQuery = listingsQuery.gte('price_usd', minPrice)
+      }
+
+      if (maxPrice) {
+        listingsQuery = listingsQuery.lte('price_usd', maxPrice)
+      }
+
+      amenityLabels.forEach((amenity) => {
+        listingsQuery = listingsQuery.contains('amenities', [amenity])
+      })
+
+      if (blockedListingIds.length > 0) {
+        listingsQuery = listingsQuery.not('id', 'in', `(${blockedListingIds.join(',')})`)
+      }
+
+      const { data: listingsData, error } = await listingsQuery
+
+      if (!error && listingsData) {
+        const { data: photosData } = listingsData.length > 0
+          ? await supabase
+              .from('listing_photos')
+              .select('listing_id, photo_url')
+              .eq('is_cover', true)
+              .in('listing_id', listingsData.map((listing) => listing.id))
+          : { data: [] }
 
         const photoMap = new Map(photosData?.map(p => [p.listing_id, p.photo_url]) || [])
         
@@ -119,33 +220,26 @@ function StaysPageContent() {
         
         setListings(listingsWithPhotos)
       } else {
-        setListings(sampleListings)
+        setListings(
+          applyClientUrlFilters(sampleListings, {
+            guests,
+            minPrice,
+            maxPrice,
+            amenityLabels,
+            blockedListingIds,
+          }),
+        )
       }
       setLoading(false)
     }
     fetchListings()
-  }, [])
+  }, [amenityKey, checkIn, checkOut, guests, maxPrice, minPrice])
 
   const filteredListings = filterListings(listings, {
     selectedArea,
-    minimumBedrooms,
-    selectedAmenities,
+    minimumBedrooms: 0,
+    selectedAmenities: [],
   })
-
-  const toggleAmenity = (amenity: string) => {
-    setSelectedAmenities((current) =>
-      current.includes(amenity)
-        ? current.filter((item) => item !== amenity)
-        : [...current, amenity],
-    )
-  }
-
-  const clearFilters = () => {
-    setMinimumBedrooms(0)
-    setSelectedAmenities([])
-  }
-
-  const hasExtraFilters = minimumBedrooms > 0 || selectedAmenities.length > 0
 
   if (loading) {
     return (
@@ -199,52 +293,8 @@ function StaysPageContent() {
           </div>
         </div>
 
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 pb-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700">
-              <span className="font-semibold">Bedrooms</span>
-              <select
-                value={minimumBedrooms}
-                onChange={(event) => setMinimumBedrooms(Number(event.target.value))}
-                className="bg-transparent text-sm font-semibold text-stone-900 outline-none"
-              >
-                <option value={0}>Any</option>
-                <option value={1}>1+</option>
-                <option value={2}>2+</option>
-                <option value={3}>3+</option>
-                <option value={4}>4+</option>
-              </select>
-            </label>
-
-            {amenityFilters.map((amenity) => {
-              const active = selectedAmenities.includes(amenity)
-
-              return (
-                <button
-                  key={amenity}
-                  type="button"
-                  onClick={() => toggleAmenity(amenity)}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                    active
-                      ? 'bg-[#c76f55] text-white'
-                      : 'border border-stone-200 bg-white text-stone-700 hover:border-[#c76f55] hover:text-[#c76f55]'
-                  }`}
-                >
-                  {amenity}
-                </button>
-              )
-            })}
-          </div>
-
-          {hasExtraFilters && (
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="w-fit text-sm font-semibold text-[#c76f55] hover:underline"
-            >
-              Clear filters
-            </button>
-          )}
+        <div className="mx-auto max-w-7xl px-4 pb-4 sm:px-6">
+          <StaysFilterBar />
         </div>
       </div>
 
@@ -264,22 +314,20 @@ function StaysPageContent() {
 
           {filteredListings.length === 0 ? (
             <div className="rounded-3xl border border-stone-200 bg-white p-8 text-center shadow-sm">
-              <h2 className="text-xl font-bold text-stone-950">No stays found here yet</h2>
+              <h2 className="text-xl font-bold text-stone-950">No stays match your filters</h2>
               <p className="mt-2 text-sm text-stone-500">Try another neighbourhood or clear some filters.</p>
-              <button
-                onClick={() => {
-                  setSelectedArea('All')
-                  clearFilters()
-                }}
+              <Link
+                href="/stays"
+                onClick={() => setSelectedArea('All')}
                 className="mt-5 rounded-full bg-[#c76f55] px-5 py-3 text-sm font-bold text-white hover:bg-[#b85f47]"
               >
                 Clear filters
-              </button>
+              </Link>
             </div>
           ) : (
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
             {filteredListings.map((stay) => (
-              <Link key={stay.id} href={`/listings/${stay.id}`}>
+              <Link key={stay.id} href={`/listings/${stay.id}?from=stays`}>
                 <article className="group cursor-pointer">
                   <div className="relative mb-4 aspect-[4/3] overflow-hidden rounded-3xl bg-stone-200 shadow-sm">
                     {stay.cover_photo_url ? (
@@ -302,6 +350,14 @@ function StaysPageContent() {
                     </div>
                     <div className="shrink-0 text-right">
                       <p className="text-lg font-bold text-stone-900">
+                        {formatPrice(stay)}
+                        {formatPrice(stay) !== 'Price on request' && (
+                          <span className="ml-1 text-sm font-normal text-stone-500">/ night</span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="hidden shrink-0 text-right">
+                      <p className="text-lg font-bold text-stone-900">
                         ₪{stay.price_ils?.toLocaleString()}
                         <span className="ml-1 text-sm font-normal text-stone-500">/ night</span>
                       </p>
@@ -320,6 +376,8 @@ function StaysPageContent() {
             id: l.id,
             title: l.title,
             area: l.area,
+            price_ils: l.price_ils,
+            price_usd: l.price_usd,
             price: `₪${l.price_ils?.toLocaleString()}`,
             bedrooms: l.bedrooms,
             sleeps: l.max_guests,

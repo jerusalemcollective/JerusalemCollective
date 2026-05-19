@@ -3,6 +3,9 @@ import { requireAdminPermission } from '@/lib/admin'
 import { updateHostVerification } from '@/app/admin/host-actions'
 import { ConfirmSubmitButton } from '@/components/confirm-submit-button'
 import { BooleanBadge } from '@/components/boolean-badge'
+import { Pagination } from '@/components/pagination'
+
+const PAGE_SIZE = 25
 
 type PersonRow = {
   user_id: string
@@ -18,8 +21,13 @@ type PersonRow = {
   last_sign_in_at: string | null
 }
 
-export default async function AdminHostsPage() {
+export default async function AdminHostsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>
+}) {
   const { supabase } = await requireAdminPermission('hosts')
+  const page = Math.max(1, Number((await searchParams).page) || 1)
   const { data, error } = await supabase.rpc('list_platform_people')
 
   if (error) {
@@ -27,6 +35,8 @@ export default async function AdminHostsPage() {
   }
 
   const hosts = ((data || []) as PersonRow[]).filter((person) => person.host_id)
+  const paged = hosts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const total = hosts.length
 
   return (
     <div>
@@ -47,11 +57,11 @@ export default async function AdminHostsPage() {
           <span>Action</span>
         </div>
 
-        {hosts.length === 0 ? (
+        {paged.length === 0 ? (
           <div className="py-12 text-center text-stone-500">No hosts yet.</div>
         ) : (
           <div className="divide-y divide-stone-200">
-            {hosts.map((host) => (
+            {paged.map((host) => (
               <div
                 key={host.host_id}
                 className="grid gap-4 py-5 md:grid-cols-[1.2fr_1fr_0.75fr_0.85fr_0.8fr_0.8fr] md:items-center"
@@ -80,6 +90,7 @@ export default async function AdminHostsPage() {
           </div>
         )}
       </div>
+      <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} basePath="/admin/hosts" />
     </div>
   )
 }

@@ -3,6 +3,9 @@ import { requireAdminPermission } from '@/lib/admin'
 import { updateListingVisibility } from '@/app/admin/listing-actions'
 import { ConfirmSubmitButton } from '@/components/confirm-submit-button'
 import { BooleanBadge } from '@/components/boolean-badge'
+import { Pagination } from '@/components/pagination'
+
+const PAGE_SIZE = 25
 
 type ListingRow = {
   id: string
@@ -17,14 +20,24 @@ type ListingRow = {
   } | null
 }
 
-export default async function AdminListingsPage() {
+export default async function AdminListingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>
+}) {
   const { supabase } = await requireAdminPermission('listings')
-  const { data } = await supabase
-    .from('listings')
-    .select('id, title, area, host_id, is_published, is_featured, created_at, hosts(name)')
-    .order('created_at', { ascending: false })
+  const page = Math.max(1, Number((await searchParams).page) || 1)
+  const [{ data }, { count }] = await Promise.all([
+    supabase
+      .from('listings')
+      .select('id, title, area, host_id, is_published, is_featured, created_at, hosts(name)')
+      .order('created_at', { ascending: false })
+      .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1),
+    supabase.from('listings').select('*', { count: 'exact', head: true }),
+  ])
 
   const listings = (data || []) as ListingRow[]
+  const total = count || 0
 
   return (
     <div>
@@ -95,6 +108,7 @@ export default async function AdminListingsPage() {
           </div>
         )}
       </div>
+      <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} basePath="/admin/listings" />
     </div>
   )
 }

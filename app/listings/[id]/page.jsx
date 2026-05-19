@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import { Link2 } from 'lucide-react'
 import { DayPicker } from 'react-day-picker'
 import { format, addDays } from 'date-fns'
 import { isSupabaseConfigured, supabase } from '@/lib/supabaseClient'
@@ -11,6 +12,7 @@ import { CalendarCaptionLabel } from '@/components/ui/calendar'
 import { MessageHostDialog } from '@/components/message-host-dialog'
 import { SaveListingButton } from '@/components/save-listing-button'
 import { BookingDateRangePicker as UnifiedBookingDateRangePicker } from '@/components/booking-date-range-picker'
+import { AvailabilityCalendar } from '@/components/availability-calendar'
 import { recordListingEngagement } from '@/lib/listing-engagement'
 import { formatHebrewMonthSpan, formatHebrewShortDate } from '@/lib/hebrew-date'
 import 'react-day-picker/dist/style.css'
@@ -264,16 +266,42 @@ export default function ListingDetailPage() {
   const params = useParams()
   const listingId = params.id
 
+  const [fromStays, setFromStays] = useState(false)
   const [listing, setListing] = useState(null)
   const [host, setHost] = useState(null)
   const [photos, setPhotos] = useState([])
   const [reviews, setReviews] = useState([])
+  const [blockedRanges, setBlockedRanges] = useState([])
+  const [copiedLink, setCopiedLink] = useState(false)
   const [loading, setLoading] = useState(true)
   const [selectedPhoto, setSelectedPhoto] = useState(0)
   const [showGallery, setShowGallery] = useState(false)
   const [showMobileBooking, setShowMobileBooking] = useState(false)
   const [bookingDateRange, setBookingDateRange] = useState({ from: undefined, to: undefined })
   const [guestCount, setGuestCount] = useState(1)
+  const copyTimeoutRef = useRef(null)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    setFromStays(params.get('from') === 'stays')
+
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  const handleCopyListingLink = async () => {
+    await navigator.clipboard.writeText(window.location.href)
+    setCopiedLink(true)
+
+    if (copyTimeoutRef.current) {
+      clearTimeout(copyTimeoutRef.current)
+    }
+
+    copyTimeoutRef.current = setTimeout(() => setCopiedLink(false), 2000)
+  }
 
   useEffect(() => {
     async function fetchListingData() {
@@ -305,41 +333,49 @@ export default function ListingDetailPage() {
       setListing(listingData)
       await recordListingEngagement(supabase, listingId, 'view')
 
-      // Fetch photos ordered by sort_order
-      const { data: photosData } = await supabase
-        .from('listing_photos')
-        .select('*')
-        .eq('listing_id', listingId)
-        .order('sort_order', { ascending: true })
+      const [
+        { data: photosData },
+        { data: hostData },
+        { data: reviewsData },
+        { data: blockedRangesData },
+      ] = await Promise.all([
+        supabase
+          .from('listing_photos')
+          .select('*')
+          .eq('listing_id', listingId)
+          .order('sort_order', { ascending: true }),
+        listingData.host_id
+          ? supabase
+              .from('hosts')
+              .select('*')
+              .eq('id', listingData.host_id)
+              .single()
+          : Promise.resolve({ data: null }),
+        supabase
+          .from('reviews')
+          .select('*')
+          .eq('listing_id', listingId)
+          .eq('is_approved', true)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('listing_unavailable_ranges')
+          .select('start_date, end_date')
+          .eq('listing_id', listingId),
+      ])
 
       if (photosData) {
         setPhotos(photosData)
       }
 
-      // Fetch host if exists
-      if (listingData.host_id) {
-        const { data: hostData } = await supabase
-          .from('hosts')
-          .select('*')
-          .eq('id', listingData.host_id)
-          .single()
-
-        if (hostData) {
-          setHost(hostData)
-        }
+      if (hostData) {
+        setHost(hostData)
       }
-
-      // Fetch reviews for this listing
-      const { data: reviewsData } = await supabase
-        .from('reviews')
-        .select('*')
-        .eq('listing_id', listingId)
-        .eq('is_approved', true)
-        .order('created_at', { ascending: false })
 
       if (reviewsData) {
         setReviews(reviewsData)
       }
+
+      setBlockedRanges(blockedRangesData || [])
 
       setLoading(false)
     }
@@ -386,7 +422,20 @@ export default function ListingDetailPage() {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-8 pb-28 lg:pb-8">
-        <div className="mb-5 flex justify-end">
+        {fromStays && (
+          <Link href="/stays" className="mb-4 inline-flex text-sm font-medium text-stone-500 transition hover:text-stone-900">
+            &larr; Back to search
+          </Link>
+        )}
+        <div className="mb-5 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={handleCopyListingLink}
+            className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-300 hover:bg-stone-50"
+          >
+            <Link2 className="h-4 w-4" />
+            {copiedLink ? 'Copied!' : 'Copy link'}
+          </button>
           <SaveListingButton listingId={listing.id} />
         </div>
         {/* Photo Gallery */}
@@ -504,6 +553,8 @@ export default function ListingDetailPage() {
                 </div>
               </div>
             )}
+
+            <AvailabilityCalendar blockedRanges={blockedRanges} />
 
             {/* Reviews */}
             <div>
