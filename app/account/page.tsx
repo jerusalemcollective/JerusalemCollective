@@ -22,18 +22,19 @@ export default async function AccountPage() {
     redirect('/login?redirect=/account')
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, full_name, phone, avatar_url, is_host, is_admin')
-    .eq('id', user.id)
-    .maybeSingle()
-
-  const { data: host } = await supabase
-    .from('hosts')
-    .select('id')
-    .or(`id.eq.${user.id},user_id.eq.${user.id}`)
-    .limit(1)
-    .maybeSingle()
+  const [{ data: profile }, { data: host }] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('id, full_name, phone, avatar_url, is_host, is_admin')
+      .eq('id', user.id)
+      .maybeSingle(),
+    supabase
+      .from('hosts')
+      .select('id')
+      .or(`id.eq.${user.id},user_id.eq.${user.id}`)
+      .limit(1)
+      .maybeSingle(),
+  ])
 
   // host.id may differ from user.id when the host record has its own PK.
   // We query by both to cover direct ownership and delegated host accounts.
@@ -59,13 +60,13 @@ export default async function AccountPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="mx-auto max-w-5xl px-5 py-10 md:px-6">
-        <header className="mb-8 border-b border-stone-200 pb-6">
-          <h1 className="text-3xl font-bold tracking-tight text-stone-950">Account</h1>
-          <p className="mt-2 text-stone-600">Profile, trips, saved stays, messages, and support.</p>
+      <div className="mx-auto max-w-5xl px-5 py-6 md:px-6">
+        <header className="mb-5 border-b border-stone-200 pb-4">
+          <h1 className="text-2xl font-bold tracking-tight text-stone-950">Account</h1>
+          <p className="mt-1.5 text-sm text-stone-600">Profile, trips, saved stays, messages, and support.</p>
         </header>
 
-        <div className="grid gap-6 md:grid-cols-[240px_1fr]">
+        <div className="grid gap-5 md:grid-cols-[240px_1fr]">
           <AccountMenu hasStay={hasStay} isAdmin={Boolean(typedProfile?.is_admin)} />
           <AccountProfileForm
             user={{ id: user.id, email: userEmail }}

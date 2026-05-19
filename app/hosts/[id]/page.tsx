@@ -1,18 +1,20 @@
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 
-type HostRecord = {
+type HostRow = {
   id: string
   name: string
   display_name: string | null
   show_full_name: boolean
-  host_type: string
-  is_verified: boolean
   profile_photo_url: string | null
+  is_verified: boolean | null
+  host_type: string | null
   bio: string | null
+  [key: string]: unknown
 }
 
-type ListingRow = {
+type ListingWithPhoto = {
   id: string
   title: string
   area: string
@@ -21,8 +23,10 @@ type ListingRow = {
   price_ils: number | null
   price_usd: number | null
   booking_type: string
-  cover_photo_url?: string | null
+  cover_photo_url: string | null
 }
+
+type ListingRow = Omit<ListingWithPhoto, 'cover_photo_url'>
 
 type ListingPhotoRow = {
   listing_id: string | null
@@ -36,70 +40,71 @@ type ReviewRow = {
   title: string | null
   content: string | null
   stay_date: string | null
+  created_at: string
 }
 
 type HostPageProps = {
   params: Promise<{ id: string }>
 }
 
-function getPublicName(host: HostRecord): string {
+function getPublicName(host: Pick<HostRow, 'name' | 'display_name' | 'show_full_name'>): string {
   if (host.show_full_name) return host.name
   return host.display_name || host.name.split(' ')[0]
 }
 
-export async function generateMetadata({ params }: HostPageProps) {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
   const { id } = await params
   const supabase = await createClient()
-  const { data } = await supabase
+  const { data: host } = await supabase
     .from('hosts')
-    .select('name, display_name, show_full_name')
+    .select('name, display_name, show_full_name, profile_photo_url')
     .eq('id', id)
     .single()
 
-  const host = data as HostRecord | null
-  const name = host ? getPublicName(host) : null
+  if (!host) return { title: 'Host | JLM Collective' }
+
+  const displayName = getPublicName(host)
 
   return {
-    title: name ? `${name} | JLM Collective Host` : 'Host | JLM Collective',
-    description: name ? `View ${name}'s Jerusalem stays on JLM Collective.` : 'View a Jerusalem host on JLM Collective.',
+    title: `${displayName} | JLM Collective Host`,
+    description: `View ${displayName}'s listings on JLM Collective — curated Jerusalem stays.`,
+    openGraph: {
+      title: `${displayName} | JLM Collective`,
+      images: host.profile_photo_url
+        ? [{ url: host.profile_photo_url, alt: displayName }]
+        : [],
+    },
   }
 }
 
 export default async function HostProfilePage({ params }: HostPageProps) {
-  const { id } = await params
+  const { id: hostId } = await params
   const supabase = await createClient()
-  const { data: hostData } = await supabase
-    .from('hosts')
-    .select('*')
-    .eq('id', id)
-    .single()
+  const [{ data: hostData }, { data: listingsData }, { data: reviewsData }] =
+    await Promise.all([
+      supabase.from('hosts').select('*').eq('id', hostId).single(),
+      supabase
+        .from('listings')
+        .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type')
+        .eq('host_id', hostId)
+        .eq('is_published', true),
+      supabase
+        .from('reviews')
+        .select('id, reviewer_name, rating, title, content, stay_date, created_at')
+        .eq('host_id', hostId)
+        .eq('is_approved', true)
+        .order('created_at', { ascending: false }),
+    ])
 
   if (!hostData) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-[#F8F5F2] px-4">
-        <h1 className="mb-4 text-2xl font-bold text-stone-800">Host not found</h1>
-        <Link href="/stays" className="text-[#c76f55] hover:underline">
-          Browse all stays
-        </Link>
-      </div>
-    )
+    notFound()
   }
 
-  const host = hostData as HostRecord
-  const [{ data: listingsData }, { data: reviewsData }] = await Promise.all([
-    supabase
-      .from('listings')
-      .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type')
-      .eq('host_id', id)
-      .eq('is_published', true),
-    supabase
-      .from('reviews')
-      .select('id, reviewer_name, rating, title, content, stay_date')
-      .eq('host_id', id)
-      .eq('is_approved', true)
-      .order('created_at', { ascending: false }),
-  ])
-
+  const host = hostData as HostRow
   const listingRows = (listingsData || []) as ListingRow[]
   const listingIds = listingRows.map((listing) => listing.id)
   const { data: photosData } = listingIds.length
@@ -109,12 +114,13 @@ export default async function HostProfilePage({ params }: HostPageProps) {
         .eq('is_cover', true)
         .in('listing_id', listingIds)
     : { data: [] }
-  const photoMap = new Map(
-    ((photosData || []) as ListingPhotoRow[])
-      .filter((photo) => photo.listing_id)
-      .map((photo) => [photo.listing_id as string, photo.photo_url]),
-  )
-  const listings = listingRows.map((listing) => ({
+  const photoMap = new Map<string, string>()
+  ;((photosData || []) as ListingPhotoRow[]).forEach((photo) => {
+    if (photo.listing_id) {
+      photoMap.set(photo.listing_id, photo.photo_url)
+    }
+  })
+  const listings: ListingWithPhoto[] = listingRows.map((listing) => ({
     ...listing,
     cover_photo_url: photoMap.get(listing.id) || null,
   }))

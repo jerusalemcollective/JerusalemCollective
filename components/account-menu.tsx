@@ -74,7 +74,7 @@ export function AccountMenu({ hasStay, isAdmin }: { hasStay: boolean; isAdmin: b
       <MenuLink href="/account/messages" label="Messages" icon={<MessageCircle className="h-5 w-5" />} active={pathname === '/account/messages'} badge={unreadCount} />
       <MenuLink href="/account/support" label="Support" icon={<LifeBuoy className="h-5 w-5" />} active={pathname === '/account/support'} />
 
-      <div className="pt-4">
+      <div className="mt-3 space-y-2 border-t border-stone-200 pt-4">
         {hasStay ? (
           <MenuLink href="/host/dashboard" label="Host dashboard" icon={<Home className="h-5 w-5" />} accent />
         ) : (
@@ -106,7 +106,7 @@ function MenuLink({
   return (
     <Link
       href={href}
-      className={`flex items-center gap-3 rounded-lg px-4 py-3 font-medium transition ${
+      className={`flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-medium transition ${
         active
           ? 'bg-white text-stone-950 shadow-sm'
           : accent

@@ -24,8 +24,12 @@ CREATE TABLE IF NOT EXISTS public.listing_admin_messages (
   host_id uuid NOT NULL REFERENCES public.hosts(id) ON DELETE CASCADE,
   body text NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
   read_at timestamptz
 );
+
+ALTER TABLE public.listing_admin_messages
+  ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
 
 CREATE INDEX IF NOT EXISTS listing_admin_messages_listing_idx
   ON public.listing_admin_messages (listing_id, created_at DESC);

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type TouchEvent } from 'react'
 import Link from 'next/link'
 import { Link2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -78,8 +78,8 @@ export function ListingDetailClient({
   fromStays,
 }: ListingDetailClientProps) {
   const [copiedLink, setCopiedLink] = useState(false)
-  const [selectedPhoto, setSelectedPhoto] = useState(0)
   const [showGallery, setShowGallery] = useState(false)
+  const [galleryIndex, setGalleryIndex] = useState(0)
   const [showMobileBooking, setShowMobileBooking] = useState(false)
   const [bookingDateRange, setBookingDateRange] = useState<DateRange>({})
   const [guestCount, setGuestCount] = useState(1)
@@ -96,27 +96,6 @@ export function ListingDetailClient({
     }
   }, [listing.id])
 
-  useEffect(() => {
-    if (!showGallery || photos.length === 0) return
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setShowGallery(false)
-      }
-
-      if (event.key === 'ArrowLeft') {
-        setSelectedPhoto((previous) => (previous > 0 ? previous - 1 : photos.length - 1))
-      }
-
-      if (event.key === 'ArrowRight') {
-        setSelectedPhoto((previous) => (previous < photos.length - 1 ? previous + 1 : 0))
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [photos.length, showGallery])
-
   const handleCopyListingLink = async () => {
     await navigator.clipboard.writeText(window.location.href)
     setCopiedLink(true)
@@ -128,7 +107,6 @@ export function ListingDetailClient({
     copyTimeoutRef.current = setTimeout(() => setCopiedLink(false), 2000)
   }
 
-  const coverPhoto = photos.find((photo) => photo.is_cover) || photos[0]
   const averageRating =
     reviews.length > 0
       ? (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1)
@@ -171,54 +149,71 @@ export function ListingDetailClient({
 
         <section className="mb-8">
           {photos.length > 0 ? (
-            <div className="relative grid gap-2 sm:grid-cols-4 sm:grid-rows-2">
-              <button
-                type="button"
-                className="relative cursor-pointer overflow-hidden rounded-2xl sm:col-span-2 sm:row-span-2"
-                onClick={() => {
-                  setSelectedPhoto(0)
-                  setShowGallery(true)
-                }}
-              >
-                <div className="aspect-[4/3] sm:aspect-auto sm:h-full">
+            <div className="relative mb-6 overflow-hidden rounded-3xl">
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-[2fr_1fr]">
+                <div
+                  className="relative aspect-[4/3] cursor-pointer overflow-hidden"
+                  onClick={() => {
+                    setGalleryIndex(0)
+                    setShowGallery(true)
+                  }}
+                >
                   <img
-                    src={coverPhoto?.photo_url}
+                    src={photos[0]?.photo_url}
                     alt={listing.title}
                     className="h-full w-full object-cover transition hover:scale-105"
                   />
                 </div>
-              </button>
 
-              {photos.slice(1, 5).map((photo, index) => (
-                <button
-                  type="button"
-                  key={photo.id}
-                  className="relative hidden cursor-pointer overflow-hidden rounded-2xl sm:block"
-                  onClick={() => {
-                    setSelectedPhoto(index + 1)
-                    setShowGallery(true)
-                  }}
-                >
-                  <div className="aspect-[4/3]">
-                    <img
-                      src={photo.photo_url}
-                      alt={`${listing.title} - Photo ${index + 2}`}
-                      className="h-full w-full object-cover transition hover:scale-105"
-                    />
-                  </div>
-                  {index === 3 && photos.length > 5 && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white">
-                      <span className="text-lg font-bold">+{photos.length - 5} more</span>
+                <div className="hidden gap-2 md:grid md:grid-rows-2">
+                  {photos.slice(1, 3).map((photo, index) => (
+                    <div
+                      key={photo.id}
+                      className="relative cursor-pointer overflow-hidden"
+                      onClick={() => {
+                        setGalleryIndex(index + 1)
+                        setShowGallery(true)
+                      }}
+                    >
+                      <img
+                        src={photo.photo_url}
+                        alt={`${listing.title} photo ${index + 2}`}
+                        className="h-full w-full object-cover transition hover:scale-105"
+                      />
                     </div>
-                  )}
-                </button>
-              ))}
+                  ))}
+                </div>
+              </div>
+
+              {photos.length > 3 && (
+                <div className="mt-2 hidden grid-cols-2 gap-2 md:grid">
+                  {photos.slice(3, 5).map((photo, index) => (
+                    <div
+                      key={photo.id}
+                      className="relative aspect-[4/3] cursor-pointer overflow-hidden"
+                      onClick={() => {
+                        setGalleryIndex(index + 3)
+                        setShowGallery(true)
+                      }}
+                    >
+                      <img
+                        src={photo.photo_url}
+                        alt={`${listing.title} photo ${index + 4}`}
+                        className="h-full w-full object-cover transition hover:scale-105"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {photos.length > 1 && (
                 <button
                   type="button"
-                  onClick={() => setShowGallery(true)}
-                  className="absolute bottom-4 right-4 rounded-full bg-white px-4 py-2 text-sm font-semibold text-stone-800 shadow-md transition hover:bg-stone-50 sm:hidden"
+                  onClick={() => {
+                    setGalleryIndex(0)
+                    setShowGallery(true)
+                  }}
+                  className="absolute bottom-4 right-4 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-800 shadow-sm transition hover:bg-stone-50"
                 >
                   View all {photos.length} photos
                 </button>
@@ -379,12 +374,12 @@ export function ListingDetailClient({
       )}
 
       {showGallery && photos.length > 0 && (
-        <Gallery
+        <GalleryOverlay
           photos={photos}
-          listingTitle={listing.title}
-          selectedPhoto={selectedPhoto}
-          setSelectedPhoto={setSelectedPhoto}
+          index={galleryIndex}
+          title={listing.title}
           onClose={() => setShowGallery(false)}
+          onIndexChange={setGalleryIndex}
         />
       )}
     </div>
@@ -517,63 +512,120 @@ function HostCard({
   )
 }
 
-function Gallery({
-  photos,
-  listingTitle,
-  selectedPhoto,
-  setSelectedPhoto,
-  onClose,
-}: {
+type GalleryOverlayProps = {
   photos: ListingDetailPhoto[]
-  listingTitle: string
-  selectedPhoto: number
-  setSelectedPhoto: (value: number | ((previous: number) => number)) => void
+  index: number
+  title: string
   onClose: () => void
-}) {
+  onIndexChange: (index: number) => void
+}
+
+function GalleryOverlay({ photos, index, title, onClose, onIndexChange }: GalleryOverlayProps) {
+  const total = photos.length
+  const touchStartX = useRef<number | null>(null)
+  const prev = useCallback(() => onIndexChange((index - 1 + total) % total), [index, onIndexChange, total])
+  const next = useCallback(() => onIndexChange((index + 1) % total), [index, onIndexChange, total])
+
+  useEffect(() => {
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'ArrowLeft') prev()
+      if (event.key === 'ArrowRight') next()
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [next, onClose, prev])
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [])
+
+  const handleTouchStart = (event: TouchEvent) => {
+    touchStartX.current = event.touches[0].clientX
+  }
+
+  const handleTouchEnd = (event: TouchEvent) => {
+    if (touchStartX.current === null) return
+    const delta = event.changedTouches[0].clientX - touchStartX.current
+    if (delta > 50) prev()
+    else if (delta < -50) next()
+    touchStartX.current = null
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95">
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white transition hover:bg-white/20"
+    <div className="fixed inset-0 z-50 flex flex-col bg-black">
+      <div className="flex items-center justify-between px-5 py-4">
+        <p className="text-sm font-semibold text-white">{title}</p>
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-white/60">{index + 1} / {total}</span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+            aria-label="Close gallery"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div
+        className="relative flex flex-1 items-center justify-center"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
-        <CloseIcon />
-      </button>
-      <button
-        type="button"
-        onClick={() => setSelectedPhoto((previous) => (previous > 0 ? previous - 1 : photos.length - 1))}
-        className="absolute left-4 rounded-full bg-white/10 p-3 text-white transition hover:bg-white/20"
-      >
-        <ChevronLeftIcon />
-      </button>
-      <div className="max-h-[80vh] max-w-[90vw]">
+        <button
+          type="button"
+          onClick={prev}
+          className="absolute left-4 z-10 rounded-full bg-white/10 p-3 text-white transition hover:bg-white/20"
+          aria-label="Previous photo"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </button>
+
         <img
-          src={photos[selectedPhoto]?.photo_url}
-          alt={`${listingTitle} - Photo ${selectedPhoto + 1}`}
-          className="max-h-[80vh] max-w-[90vw] object-contain"
+          key={photos[index]?.id}
+          src={photos[index]?.photo_url}
+          alt={`${title} - photo ${index + 1}`}
+          className="max-h-full max-w-full object-contain"
         />
+
+        <button
+          type="button"
+          onClick={next}
+          className="absolute right-4 z-10 rounded-full bg-white/10 p-3 text-white transition hover:bg-white/20"
+          aria-label="Next photo"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M9 18l6-6-6-6" />
+          </svg>
+        </button>
       </div>
-      <button
-        type="button"
-        onClick={() => setSelectedPhoto((previous) => (previous < photos.length - 1 ? previous + 1 : 0))}
-        className="absolute right-4 rounded-full bg-white/10 p-3 text-white transition hover:bg-white/20"
-      >
-        <ChevronRightLargeIcon />
-      </button>
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white">
-        {selectedPhoto + 1} / {photos.length}
-      </div>
-      <div className="absolute bottom-16 left-1/2 flex -translate-x-1/2 gap-2">
-        {photos.map((photo, index) => (
+
+      <div className="flex gap-2 overflow-x-auto px-5 py-4">
+        {photos.map((photo, thumbIndex) => (
           <button
             type="button"
             key={photo.id}
-            onClick={() => setSelectedPhoto(index)}
-            className={`h-12 w-12 overflow-hidden rounded-lg border-2 transition ${
-              selectedPhoto === index ? 'border-white' : 'border-transparent opacity-50 hover:opacity-100'
+            onClick={() => onIndexChange(thumbIndex)}
+            className={`shrink-0 overflow-hidden rounded-lg transition ${
+              thumbIndex === index
+                ? 'ring-2 ring-white ring-offset-2 ring-offset-black'
+                : 'opacity-50 hover:opacity-80'
             }`}
           >
-            <img src={photo.photo_url} alt="" className="h-full w-full object-cover" />
+            <img
+              src={photo.photo_url}
+              alt=""
+              className="h-16 w-24 object-cover"
+            />
           </button>
         ))}
       </div>
@@ -624,22 +676,6 @@ function CloseIcon() {
 function ChevronRightIcon() {
   return (
     <svg className="h-5 w-5 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-    </svg>
-  )
-}
-
-function ChevronLeftIcon() {
-  return (
-    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-    </svg>
-  )
-}
-
-function ChevronRightLargeIcon() {
-  return (
-    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
     </svg>
   )

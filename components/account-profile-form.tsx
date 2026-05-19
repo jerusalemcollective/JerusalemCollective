@@ -63,17 +63,17 @@ export function AccountProfileForm({ user, profile, hasStay }: AccountProfileFor
   }
 
   return (
-    <div className="rounded-lg bg-white p-6 shadow-sm md:p-8">
-      <div className="mb-8 flex flex-col items-center sm:flex-row sm:items-start sm:gap-8">
+    <div className="rounded-lg bg-white p-5 shadow-sm md:p-6">
+      <div className="mb-5 flex flex-col items-center sm:flex-row sm:items-center sm:gap-6">
         <AvatarUpload
           currentAvatarUrl={avatarUrl}
           userId={user.id}
           onUploadComplete={(newUrl) => setAvatarUrl(newUrl)}
-          size="lg"
+          size="md"
         />
-        <div className="mt-4 text-center sm:mt-0 sm:text-left">
-          <h2 className="text-xl font-bold text-stone-900">{fullName || 'Your name'}</h2>
-          <p className="text-stone-500">{user.email}</p>
+        <div className="mt-3 text-center sm:mt-0 sm:text-left">
+          <h2 className="text-lg font-bold text-stone-900">{fullName || 'Your name'}</h2>
+          <p className="text-sm text-stone-500">{user.email}</p>
           {hasStay && (
             <span className="mt-2 inline-block rounded-full bg-[#fff4ef] px-3 py-1 text-xs font-semibold text-[#c76f55]">
               Host
@@ -82,37 +82,39 @@ export function AccountProfileForm({ user, profile, hasStay }: AccountProfileFor
         </div>
       </div>
 
-      <div className="space-y-5">
+      <div className="space-y-4">
         <div>
           <label className="mb-1.5 block text-sm font-medium text-stone-700">Full name</label>
           <Input
             type="text"
             value={fullName}
             onChange={(event) => setFullName(event.target.value)}
-            className="h-12 rounded-lg border-stone-200 bg-[#F8F5F2] px-4"
+            className="h-10 rounded-lg border-stone-200 bg-[#F8F5F2] px-4"
           />
         </div>
 
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-stone-700">Email</label>
-          <Input
-            type="email"
-            value={user.email}
-            disabled
-            className="h-12 rounded-lg border-stone-200 bg-stone-100 px-4 text-stone-500"
-          />
-          <p className="mt-1 text-xs text-stone-500">Email cannot be changed</p>
-        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-stone-700">Email</label>
+            <Input
+              type="email"
+              value={user.email}
+              disabled
+              className="h-10 rounded-lg border-stone-200 bg-stone-100 px-4 text-stone-500"
+            />
+            <p className="mt-1 text-xs text-stone-500">Email cannot be changed</p>
+          </div>
 
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-stone-700">Phone number</label>
-          <Input
-            type="tel"
-            value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            placeholder="+972 50 000 0000"
-            className="h-12 rounded-lg border-stone-200 bg-[#F8F5F2] px-4"
-          />
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-stone-700">Phone number</label>
+            <Input
+              type="tel"
+              value={phone}
+              onChange={(event) => setPhone(event.target.value)}
+              placeholder="+972 50 000 0000"
+              className="h-10 rounded-lg border-stone-200 bg-[#F8F5F2] px-4"
+            />
+          </div>
         </div>
 
         {error && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>}
@@ -123,7 +125,7 @@ export function AccountProfileForm({ user, profile, hasStay }: AccountProfileFor
           </div>
         )}
 
-        <div className="flex items-center justify-between pt-4">
+        <div className="flex items-center justify-between pt-2">
           <Button
             onClick={handleSignOut}
             variant="outline"

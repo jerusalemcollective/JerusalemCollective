@@ -27,6 +27,11 @@ type ListingPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>
 }
 
+type ListingStructuredDataListing = ListingDetailListing & {
+  latitude: number | null
+  longitude: number | null
+}
+
 function getPublicName(host: HostRecord): string {
   if (host.show_full_name) return host.name
   return host.display_name || host.name.split(' ')[0]
@@ -67,7 +72,7 @@ export async function generateMetadata({
   const priceText = listing.price_usd
     ? `From $${Number(listing.price_usd).toLocaleString()} per night`
     : listing.price_ils
-      ? `From ₪${Number(listing.price_ils).toLocaleString()} per night`
+      ? `From \u20aa${Number(listing.price_ils).toLocaleString()} per night`
       : null
   const ogDescription = priceText ? `${description} ${priceText}.` : description
   const images = coverPhoto?.photo_url
@@ -202,18 +207,78 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
 
   const photos = (photosData || []) as ListingDetailPhoto[]
   const reviews = (reviewsData || []) as ListingDetailReview[]
-  const jsonLd = buildListingJsonLd({
-    listing,
-    photos,
-    reviews,
-    publicHostName,
-  })
+  const structuredListing = listingData as ListingStructuredDataListing
+  const avgRating =
+    reviews.length > 0
+      ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
+      : null
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'LodgingBusiness',
+    name: structuredListing.title,
+    description:
+      structuredListing.description ||
+      `${structuredListing.bedrooms ?? 1}-bedroom stay in ${structuredListing.area}, Jerusalem.`,
+    url: `https://jlmcollective.co/listings/${id}`,
+    image: photos.map((photo) => photo.photo_url),
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: structuredListing.area,
+      addressRegion: 'Jerusalem',
+      addressCountry: 'IL',
+    },
+    geo:
+      structuredListing.latitude && structuredListing.longitude
+        ? {
+            '@type': 'GeoCoordinates',
+            latitude: structuredListing.latitude,
+            longitude: structuredListing.longitude,
+          }
+        : undefined,
+    numberOfRooms: structuredListing.bedrooms ?? undefined,
+    occupancy: structuredListing.max_guests
+      ? {
+          '@type': 'QuantitativeValue',
+          maxValue: structuredListing.max_guests,
+        }
+      : undefined,
+    priceRange: structuredListing.price_usd
+      ? `$${Number(structuredListing.price_usd).toLocaleString()} per night`
+      : structuredListing.price_ils
+        ? `\u20aa${Number(structuredListing.price_ils).toLocaleString()} per night`
+        : undefined,
+    aggregateRating:
+      avgRating !== null && reviews.length > 0
+        ? {
+            '@type': 'AggregateRating',
+            ratingValue: avgRating.toFixed(1),
+            reviewCount: reviews.length,
+            bestRating: 5,
+            worstRating: 1,
+          }
+        : undefined,
+    review: reviews.slice(0, 5).map((review) => ({
+      '@type': 'Review',
+      author: {
+        '@type': 'Person',
+        name: review.reviewer_name,
+      },
+      reviewRating: {
+        '@type': 'Rating',
+        ratingValue: review.rating,
+        bestRating: 5,
+        worstRating: 1,
+      },
+      reviewBody: review.content || undefined,
+    })),
+  }
+  const cleanJsonLd: unknown = JSON.parse(JSON.stringify(jsonLd))
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(cleanJsonLd) }}
       />
       <ListingDetailClient
         listing={listing}
