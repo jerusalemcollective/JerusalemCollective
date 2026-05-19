@@ -13,6 +13,7 @@ type EnquiryRow = {
   guests: number
   message: string | null
   created_at: string | null
+  conversation_id: string | null
   listings?: {
     id: string
     title: string
@@ -37,7 +38,7 @@ export default async function EnquiriesPage() {
 
   const { data } = await supabase
     .from('booking_requests')
-    .select('id, status, check_in, check_out, guests, message, created_at, listings(id, title, area)')
+    .select('id, status, check_in, check_out, guests, message, created_at, conversation_id, listings(id, title, area)')
     .eq('guest_id', user.id)
     .order('created_at', { ascending: false })
 
@@ -60,7 +61,13 @@ export default async function EnquiriesPage() {
             {enquiries.map((enquiry) => (
               <Link
                 key={enquiry.id}
-                href={enquiry.listings?.id ? `/listings/${enquiry.listings.id}` : '/stays'}
+                href={
+                  enquiry.conversation_id
+                    ? `/account/messages?conversation=${enquiry.conversation_id}`
+                    : enquiry.listings?.id
+                      ? `/listings/${enquiry.listings.id}`
+                      : '/stays'
+                }
                 className="grid gap-3 py-5 transition hover:bg-white/50 md:grid-cols-[1fr_auto] md:items-center"
               >
                 <div>

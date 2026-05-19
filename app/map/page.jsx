@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { isSupabaseConfigured, supabase } from '@/lib/supabaseClient'
+import { createClient } from '@/lib/supabase/client'
 import { sampleListings } from '@/lib/sample-listings'
 import { filterListings } from '@/lib/marketplace-rules'
 
@@ -54,7 +54,10 @@ export default function MapPage() {
     }))
 
     async function fetchListings() {
-      if (!isSupabaseConfigured || !supabase) {
+      let supabase
+      try {
+        supabase = createClient()
+      } catch {
         setListings(toMapListings(sampleListings))
         setLoading(false)
         return

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { requireAdminPermission } from '@/lib/admin'
 import { StatusBadge } from '@/components/status-badge'
-import { Pagination } from '@/components/pagination'
+import { Pagination, normalizePaginationSearchParams, type PaginationSearchParams } from '@/components/pagination'
 
 const PAGE_SIZE = 25
 
@@ -18,10 +18,11 @@ type ApplicationRow = {
 export default async function AdminApplicationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>
+  searchParams: Promise<PaginationSearchParams>
 }) {
   const { supabase } = await requireAdminPermission('applications')
-  const page = Math.max(1, Number((await searchParams).page) || 1)
+  const currentSearchParams = normalizePaginationSearchParams(await searchParams)
+  const page = Math.max(1, Number(currentSearchParams.page) || 1)
   const [{ data }, { count }] = await Promise.all([
     supabase
       .from('host_applications')
@@ -75,7 +76,7 @@ export default async function AdminApplicationsPage({
           </div>
         )}
       </div>
-      <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} basePath="/admin/applications" />
+      <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} basePath="/admin/applications" searchParams={currentSearchParams} />
     </div>
   )
 }

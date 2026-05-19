@@ -1,18 +1,22 @@
-'use client'
-
-import { Suspense, useEffect, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { Suspense, type ReactNode } from 'react'
 import Link from 'next/link'
-import { isSupabaseConfigured, supabase } from '@/lib/supabaseClient'
-import dynamic from 'next/dynamic'
-import { sampleListings } from '@/lib/sample-listings'
+import { createClient } from '@/lib/supabase/server'
 import { allNeighborhoods } from '@/lib/neighborhoods'
-import { filterListings } from '@/lib/marketplace-rules'
-import { StaysFilterBar, getAmenityLabel } from '@/components/stays-filter-bar'
+import { getAmenityLabel } from '@/lib/stay-amenities'
+import { StaysFilterBar } from '@/components/stays-filter-bar'
+import { StaysMapView } from '@/components/stays-map-view'
+import { StaysNeighborhoodNav } from '@/components/stays-neighborhood-nav'
+
+export const metadata = {
+  title: 'Jerusalem Stays | JLM Collective',
+  description: 'Find curated short-term stays in Jerusalem.',
+}
 
 const neighborhoods = ['All', ...allNeighborhoods]
 
-interface Listing {
+type SearchParams = Record<string, string>
+
+type Listing = {
   id: string
   title: string
   area: string
@@ -27,17 +31,20 @@ interface Listing {
   cover_photo_url?: string | null
 }
 
-// Dynamically import Google Maps component
-const JerusalemMap = dynamic(() => import('@/components/jerusalem-map'), { 
-  ssr: false,
-  loading: () => (
-    <div className="flex h-full items-center justify-center bg-[#EDE7DF]">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-stone-200 border-t-[#c76f55]" />
-    </div>
-  )
-})
+type BlockedListingRow = {
+  listing_id: string | null
+}
 
-function Badge({ children }: { children: React.ReactNode }) {
+type ListingPhotoRow = {
+  listing_id: string | null
+  photo_url: string
+}
+
+type StaysPageProps = {
+  searchParams: Promise<SearchParams>
+}
+
+function Badge({ children }: { children: ReactNode }) {
   return (
     <span className="rounded-full border border-white/70 bg-white/90 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-stone-700 shadow-sm">
       {children}
@@ -70,31 +77,12 @@ function formatPrice(listing: Pick<Listing, 'price_ils' | 'price_usd'>) {
   return 'Price on request'
 }
 
-async function trackNeighborhoodSearch(neighborhood: string, source: string) {
-  if (
-    neighborhood === 'All' ||
-    !isSupabaseConfigured ||
-    !supabase
-  ) {
-    return
-  }
-
-  await supabase.rpc('record_neighborhood_search', {
-    searched_neighborhood: neighborhood,
-    search_source: source,
-  })
-}
-
-type BlockedListingRow = {
-  listing_id: string | null
-}
-
-function parsePositiveNumber(value: string | null) {
+function parsePositiveNumber(value?: string) {
   const numberValue = Number(value)
   return Number.isFinite(numberValue) && numberValue > 0 ? numberValue : null
 }
 
-function parseAmenityLabels(value: string | null) {
+function parseAmenityLabels(value?: string) {
   if (!value) return []
 
   return value
@@ -103,198 +91,82 @@ function parseAmenityLabels(value: string | null) {
     .filter((item): item is string => Boolean(item))
 }
 
-function applyClientUrlFilters(
-  listingRows: Listing[],
-  filters: {
-    guests: number | null
-    minPrice: number | null
-    maxPrice: number | null
-    amenityLabels: string[]
-    blockedListingIds: string[]
-  },
-) {
-  return listingRows.filter((listing) => {
-    if (filters.guests && listing.max_guests < filters.guests) return false
-    if (filters.minPrice && Number(listing.price_usd || 0) < filters.minPrice) return false
-    if (filters.maxPrice && Number(listing.price_usd || 0) > filters.maxPrice) return false
-    if (filters.blockedListingIds.includes(listing.id)) return false
-
-    return filters.amenityLabels.every((amenity) => listing.amenities?.includes(amenity))
-  })
+function cleanSearchParams(params: SearchParams) {
+  return Object.fromEntries(
+    Object.entries(params).filter((entry): entry is [string, string] => Boolean(entry[1])),
+  )
 }
 
-function StaysPageContent() {
-  const searchParams = useSearchParams()
-  const initialView = searchParams.get('view') === 'map' ? 'map' : 'list'
-  const initialArea = searchParams.get('neighborhood') || 'All'
-  const activeFeature = searchParams.get('feature') || searchParams.get('type') || searchParams.get('season')
-  const checkIn = searchParams.get('checkIn')
-  const checkOut = searchParams.get('checkOut')
-  const guests = parsePositiveNumber(searchParams.get('guests'))
-  const minPrice = parsePositiveNumber(searchParams.get('minPrice'))
-  const maxPrice = parsePositiveNumber(searchParams.get('maxPrice'))
-  const amenityLabels = parseAmenityLabels(searchParams.get('amenities'))
-  const amenityKey = amenityLabels.join('|')
-  const [view, setView] = useState<'list' | 'map'>(initialView)
-  const [selectedArea, setSelectedArea] = useState(initialArea)
-  const [listings, setListings] = useState<Listing[]>(sampleListings)
-  const [loading, setLoading] = useState(false)
+function buildHref(baseQuery: Record<string, string>, updates: Record<string, string | null>) {
+  const params = new URLSearchParams(baseQuery)
 
-  useEffect(() => {
-    async function fetchListings() {
-      setLoading(true)
-      if (!isSupabaseConfigured || !supabase) {
-        setListings(
-          applyClientUrlFilters(sampleListings, {
-            guests,
-            minPrice,
-            maxPrice,
-            amenityLabels,
-            blockedListingIds: [],
-          }),
-        )
-        setLoading(false)
-        return
-      }
-
-      let blockedListingIds: string[] = []
-
-      if (checkIn && checkOut) {
-        const { data: blockedRanges } = await supabase
-          .from('listing_unavailable_ranges')
-          .select('listing_id')
-          .lte('start_date', checkOut)
-          .gte('end_date', checkIn)
-
-        blockedListingIds = Array.from(
-          new Set(
-            ((blockedRanges || []) as BlockedListingRow[])
-              .map((range) => range.listing_id)
-              .filter((id): id is string => Boolean(id)),
-          ),
-        )
-      }
-
-      let listingsQuery = supabase
-        .from('listings')
-        .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, latitude, longitude, amenities')
-        .order('is_featured', { ascending: false })
-
-      if (guests) {
-        listingsQuery = listingsQuery.gte('max_guests', guests)
-      }
-
-      if (minPrice) {
-        listingsQuery = listingsQuery.gte('price_usd', minPrice)
-      }
-
-      if (maxPrice) {
-        listingsQuery = listingsQuery.lte('price_usd', maxPrice)
-      }
-
-      amenityLabels.forEach((amenity) => {
-        listingsQuery = listingsQuery.contains('amenities', [amenity])
-      })
-
-      if (blockedListingIds.length > 0) {
-        listingsQuery = listingsQuery.not('id', 'in', `(${blockedListingIds.join(',')})`)
-      }
-
-      const { data: listingsData, error } = await listingsQuery
-
-      if (!error && listingsData) {
-        const { data: photosData } = listingsData.length > 0
-          ? await supabase
-              .from('listing_photos')
-              .select('listing_id, photo_url')
-              .eq('is_cover', true)
-              .in('listing_id', listingsData.map((listing) => listing.id))
-          : { data: [] }
-
-        const photoMap = new Map(photosData?.map(p => [p.listing_id, p.photo_url]) || [])
-        
-        const listingsWithPhotos = listingsData.map(listing => ({
-          ...listing,
-          cover_photo_url: photoMap.get(listing.id) || null
-        }))
-        
-        setListings(listingsWithPhotos)
-      } else {
-        setListings(
-          applyClientUrlFilters(sampleListings, {
-            guests,
-            minPrice,
-            maxPrice,
-            amenityLabels,
-            blockedListingIds,
-          }),
-        )
-      }
-      setLoading(false)
+  Object.entries(updates).forEach(([key, value]) => {
+    if (value) {
+      params.set(key, value)
+    } else {
+      params.delete(key)
     }
-    fetchListings()
-  }, [amenityKey, checkIn, checkOut, guests, maxPrice, minPrice])
-
-  const filteredListings = filterListings(listings, {
-    selectedArea,
-    minimumBedrooms: 0,
-    selectedAmenities: [],
   })
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-stone-200 border-t-[#c76f55]" />
-      </div>
-    )
-  }
+  const query = params.toString()
+  return query ? `/stays?${query}` : '/stays'
+}
+
+export default async function StaysPage({ searchParams }: StaysPageProps) {
+  const params = cleanSearchParams(await searchParams)
+  const view = params.view === 'map' ? 'map' : 'list'
+  const selectedArea = params.neighborhood || params.area || 'All'
+  const activeFeature = params.feature || params.type || params.season
+  const checkIn = params.checkIn
+  const checkOut = params.checkOut
+  const guests = parsePositiveNumber(params.guests)
+  const minPrice = parsePositiveNumber(params.minPrice)
+  const maxPrice = parsePositiveNumber(params.maxPrice)
+  const amenityLabels = parseAmenityLabels(params.amenities)
+  const listings = await loadListings({
+    selectedArea,
+    checkIn,
+    checkOut,
+    guests,
+    minPrice,
+    maxPrice,
+    amenityLabels,
+  })
 
   return (
     <div className="min-h-screen">
-      {/* Filters Bar */}
       <div className="sticky top-[73px] z-30 border-b border-stone-200 bg-[#F8F5F2]/95 backdrop-blur-sm">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
-            {neighborhoods.map((area) => (
-              <button
-                key={area}
-                onClick={() => {
-                  setSelectedArea(area)
-                  void trackNeighborhoodSearch(area, 'stays_filter')
-                }}
-                className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition ${
-                  selectedArea === area
-                    ? 'bg-[#1A4B5A] text-white'
-                    : 'border border-stone-200 bg-white text-stone-700 hover:border-[#c76f55] hover:text-[#c76f55]'
-                }`}
-              >
-                {area}
-              </button>
-            ))}
-          </div>
+          <StaysNeighborhoodNav
+            neighborhoods={neighborhoods}
+            selectedArea={selectedArea}
+            baseQuery={params}
+          />
 
           <div className="flex w-fit items-center gap-1 rounded-full border border-stone-200 bg-white p-1">
-            <button
-              onClick={() => setView('list')}
+            <Link
+              href={buildHref(params, { view: null })}
               className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
                 view === 'list' ? 'bg-stone-100 text-stone-900' : 'text-stone-500 hover:text-stone-700'
               }`}
             >
               List
-            </button>
-            <button
-              onClick={() => setView('map')}
+            </Link>
+            <Link
+              href={buildHref(params, { view: 'map' })}
               className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
                 view === 'map' ? 'bg-stone-100 text-stone-900' : 'text-stone-500 hover:text-stone-700'
               }`}
             >
               Map
-            </button>
+            </Link>
           </div>
         </div>
 
         <div className="mx-auto max-w-7xl px-4 pb-4 sm:px-6">
-          <StaysFilterBar />
+          <Suspense fallback={<div className="h-24 rounded-3xl bg-white shadow-sm" />}>
+            <StaysFilterBar />
+          </Suspense>
         </div>
       </div>
 
@@ -304,7 +176,7 @@ function StaysPageContent() {
             <h1 className="text-3xl font-bold tracking-tight text-stone-950">
               {selectedArea === 'All' ? 'All stays in Jerusalem' : `Stays in ${selectedArea}`}
             </h1>
-            <p className="mt-2 text-stone-500">{filteredListings.length} verified apartments available</p>
+            <p className="mt-2 text-stone-500">{listings.length} verified apartments available</p>
             {activeFeature && (
               <p className="mt-1 text-sm text-stone-500">
                 Showing results related to {activeFeature}
@@ -312,77 +184,69 @@ function StaysPageContent() {
             )}
           </div>
 
-          {filteredListings.length === 0 ? (
+          {listings.length === 0 ? (
             <div className="rounded-3xl border border-stone-200 bg-white p-8 text-center shadow-sm">
               <h2 className="text-xl font-bold text-stone-950">No stays match your filters</h2>
               <p className="mt-2 text-sm text-stone-500">Try another neighbourhood or clear some filters.</p>
               <Link
                 href="/stays"
-                onClick={() => setSelectedArea('All')}
-                className="mt-5 rounded-full bg-[#c76f55] px-5 py-3 text-sm font-bold text-white hover:bg-[#b85f47]"
+                className="mt-5 inline-flex rounded-full bg-[#c76f55] px-5 py-3 text-sm font-bold text-white hover:bg-[#b85f47]"
               >
                 Clear filters
               </Link>
             </div>
           ) : (
-          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredListings.map((stay) => (
-              <Link key={stay.id} href={`/listings/${stay.id}?from=stays`}>
-                <article className="group cursor-pointer">
-                  <div className="relative mb-4 aspect-[4/3] overflow-hidden rounded-3xl bg-stone-200 shadow-sm">
-                    {stay.cover_photo_url ? (
-                      <img 
-                        src={stay.cover_photo_url} 
-                        alt={stay.title}
-                        className="absolute inset-0 h-full w-full object-cover transition group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 bg-gradient-to-br from-stone-200 via-stone-100 to-stone-300 transition group-hover:scale-105" />
-                    )}
-                    <div className="absolute left-3 top-3"><Badge>{formatBookingType(stay.booking_type)}</Badge></div>
-                    <div className="absolute bottom-3 left-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-stone-700 shadow-sm">Verified stay</div>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">{stay.area}</p>
-                      <h3 className="text-lg font-bold leading-tight text-stone-900 group-hover:underline">{stay.title}</h3>
-                      <p className="mt-1 text-sm text-stone-500">{stay.bedrooms} bedrooms · sleeps {stay.max_guests}</p>
+            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+              {listings.map((stay) => (
+                <Link key={stay.id} href={`/listings/${stay.id}?from=stays`}>
+                  <article className="group cursor-pointer">
+                    <div className="relative mb-4 aspect-[4/3] overflow-hidden rounded-3xl bg-stone-200 shadow-sm">
+                      {stay.cover_photo_url ? (
+                        <img
+                          src={stay.cover_photo_url}
+                          alt={stay.title}
+                          className="absolute inset-0 h-full w-full object-cover transition group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 bg-gradient-to-br from-stone-200 via-stone-100 to-stone-300 transition group-hover:scale-105" />
+                      )}
+                      <div className="absolute left-3 top-3"><Badge>{formatBookingType(stay.booking_type)}</Badge></div>
+                      <div className="absolute bottom-3 left-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-stone-700 shadow-sm">Verified stay</div>
                     </div>
-                    <div className="shrink-0 text-right">
-                      <p className="text-lg font-bold text-stone-900">
-                        {formatPrice(stay)}
-                        {formatPrice(stay) !== 'Price on request' && (
-                          <span className="ml-1 text-sm font-normal text-stone-500">/ night</span>
-                        )}
-                      </p>
+                    <div className="flex justify-between gap-4">
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">{stay.area}</p>
+                        <h3 className="text-lg font-bold leading-tight text-stone-900 group-hover:underline">{stay.title}</h3>
+                        <p className="mt-1 text-sm text-stone-500">{stay.bedrooms} bedrooms | sleeps {stay.max_guests}</p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="text-lg font-bold text-stone-900">
+                          {formatPrice(stay)}
+                          {formatPrice(stay) !== 'Price on request' && (
+                            <span className="ml-1 text-sm font-normal text-stone-500">/ night</span>
+                          )}
+                        </p>
+                      </div>
                     </div>
-                    <div className="hidden shrink-0 text-right">
-                      <p className="text-lg font-bold text-stone-900">
-                        ₪{stay.price_ils?.toLocaleString()}
-                        <span className="ml-1 text-sm font-normal text-stone-500">/ night</span>
-                      </p>
-                      <p className="text-xs font-medium text-stone-400">${stay.price_usd?.toLocaleString()} / night</p>
-                    </div>
-                  </div>
-                </article>
-              </Link>
-            ))}
-          </div>
+                  </article>
+                </Link>
+              ))}
+            </div>
           )}
         </div>
       ) : (
-        <JerusalemMap 
-          listings={filteredListings.map(l => ({
-            id: l.id,
-            title: l.title,
-            area: l.area,
-            price_ils: l.price_ils,
-            price_usd: l.price_usd,
-            price: `₪${l.price_ils?.toLocaleString()}`,
-            bedrooms: l.bedrooms,
-            sleeps: l.max_guests,
-            lat: l.latitude,
-            lng: l.longitude,
+        <StaysMapView
+          listings={listings.map((listing) => ({
+            id: listing.id,
+            title: listing.title,
+            area: listing.area,
+            price_ils: listing.price_ils,
+            price_usd: listing.price_usd,
+            price: formatPrice(listing),
+            bedrooms: listing.bedrooms,
+            sleeps: listing.max_guests,
+            lat: listing.latitude,
+            lng: listing.longitude,
           }))}
         />
       )}
@@ -390,14 +254,91 @@ function StaysPageContent() {
   )
 }
 
-export default function StaysPage() {
-  return (
-    <Suspense fallback={
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-stone-200 border-t-[#c76f55]" />
-      </div>
-    }>
-      <StaysPageContent />
-    </Suspense>
+async function loadListings({
+  selectedArea,
+  checkIn,
+  checkOut,
+  guests,
+  minPrice,
+  maxPrice,
+  amenityLabels,
+}: {
+  selectedArea: string
+  checkIn?: string
+  checkOut?: string
+  guests: number | null
+  minPrice: number | null
+  maxPrice: number | null
+  amenityLabels: string[]
+}) {
+  const supabase = await createClient()
+  let blockedListingIds: string[] = []
+
+  if (checkIn && checkOut) {
+    const { data: blockedRanges } = await supabase
+      .from('listing_unavailable_ranges')
+      .select('listing_id')
+      .lte('start_date', checkOut)
+      .gte('end_date', checkIn)
+
+    blockedListingIds = Array.from(
+      new Set(
+        ((blockedRanges || []) as BlockedListingRow[])
+          .map((range) => range.listing_id)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    )
+  }
+
+  let listingsQuery = supabase
+    .from('listings')
+    .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, latitude, longitude, amenities')
+    .eq('is_published', true)
+    .order('is_featured', { ascending: false })
+    .order('created_at', { ascending: false })
+
+  if (selectedArea && selectedArea !== 'All') {
+    listingsQuery = listingsQuery.eq('area', selectedArea)
+  }
+
+  if (guests) {
+    listingsQuery = listingsQuery.gte('max_guests', guests)
+  }
+
+  if (minPrice) {
+    listingsQuery = listingsQuery.gte('price_usd', minPrice)
+  }
+
+  if (maxPrice) {
+    listingsQuery = listingsQuery.lte('price_usd', maxPrice)
+  }
+
+  amenityLabels.forEach((amenity) => {
+    listingsQuery = listingsQuery.contains('amenities', [amenity])
+  })
+
+  if (blockedListingIds.length > 0) {
+    listingsQuery = listingsQuery.not('id', 'in', `(${blockedListingIds.join(',')})`)
+  }
+
+  const { data: listingsData } = await listingsQuery
+  const listingRows = (listingsData || []) as Listing[]
+  const listingIds = listingRows.map((listing) => listing.id)
+  const { data: photosData } = listingIds.length
+    ? await supabase
+        .from('listing_photos')
+        .select('listing_id, photo_url')
+        .eq('is_cover', true)
+        .in('listing_id', listingIds)
+    : { data: [] }
+  const photoMap = new Map(
+    ((photosData || []) as ListingPhotoRow[])
+      .filter((photo) => photo.listing_id)
+      .map((photo) => [photo.listing_id as string, photo.photo_url]),
   )
+
+  return listingRows.map((listing) => ({
+    ...listing,
+    cover_photo_url: photoMap.get(listing.id) || null,
+  }))
 }

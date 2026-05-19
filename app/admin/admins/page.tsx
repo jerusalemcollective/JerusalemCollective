@@ -1,6 +1,6 @@
 import { AdminAddAdminForm } from '@/components/admin-add-admin-form'
 import { describeAdminRole, requireAdminPermission } from '@/lib/admin'
-import { Pagination } from '@/components/pagination'
+import { Pagination, normalizePaginationSearchParams, type PaginationSearchParams } from '@/components/pagination'
 
 const PAGE_SIZE = 25
 
@@ -16,10 +16,11 @@ type AdminUser = {
 export default async function AdminUsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>
+  searchParams: Promise<PaginationSearchParams>
 }) {
   const { supabase } = await requireAdminPermission('admins')
-  const page = Math.max(1, Number((await searchParams).page) || 1)
+  const currentSearchParams = normalizePaginationSearchParams(await searchParams)
+  const page = Math.max(1, Number(currentSearchParams.page) || 1)
   const { data, error } = await supabase.rpc('list_admin_users')
 
   if (error) {
@@ -79,7 +80,7 @@ export default async function AdminUsersPage({
             </div>
           )}
         </div>
-        <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} basePath="/admin/admins" />
+        <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} basePath="/admin/admins" searchParams={currentSearchParams} />
       </section>
     </div>
   )

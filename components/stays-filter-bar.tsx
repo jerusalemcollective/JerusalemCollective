@@ -3,40 +3,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { BookingDateRangePicker } from '@/components/booking-date-range-picker'
+import { STAY_AMENITIES, slugifyAmenity } from '@/lib/stay-amenities'
 
 type DateRange = {
   from?: Date
   to?: Date
-}
-
-export const STAY_AMENITIES = [
-  'WiFi',
-  'Air conditioning',
-  'Washer',
-  'Dryer',
-  'Parking',
-  'Elevator',
-  'Balcony',
-  'Garden',
-  'Kosher kitchen',
-  'Shabbat-friendly',
-  'Sukkah balcony',
-  'Near synagogues',
-  'Family friendly',
-  'Crib / high chair available',
-]
-
-function slugifyAmenity(value: string) {
-  return value.toLowerCase().replaceAll('/', '').replaceAll(' ', '-')
-}
-
-export function getAmenityLabel(value: string) {
-  const normalizedValue = value.toLowerCase()
-  return (
-    STAY_AMENITIES.find(
-      (amenity) => slugifyAmenity(amenity) === normalizedValue || amenity.toLowerCase() === normalizedValue,
-    ) || null
-  )
 }
 
 function parseLocalDate(value: string | null) {
@@ -113,6 +84,15 @@ export function StaysFilterBar() {
     setOrDelete(next, 'minPrice', minPrice)
     setOrDelete(next, 'maxPrice', maxPrice)
     setOrDelete(next, 'amenities', selectedAmenities.join(','))
+
+    const neighborhood = next.get('neighborhood') || next.get('area')
+    if (neighborhood && neighborhood !== 'All') {
+      void fetch('/api/neighborhood-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ neighborhood, source: 'stays_filter' }),
+      })
+    }
 
     const nextQuery = next.toString()
     router.push(nextQuery ? `/stays?${nextQuery}` : '/stays')

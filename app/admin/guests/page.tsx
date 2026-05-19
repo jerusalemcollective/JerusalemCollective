@@ -1,5 +1,5 @@
 import { requireAdminPermission } from '@/lib/admin'
-import { Pagination } from '@/components/pagination'
+import { Pagination, normalizePaginationSearchParams, type PaginationSearchParams } from '@/components/pagination'
 
 const PAGE_SIZE = 25
 
@@ -20,10 +20,11 @@ type PersonRow = {
 export default async function AdminGuestsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>
+  searchParams: Promise<PaginationSearchParams>
 }) {
   const { supabase } = await requireAdminPermission('guests')
-  const page = Math.max(1, Number((await searchParams).page) || 1)
+  const currentSearchParams = normalizePaginationSearchParams(await searchParams)
+  const page = Math.max(1, Number(currentSearchParams.page) || 1)
   const { data, error } = await supabase.rpc('list_platform_people')
 
   if (error) {
@@ -76,7 +77,7 @@ export default async function AdminGuestsPage({
           </div>
         )}
       </div>
-      <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} basePath="/admin/guests" />
+      <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} basePath="/admin/guests" searchParams={currentSearchParams} />
     </div>
   )
 }

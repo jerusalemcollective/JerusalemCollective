@@ -1,4 +1,31 @@
-export function filterListings(listings, options = {}) {
+type Listing = {
+  area: string
+  bedrooms: number
+  amenities: string[]
+  [key: string]: unknown
+}
+
+type FilterOptions = {
+  selectedArea?: string
+  minimumBedrooms?: number
+  selectedAmenities?: string[]
+}
+
+type SupportCase = {
+  status: string
+}
+
+type SupportSummary = {
+  open: number
+  underReview: number
+  waitingOnGuest: number
+  waitingOnHost: number
+}
+
+export function filterListings<TListing extends Listing>(
+  listings: TListing[],
+  options: FilterOptions = {},
+) {
   const {
     selectedArea = 'All',
     minimumBedrooms = 0,
@@ -16,7 +43,7 @@ export function filterListings(listings, options = {}) {
   })
 }
 
-export function summarizeSupportCases(cases) {
+export function summarizeSupportCases(cases: SupportCase[]): SupportSummary {
   return cases.reduce(
     (summary, supportCase) => {
       if (supportCase.status === 'open') summary.open += 1

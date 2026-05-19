@@ -53,12 +53,13 @@ export default async function HostDashboardPage() {
       .gte('check_in', today)
       .order('check_in', { ascending: true })
       .limit(5),
-    supabase
-      .from('support_cases')
-      .select('id, reason, status')
-      .in('host_id', hostIds)
-      .not('status', 'in', '(resolved,closed)')
-      .order('created_at', { ascending: false }),
+      supabase
+        .from('support_cases')
+        .select('id, reason, status')
+        .in('host_id', hostIds)
+        .neq('status', 'resolved')
+        .neq('status', 'closed')
+        .order('created_at', { ascending: false }),
     supabase
       .from('listings')
       .select('*', { count: 'exact', head: true })
@@ -72,12 +73,13 @@ export default async function HostDashboardPage() {
       .from('host_applications')
       .select('*', { count: 'exact', head: true })
       .in('host_id', hostIds),
-    supabase
-      .from('host_applications')
-      .select('id, status')
-      .in('host_id', hostIds)
-      .not('status', 'in', '(approved,rejected)')
-      .order('created_at', { ascending: false })
+      supabase
+        .from('host_applications')
+        .select('id, status')
+        .in('host_id', hostIds)
+        .neq('status', 'approved')
+        .neq('status', 'rejected')
+        .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
   ])

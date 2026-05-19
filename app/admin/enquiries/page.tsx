@@ -1,6 +1,6 @@
 import { requireAdminPermission } from '@/lib/admin'
 import { StatusBadge } from '@/components/status-badge'
-import { Pagination } from '@/components/pagination'
+import { Pagination, normalizePaginationSearchParams, type PaginationSearchParams } from '@/components/pagination'
 
 const PAGE_SIZE = 25
 
@@ -33,10 +33,11 @@ type EnquiryRow = {
 export default async function AdminEnquiriesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>
+  searchParams: Promise<PaginationSearchParams>
 }) {
   const { supabase } = await requireAdminPermission('messages')
-  const page = Math.max(1, Number((await searchParams).page) || 1)
+  const currentSearchParams = normalizePaginationSearchParams(await searchParams)
+  const page = Math.max(1, Number(currentSearchParams.page) || 1)
   const [{ data }, { count }] = await Promise.all([
     supabase
       .from('booking_requests')
@@ -122,7 +123,7 @@ export default async function AdminEnquiriesPage({
           <div className="py-12 text-center text-stone-500">No enquiries yet.</div>
         )}
       </div>
-      <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} basePath="/admin/enquiries" />
+      <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} basePath="/admin/enquiries" searchParams={currentSearchParams} />
     </div>
   )
 }

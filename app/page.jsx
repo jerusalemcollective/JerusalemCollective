@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { format, addDays } from 'date-fns'
-import { isSupabaseConfigured, supabase } from '@/lib/supabaseClient'
+import { createClient } from '@/lib/supabase/client'
 import { sampleListings } from '@/lib/sample-listings'
 import {
   allNeighborhoods,
@@ -144,13 +144,20 @@ const getExploreHref = (blockLabel, item) => {
 }
 
 const trackNeighborhoodSearch = async (neighborhood, source) => {
-  if (!isSupabaseConfigured || !supabase || !neighborhood?.trim()) return
+  if (!neighborhood?.trim()) return
 
   const canonicalNeighborhood = allNeighborhoods.find(
     (item) => item.toLowerCase() === neighborhood.trim().toLowerCase(),
   )
 
   if (!canonicalNeighborhood) return
+
+  let supabase
+  try {
+    supabase = createClient()
+  } catch {
+    return
+  }
 
   await supabase.rpc('record_neighborhood_search', {
     searched_neighborhood: canonicalNeighborhood,
@@ -761,7 +768,12 @@ export default function JLMCollectiveHomePage() {
 
   useEffect(() => {
     async function fetchFeaturedStays() {
-      if (!isSupabaseConfigured || !supabase) return
+      let supabase
+      try {
+        supabase = createClient()
+      } catch {
+        return
+      }
 
       const { data, error } = await supabase
         .from('listings')
@@ -779,7 +791,12 @@ export default function JLMCollectiveHomePage() {
 
   useEffect(() => {
     async function fetchPopularNeighborhoods() {
-      if (!isSupabaseConfigured || !supabase) return
+      let supabase
+      try {
+        supabase = createClient()
+      } catch {
+        return
+      }
 
       const { data, error } = await supabase.rpc('popular_neighborhoods', {
         result_limit: 6,

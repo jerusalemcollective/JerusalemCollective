@@ -1,9 +1,129 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
 import Link from 'next/link'
+import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { ensureHostProfile } from '@/lib/host-profile'
+
+type PhotoUpload = {
+  file: File
+  preview: string
+}
+
+type DocumentUpload = {
+  file: File
+  preview: string | null
+  name: string
+  type: string
+}
+
+type HostType = 'owner' | 'representative'
+
+type CurrencyPreference = 'ILS' | 'USD' | 'Both'
+
+type FormState = {
+  host_name: string
+  display_name: string
+  show_full_name: boolean
+  email: string
+  phone: string
+  whatsapp_number: string
+  host_type: HostType
+  host_role: string
+  has_permission: boolean
+  apartment_title: string
+  area: string
+  exact_address: string
+  address_latitude: number | null
+  address_longitude: number | null
+  bedrooms: string
+  bathrooms: string
+  sleeps: string
+  currency_preference: CurrencyPreference
+  price_ils: string
+  price_usd: string
+  amenities: string[]
+  description: string
+  photo_link: string
+  photos: PhotoUpload[]
+  uploaded_photo_urls: string[]
+  verification_doc: DocumentUpload | null
+  verification_doc_type: string
+  id_doc: DocumentUpload | null
+  id_doc_type: string
+  confirmation: boolean
+  host_terms_accepted: boolean
+}
+
+type AiSuggestion = {
+  title?: string
+  description?: string
+  highlights?: string[]
+  error?: string
+}
+
+type AddressSelection = {
+  address: string
+  latitude: number
+  longitude: number
+}
+
+type PlacesLocation = {
+  lat: () => number
+  lng: () => number
+}
+
+type PlaceRecord = {
+  formattedAddress?: string
+  location?: PlacesLocation
+  fetchFields: (options: { fields: string[] }) => Promise<void>
+}
+
+type PlacePrediction = {
+  toPlace: () => PlaceRecord
+  text?: { toString: () => string }
+}
+
+type PlaceAutocompleteSelectEvent = Event & {
+  placePrediction?: PlacePrediction
+  detail?: {
+    placePrediction?: PlacePrediction
+  }
+}
+
+type PlaceAutocompleteWidget = HTMLElement & {
+  placeholder: string
+  value: string
+  className: string
+}
+
+type PlacesLibrary = {
+  PlaceAutocompleteElement: new (options: {
+    includedPrimaryTypes: string[]
+    includedRegionCodes: string[]
+    locationRestriction: {
+      west: number
+      south: number
+      east: number
+      north: number
+    }
+    requestedLanguage: string
+    requestedRegion: string
+  }) => PlaceAutocompleteWidget
+}
+
+type MapsWindow = Window & {
+  google?: {
+    maps?: {
+      importLibrary?: (library: 'places') => Promise<PlacesLibrary>
+    }
+  }
+}
+
+function getMapsWindow(): MapsWindow {
+  return window as MapsWindow
+}
 
 // Jerusalem neighbourhoods for autocomplete suggestions
 const neighbourhoods = [
@@ -64,8 +184,15 @@ const amenitiesList = [
   'Crib / high chair available',
 ]
 
+type NeighbourhoodAutocompleteProps = {
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+  className?: string
+}
+
 // Neighbourhood autocomplete component
-function NeighbourhoodAutocomplete({ value, onChange, placeholder, className }) {
+function NeighbourhoodAutocomplete({ value, onChange, placeholder, className }: NeighbourhoodAutocompleteProps) {
   const [inputValue, setInputValue] = useState(value || '')
   const [isOpen, setIsOpen] = useState(false)
   const [highlightedIndex, setHighlightedIndex] = useState(-1)
@@ -73,12 +200,12 @@ function NeighbourhoodAutocomplete({ value, onChange, placeholder, className }) 
   const suggestions = useMemo(() => {
     if (!inputValue.trim()) return []
     const query = inputValue.toLowerCase()
-    return neighbourhoods.filter(n => 
-      n.toLowerCase().includes(query)
+    return neighbourhoods.filter((neighbourhood) => 
+      neighbourhood.toLowerCase().includes(query)
     ).slice(0, 8) // Limit to 8 suggestions
   }, [inputValue])
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
     setInputValue(val)
     onChange(val)
@@ -86,24 +213,24 @@ function NeighbourhoodAutocomplete({ value, onChange, placeholder, className }) 
     setHighlightedIndex(-1)
   }
 
-  const handleSelect = (neighbourhood) => {
+  const handleSelect = (neighbourhood: string) => {
     setInputValue(neighbourhood)
     onChange(neighbourhood)
     setIsOpen(false)
     setHighlightedIndex(-1)
   }
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (!isOpen || suggestions.length === 0) return
 
     if (e.key === 'ArrowDown') {
       e.preventDefault()
-      setHighlightedIndex(prev => 
+      setHighlightedIndex((prev) => 
         prev < suggestions.length - 1 ? prev + 1 : 0
       )
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
-      setHighlightedIndex(prev => 
+      setHighlightedIndex((prev) => 
         prev > 0 ? prev - 1 : suggestions.length - 1
       )
     } else if (e.key === 'Enter' && highlightedIndex >= 0) {
@@ -153,7 +280,7 @@ function NeighbourhoodAutocomplete({ value, onChange, placeholder, className }) 
                   : 'text-stone-700 hover:bg-stone-50'
               }`}
               onMouseEnter={() => setHighlightedIndex(index)}
-              onMouseDown={(e) => {
+              onMouseDown={(e: MouseEvent<HTMLLIElement>) => {
                 e.preventDefault() // Prevent blur before click
                 handleSelect(neighbourhood)
               }}
@@ -167,27 +294,29 @@ function NeighbourhoodAutocomplete({ value, onChange, placeholder, className }) 
   )
 }
 
-let googlePlacesPromise
+let googlePlacesPromise: Promise<PlacesLibrary> | null = null
 
-function loadGooglePlacesLibrary(apiKey) {
+function loadGooglePlacesLibrary(apiKey: string): Promise<PlacesLibrary> {
   if (typeof window === 'undefined') {
     return Promise.reject(new Error('Google Maps can only load in the browser.'))
   }
 
-  if (window.google?.maps?.importLibrary) {
-    return window.google.maps.importLibrary('places')
+  const mapsWindow = getMapsWindow()
+
+  if (mapsWindow.google?.maps?.importLibrary) {
+    return mapsWindow.google.maps.importLibrary('places')
   }
 
   if (!googlePlacesPromise) {
-    googlePlacesPromise = new Promise((resolve, reject) => {
+    googlePlacesPromise = new Promise<PlacesLibrary>((resolve, reject) => {
       const finishLoading = async () => {
         try {
-          if (!window.google?.maps?.importLibrary) {
+          if (!mapsWindow.google?.maps?.importLibrary) {
             reject(new Error('Google Maps loaded without the Places library.'))
             return
           }
 
-          const places = await window.google.maps.importLibrary('places')
+          const places = await mapsWindow.google.maps.importLibrary('places')
           resolve(places)
         } catch (error) {
           reject(error)
@@ -197,7 +326,7 @@ function loadGooglePlacesLibrary(apiKey) {
       const existingScript = document.querySelector('script[src*="maps.googleapis.com"]')
 
       if (existingScript) {
-        if (window.google?.maps?.importLibrary) {
+        if (mapsWindow.google?.maps?.importLibrary) {
           finishLoading()
           return
         }
@@ -224,10 +353,18 @@ function loadGooglePlacesLibrary(apiKey) {
   return googlePlacesPromise
 }
 
+type AddressAutocompleteProps = {
+  value: string
+  onChange: (value: string) => void
+  onSelect: (selection: AddressSelection) => void
+  placeholder?: string
+  className?: string
+}
+
 // Address autocomplete using Google Places API
-function AddressAutocomplete({ value, onChange, onSelect, placeholder, className }) {
-  const widgetContainerRef = useRef(null)
-  const widgetRef = useRef(null)
+function AddressAutocomplete({ value, onChange, onSelect, placeholder, className }: AddressAutocompleteProps) {
+  const widgetContainerRef = useRef<HTMLDivElement | null>(null)
+  const widgetRef = useRef<PlaceAutocompleteWidget | null>(null)
   const [inputValue, setInputValue] = useState(value || '')
   const [isValidated, setIsValidated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -273,7 +410,12 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
         placeAutocomplete.placeholder = placeholder
         placeAutocomplete.value = inputValue
         placeAutocomplete.className = 'jlm-place-autocomplete'
-        placeAutocomplete.addEventListener('gmp-select', async ({ placePrediction }) => {
+        placeAutocomplete.addEventListener('gmp-select', async (event) => {
+          const selectEvent = event as PlaceAutocompleteSelectEvent
+          const placePrediction = selectEvent.placePrediction || selectEvent.detail?.placePrediction
+
+          if (!placePrediction) return
+
           const place = placePrediction.toPlace()
           await place.fetchFields({
             fields: ['formattedAddress', 'location'],
@@ -360,7 +502,7 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
   )
 }
 
-const initialForm = {
+const initialForm: FormState = {
   host_name: '',
   display_name: '',
   show_full_name: false,
@@ -435,24 +577,24 @@ const steps = [
 
 const minimumPhotoCount = 5
 const hostTermsVersion = '2026-05-18'
-const isSupabaseConfigured = Boolean(
+const isSupabaseEnvReady = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL &&
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
 )
 
 export default function BecomeAHostPage() {
   const [step, setStep] = useState(0)
-  const [form, setForm] = useState(initialForm)
+  const [form, setForm] = useState<FormState>(initialForm)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
-  const [hostId, setHostId] = useState(null)
+  const [hostId, setHostId] = useState<string | null>(null)
   const [checkingHost, setCheckingHost] = useState(true)
-  const [accountUser, setAccountUser] = useState(null)
+  const [accountUser, setAccountUser] = useState<User | null>(null)
   const [requiresHostTermsAcceptance, setRequiresHostTermsAcceptance] = useState(true)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
-  const [aiSuggestion, setAiSuggestion] = useState(null)
+  const [aiSuggestion, setAiSuggestion] = useState<AiSuggestion | null>(null)
 
   const progress = useMemo(() => {
     return Math.round(((step + 1) / steps.length) * 100)
@@ -460,7 +602,7 @@ export default function BecomeAHostPage() {
 
   useEffect(() => {
     async function loadHost() {
-      if (!isSupabaseConfigured) {
+      if (!isSupabaseEnvReady) {
         setCheckingHost(false)
         return
       }
@@ -507,14 +649,15 @@ export default function BecomeAHostPage() {
     loadHost()
   }, [])
 
-  function updateField(name, value) {
-    setForm((current) => ({
-      ...current,
-      [name]: value,
-    }))
+  function updateField<K extends keyof FormState>(name: K, value: FormState[K]) {
+    setForm((current) => {
+      const next = { ...current }
+      next[name] = value
+      return next
+    })
   }
 
-  function toggleAmenity(item) {
+  function toggleAmenity(item: string) {
     setForm((current) => {
       const exists = current.amenities.includes(item)
 
@@ -549,7 +692,7 @@ export default function BecomeAHostPage() {
         }),
       })
 
-      const data = await response.json()
+      const data = (await response.json()) as AiSuggestion
 
       if (!response.ok) {
         throw new Error(data.error || 'Unable to improve the listing right now.')
@@ -703,7 +846,7 @@ async function handleSubmit() {
     setError('')
     setSuccess(false)
 
-    if (!isSupabaseConfigured) {
+    if (!isSupabaseEnvReady) {
       setError('The live listing database is not connected yet. Add the Supabase environment variables before accepting submissions.')
       setLoading(false)
       return
@@ -818,7 +961,7 @@ async function handleSubmit() {
 
     // Upload verification document to Supabase Storage
     if (form.verification_doc) {
-      const fileExt = form.verification_doc.name.split('.').pop().toLowerCase()
+      const fileExt = form.verification_doc.name.split('.').pop()?.toLowerCase() || 'file'
       const fileName = `verification-${Date.now()}.${fileExt}`
       const storagePath = `applications/${applicationId}/${fileName}`
 
@@ -840,7 +983,7 @@ async function handleSubmit() {
 
     // Upload ID document to Supabase Storage
     if (form.id_doc) {
-      const fileExt = form.id_doc.name.split('.').pop().toLowerCase()
+      const fileExt = form.id_doc.name.split('.').pop()?.toLowerCase() || 'file'
       const fileName = `id-${Date.now()}.${fileExt}`
       const storagePath = `applications/${applicationId}/${fileName}`
 
@@ -864,7 +1007,7 @@ async function handleSubmit() {
     if (form.photos.length > 0) {
       for (let i = 0; i < form.photos.length; i++) {
         const photo = form.photos[i]
-        const fileExt = photo.file.name.split('.').pop().toLowerCase()
+        const fileExt = photo.file.name.split('.').pop()?.toLowerCase() || 'file'
         const fileName = `photo-${i + 1}-${Date.now()}.${fileExt}`
         const storagePath = `listings/${applicationId}/${fileName}`
 
@@ -1278,9 +1421,12 @@ async function handleSubmit() {
                 <Field label="Preferred currency">
                   <select
                     value={form.currency_preference}
-                    onChange={(e) =>
-                      updateField('currency_preference', e.target.value)
-                    }
+                    onChange={(e) => {
+                      const value = e.target.value
+                      if (value === 'ILS' || value === 'USD' || value === 'Both') {
+                        updateField('currency_preference', value)
+                      }
+                    }}
                     className={inputClass}
                   >
                     <option value="ILS">ILS</option>
@@ -1820,7 +1966,17 @@ async function handleSubmit() {
 const inputClass =
   'mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#c76f55]'
 
-function StepShell({ eyebrow, title, description, children }) {
+function StepShell({
+  eyebrow,
+  title,
+  description,
+  children,
+}: {
+  eyebrow: string
+  title: string
+  description: string
+  children: ReactNode
+}) {
   return (
     <div>
       <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#c76f55]">
@@ -1840,7 +1996,15 @@ function StepShell({ eyebrow, title, description, children }) {
   )
 }
 
-function Field({ label, required = false, children }) {
+function Field({
+  label,
+  required = false,
+  children,
+}: {
+  label: string
+  required?: boolean
+  children: ReactNode
+}) {
   return (
     <label className="block">
       <span className="text-sm font-semibold text-stone-800">
@@ -1851,7 +2015,15 @@ function Field({ label, required = false, children }) {
   )
 }
 
-function ChoiceCard({ active, title, onClick }) {
+function ChoiceCard({
+  active,
+  title,
+  onClick,
+}: {
+  active: boolean
+  title: string
+  onClick: () => void
+}) {
   return (
     <button
       type="button"
@@ -1867,7 +2039,7 @@ function ChoiceCard({ active, title, onClick }) {
   )
 }
 
-function ReviewItem({ label, value }) {
+function ReviewItem({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="rounded-2xl bg-[#F8F5F2] p-4">
       <p className="text-xs font-bold uppercase tracking-widest text-stone-400">

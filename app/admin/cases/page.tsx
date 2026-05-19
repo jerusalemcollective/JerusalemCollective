@@ -3,7 +3,7 @@ import { requireAdminPermission } from '@/lib/admin'
 import { SupportCaseForm } from './support-case-form'
 import { summarizeSupportCases } from '@/lib/marketplace-rules'
 import { StatusBadge } from '@/components/status-badge'
-import { Pagination } from '@/components/pagination'
+import { Pagination, normalizePaginationSearchParams, type PaginationSearchParams } from '@/components/pagination'
 
 const PAGE_SIZE = 25
 
@@ -36,10 +36,11 @@ type SupportCase = {
 export default async function AdminCasesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>
+  searchParams: Promise<PaginationSearchParams>
 }) {
   const { supabase } = await requireAdminPermission('cases')
-  const page = Math.max(1, Number((await searchParams).page) || 1)
+  const currentSearchParams = normalizePaginationSearchParams(await searchParams)
+  const page = Math.max(1, Number(currentSearchParams.page) || 1)
   const [{ data }, { count }] = await Promise.all([
     supabase
       .from('support_cases')
@@ -128,7 +129,7 @@ export default async function AdminCasesPage({
           </div>
         )}
       </div>
-      <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} basePath="/admin/cases" />
+      <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} basePath="/admin/cases" searchParams={currentSearchParams} />
     </div>
   )
 }

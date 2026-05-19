@@ -71,19 +71,19 @@ export function Header() {
         const { data: { user: authUser } } = await supabase.auth.getUser()
         
         if (authUser) {
-          // Fetch profile
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('full_name, avatar_url, is_host, is_admin')
-            .eq('id', authUser.id)
-            .single()
-
-          const { data: host } = await supabase
-            .from('hosts')
-            .select('id')
-            .or(`id.eq.${authUser.id},user_id.eq.${authUser.id}`)
-            .limit(1)
-            .maybeSingle()
+          const [{ data: profile }, { data: host }] = await Promise.all([
+            supabase
+              .from('profiles')
+              .select('full_name, avatar_url, is_host, is_admin')
+              .eq('id', authUser.id)
+              .single(),
+            supabase
+              .from('hosts')
+              .select('id')
+              .or(`id.eq.${authUser.id},user_id.eq.${authUser.id}`)
+              .limit(1)
+              .maybeSingle(),
+          ])
 
           const hostIds = Array.from(new Set([host?.id, authUser.id].filter(Boolean))) as string[]
           const [{ data: ownedApplication }, { data: ownedListing }] = await Promise.all([

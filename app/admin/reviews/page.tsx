@@ -1,7 +1,7 @@
 import { requireAdminPermission } from '@/lib/admin'
 import { updateReviewApproval } from '@/app/admin/review-actions'
 import { BooleanBadge } from '@/components/boolean-badge'
-import { Pagination } from '@/components/pagination'
+import { Pagination, normalizePaginationSearchParams, type PaginationSearchParams } from '@/components/pagination'
 
 const PAGE_SIZE = 25
 
@@ -21,10 +21,11 @@ type ReviewRow = {
 export default async function AdminReviewsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>
+  searchParams: Promise<PaginationSearchParams>
 }) {
   const { supabase } = await requireAdminPermission('reviews')
-  const page = Math.max(1, Number((await searchParams).page) || 1)
+  const currentSearchParams = normalizePaginationSearchParams(await searchParams)
+  const page = Math.max(1, Number(currentSearchParams.page) || 1)
   const [{ data }, { count }] = await Promise.all([
     supabase
       .from('reviews')
@@ -80,7 +81,7 @@ export default async function AdminReviewsPage({
           ))
         )}
       </div>
-      <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} basePath="/admin/reviews" />
+      <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} basePath="/admin/reviews" searchParams={currentSearchParams} />
     </div>
   )
 }

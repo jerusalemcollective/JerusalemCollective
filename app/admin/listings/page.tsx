@@ -3,7 +3,7 @@ import { requireAdminPermission } from '@/lib/admin'
 import { updateListingVisibility } from '@/app/admin/listing-actions'
 import { ConfirmSubmitButton } from '@/components/confirm-submit-button'
 import { BooleanBadge } from '@/components/boolean-badge'
-import { Pagination } from '@/components/pagination'
+import { Pagination, normalizePaginationSearchParams, type PaginationSearchParams } from '@/components/pagination'
 
 const PAGE_SIZE = 25
 
@@ -23,10 +23,11 @@ type ListingRow = {
 export default async function AdminListingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>
+  searchParams: Promise<PaginationSearchParams>
 }) {
   const { supabase } = await requireAdminPermission('listings')
-  const page = Math.max(1, Number((await searchParams).page) || 1)
+  const currentSearchParams = normalizePaginationSearchParams(await searchParams)
+  const page = Math.max(1, Number(currentSearchParams.page) || 1)
   const [{ data }, { count }] = await Promise.all([
     supabase
       .from('listings')
@@ -108,7 +109,7 @@ export default async function AdminListingsPage({
           </div>
         )}
       </div>
-      <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} basePath="/admin/listings" />
+      <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} basePath="/admin/listings" searchParams={currentSearchParams} />
     </div>
   )
 }

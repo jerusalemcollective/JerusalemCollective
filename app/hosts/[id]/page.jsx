@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { isSupabaseConfigured, supabase } from '@/lib/supabaseClient'
+import { createClient } from '@/lib/supabase/client'
 
 // Helper to get the public display name for a host
 function getPublicName(host) {
@@ -24,7 +24,10 @@ export default function HostProfilePage() {
 
   useEffect(() => {
     async function fetchHostData() {
-      if (!isSupabaseConfigured || !supabase) {
+      let supabase
+      try {
+        supabase = createClient()
+      } catch {
         setLoading(false)
         return
       }
