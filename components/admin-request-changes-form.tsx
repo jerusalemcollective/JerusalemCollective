@@ -14,9 +14,12 @@ export function AdminRequestChangesForm({ applicationId }: { applicationId: stri
   return (
     <form action={formAction} className="space-y-3">
       <input type="hidden" name="applicationId" value={applicationId} />
-      <p className="text-xs leading-5 text-stone-500">
-        This will appear to the host as a message from JLM Collective.
-      </p>
+      <div>
+        <p className="text-sm font-bold text-stone-950">Message host / request changes</p>
+        <p className="mt-1 text-xs leading-5 text-stone-500">
+          Use this for submitted stays that are not live yet. The host will see it as a message from JLM Collective and can edit the stay.
+        </p>
+      </div>
       <textarea
         name="feedback"
         required

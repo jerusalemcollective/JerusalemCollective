@@ -67,7 +67,7 @@ export default async function HostApplicationEditPage({
                   <h1 className="mt-2 text-3xl font-bold text-stone-950">Edit and resubmit</h1>
                 </div>
                 <span className="inline-flex w-fit rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
-                  {application.status.replace('_', ' ')}
+                  {hostStatusLabel(application.status)}
                 </span>
               </div>
             </section>
@@ -204,3 +204,9 @@ function Field({
 
 const inputClass =
   'mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#c76f55]'
+
+function hostStatusLabel(status: string) {
+  if (status === 'new') return 'In review'
+  if (status === 'changes_requested') return 'Changes requested'
+  return status.replace('_', ' ')
+}

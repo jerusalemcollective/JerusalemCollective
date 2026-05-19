@@ -7,6 +7,7 @@ import { canAdminRole, type AdminPermission, type AdminRole } from '@/lib/admin-
 const adminLinks = [
   { href: '/admin', label: 'Overview', permission: 'overview' },
   { href: '/admin/applications', label: 'Applications', permission: 'applications' },
+  { href: '/admin/enquiries', label: 'Enquiries', permission: 'messages' },
   { href: '/admin/listings', label: 'Listings', permission: 'listings' },
   { href: '/admin/analytics', label: 'Analytics', permission: 'analytics' },
   { href: '/admin/cases', label: 'Disputes & refunds', permission: 'cases' },

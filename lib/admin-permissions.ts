@@ -41,7 +41,7 @@ const ROLE_PERMISSIONS: Record<AdminRole, AdminPermission[]> = {
     'messages',
     'admins',
   ],
-  operations: ['overview', 'applications', 'listings', 'hosts', 'guests', 'reviews', 'analytics'],
+  operations: ['overview', 'applications', 'listings', 'hosts', 'guests', 'reviews', 'analytics', 'messages'],
   support: ['overview', 'hosts', 'guests', 'cases', 'messages'],
   content: ['overview', 'applications', 'listings', 'reviews', 'analytics'],
   analyst: ['overview', 'analytics', 'hosts', 'guests'],

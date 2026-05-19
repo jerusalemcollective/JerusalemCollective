@@ -259,7 +259,7 @@ function ApplicationRow({
         )}
       </div>
       <div className="flex flex-wrap items-center gap-2 md:justify-end">
-        <StatusBadge label={application.status.replace('_', ' ')} tone={statusTone(application.status)} />
+        <StatusBadge label={hostStatusLabel(application.status)} tone={statusTone(application.status)} />
         {needsAction && (
           <Link
             href={`/host/dashboard/applications/${application.id}`}
@@ -314,15 +314,23 @@ function statusTone(status: string): 'green' | 'amber' | 'rose' | 'stone' {
   if (status === 'approved') return 'green'
   if (status === 'changes_requested') return 'amber'
   if (status === 'rejected') return 'rose'
+  if (status === 'new') return 'amber'
   if (status === 'in_review') return 'amber'
   return 'stone'
+}
+
+function hostStatusLabel(status: string) {
+  if (status === 'new') return 'In review'
+  if (status === 'changes_requested') return 'Changes requested'
+  return status.replace('_', ' ')
 }
 
 function nextStepText(status: string, verificationStatus: string) {
   if (status === 'approved') return 'Approved and ready for publication.'
   if (status === 'rejected') return 'This stay needs attention before it can move forward.'
   if (status === 'changes_requested') return 'Changes were requested before review can continue.'
-  if (verificationStatus === 'pending') return 'Verification is still waiting for review.'
+  if (status === 'new') return 'Submitted successfully and now waiting for JLM Collective review.'
   if (status === 'in_review') return 'Currently being reviewed by JLM Collective.'
+  if (verificationStatus === 'pending') return 'Verification is still waiting for review.'
   return 'Submitted successfully and waiting for review.'
 }

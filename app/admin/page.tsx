@@ -9,19 +9,39 @@ export default async function AdminOverviewPage() {
     { count: publishedListingCount },
     { count: draftListingCount },
     { count: hostCount },
+    { count: newEnquiryCount },
     { data: recentApplications },
+    { data: recentEnquiries },
   ] = await Promise.all([
     supabase.from('host_applications').select('*', { count: 'exact', head: true }),
     supabase.from('host_applications').select('*', { count: 'exact', head: true }).eq('status', 'new'),
     supabase.from('listings').select('*', { count: 'exact', head: true }).eq('is_published', true),
     supabase.from('listings').select('*', { count: 'exact', head: true }).eq('is_published', false),
     supabase.from('hosts').select('*', { count: 'exact', head: true }),
+    supabase.from('booking_requests').select('*', { count: 'exact', head: true }).eq('status', 'new'),
     supabase
       .from('host_applications')
       .select('id, host_name, apartment_title, area, status, created_at')
       .order('created_at', { ascending: false })
       .limit(6),
+    supabase
+      .from('booking_requests')
+      .select('id, listing_id, guest_id, status, check_in, check_out, guests, created_at')
+      .order('created_at', { ascending: false })
+      .limit(5),
   ])
+  const recentListingIds = (recentEnquiries || []).map((request: any) => request.listing_id).filter(Boolean)
+  const recentGuestIds = (recentEnquiries || []).map((request: any) => request.guest_id).filter(Boolean)
+  const [{ data: enquiryListings }, { data: enquiryGuests }] = await Promise.all([
+    recentListingIds.length
+      ? supabase.from('listings').select('id, title, area').in('id', recentListingIds)
+      : Promise.resolve({ data: [] }),
+    recentGuestIds.length
+      ? supabase.from('profiles').select('id, full_name').in('id', recentGuestIds)
+      : Promise.resolve({ data: [] }),
+  ])
+  const enquiryListingMap = new Map((enquiryListings || []).map((listing: any) => [listing.id, listing]))
+  const enquiryGuestMap = new Map((enquiryGuests || []).map((guest: any) => [guest.id, guest]))
 
   return (
     <div>
@@ -32,9 +52,10 @@ export default async function AdminOverviewPage() {
         </p>
       </header>
 
-      <div className="grid gap-4 border-b border-stone-200 py-5 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 border-b border-stone-200 py-5 sm:grid-cols-2 xl:grid-cols-6">
         <Metric label="Applications" value={applicationCount || 0} />
         <Metric label="New submissions" value={newApplicationCount || 0} />
+        <Metric label="New enquiries" value={newEnquiryCount || 0} />
         <Metric label="Published" value={publishedListingCount || 0} />
         <Metric label="Hidden drafts" value={draftListingCount || 0} />
         <Metric label="Hosts" value={hostCount || 0} />
@@ -79,6 +100,11 @@ export default async function AdminOverviewPage() {
           <h3 className="text-xl font-bold text-stone-950">Work queue</h3>
           <div className="mt-4 divide-y divide-stone-200 border-y border-stone-200">
             <QueueLink
+              href="/admin/enquiries"
+              title="New enquiries"
+              detail={`${newEnquiryCount || 0} guests waiting`}
+            />
+            <QueueLink
               href="/admin/applications"
               title="Review applications"
               detail={`${newApplicationCount || 0} new waiting`}
@@ -98,6 +124,23 @@ export default async function AdminOverviewPage() {
               title="Check analytics"
               detail="Searches, saves, and enquiries"
             />
+          </div>
+
+          <h3 className="mt-8 text-xl font-bold text-stone-950">Recent enquiries</h3>
+          <div className="mt-4 divide-y divide-stone-200 border-y border-stone-200">
+            {(recentEnquiries || []).map((request: any) => (
+              <Link key={request.id} href="/admin/enquiries" className="block py-4 transition hover:text-[#c76f55]">
+                <p className="font-semibold text-stone-950">
+                  {enquiryListingMap.get(request.listing_id)?.title || 'Stay enquiry'}
+                </p>
+                <p className="mt-1 text-sm text-stone-600">
+                  {enquiryGuestMap.get(request.guest_id)?.full_name || 'Guest'} | {request.guests || 1} guest{request.guests === 1 ? '' : 's'}
+                </p>
+              </Link>
+            ))}
+            {!recentEnquiries?.length && (
+              <div className="py-6 text-sm text-stone-500">No enquiries yet.</div>
+            )}
           </div>
         </aside>
       </div>

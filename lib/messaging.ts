@@ -23,6 +23,19 @@ export type ConversationSummary = {
     sender_id: string
     created_at: string
   } | null
+  request?: BookingRequestSummary | null
+}
+
+export type BookingRequestSummary = {
+  id: string
+  conversation_id: string | null
+  listing_id: string | null
+  status: 'new' | 'host_replied' | 'accepted' | 'declined' | 'closed'
+  check_in: string | null
+  check_out: string | null
+  guests: number
+  message: string | null
+  created_at: string
 }
 
 export type ConversationMessage = {
@@ -65,6 +78,44 @@ export async function getOrCreateConversation(
   return data.id
 }
 
+export async function createListingEnquiry(
+  supabase: SupabaseClient,
+  listingId: string,
+  checkIn: string | null,
+  checkOut: string | null,
+  guests: number,
+  message: string,
+) {
+  const { data, error } = await supabase.rpc('create_listing_enquiry', {
+    target_listing_id: listingId,
+    check_in_date: checkIn,
+    check_out_date: checkOut,
+    guest_count: guests,
+    message_body: message,
+  })
+
+  if (error) throw error
+
+  const result = Array.isArray(data) ? data[0] : data
+  return {
+    requestId: result?.request_id as string,
+    conversationId: result?.conversation_id as string,
+  }
+}
+
+export async function updateBookingRequestStatus(
+  supabase: SupabaseClient,
+  requestId: string,
+  status: 'host_replied' | 'accepted' | 'declined' | 'closed',
+) {
+  const { error } = await supabase.rpc('update_booking_request_status', {
+    request_uuid: requestId,
+    new_status: status,
+  })
+
+  if (error) throw error
+}
+
 export async function sendConversationMessage(
   supabase: SupabaseClient,
   conversationId: string,
@@ -98,4 +149,3 @@ export async function loadConversationMessages(
   if (error) throw error
   return (data || []) as ConversationMessage[]
 }
-

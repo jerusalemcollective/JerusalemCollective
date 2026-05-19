@@ -8,6 +8,7 @@ import {
   type ConversationSummary,
   loadConversationMessages,
   sendConversationMessage,
+  updateBookingRequestStatus,
 } from '@/lib/messaging'
 
 type MessagesInboxProps = {
@@ -25,6 +26,26 @@ function formatTimestamp(value: string) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(value))
+}
+
+function formatRequestDate(value: string | null) {
+  if (!value) return 'Date not set'
+  return new Date(`${value}T12:00:00`).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+  })
+}
+
+function requestStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    new: 'New request',
+    host_replied: 'Host replied',
+    accepted: 'Accepted',
+    declined: 'Declined',
+    closed: 'Closed',
+  }
+
+  return labels[status] || status.replaceAll('_', ' ')
 }
 
 export function MessagesInbox({ mode }: MessagesInboxProps) {
@@ -69,7 +90,7 @@ export function MessagesInbox({ mode }: MessagesInboxProps) {
           mode === 'host' ? conversation.participant_1 : conversation.participant_2,
         )
 
-        const [{ data: listings }, { data: profiles }, { data: latestMessages }] = await Promise.all([
+        const [{ data: listings }, { data: profiles }, { data: latestMessages }, { data: requests }] = await Promise.all([
           listingIds.length
             ? supabase
                 .from('listings')
@@ -89,6 +110,13 @@ export function MessagesInbox({ mode }: MessagesInboxProps) {
                 .in('conversation_id', rows.map((conversation) => conversation.id))
                 .order('created_at', { ascending: false })
             : Promise.resolve({ data: [] }),
+          rows.length
+            ? supabase
+                .from('booking_requests')
+                .select('id, conversation_id, listing_id, status, check_in, check_out, guests, message, created_at')
+                .in('conversation_id', rows.map((conversation) => conversation.id))
+                .order('created_at', { ascending: false })
+            : Promise.resolve({ data: [] }),
         ])
 
         const latestByConversation = new Map<string, ConversationSummary['last_message']>()
@@ -100,6 +128,12 @@ export function MessagesInbox({ mode }: MessagesInboxProps) {
 
         const listingMap = new Map((listings || []).map((listing: any) => [listing.id, listing]))
         const profileMap = new Map((profiles || []).map((profile: any) => [profile.id, profile]))
+        const requestByConversation = new Map()
+        ;(requests || []).forEach((request: any) => {
+          if (request.conversation_id && !requestByConversation.has(request.conversation_id)) {
+            requestByConversation.set(request.conversation_id, request)
+          }
+        })
 
         const hydrated = rows.map((conversation) => ({
           ...conversation,
@@ -107,6 +141,7 @@ export function MessagesInbox({ mode }: MessagesInboxProps) {
           other_participant:
             profileMap.get(mode === 'host' ? conversation.participant_1 : conversation.participant_2) || null,
           last_message: latestByConversation.get(conversation.id) || null,
+          request: requestByConversation.get(conversation.id) || null,
         }))
 
         setConversations(hydrated)
@@ -161,6 +196,9 @@ export function MessagesInbox({ mode }: MessagesInboxProps) {
     try {
       const supabase = createClient()
       await sendConversationMessage(supabase, selectedConversationId, user.id, draft.trim())
+      if (mode === 'host' && selectedConversation?.request?.id && selectedConversation.request.status === 'new') {
+        await updateBookingRequestStatus(supabase, selectedConversation.request.id, 'host_replied')
+      }
       const nextMessages = await loadConversationMessages(supabase, selectedConversationId)
       setMessages(nextMessages)
       setConversations((current) =>
@@ -178,9 +216,49 @@ export function MessagesInbox({ mode }: MessagesInboxProps) {
             : conversation,
         ),
       )
+      if (mode === 'host' && selectedConversation?.request?.id && selectedConversation.request.status === 'new') {
+        setConversations((current) =>
+          current.map((conversation) =>
+            conversation.id === selectedConversationId
+              ? {
+                  ...conversation,
+                  request: conversation.request
+                    ? { ...conversation.request, status: 'host_replied' }
+                    : conversation.request,
+                }
+              : conversation,
+          ),
+        )
+      }
       setDraft('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to send message.')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const handleRequestStatus = async (status: 'accepted' | 'declined') => {
+    if (!selectedConversation?.request?.id) return
+
+    setSending(true)
+    setError(null)
+
+    try {
+      const supabase = createClient()
+      await updateBookingRequestStatus(supabase, selectedConversation.request.id, status)
+      setConversations((current) =>
+        current.map((conversation) =>
+          conversation.id === selectedConversationId
+            ? {
+                ...conversation,
+                request: conversation.request ? { ...conversation.request, status } : conversation.request,
+              }
+            : conversation,
+        ),
+      )
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to update request.')
     } finally {
       setSending(false)
     }
@@ -228,6 +306,11 @@ export function MessagesInbox({ mode }: MessagesInboxProps) {
                     <p className="mt-0.5 text-sm text-stone-500">
                       {conversation.listing?.title || 'Listing conversation'}
                     </p>
+                    {conversation.request && (
+                      <span className="mt-2 inline-flex rounded-full bg-[#fff4ef] px-2.5 py-1 text-[11px] font-bold text-[#c76f55]">
+                        {requestStatusLabel(conversation.request.status)}
+                      </span>
+                    )}
                   </div>
                   <span className="shrink-0 text-xs text-stone-400">
                     {formatTimestamp(conversation.updated_at)}
@@ -251,6 +334,42 @@ export function MessagesInbox({ mode }: MessagesInboxProps) {
             <p className="text-sm text-stone-500">
               {selectedConversation?.listing?.area || 'Jerusalem'}
             </p>
+            {selectedConversation?.request && (
+              <div className="mt-3 rounded-2xl bg-[#F8F5F2] p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-stone-700">
+                    {requestStatusLabel(selectedConversation.request.status)}
+                  </span>
+                  <span className="text-sm font-medium text-stone-700">
+                    {formatRequestDate(selectedConversation.request.check_in)} to{' '}
+                    {formatRequestDate(selectedConversation.request.check_out)}
+                  </span>
+                  <span className="text-sm text-stone-500">
+                    {selectedConversation.request.guests} guest{selectedConversation.request.guests === 1 ? '' : 's'}
+                  </span>
+                </div>
+                {mode === 'host' && ['new', 'host_replied'].includes(selectedConversation.request.status) && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={sending}
+                      onClick={() => handleRequestStatus('accepted')}
+                      className="rounded-full bg-green-700 px-4 py-2 text-xs font-bold text-white transition hover:bg-green-800 disabled:opacity-50"
+                    >
+                      Accept request
+                    </button>
+                    <button
+                      type="button"
+                      disabled={sending}
+                      onClick={() => handleRequestStatus('declined')}
+                      className="rounded-full border border-red-200 px-4 py-2 text-xs font-bold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
+                    >
+                      Decline
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex-1 space-y-4 overflow-y-auto bg-[#fcfaf8] px-5 py-5">
@@ -297,4 +416,3 @@ export function MessagesInbox({ mode }: MessagesInboxProps) {
     </div>
   )
 }
-

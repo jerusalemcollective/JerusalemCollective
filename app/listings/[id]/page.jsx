@@ -273,6 +273,7 @@ export default function ListingDetailPage() {
   const [showGallery, setShowGallery] = useState(false)
   const [showMobileBooking, setShowMobileBooking] = useState(false)
   const [bookingDateRange, setBookingDateRange] = useState({ from: undefined, to: undefined })
+  const [guestCount, setGuestCount] = useState(1)
 
   useEffect(() => {
     async function fetchListingData() {
@@ -560,7 +561,11 @@ export default function ListingDetailPage() {
                 />
                 <div className="rounded-2xl border border-stone-200 bg-white p-4">
                   <label className="block text-[10px] font-bold uppercase tracking-wide text-stone-500">Guests</label>
-                  <select className="mt-1 w-full border-0 bg-transparent p-0 text-sm text-stone-900 focus:outline-none focus:ring-0">
+                  <select
+                    value={guestCount}
+                    onChange={(event) => setGuestCount(Number(event.target.value))}
+                    className="mt-1 w-full border-0 bg-transparent p-0 text-sm text-stone-900 focus:outline-none focus:ring-0"
+                  >
                     {[...Array(listing.max_guests || 6)].map((_, i) => (
                       <option key={i + 1} value={i + 1}>{i + 1} guest{i > 0 ? 's' : ''}</option>
                     ))}
@@ -569,9 +574,16 @@ export default function ListingDetailPage() {
               </div>
 
               {/* Primary Action */}
-              <button className="mb-3 w-full rounded-xl bg-[#c76f55] py-3.5 font-semibold text-white transition hover:bg-[#b55f47]">
-                Request to book
-              </button>
+              <MessageHostDialog
+                listingId={listing.id}
+                listingTitle={listing.title}
+                hostId={listing.host_id}
+                dateRange={bookingDateRange}
+                guests={guestCount}
+                intent="request"
+                buttonLabel="Request to book"
+                buttonClassName="mb-3 flex w-full items-center justify-center rounded-xl bg-[#c76f55] py-3.5 font-semibold text-white transition hover:bg-[#b55f47]"
+              />
 
               <p className="mb-4 text-center text-xs text-stone-500">You won&apos;t be charged yet</p>
 
@@ -581,6 +593,8 @@ export default function ListingDetailPage() {
                   listingId={listing.id}
                   listingTitle={listing.title}
                   hostId={listing.host_id}
+                  dateRange={bookingDateRange}
+                  guests={guestCount}
                 />
                 <button className="flex w-full items-center justify-center gap-2 rounded-xl border border-stone-200 bg-white py-3 text-sm font-semibold text-stone-700 transition hover:border-stone-300 hover:bg-stone-50">
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -700,7 +714,11 @@ export default function ListingDetailPage() {
                 />
                 <div className="rounded-2xl border border-stone-200 bg-white p-4">
                   <label className="block text-[10px] font-bold uppercase tracking-wide text-stone-500">Guests</label>
-                  <select className="mt-1 w-full border-0 bg-transparent p-0 text-sm text-stone-900 focus:outline-none focus:ring-0">
+                  <select
+                    value={guestCount}
+                    onChange={(event) => setGuestCount(Number(event.target.value))}
+                    className="mt-1 w-full border-0 bg-transparent p-0 text-sm text-stone-900 focus:outline-none focus:ring-0"
+                  >
                     {[...Array(listing.max_guests || 6)].map((_, i) => (
                       <option key={i + 1} value={i + 1}>{i + 1} guest{i > 0 ? 's' : ''}</option>
                     ))}
@@ -710,13 +728,22 @@ export default function ListingDetailPage() {
 
               {/* Actions */}
               <div className="space-y-3">
-                <button className="w-full rounded-xl bg-[#c76f55] py-4 font-semibold text-white transition hover:bg-[#b55f47]">
-                  Request to book
-                </button>
                 <MessageHostDialog
                   listingId={listing.id}
                   listingTitle={listing.title}
                   hostId={listing.host_id}
+                  dateRange={bookingDateRange}
+                  guests={guestCount}
+                  intent="request"
+                  buttonLabel="Request to book"
+                  buttonClassName="flex w-full items-center justify-center rounded-xl bg-[#c76f55] py-4 font-semibold text-white transition hover:bg-[#b55f47]"
+                />
+                <MessageHostDialog
+                  listingId={listing.id}
+                  listingTitle={listing.title}
+                  hostId={listing.host_id}
+                  dateRange={bookingDateRange}
+                  guests={guestCount}
                 />
                 <button className="flex w-full items-center justify-center gap-2 rounded-xl border border-stone-200 bg-white py-4 font-semibold text-stone-700 transition hover:border-stone-300 hover:bg-stone-50">
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

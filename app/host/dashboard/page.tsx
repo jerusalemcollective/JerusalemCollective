@@ -14,9 +14,14 @@ type HostListing = {
 
 export default async function HostDashboardPage() {
   const { supabase, hostIds } = await requireHostDashboardAccess()
-  const [{ data: applications }, { data: listings }] = await Promise.all([
+  const [{ data: applications }, { data: listings }, { count: newEnquiryCount }] = await Promise.all([
     supabase.from('host_applications').select('id, status').in('host_id', hostIds),
     supabase.from('listings').select('id, is_published').in('host_id', hostIds),
+    supabase
+      .from('booking_requests')
+      .select('*', { count: 'exact', head: true })
+      .in('host_id', hostIds)
+      .eq('status', 'new'),
   ])
 
   const hostApplications = (applications || []) as HostApplication[]
@@ -50,8 +55,9 @@ export default async function HostDashboardPage() {
           </Link>
         </header>
 
-        <div className="grid gap-4 border-b border-stone-200 py-5 sm:grid-cols-3">
+        <div className="grid gap-4 border-b border-stone-200 py-5 sm:grid-cols-4">
           <Metric label="Live stays" value={liveCount} />
+          <Metric label="New enquiries" value={newEnquiryCount || 0} />
           <Metric label="In review" value={reviewCount} />
           <Metric label="Needs attention" value={needsActionCount} />
         </div>
@@ -90,9 +96,17 @@ export default async function HostDashboardPage() {
               />
               <TaskRow
                 href="/host/dashboard/messages"
-                title="Check guest messages"
-                detail="Reply quickly when new enquiries begin coming in."
-                tone="calm"
+                title={
+                  newEnquiryCount
+                    ? `${newEnquiryCount} new guest ${newEnquiryCount === 1 ? 'enquiry' : 'enquiries'}`
+                    : 'Check guest messages'
+                }
+                detail={
+                  newEnquiryCount
+                    ? 'Reply, accept, or decline from your inbox.'
+                    : 'Reply quickly when new enquiries begin coming in.'
+                }
+                tone={newEnquiryCount ? 'attention' : 'calm'}
               />
               <TaskRow
                 href="/host/dashboard/payments"
