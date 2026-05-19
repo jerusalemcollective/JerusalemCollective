@@ -1,8 +1,11 @@
 import Link from 'next/link'
+import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { sampleListings } from '@/lib/sample-listings'
 import { defaultExploreNeighborhoods } from '@/lib/neighborhoods'
-import { HomeNeighborhoodSearch, HomeSearchForm } from '@/components/home-search-form'
+import { HomeNeighborhoodSearch } from '@/components/home-search-form'
+import { HomeSearchBar } from '@/components/home-search-bar'
+import { HomeMapSection } from '@/components/home-map-section'
 
 type ListingRow = {
   id: string
@@ -12,6 +15,15 @@ type ListingRow = {
   max_guests: number | null
   price_ils: number | null
   price_usd: number | null
+  booking_type: string | null
+  amenities: string[] | null
+  latitude: number | null
+  longitude: number | null
+}
+
+type ListingPhotoRow = {
+  listing_id: string | null
+  photo_url: string
 }
 
 type FeaturedStay = {
@@ -21,15 +33,33 @@ type FeaturedStay = {
   details: string
   priceILS: string
   priceUSD: string
+  coverPhotoUrl: string | null
 }
 
 type PopularNeighborhoodRow = {
   neighborhood: string | null
 }
 
-export const metadata = {
-  title: 'JLM Collective | Curated Jerusalem Stays',
-  description: 'Find curated short-term stays across Jerusalem with JLM Collective.',
+export const metadata: Metadata = {
+  title: 'Jerusalem Short-Term Stays | JLM Collective',
+  description:
+    'Discover curated, verified short-term stays in Jerusalem. Browse apartments by neighbourhood, dates, and amenities — with expert local support.',
+  openGraph: {
+    title: 'Jerusalem Short-Term Stays | JLM Collective',
+    description: 'Curated verified stays in Jerusalem with local expertise and real human support.',
+    url: 'https://jlmcollective.co',
+    siteName: 'JLM Collective',
+    images: [
+      {
+        url: '/logos/JLM_Collective_Primary_Horizontal_Terracotta_UI.webp',
+        width: 1200,
+        height: 630,
+        alt: 'JLM Collective',
+      },
+    ],
+    locale: 'en_GB',
+    type: 'website',
+  },
 }
 
 const baseExploreBlocks = [
@@ -59,7 +89,7 @@ const baseExploreBlocks = [
   },
 ]
 
-function toFeaturedStay(listing: ListingRow): FeaturedStay {
+function toFeaturedStay(listing: ListingRow & { cover_photo_url?: string | null }): FeaturedStay {
   return {
     id: listing.id,
     title: listing.title,
@@ -67,6 +97,7 @@ function toFeaturedStay(listing: ListingRow): FeaturedStay {
     details: `${listing.bedrooms || 0} bedrooms · sleeps ${listing.max_guests || 0}`,
     priceILS: listing.price_ils ? `₪${listing.price_ils.toLocaleString()}` : 'Price on request',
     priceUSD: listing.price_usd ? `$${listing.price_usd.toLocaleString()}` : '',
+    coverPhotoUrl: listing.cover_photo_url || null,
   }
 }
 
@@ -87,18 +118,39 @@ async function getHomepageData() {
   const [{ data: listingsData }, { data: neighborhoodsData }] = await Promise.all([
     supabase
       .from('listings')
-      .select('id, title, area, bedrooms, max_guests, price_ils, price_usd')
+      .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, amenities, latitude, longitude')
       .eq('is_published', true)
-      .order('is_featured', { ascending: false })
-      .limit(3),
+      .eq('is_featured', true)
+      .limit(6),
     supabase.rpc('popular_neighborhoods', {
       result_limit: 6,
       lookback_days: 30,
     }),
   ])
 
-  const featuredStays = listingsData?.length
-    ? (listingsData as ListingRow[]).map(toFeaturedStay)
+  const featuredRows = (listingsData || []) as ListingRow[]
+  const featuredIds = featuredRows.map((listing) => listing.id)
+  const { data: photoData } = featuredIds.length
+    ? await supabase
+        .from('listing_photos')
+        .select('listing_id, photo_url')
+        .eq('is_cover', true)
+        .in('listing_id', featuredIds)
+    : { data: [] }
+  const coverPhotoByListingId = new Map<string, string>()
+  ;((photoData || []) as ListingPhotoRow[]).forEach((photo) => {
+    if (photo.listing_id) {
+      coverPhotoByListingId.set(photo.listing_id, photo.photo_url)
+    }
+  })
+
+  const featuredStays = featuredRows.length
+    ? featuredRows.map((listing) =>
+        toFeaturedStay({
+          ...listing,
+          cover_photo_url: coverPhotoByListingId.get(listing.id) || null,
+        }),
+      )
     : defaultFeatured
   const liveNeighborhoods = ((neighborhoodsData || []) as PopularNeighborhoodRow[])
     .map((row) => row.neighborhood)
@@ -124,6 +176,23 @@ export default async function JLMCollectiveHomePage() {
 
   return (
     <div className="min-h-screen bg-[#F8F5F2] text-[#2D2D2D] antialiased">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'WebSite',
+            name: 'JLM Collective',
+            url: 'https://jlmcollective.co',
+            description: 'Curated short-term stays in Jerusalem',
+            potentialAction: {
+              '@type': 'SearchAction',
+              target: 'https://jlmcollective.co/stays?area={search_term_string}',
+              'query-input': 'required name=search_term_string',
+            },
+          }),
+        }}
+      />
       <main>
         <section className="mx-auto max-w-7xl px-6 pb-12 pt-16 text-center md:pt-20">
           <div className="mx-auto mb-8 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium shadow-sm ring-1 ring-stone-200">
@@ -140,7 +209,7 @@ export default async function JLMCollectiveHomePage() {
             </p>
           </div>
 
-          <HomeSearchForm />
+          <HomeSearchBar />
 
           <Link
             href="/stays?view=map"
@@ -231,6 +300,13 @@ export default async function JLMCollectiveHomePage() {
                 <Link key={stay.id} href={`/listings/${stay.id}`} className="group cursor-pointer">
                   <div className="relative mb-3 aspect-[4/3] overflow-hidden rounded-xl bg-stone-200 shadow-sm">
                     <div className="absolute inset-0 bg-gradient-to-br from-stone-100 via-stone-200 to-stone-300" />
+                    {stay.coverPhotoUrl ? (
+                      <img
+                        src={stay.coverPhotoUrl}
+                        alt=""
+                        className="absolute inset-0 h-full w-full object-cover"
+                      />
+                    ) : null}
                   </div>
                   <div className="flex justify-between gap-3">
                     <div>
@@ -248,7 +324,7 @@ export default async function JLMCollectiveHomePage() {
             </div>
           </div>
 
-          <MapPreview />
+          <HomeMapSection />
         </section>
 
         <section id="saved" className="mx-auto max-w-7xl px-6 pb-4">

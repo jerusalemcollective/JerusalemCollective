@@ -32,11 +32,19 @@ function getPublicName(host: HostRecord): string {
   return host.display_name || host.name.split(' ')[0]
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
   const { id } = await params
   const supabase = await createClient()
-  const [{ data }, { data: photoData }] = await Promise.all([
-    supabase.from('listings').select('title, area').eq('id', id).single(),
+  const [{ data: listing }, { data: coverPhoto }] = await Promise.all([
+    supabase
+      .from('listings')
+      .select('title, area, bedrooms, max_guests, price_ils, price_usd, description')
+      .eq('id', id)
+      .single(),
     supabase
       .from('listing_photos')
       .select('photo_url')
@@ -45,16 +53,58 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       .limit(1)
       .maybeSingle(),
   ])
-  const title = data ? `${data.title} | JLM Collective` : 'Stay | JLM Collective'
-  const description = data ? `View ${data.title}, a curated stay in ${data.area}, Jerusalem.` : 'View a curated Jerusalem stay on JLM Collective.'
+
+  if (!listing) {
+    return {
+      title: 'Stay | JLM Collective',
+    }
+  }
+
+  const title = `${listing.title} | JLM Collective`
+  const description = listing.description
+    ? listing.description.slice(0, 155)
+    : `${listing.bedrooms ?? 1}-bedroom stay in ${listing.area}, Jerusalem. Verified by JLM Collective.`
+  const priceText = listing.price_usd
+    ? `From $${Number(listing.price_usd).toLocaleString()} per night`
+    : listing.price_ils
+      ? `From ₪${Number(listing.price_ils).toLocaleString()} per night`
+      : null
+  const ogDescription = priceText ? `${description} ${priceText}.` : description
+  const images = coverPhoto?.photo_url
+    ? [
+        {
+          url: coverPhoto.photo_url,
+          width: 1200,
+          height: 800,
+          alt: listing.title,
+        },
+      ]
+    : [
+        {
+          url: '/logos/JLM_Collective_Primary_Horizontal_Terracotta_UI.webp',
+          width: 1200,
+          height: 630,
+          alt: 'JLM Collective',
+        },
+      ]
 
   return {
     title,
     description,
     openGraph: {
       title,
-      description,
-      images: photoData?.photo_url ? [{ url: photoData.photo_url }] : [],
+      description: ogDescription,
+      url: `https://jlmcollective.co/listings/${id}`,
+      siteName: 'JLM Collective',
+      images,
+      locale: 'en_GB',
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description: ogDescription,
+      images: images.map((image) => image.url),
     },
   }
 }
