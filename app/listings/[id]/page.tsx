@@ -1,4 +1,4 @@
-import Link from 'next/link'
+﻿import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getSampleListing } from '@/lib/sample-listings'
 import {
@@ -293,72 +293,4 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
   )
 }
 
-function buildListingJsonLd({
-  listing,
-  photos,
-  reviews,
-  publicHostName,
-}: {
-  listing: ListingDetailListing
-  photos: ListingDetailPhoto[]
-  reviews: ListingDetailReview[]
-  publicHostName: string | null
-}) {
-  const coverPhoto = photos.find((photo) => photo.is_cover) || photos[0]
-  const jsonLd: Record<string, unknown> = {
-    '@context': 'https://schema.org',
-    '@type': 'LodgingBusiness',
-    name: listing.title,
-    description: listing.description || `Curated stay in ${listing.area}, Jerusalem.`,
-    url: `https://jlmcollective.co/listings/${listing.id}`,
-    image: coverPhoto?.photo_url ? [coverPhoto.photo_url] : undefined,
-    address: {
-      '@type': 'PostalAddress',
-      addressLocality: listing.area,
-      addressRegion: 'Jerusalem',
-      addressCountry: 'IL',
-    },
-    numberOfRooms: listing.bedrooms,
-    maximumAttendeeCapacity: listing.max_guests,
-    amenityFeature: listing.amenities?.map((amenity) => ({
-      '@type': 'LocationFeatureSpecification',
-      name: amenity,
-      value: true,
-    })),
-    priceRange: listing.price_usd
-      ? `$${listing.price_usd.toLocaleString()}`
-      : listing.price_ils
-        ? `₪${listing.price_ils.toLocaleString()}`
-        : 'Price on request',
-    provider: publicHostName
-      ? {
-          '@type': 'Person',
-          name: publicHostName,
-        }
-      : undefined,
-  }
 
-  if (reviews.length > 0) {
-    const ratingValue = reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
-    jsonLd.aggregateRating = {
-      '@type': 'AggregateRating',
-      ratingValue: Number(ratingValue.toFixed(1)),
-      reviewCount: reviews.length,
-    }
-    jsonLd.review = reviews.slice(0, 5).map((review) => ({
-      '@type': 'Review',
-      author: {
-        '@type': 'Person',
-        name: review.reviewer_name,
-      },
-      reviewRating: {
-        '@type': 'Rating',
-        ratingValue: review.rating,
-        bestRating: 5,
-      },
-      reviewBody: review.content || undefined,
-    }))
-  }
-
-  return jsonLd
-}

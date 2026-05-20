@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+﻿import { createClient } from '@/lib/supabase/server'
 import { sampleListings } from '@/lib/sample-listings'
 import { MapPageClient, type MapListing } from '@/components/map-page-client'
 
@@ -56,3 +56,4 @@ export default async function MapPage() {
 
   return <MapPageClient listings={listings} />
 }
+

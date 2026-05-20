@@ -1,4 +1,4 @@
-type BookingRequestRecord = {
+﻿type BookingRequestRecord = {
   listing_id: string | null
   guest_id: string | null
   status: string | null
@@ -61,9 +61,9 @@ Deno.serve(async (request) => {
       subject: `Your booking request was ${record.status}`,
       html: isAccepted
         ? `
-          <p>Good news — your booking request for <strong>${escapeHtml(listingTitle)}</strong> was accepted.</p>
+          <p>Good news - your booking request for <strong>${escapeHtml(listingTitle)}</strong> was accepted.</p>
           <p><strong>Dates:</strong> ${escapeHtml(dates)}</p>
-          <p>You can view your trip details in your account.</p>
+          <p>You can view your trip details in your account and add it to your calendar from My trips.</p>
           <p><a href="${siteUrl}/account/bookings">Open my bookings</a></p>
         `
         : `
@@ -178,3 +178,5 @@ function ok() {
     headers: { 'Content-Type': 'application/json' },
   })
 }
+
+

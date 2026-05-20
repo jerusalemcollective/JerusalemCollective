@@ -26,7 +26,7 @@ export function SessionTimeout() {
     const signOutForInactivity = async () => {
       await supabase.auth.signOut()
       window.localStorage.removeItem(lastActivityKey)
-      window.location.href = '/login?reason=session-expired'
+      window.location.href = `/login?reason=session-expired&at=${Date.now()}`
     }
 
     const checkInactivity = async () => {

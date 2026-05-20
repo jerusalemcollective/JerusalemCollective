@@ -48,22 +48,29 @@ export default async function BookingsPage() {
         ) : (
           <div className="divide-y divide-stone-200 border-y border-stone-200">
             {bookings.map((booking) => (
-              <Link
+              <div
                 key={booking.id}
-                href={booking.listings?.id ? `/listings/${booking.listings.id}` : '/stays'}
                 className="grid gap-3 py-5 transition hover:bg-white/50 md:grid-cols-[1fr_auto] md:items-center"
               >
-                <div>
+                <Link href={booking.listings?.id ? `/listings/${booking.listings.id}` : '/stays'}>
                   <p className="font-bold text-stone-950">{booking.listings?.title || 'Stay'}</p>
                   <p className="mt-1 text-sm text-stone-600">{booking.listings?.area || 'Jerusalem'}</p>
                   <p className="mt-2 text-sm font-medium text-stone-700">
                     {formatDate(booking.check_in)} to {formatDate(booking.check_out)}
                   </p>
+                </Link>
+                <div className="flex flex-col items-start gap-2 md:items-end">
+                  <span className="w-fit rounded-full bg-stone-200 px-3 py-1 text-xs font-bold capitalize text-stone-700">
+                    Booking
+                  </span>
+                  <a
+                    href={`/api/booking-calendar/${booking.id}`}
+                    className="text-xs font-semibold text-[#c76f55] hover:underline"
+                  >
+                    Add to calendar
+                  </a>
                 </div>
-                <span className="w-fit rounded-full bg-stone-200 px-3 py-1 text-xs font-bold capitalize text-stone-700">
-                  Booking
-                </span>
-              </Link>
+              </div>
             ))}
           </div>
         )}

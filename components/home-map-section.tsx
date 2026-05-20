@@ -6,6 +6,7 @@ export function HomeMapSection() {
   return (
     <aside id="map" className="sticky top-24 hidden h-[380px] overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm lg:block">
       <div className="relative h-full bg-[#E9DFD2]">
+        {/* Illustrative price pins until this homepage preview is connected to live listing prices. */}
         <div
           className="absolute inset-0 opacity-60"
           style={{

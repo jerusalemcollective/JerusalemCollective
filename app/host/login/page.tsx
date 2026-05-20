@@ -17,7 +17,11 @@ function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirect = searchParams.get('redirect') || '/become-a-host'
-  const sessionExpired = searchParams.get('reason') === 'session-expired'
+  const sessionExpiredAt = Number(searchParams.get('at'))
+  const sessionExpired =
+    searchParams.get('reason') === 'session-expired' &&
+    Number.isFinite(sessionExpiredAt) &&
+    Date.now() - sessionExpiredAt < 5 * 60 * 1000
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()

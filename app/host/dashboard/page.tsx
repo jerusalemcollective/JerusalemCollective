@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { HostDashboardNav } from '@/components/host-dashboard-nav'
+import { CopyCalendarUrlButton } from '@/components/copy-calendar-url-button'
 
 type UpcomingBooking = {
   id: string
@@ -22,6 +23,11 @@ type PendingApplication = {
   status: string
 }
 
+type HostCalendar = {
+  name: string
+  calendar_token: string | null
+}
+
 export default async function HostDashboardPage() {
   const { supabase, hostIds } = await requireHostDashboardAccess()
   const today = new Date().toISOString().slice(0, 10)
@@ -35,6 +41,7 @@ export default async function HostDashboardPage() {
     { count: totalListingsCount },
     { count: totalApplicationsCount },
     { data: pendingApplicationData },
+    { data: hostCalendarData },
   ] = await Promise.all([
     supabase
       .from('booking_requests')
@@ -82,6 +89,12 @@ export default async function HostDashboardPage() {
         .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
+    supabase
+      .from('hosts')
+      .select('name, calendar_token')
+      .in('id', hostIds)
+      .limit(1)
+      .maybeSingle(),
   ])
 
   const newEnquiries = newEnquiryCount || 0
@@ -92,6 +105,10 @@ export default async function HostDashboardPage() {
   const upcomingBookings = (upcomingBookingsData || []) as UpcomingBooking[]
   const openSupportCases = (supportCasesData || []) as HostSupportCase[]
   const pendingApplication = pendingApplicationData as PendingApplication | null
+  const hostCalendar = hostCalendarData as HostCalendar | null
+  const calendarUrl = hostCalendar?.calendar_token
+    ? `https://jlmcollective.co/api/host-calendar/${hostCalendar.calendar_token}.ics`
+    : null
   const isNewHost = totalListings === 0 && totalApplications === 0
   const hasActions =
     newEnquiries > 0 ||
@@ -187,6 +204,49 @@ export default async function HostDashboardPage() {
               </p>
             </div>
           )}
+        </section>
+
+        <section className="border-b border-stone-200 py-6">
+          <div className="rounded-3xl bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-bold text-stone-950">Sync bookings to your calendar</h2>
+            <p className="mt-2 text-sm leading-6 text-stone-600">
+              Subscribe to this link in Google Calendar or Apple Calendar to see all your bookings automatically.
+            </p>
+            {calendarUrl ? (
+              <>
+                <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center">
+                  <input
+                    readOnly
+                    value={calendarUrl}
+                    className="flex-1 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 font-mono text-sm text-stone-700"
+                  />
+                  <CopyCalendarUrlButton value={calendarUrl} />
+                </div>
+                <div className="mt-3 flex flex-wrap gap-3">
+                  <a
+                    href="https://calendar.google.com/calendar/r/settings/addbyurl"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-semibold text-[#c76f55] hover:underline"
+                  >
+                    Add to Google Calendar -&gt;
+                  </a>
+                  <a
+                    href="https://support.apple.com/guide/icloud/set-up-icloud-calendar-mm6902b8ad/icloud"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-semibold text-stone-500 hover:underline"
+                  >
+                    Add to Apple Calendar -&gt;
+                  </a>
+                </div>
+              </>
+            ) : (
+              <p className="mt-4 rounded-2xl bg-[#F8F5F2] p-4 text-sm text-stone-600">
+                Your private calendar link will appear after the calendar token migration has been run.
+              </p>
+            )}
+          </div>
         </section>
 
         <div className="grid gap-8 py-8 lg:grid-cols-[1.2fr_0.8fr]">

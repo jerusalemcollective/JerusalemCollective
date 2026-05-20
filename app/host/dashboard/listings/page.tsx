@@ -1,6 +1,8 @@
-import Link from 'next/link'
+﻿import Link from 'next/link'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { HostDashboardNav } from '@/components/host-dashboard-nav'
+import { ListingQualityScore } from '@/components/listing-quality-score'
+import { calculateListingScore } from '@/lib/marketplace-rules'
 
 type HostApplication = {
   id: string
@@ -20,8 +22,13 @@ type HostListing = {
   area: string
   is_published: boolean
   is_featured: boolean
-  bedrooms: number
+  bedrooms: number | null
+  bathrooms: number | null
   max_guests: number
+  amenities: string[] | null
+  description: string | null
+  price_usd: number | null
+  price_ils: number | null
   created_at: string
 }
 
@@ -44,7 +51,7 @@ export default async function HostListingsPage() {
       .order('created_at', { ascending: false }),
     supabase
       .from('listings')
-      .select('id, title, area, is_published, is_featured, bedrooms, max_guests, created_at')
+      .select('id, title, area, is_published, is_featured, bedrooms, bathrooms, max_guests, amenities, description, price_usd, price_ils, created_at')
       .in('host_id', hostIds)
       .order('created_at', { ascending: false }),
   ])
@@ -76,6 +83,7 @@ export default async function HostListingsPage() {
 
   const coverByApplication = new Map<string, string>()
   const coverByListing = new Map<string, string>()
+  const photoCountByListing = new Map<string, number>()
 
   listingPhotos.forEach((photo) => {
     if (photo.application_id && !coverByApplication.has(photo.application_id)) {
@@ -83,6 +91,12 @@ export default async function HostListingsPage() {
     }
     if (photo.listing_id && !coverByListing.has(photo.listing_id)) {
       coverByListing.set(photo.listing_id, photo.photo_url)
+    }
+    if (photo.listing_id) {
+      photoCountByListing.set(
+        photo.listing_id,
+        (photoCountByListing.get(photo.listing_id) || 0) + 1,
+      )
     }
   })
 
@@ -334,3 +348,4 @@ function nextStepText(status: string, verificationStatus?: string | null) {
   if (verificationStatus === 'pending') return 'Verification is still waiting for review.'
   return 'Submitted successfully and waiting for review.'
 }
+

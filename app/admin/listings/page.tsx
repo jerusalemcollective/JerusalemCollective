@@ -3,7 +3,9 @@ import { requireAdminPermission } from '@/lib/admin'
 import { updateListingVisibility } from '@/app/admin/listing-actions'
 import { ConfirmSubmitButton } from '@/components/confirm-submit-button'
 import { BooleanBadge } from '@/components/boolean-badge'
+import { ListingQualityScore } from '@/components/listing-quality-score'
 import { Pagination, normalizePaginationSearchParams, type PaginationSearchParams } from '@/components/pagination'
+import { calculateListingScore } from '@/lib/marketplace-rules'
 
 const PAGE_SIZE = 25
 
@@ -14,10 +16,20 @@ type ListingRow = {
   host_id: string
   is_published: boolean
   is_featured: boolean
+  bedrooms: number | null
+  bathrooms: number | null
+  amenities: string[] | null
+  description: string | null
+  price_usd: number | null
+  price_ils: number | null
   created_at: string
   hosts?: {
     name: string
   } | null
+}
+
+type ListingPhotoRow = {
+  listing_id: string | null
 }
 
 export default async function AdminListingsPage({
@@ -31,13 +43,21 @@ export default async function AdminListingsPage({
   const [{ data }, { count }] = await Promise.all([
     supabase
       .from('listings')
-      .select('id, title, area, host_id, is_published, is_featured, created_at, hosts(name)')
+      .select('id, title, area, host_id, is_published, is_featured, bedrooms, bathrooms, amenities, description, price_usd, price_ils, created_at, hosts(name)')
       .order('created_at', { ascending: false })
       .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1),
     supabase.from('listings').select('*', { count: 'exact', head: true }),
   ])
 
   const listings = (data || []) as ListingRow[]
+  const listingIds = listings.map((listing) => listing.id)
+  const { data: photos } = listingIds.length
+    ? await supabase
+        .from('listing_photos')
+        .select('listing_id')
+        .in('listing_id', listingIds)
+    : { data: [] }
+  const photoCounts = countPhotosByListing((photos || []) as ListingPhotoRow[])
   const total = count || 0
 
   return (
@@ -48,9 +68,10 @@ export default async function AdminListingsPage({
       </div>
 
       <div className="overflow-hidden rounded-3xl bg-white shadow-sm">
-        <div className="grid gap-4 border-b border-stone-100 px-6 py-4 text-xs font-bold uppercase tracking-widest text-stone-400 md:grid-cols-[1.3fr_1fr_0.7fr_0.7fr_1fr]">
+        <div className="grid gap-4 border-b border-stone-100 px-6 py-4 text-xs font-bold uppercase tracking-widest text-stone-400 md:grid-cols-[1.2fr_0.9fr_0.9fr_0.6fr_0.6fr_1fr]">
           <span>Listing</span>
           <span>Host</span>
+          <span>Quality</span>
           <span>Published</span>
           <span>Featured</span>
           <span>Actions</span>
@@ -63,7 +84,7 @@ export default async function AdminListingsPage({
             {listings.map((listing) => (
               <div
                 key={listing.id}
-                className="grid gap-4 px-6 py-5 md:grid-cols-[1.3fr_1fr_0.7fr_0.7fr_1fr] md:items-center"
+                className="grid gap-4 px-6 py-5 md:grid-cols-[1.2fr_0.9fr_0.9fr_0.6fr_0.6fr_1fr] md:items-center"
               >
                 <div>
                   <Link href={`/admin/listings/${listing.id}`} className="font-bold text-stone-950 hover:underline">
@@ -72,6 +93,17 @@ export default async function AdminListingsPage({
                   <p className="mt-1 text-sm text-stone-500">{listing.area}</p>
                 </div>
                 <p className="text-sm text-stone-700">{listing.hosts?.name || 'Host'}</p>
+                <ListingQualityScore
+                  score={calculateListingScore({
+                    photo_count: photoCounts.get(listing.id) || 0,
+                    description: listing.description,
+                    bedrooms: listing.bedrooms,
+                    bathrooms: listing.bathrooms,
+                    amenities: listing.amenities || [],
+                    price_usd: listing.price_usd,
+                    price_ils: listing.price_ils,
+                  })}
+                />
                 <BooleanBadge value={listing.is_published} yes="Live" no="Hidden" />
                 <BooleanBadge value={listing.is_featured} yes="Featured" no="Standard" />
                 <div className="flex flex-wrap gap-2">
@@ -112,4 +144,15 @@ export default async function AdminListingsPage({
       <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} basePath="/admin/listings" searchParams={currentSearchParams} />
     </div>
   )
+}
+
+function countPhotosByListing(photos: ListingPhotoRow[]) {
+  const counts = new Map<string, number>()
+
+  photos.forEach((photo) => {
+    if (!photo.listing_id) return
+    counts.set(photo.listing_id, (counts.get(photo.listing_id) || 0) + 1)
+  })
+
+  return counts
 }

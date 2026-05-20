@@ -2,6 +2,12 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
+import { syncExternalCalendar } from '@/lib/calendar-sync'
+
+type ExternalCalendarState = {
+  status: string
+  message: string
+}
 
 export async function updateHostListing(formData: FormData) {
   const listingId = String(formData.get('listingId') || '')
@@ -95,4 +101,66 @@ export async function updateHostApplication(formData: FormData) {
   revalidatePath('/host/dashboard')
   revalidatePath('/host/dashboard/listings')
   revalidatePath(`/host/dashboard/applications/${applicationId}`)
+}
+
+export async function saveExternalCalendarUrl(
+  _prev: ExternalCalendarState,
+  formData: FormData,
+): Promise<ExternalCalendarState> {
+  const listingId = String(formData.get('listingId') || '')
+  const url = String(formData.get('calendarUrl') || '').trim()
+
+  if (!listingId) {
+    return { status: 'error', message: 'Missing listing.' }
+  }
+
+  if (url && !url.startsWith('http')) {
+    return {
+      status: 'error',
+      message: 'Please enter a valid calendar URL.',
+    }
+  }
+
+  const { supabase, hostIds } = await requireHostDashboardAccess()
+  const { data: listing } = await supabase
+    .from('listings')
+    .select('id')
+    .eq('id', listingId)
+    .in('host_id', hostIds)
+    .maybeSingle()
+
+  if (!listing) {
+    return { status: 'error', message: 'Listing not found.' }
+  }
+
+  const listingUpdate = url
+    ? { external_calendar_url: url }
+    : { external_calendar_url: null, calendar_last_synced_at: null }
+
+  const { error } = await supabase
+    .from('listings')
+    .update(listingUpdate)
+    .eq('id', listingId)
+    .in('host_id', hostIds)
+
+  if (error) return { status: 'error', message: error.message }
+
+  if (url) {
+    await syncExternalCalendar(supabase, listingId, url)
+  } else {
+    await supabase
+      .from('listing_unavailable_ranges')
+      .delete()
+      .eq('listing_id', listingId)
+      .eq('source', 'external_calendar')
+  }
+
+  revalidatePath('/host/dashboard/listings')
+  revalidatePath(`/host/dashboard/listings/${listingId}`)
+  revalidatePath(`/listings/${listingId}`)
+
+  return {
+    status: 'success',
+    message: url ? 'Calendar connected and synced.' : 'Calendar disconnected.',
+  }
 }

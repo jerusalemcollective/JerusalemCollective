@@ -35,6 +35,7 @@ export async function addUnavailableRange(formData: FormData) {
     start_date: startDate,
     end_date: endDate,
     reason: reason || null,
+    source: 'manual',
   })
 
   if (error) throw error

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import * as React from 'react'
 import {
@@ -189,12 +189,10 @@ function CalendarCaptionLabel({
   ...props
 }: React.ComponentProps<'span'>) {
   const captionText = String(children ?? '')
-    .replace('Ã‚Â·', '·')
-    .replace('Â·', '·')
 
   const [gregorianMonth, hebrewMonth = ''] = captionText.includes('|')
     ? captionText.split('|')
-    : captionText.split('·')
+    : captionText.split('\u00b7')
 
   return (
     <span
@@ -260,3 +258,4 @@ function CalendarDayButton({
 }
 
 export { Calendar, CalendarCaptionLabel, CalendarDayButton }
+
