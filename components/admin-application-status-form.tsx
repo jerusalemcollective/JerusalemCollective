@@ -15,11 +15,13 @@ export function AdminApplicationStatusForm({
   applicationId,
   status,
   label,
+  description,
   tone,
 }: {
   applicationId: string
   status: 'in_review' | 'rejected'
   label: string
+  description?: string
   tone: 'neutral' | 'danger'
 }) {
   const [state, formAction, pending] = useActionState(
@@ -36,6 +38,7 @@ export function AdminApplicationStatusForm({
     <form action={formAction} className="space-y-2">
       <input type="hidden" name="applicationId" value={applicationId} />
       <input type="hidden" name="status" value={status} />
+      {description ? <p className="text-xs leading-5 text-stone-500">{description}</p> : null}
       <button
         disabled={pending}
         className={`w-full rounded-2xl border px-4 py-3 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-60 ${buttonClass}`}

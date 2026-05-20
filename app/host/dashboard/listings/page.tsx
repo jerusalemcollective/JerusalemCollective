@@ -143,23 +143,38 @@ export default async function HostListingsPage() {
             <EmptyPanel text="No live listings yet. Approved stays will appear here." />
           ) : (
             <div className="mt-4 divide-y divide-stone-200 border-y border-stone-200">
-              {hostListings.map((listing) => (
-                <ListingRow
-                  key={listing.id}
-                  title={listing.title}
-                  area={listing.area}
-                  meta={`${listing.bedrooms} bedrooms · sleeps ${listing.max_guests}`}
-                  image={coverByListing.get(listing.id)}
-                  badge={{
-                    label: listing.is_published ? 'Live' : 'Hidden',
-                    tone: listing.is_published ? 'green' : 'stone',
-                  }}
-                  actions={[
-                    { href: `/host/dashboard/listings/${listing.id}`, label: 'Manage' },
-                    { href: `/listings/${listing.id}`, label: 'View public page' },
-                  ]}
-                />
-              ))}
+              {hostListings.map((listing) => {
+                const photoCount = photoCountByListing.get(listing.id) || 0
+                const scoreInput = {
+                  photo_count: photoCount,
+                  description: listing.description,
+                  bedrooms: listing.bedrooms,
+                  bathrooms: listing.bathrooms,
+                  amenities: listing.amenities || [],
+                  price_usd: listing.price_usd,
+                  price_ils: listing.price_ils,
+                }
+
+                return (
+                  <ListingRow
+                    key={listing.id}
+                    title={listing.title}
+                    area={listing.area}
+                    meta={`${listing.bedrooms || '-'} bedrooms · sleeps ${listing.max_guests}`}
+                    image={coverByListing.get(listing.id)}
+                    score={calculateListingScore(scoreInput)}
+                    suggestions={listingStrengthSuggestions(listing, photoCount)}
+                    badge={{
+                      label: listing.is_published ? 'Live' : 'Hidden',
+                      tone: listing.is_published ? 'green' : 'stone',
+                    }}
+                    actions={[
+                      { href: `/host/dashboard/listings/${listing.id}`, label: 'Manage' },
+                      { href: `/listings/${listing.id}`, label: 'View public page' },
+                    ]}
+                  />
+                )
+              })}
             </div>
           )}
         </section>
@@ -211,6 +226,8 @@ function ListingRow({
   area,
   meta,
   image,
+  score,
+  suggestions,
   badge,
   actions,
 }: {
@@ -218,6 +235,8 @@ function ListingRow({
   area: string
   meta: string
   image?: string
+  score: number
+  suggestions: string[]
   badge: { label: string; tone: 'green' | 'stone' }
   actions: Array<{ href: string; label: string }>
 }) {
@@ -228,6 +247,9 @@ function ListingRow({
         <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">{area}</p>
         <h3 className="mt-1 font-bold text-stone-950">{title}</h3>
         <p className="mt-1 text-sm text-stone-600">{meta}</p>
+        <div className="mt-4 max-w-xl">
+          <ListingQualityScore score={score} label="Listing strength" suggestions={suggestions} />
+        </div>
       </div>
       <div className="flex flex-wrap items-center gap-2 md:justify-end">
         <StatusBadge label={badge.label} tone={badge.tone} />
@@ -243,6 +265,22 @@ function ListingRow({
       </div>
     </article>
   )
+}
+
+function listingStrengthSuggestions(listing: HostListing, photoCount: number) {
+  const suggestions: string[] = []
+  const descriptionLength = listing.description?.length || 0
+  const amenities = listing.amenities || []
+
+  if (photoCount < 10) suggestions.push('Add more photos, ideally at least 10.')
+  if (descriptionLength <= 150) {
+    suggestions.push('Write a fuller description with sleeping setup, location, and guest details.')
+  }
+  if (listing.bathrooms === null) suggestions.push('Add the bathroom count.')
+  if (!listing.price_usd && !listing.price_ils) suggestions.push('Add a clear price.')
+  if (amenities.length < 5) suggestions.push('Add at least five useful amenities.')
+
+  return suggestions.slice(0, 3)
 }
 
 function ApplicationRow({

@@ -69,12 +69,12 @@ export async function updateApplicationStatusWithFeedback(
 
     return {
       status: 'success',
-      message: status === 'rejected' ? 'Listing rejected.' : 'Listing marked in review.',
+      message: status === 'rejected' ? 'Application rejected.' : 'Application marked in review.',
     }
   } catch (error) {
     return {
       status: 'error',
-      message: error instanceof Error ? error.message : 'Unable to update this listing.',
+      message: error instanceof Error ? error.message : 'Unable to update this application.',
     }
   }
 }
@@ -327,7 +327,7 @@ async function setApplicationStatus(
     if (fallbackError) throw fallbackError
 
     if (!fallbackData?.id) {
-      throw new Error('No listing was updated. Check that this application still exists.')
+      throw new Error('No application was updated. Check that this application still exists.')
     }
 
     await logAdminAction(supabase, `set_status_${status}`, 'application', applicationId)
@@ -344,7 +344,7 @@ async function setApplicationStatus(
   if (error) throw error
 
   if (!data?.id) {
-    throw new Error('No listing was updated. Check that this application still exists.')
+    throw new Error('No application was updated. Check that this application still exists.')
   }
 
   await logAdminAction(supabase, `set_status_${status}`, 'application', applicationId)

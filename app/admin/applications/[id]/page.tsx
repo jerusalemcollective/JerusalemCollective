@@ -128,7 +128,8 @@ export default async function AdminApplicationPage({
                 <AdminApplicationStatusForm
                   applicationId={adminApplication.id}
                   status="in_review"
-                  label="Mark in review"
+                  label="Start review"
+                  description="Use this when JLM Collective has started checking the submitted stay. It does not publish the listing."
                   tone="neutral"
                 />
 
