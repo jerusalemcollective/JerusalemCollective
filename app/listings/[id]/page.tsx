@@ -1,4 +1,4 @@
-﻿import Link from 'next/link'
+﻿import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getSampleListing } from '@/lib/sample-listings'
 import {
@@ -30,6 +30,16 @@ type ListingPageProps = {
 type ListingStructuredDataListing = ListingDetailListing & {
   latitude: number | null
   longitude: number | null
+}
+
+type SimilarListing = {
+  id: string
+  title: string
+  area: string
+  bedrooms: number | null
+  max_guests: number | null
+  price_ils: number | null
+  price_usd: number | null
 }
 
 function getPublicName(host: HostRecord): string {
@@ -149,19 +159,13 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
           }] : []}
           reviews={[]}
           blockedRanges={[]}
+          similarListings={[]}
           fromStays={fromStays}
         />
       )
     }
 
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-[#F8F5F2] px-4">
-        <h1 className="mb-4 text-2xl font-bold text-stone-800">Listing not found</h1>
-        <Link href="/stays" className="text-[#c76f55] hover:underline">
-          Browse all stays
-        </Link>
-      </div>
-    )
+    notFound()
   }
 
   const listing = listingData as ListingDetailListing
@@ -194,6 +198,29 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
       .select('start_date, end_date')
       .eq('listing_id', id),
   ])
+
+  const { data: similarRaw } = await supabase
+    .from('listings')
+    .select('id, title, area, bedrooms, max_guests, price_ils, price_usd')
+    .eq('is_published', true)
+    .eq('area', listing.area)
+    .neq('id', id)
+    .limit(3)
+
+  const similarListings = [...((similarRaw || []) as SimilarListing[])]
+
+  if (similarListings.length < 3) {
+    const excludeIds = [id, ...similarListings.map((similarListing) => similarListing.id)]
+    const { data: additionalSimilarRaw } = await supabase
+      .from('listings')
+      .select('id, title, area, bedrooms, max_guests, price_ils, price_usd')
+      .eq('is_published', true)
+      .not('id', 'in', `(${excludeIds.join(',')})`)
+      .order('is_featured', { ascending: false })
+      .limit(3 - similarListings.length)
+
+    similarListings.push(...((additionalSimilarRaw || []) as SimilarListing[]))
+  }
 
   const hostRecord = hostData as HostRow | null
   const publicHostName = hostRecord ? getPublicName(hostRecord) : null
@@ -287,6 +314,7 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
         photos={photos}
         reviews={reviews}
         blockedRanges={(blockedRangesData || []) as ListingBlockedRange[]}
+        similarListings={similarListings}
         fromStays={fromStays}
       />
     </>

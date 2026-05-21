@@ -1,5 +1,10 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+// NOTE: The ICS parsing logic in this file is intentionally duplicated in
+// supabase/functions/sync-external-calendars/index.ts (and vice versa).
+// Edge Functions cannot import from lib/ so both must be kept in sync manually.
+// If you fix a parsing bug here, apply the same fix to the other file.
+
 type ListingRow = {
   id: string
   host_id: string | null

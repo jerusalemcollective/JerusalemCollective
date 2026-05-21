@@ -54,6 +54,16 @@ export type ListingBlockedRange = {
   end_date: string
 }
 
+type SimilarListing = {
+  id: string
+  title: string
+  area: string
+  bedrooms: number | null
+  max_guests: number | null
+  price_ils: number | null
+  price_usd: number | null
+}
+
 type ListingDetailClientProps = {
   listing: ListingDetailListing
   host: ListingDetailHost | null
@@ -61,11 +71,22 @@ type ListingDetailClientProps = {
   photos: ListingDetailPhoto[]
   reviews: ListingDetailReview[]
   blockedRanges: ListingBlockedRange[]
+  similarListings: SimilarListing[]
   fromStays: boolean
 }
 
 function formatPrice(value?: number | null) {
   return value ? value.toLocaleString() : null
+}
+
+function formatListingPrice(listing: Pick<SimilarListing, 'price_ils' | 'price_usd'>) {
+  const ils = formatPrice(listing.price_ils)
+  const usd = formatPrice(listing.price_usd)
+
+  if (ils && usd) return `₪${ils} / $${usd}`
+  if (ils) return `₪${ils}`
+  if (usd) return `$${usd}`
+  return 'Price on request'
 }
 
 export function ListingDetailClient({
@@ -75,6 +96,7 @@ export function ListingDetailClient({
   photos,
   reviews,
   blockedRanges,
+  similarListings,
   fromStays,
 }: ListingDetailClientProps) {
   const [copiedLink, setCopiedLink] = useState(false)
@@ -311,6 +333,32 @@ export function ListingDetailClient({
             </div>
           </div>
         </div>
+
+        {similarListings.length > 0 && (
+          <section className="mt-10">
+            <h2 className="mb-4 text-xl font-bold text-stone-950">You might also like</h2>
+            <div className="grid gap-4 md:grid-cols-3">
+              {similarListings.map((similarListing) => (
+                <Link
+                  key={similarListing.id}
+                  href={`/listings/${similarListing.id}?from=stays`}
+                  className="rounded-2xl bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
+                    {similarListing.area}
+                  </p>
+                  <h3 className="mt-2 font-bold text-stone-950">{similarListing.title}</h3>
+                  <p className="mt-2 text-sm text-stone-600">
+                    {similarListing.bedrooms || 0} bedrooms · sleeps {similarListing.max_guests || 0}
+                  </p>
+                  <p className="mt-4 text-sm font-semibold text-stone-900">
+                    {formatListingPrice(similarListing)}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
 
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-stone-200 bg-white p-4 shadow-lg lg:hidden">

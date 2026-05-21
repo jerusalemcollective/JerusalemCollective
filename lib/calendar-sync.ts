@@ -1,13 +1,15 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
+// NOTE: The ICS parsing logic in this file is intentionally duplicated in
+// supabase/functions/sync-external-calendars/index.ts (and vice versa).
+// Edge Functions cannot import from lib/ so both must be kept in sync manually.
+// If you fix a parsing bug here, apply the same fix to the other file.
+
 type BlockedRange = {
   start: string
   end: string
 }
 
-type ListingHostRow = {
-  host_id: string | null
-}
 
 function parseICSDate(value: string): string {
   const clean = value.replace(/T.*$/, '').trim()
@@ -58,15 +60,7 @@ export async function syncExternalCalendar(
       throw new Error(`Calendar fetch failed: ${response.status}`)
     }
 
-    const [{ data: listing }, icsText] = await Promise.all([
-      supabase.from('listings').select('host_id').eq('id', listingId).single(),
-      response.text(),
-    ])
-    const hostId = (listing as ListingHostRow | null)?.host_id
-
-    if (!hostId) {
-      throw new Error('Listing host was not found.')
-    }
+    const icsText = await response.text()
 
     const blocks = parseICSBlocks(icsText)
 
@@ -79,7 +73,6 @@ export async function syncExternalCalendar(
     if (blocks.length > 0) {
       const rows = blocks.map((block) => ({
         listing_id: listingId,
-        host_id: hostId,
         start_date: block.start,
         end_date: block.end,
         reason: 'External calendar',
