@@ -79,6 +79,18 @@ type AddressSuggestion = {
   fallbackLongitude?: number
 }
 
+function cleanAddressLabel(label: string) {
+  return label
+    .replace(/,\s*ישראל/g, ', Israel')
+    .replace(/,\s*إسرائيل/g, ', Israel')
+    .replace(/,\s*ירושלים/g, ', Jerusalem')
+    .replace(/,\s*القدس/g, ', Jerusalem')
+    .replace(/,\s*מחוז ירושלים/g, ', Jerusalem District')
+    .replace(/,\s*منطقة القدس/g, ', Jerusalem District')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 type BackupAddressSuggestion = {
   id: string
   label: string
@@ -284,13 +296,15 @@ export function GoogleAddressField({
                 input: `${addressValue} Jerusalem`,
                 componentRestrictions: { country: 'il' },
                 types: ['address'],
+                language: 'en',
+                region: 'il',
               },
               (results) => resolve(results || []),
             )
           })
 
           nextSuggestions = predictions.slice(0, 8).map((prediction) => ({
-            label: prediction.description,
+            label: cleanAddressLabel(prediction.description),
             legacyPlaceId: prediction.place_id,
           }))
         } else if (places?.AutocompleteSuggestion) {
@@ -316,7 +330,7 @@ export function GoogleAddressField({
             .map((suggestion) => {
               const prediction = suggestion.placePrediction
               const label = prediction?.text?.toString() || prediction?.mainText?.toString() || ''
-              return prediction && label ? { label, newPrediction: prediction } : null
+              return prediction && label ? { label: cleanAddressLabel(label), newPrediction: prediction } : null
             })
             .filter((suggestion): suggestion is AddressSuggestion => Boolean(suggestion))
             .slice(0, 8)
@@ -387,13 +401,13 @@ export function GoogleAddressField({
           )
         })
 
-        nextAddress = place?.formatted_address || suggestion.label
+        nextAddress = cleanAddressLabel(place?.formatted_address || suggestion.label)
         nextLatitude = place?.geometry?.location?.lat() ?? null
         nextLongitude = place?.geometry?.location?.lng() ?? null
       } else if (suggestion.newPrediction) {
         const place = suggestion.newPrediction.toPlace()
         await place.fetchFields({ fields: ['formattedAddress', 'location'] })
-        nextAddress = place.formattedAddress || suggestion.label
+        nextAddress = cleanAddressLabel(place.formattedAddress || suggestion.label)
         nextLatitude = place.location?.lat() ?? null
         nextLongitude = place.location?.lng() ?? null
       } else if (suggestion.fallbackLatitude !== undefined && suggestion.fallbackLongitude !== undefined) {

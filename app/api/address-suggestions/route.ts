@@ -24,10 +24,12 @@ export async function GET(request: Request) {
     nominatimUrl.searchParams.set('addressdetails', '0')
     nominatimUrl.searchParams.set('bounded', '1')
     nominatimUrl.searchParams.set('viewbox', '35.10,31.86,35.32,31.68')
+    nominatimUrl.searchParams.set('accept-language', 'en')
 
     const response = await fetch(nominatimUrl, {
       headers: {
         'User-Agent': 'JLM Collective address lookup (https://jlmcollective.co)',
+        'Accept-Language': 'en',
       },
       next: { revalidate: 60 * 60 * 24 },
     })
@@ -39,7 +41,13 @@ export async function GET(request: Request) {
     const results = (await response.json()) as NominatimResult[]
     const suggestions = results.map((result) => ({
       id: String(result.place_id),
-      label: result.display_name,
+      label: result.display_name
+        .replace(/,\s*ישראל/g, ', Israel')
+        .replace(/,\s*إسرائيل/g, ', Israel')
+        .replace(/,\s*ירושלים/g, ', Jerusalem')
+        .replace(/,\s*القدس/g, ', Jerusalem')
+        .replace(/,\s*מחוז ירושלים/g, ', Jerusalem District')
+        .replace(/,\s*منطقة القدس/g, ', Jerusalem District'),
       latitude: Number(result.lat),
       longitude: Number(result.lon),
     }))
