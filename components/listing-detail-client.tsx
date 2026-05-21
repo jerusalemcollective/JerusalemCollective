@@ -39,6 +39,10 @@ export type ListingDetailPhoto = {
   is_cover: boolean | null
 }
 
+type PointerLikeEvent = {
+  clientX: number
+}
+
 export type ListingDetailHost = {
   id: string
   is_verified: boolean | null
@@ -105,12 +109,15 @@ export function ListingDetailClient({
   const [copiedLink, setCopiedLink] = useState(false)
   const [showGallery, setShowGallery] = useState(false)
   const [galleryIndex, setGalleryIndex] = useState(0)
+  const [mobilePhotoIndex, setMobilePhotoIndex] = useState(0)
   const [showMobileBooking, setShowMobileBooking] = useState(false)
   const [bookingDateRange, setBookingDateRange] = useState<DateRange>({})
   const [guestCount, setGuestCount] = useState(1)
   const [existingConversationId, setExistingConversationId] = useState<string | null>(null)
   const [showQuickQuestion, setShowQuickQuestion] = useState(false)
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const mobilePhotoDragStartRef = useRef<number | null>(null)
+  const mobilePhotoDidSwipeRef = useRef(false)
   const shareUrl = typeof window !== 'undefined' ? window.location.href : ''
   const nights =
     bookingDateRange.from && bookingDateRange.to
@@ -203,6 +210,40 @@ export function ListingDetailClient({
   const maxGuests = listing.max_guests || 6
   const priceIls = formatPrice(listing.price_ils)
   const priceUsd = formatPrice(listing.price_usd)
+  const currentMobilePhoto = photos[mobilePhotoIndex] ?? photos[0]
+
+  const goToMobilePhoto = (index: number) => {
+    if (photos.length === 0) return
+    setMobilePhotoIndex((index + photos.length) % photos.length)
+  }
+
+  const handleMobilePhotoDragStart = (event: PointerLikeEvent) => {
+    mobilePhotoDragStartRef.current = event.clientX
+    mobilePhotoDidSwipeRef.current = false
+  }
+
+  const handleMobilePhotoDragEnd = (event: PointerLikeEvent) => {
+    if (mobilePhotoDragStartRef.current === null || photos.length < 2) return
+    const delta = event.clientX - mobilePhotoDragStartRef.current
+    if (delta > 40) {
+      mobilePhotoDidSwipeRef.current = true
+      goToMobilePhoto(mobilePhotoIndex - 1)
+    }
+    if (delta < -40) {
+      mobilePhotoDidSwipeRef.current = true
+      goToMobilePhoto(mobilePhotoIndex + 1)
+    }
+    mobilePhotoDragStartRef.current = null
+  }
+
+  const handleMobilePhotoClick = () => {
+    if (mobilePhotoDidSwipeRef.current) {
+      mobilePhotoDidSwipeRef.current = false
+      return
+    }
+    setGalleryIndex(mobilePhotoIndex)
+    setShowGallery(true)
+  }
 
   return (
     <div className="min-h-screen bg-[#F8F5F2]">
@@ -254,7 +295,61 @@ export function ListingDetailClient({
         <section className="mb-8">
           {photos.length > 0 ? (
             <div className="relative mb-6 overflow-hidden rounded-3xl">
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-[2fr_1fr]">
+              <div
+                className="relative aspect-[4/3] overflow-hidden md:hidden"
+                onTouchStart={(event) => handleMobilePhotoDragStart(event.touches[0])}
+                onTouchEnd={(event) => handleMobilePhotoDragEnd(event.changedTouches[0])}
+                onMouseDown={(event) => handleMobilePhotoDragStart(event)}
+                onMouseUp={(event) => handleMobilePhotoDragEnd(event)}
+              >
+                {currentMobilePhoto && (
+                  <button
+                    type="button"
+                    className="block h-full w-full cursor-grab active:cursor-grabbing"
+                    onClick={handleMobilePhotoClick}
+                  >
+                    <Image
+                      src={currentMobilePhoto.photo_url}
+                      alt={`${listing.title} photo ${mobilePhotoIndex + 1}`}
+                      fill
+                      className="object-cover"
+                      priority={mobilePhotoIndex === 0}
+                      loading={mobilePhotoIndex === 0 ? undefined : 'lazy'}
+                      sizes="100vw"
+                    />
+                  </button>
+                )}
+
+                {photos.length > 1 && (
+                  <>
+                    <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-1.5 rounded-full bg-black/35 px-3 py-2">
+                      {photos.slice(0, 8).map((photo, index) => (
+                        <button
+                          key={photo.id}
+                          type="button"
+                          onClick={() => goToMobilePhoto(index)}
+                          aria-label={`Show photo ${index + 1}`}
+                          className={`h-1.5 rounded-full transition ${
+                            index === mobilePhotoIndex ? 'w-5 bg-white' : 'w-1.5 bg-white/60'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGalleryIndex(mobilePhotoIndex)
+                        setShowGallery(true)
+                      }}
+                      className="absolute bottom-4 right-4 rounded-full bg-black/45 px-3 py-1.5 text-xs font-semibold text-white"
+                    >
+                      {mobilePhotoIndex + 1} / {photos.length}
+                    </button>
+                  </>
+                )}
+              </div>
+
+              <div className="hidden grid-cols-1 gap-2 md:grid md:grid-cols-[2fr_1fr]">
                 <div
                   className="relative aspect-[4/3] cursor-pointer overflow-hidden"
                   onClick={() => {
@@ -326,7 +421,7 @@ export function ListingDetailClient({
                     setGalleryIndex(0)
                     setShowGallery(true)
                   }}
-                  className="absolute bottom-4 right-4 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-800 shadow-sm transition hover:bg-stone-50"
+                  className="absolute bottom-4 right-4 hidden rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-800 shadow-sm transition hover:bg-stone-50 md:block"
                 >
                   View all {photos.length} photos
                 </button>
