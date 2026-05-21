@@ -84,40 +84,62 @@ type PlaceRecord = {
 type PlacePrediction = {
   toPlace: () => PlaceRecord
   text?: { toString: () => string }
+  mainText?: { toString: () => string }
 }
 
-type PlaceAutocompleteSelectEvent = Event & {
+type GoogleAddressSuggestion = {
   placePrediction?: PlacePrediction
-  detail?: {
-    placePrediction?: PlacePrediction
+}
+
+type LegacyPlacePrediction = {
+  description: string
+  place_id: string
+}
+
+type LegacyPlaceResult = {
+  formatted_address?: string
+  geometry?: {
+    location?: PlacesLocation
   }
 }
 
-type PlaceAutocompleteWidget = HTMLElement & {
-  placeholder: string
-  value: string
-  className: string
+type LegacyAutocompleteService = {
+  getPlacePredictions: (
+    request: Record<string, unknown>,
+    callback: (predictions: LegacyPlacePrediction[] | null, status: string) => void,
+  ) => void
+}
+
+type LegacyPlacesService = {
+  getDetails: (
+    request: Record<string, unknown>,
+    callback: (place: LegacyPlaceResult | null, status: string) => void,
+  ) => void
+}
+
+type AddressSuggestion = {
+  label: string
+  prediction?: PlacePrediction
+  placeId?: string
 }
 
 type PlacesLibrary = {
-  PlaceAutocompleteElement: new (options: {
-    includedPrimaryTypes: string[]
-    includedRegionCodes: string[]
-    locationRestriction: {
-      west: number
-      south: number
-      east: number
-      north: number
-    }
-    requestedLanguage: string
-    requestedRegion: string
-  }) => PlaceAutocompleteWidget
+  AutocompleteSessionToken?: new () => unknown
+  AutocompleteSuggestion?: {
+    fetchAutocompleteSuggestions: (request: Record<string, unknown>) => Promise<{ suggestions?: GoogleAddressSuggestion[] }>
+  }
+  AutocompleteService?: new () => LegacyAutocompleteService
+  PlacesService?: new (container: HTMLDivElement) => LegacyPlacesService
+  PlacesServiceStatus?: {
+    OK: string
+  }
 }
 
 type MapsWindow = Window & {
   google?: {
     maps?: {
       importLibrary?: (library: 'places') => Promise<PlacesLibrary>
+      Circle?: new (options: { center: { lat: number; lng: number }; radius: number }) => unknown
     }
   }
 }
@@ -346,14 +368,19 @@ type AddressAutocompleteProps = {
 
 // Address autocomplete using Google Places API
 function AddressAutocomplete({ value, onChange, onSelect, placeholder, className }: AddressAutocompleteProps) {
-  const widgetContainerRef = useRef<HTMLDivElement | null>(null)
-  const widgetRef = useRef<PlaceAutocompleteWidget | null>(null)
+  const placesLibrary = useRef<PlacesLibrary | null>(null)
+  const placesServiceContainerRef = useRef<HTMLDivElement | null>(null)
+  const sessionToken = useRef<unknown>(null)
+  const requestIdRef = useRef(0)
   const [inputValue, setInputValue] = useState(value || '')
+  const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([])
+  const [isOpen, setIsOpen] = useState(false)
+  const [highlightedIndex, setHighlightedIndex] = useState(-1)
   const [isValidated, setIsValidated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [isSearching, setIsSearching] = useState(false)
   const [loadError, setLoadError] = useState('')
 
-  // Sync external value changes
   useEffect(() => {
     if (value !== inputValue) {
       setInputValue(value || '')
@@ -375,57 +402,16 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
       try {
         const places = await loadGooglePlacesLibrary(apiKey)
 
-        if (!isMounted || widgetRef.current || !widgetContainerRef.current) return
+        if (!isMounted) return
 
-        const placeAutocomplete = new places.PlaceAutocompleteElement({
-          includedPrimaryTypes: ['street_address', 'route', 'premise'],
-          includedRegionCodes: ['il'],
-          locationRestriction: {
-            west: 35.10,
-            south: 31.68,
-            east: 35.32,
-            north: 31.86,
-          },
-          requestedLanguage: 'en',
-          requestedRegion: 'il',
-        })
-
-        placeAutocomplete.placeholder = placeholder
-        placeAutocomplete.value = inputValue
-        placeAutocomplete.className = 'jlm-place-autocomplete'
-        placeAutocomplete.addEventListener('gmp-select', async (event) => {
-          const selectEvent = event as PlaceAutocompleteSelectEvent
-          const placePrediction = selectEvent.placePrediction || selectEvent.detail?.placePrediction
-
-          if (!placePrediction) return
-
-          const place = placePrediction.toPlace()
-          await place.fetchFields({
-            fields: ['formattedAddress', 'location'],
-          })
-
-          const address = place.formattedAddress || placePrediction.text?.toString() || ''
-          if (!address) return
-
-          setInputValue(address)
-          setIsValidated(true)
-          onChange(address)
-
-          if (place.location) {
-            onSelect({
-              address,
-              latitude: place.location.lat(),
-              longitude: place.location.lng(),
-            })
-          }
-        })
-        placeAutocomplete.addEventListener('gmp-error', () => {
+        if (!places.AutocompleteSuggestion && !places.AutocompleteService) {
           setLoadError('Address lookup is unavailable right now. You can still type the address manually.')
-        })
+          setIsLoading(false)
+          return
+        }
 
-        widgetContainerRef.current.innerHTML = ''
-        widgetContainerRef.current.appendChild(placeAutocomplete)
-        widgetRef.current = placeAutocomplete
+        placesLibrary.current = places
+        sessionToken.current = places.AutocompleteSessionToken ? new places.AutocompleteSessionToken() : null
         setLoadError('')
         setIsLoading(false)
       } catch (err) {
@@ -446,23 +432,226 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
   }, [])
 
   useEffect(() => {
-    if (widgetRef.current && value !== inputValue) {
-      widgetRef.current.value = value || ''
+    if (isLoading || loadError || inputValue.trim().length < 3) {
+      setSuggestions([])
+      setIsSearching(false)
+      return
     }
-  }, [value, inputValue])
+
+    const timer = window.setTimeout(async () => {
+      const places = placesLibrary.current
+      const mapsWindow = getMapsWindow()
+
+      if (!places?.AutocompleteSuggestion && !places?.AutocompleteService) return
+
+      const currentRequestId = ++requestIdRef.current
+      setIsSearching(true)
+
+      try {
+        let nextSuggestions: AddressSuggestion[] = []
+
+        if (places.AutocompleteSuggestion) {
+          const request: Record<string, unknown> = {
+            input: `${inputValue} Jerusalem`,
+            sessionToken: sessionToken.current,
+            includedRegionCodes: ['il'],
+            includedPrimaryTypes: ['street_address', 'premise', 'route'],
+            language: 'en',
+          }
+
+          if (mapsWindow.google?.maps?.Circle) {
+            request.locationBias = new mapsWindow.google.maps.Circle({
+              center: { lat: 31.7683, lng: 35.2137 },
+              radius: 18000,
+            })
+          }
+
+          const { suggestions: googleSuggestions } =
+            await places.AutocompleteSuggestion.fetchAutocompleteSuggestions(request)
+
+          nextSuggestions = (googleSuggestions || [])
+            .map((suggestion) => {
+              const prediction = suggestion.placePrediction
+              if (!prediction) return null
+
+              const label = prediction.text?.toString() || prediction.mainText?.toString() || ''
+              if (!label) return null
+
+              return { label, prediction }
+            })
+            .filter((suggestion): suggestion is AddressSuggestion => Boolean(suggestion))
+            .slice(0, 8)
+        } else if (places.AutocompleteService) {
+          const service = new places.AutocompleteService()
+          const predictions = await new Promise<LegacyPlacePrediction[]>((resolve) => {
+            service.getPlacePredictions(
+              {
+                input: `${inputValue} Jerusalem`,
+                componentRestrictions: { country: 'il' },
+                types: ['address'],
+              },
+              (results) => resolve(results || []),
+            )
+          })
+
+          nextSuggestions = predictions.slice(0, 8).map((prediction) => ({
+            label: prediction.description,
+            placeId: prediction.place_id,
+          }))
+        }
+
+        if (currentRequestId !== requestIdRef.current) return
+
+        setSuggestions(nextSuggestions)
+        setIsOpen(nextSuggestions.length > 0)
+        setHighlightedIndex(-1)
+      } catch (error) {
+        console.log('[v0] Google address lookup error:', error instanceof Error ? error.message : error)
+        if (currentRequestId === requestIdRef.current) {
+          setSuggestions([])
+          setIsOpen(false)
+        }
+      } finally {
+        if (currentRequestId === requestIdRef.current) {
+          setIsSearching(false)
+        }
+      }
+    }, 250)
+
+    return () => window.clearTimeout(timer)
+  }, [inputValue, isLoading, loadError])
+
+  const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const nextValue = event.target.value
+    setInputValue(nextValue)
+    setIsValidated(false)
+    onChange(nextValue)
+  }
+
+  const handleSelect = async (suggestion: AddressSuggestion) => {
+    try {
+      let address = suggestion.label
+      let latitude: number | null = null
+      let longitude: number | null = null
+
+      if (suggestion.prediction) {
+        const place = suggestion.prediction.toPlace()
+        await place.fetchFields({
+          fields: ['formattedAddress', 'location'],
+        })
+
+        address = place.formattedAddress || suggestion.label
+        latitude = place.location?.lat() ?? null
+        longitude = place.location?.lng() ?? null
+      } else if (suggestion.placeId && placesLibrary.current?.PlacesService && placesServiceContainerRef.current) {
+        const places = placesLibrary.current
+        const service = new places.PlacesService(placesServiceContainerRef.current)
+        const place = await new Promise<LegacyPlaceResult | null>((resolve) => {
+          service.getDetails(
+            {
+              placeId: suggestion.placeId,
+              fields: ['formatted_address', 'geometry'],
+            },
+            (result, status) => {
+              const okStatus = places.PlacesServiceStatus?.OK || 'OK'
+              resolve(status === okStatus ? result : null)
+            },
+          )
+        })
+
+        address = place?.formatted_address || suggestion.label
+        latitude = place?.geometry?.location?.lat() ?? null
+        longitude = place?.geometry?.location?.lng() ?? null
+      }
+
+      setInputValue(address)
+      setIsValidated(true)
+      setIsOpen(false)
+      setSuggestions([])
+      onChange(address)
+
+      if (latitude !== null && longitude !== null) {
+        onSelect({
+          address,
+          latitude,
+          longitude,
+        })
+      }
+    } catch (error) {
+      console.log('[v0] Google address selection error:', error instanceof Error ? error.message : error)
+      setLoadError('Address lookup is unavailable right now. You can still type the address manually.')
+    }
+  }
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (!isOpen || suggestions.length === 0) return
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      setHighlightedIndex((current) => (current < suggestions.length - 1 ? current + 1 : 0))
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      setHighlightedIndex((current) => (current > 0 ? current - 1 : suggestions.length - 1))
+    } else if (event.key === 'Enter' && highlightedIndex >= 0) {
+      event.preventDefault()
+      void handleSelect(suggestions[highlightedIndex])
+    } else if (event.key === 'Escape') {
+      setIsOpen(false)
+    }
+  }
+
+  const handleBlur = () => {
+    window.setTimeout(() => setIsOpen(false), 150)
+  }
 
   return (
     <div className="relative">
-      <div ref={widgetContainerRef} className={isLoading ? 'hidden' : ''} />
-      {isLoading && (
-        <input
-          type="text"
-          value=""
-          readOnly
-          placeholder="Loading address lookup..."
-          className={className}
-        />
+      <div ref={placesServiceContainerRef} className="hidden" />
+      <input
+        type="text"
+        value={inputValue}
+        onChange={handleInputChange}
+        onFocus={() => {
+          if (suggestions.length > 0) setIsOpen(true)
+        }}
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
+        placeholder={isLoading ? 'Loading address lookup...' : placeholder}
+        className={className}
+        autoComplete="off"
+        role="combobox"
+        aria-expanded={isOpen && suggestions.length > 0}
+        aria-haspopup="listbox"
+        aria-autocomplete="list"
+      />
+
+      {isOpen && suggestions.length > 0 && (
+        <ul
+          className="absolute left-0 right-0 top-full z-50 mt-1 max-h-72 overflow-y-auto rounded-2xl border border-stone-200 bg-white py-2 shadow-lg"
+          role="listbox"
+        >
+          {suggestions.map((suggestion, index) => (
+            <li
+              key={suggestion.label}
+              role="option"
+              aria-selected={index === highlightedIndex}
+              className={`cursor-pointer px-4 py-3 text-sm transition ${
+                index === highlightedIndex
+                  ? 'bg-[#F8F5F2] text-stone-900'
+                  : 'text-stone-700 hover:bg-stone-50'
+              }`}
+              onMouseEnter={() => setHighlightedIndex(index)}
+              onMouseDown={(event: MouseEvent<HTMLLIElement>) => {
+                event.preventDefault()
+                void handleSelect(suggestion)
+              }}
+            >
+              {suggestion.label}
+            </li>
+          ))}
+        </ul>
       )}
+
       {inputValue && isValidated && (
         <div className="mt-1 flex items-center gap-1 text-xs text-green-600">
           <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -473,7 +662,7 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
       )}
       {inputValue && !isValidated && !isLoading && !loadError && (
         <div className="mt-1 text-xs text-stone-500">
-          Choose the full address from the Google suggestions.
+          {isSearching ? 'Searching Google Maps...' : 'Choose the full address from the Google suggestions.'}
         </div>
       )}
       {loadError && (
