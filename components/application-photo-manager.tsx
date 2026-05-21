@@ -10,6 +10,7 @@ type ApplicationPhoto = {
   storage_path: string | null
   is_cover: boolean
   sort_order: number
+  label?: string | null
 }
 
 type ApplicationPhotoManagerProps = {
@@ -26,6 +27,7 @@ export function ApplicationPhotoManager({
   const [photos, setPhotos] = useState(initialPhotos)
   const [message, setMessage] = useState('')
   const [isPending, startTransition] = useTransition()
+  const [draggingPhotoIndex, setDraggingPhotoIndex] = useState<number | null>(null)
   const supabase = createClient()
 
   async function handleUpload(files: FileList | null) {
@@ -66,7 +68,7 @@ export function ApplicationPhotoManager({
           sort_order: nextSortOrder,
           is_cover: nextSortOrder === 0,
         })
-        .select('id, photo_url, storage_path, is_cover, sort_order')
+        .select('id, photo_url, storage_path, is_cover, sort_order, label')
         .single()
 
       if (insertError) {
@@ -81,6 +83,76 @@ export function ApplicationPhotoManager({
     }
 
     if (inputRef.current) inputRef.current.value = ''
+    startTransition(() => router.refresh())
+  }
+
+  async function persistPhotoOrder(nextPhotos: ApplicationPhoto[]) {
+    setMessage('')
+    setPhotos(nextPhotos)
+
+    const updates = nextPhotos.map((photo, index) =>
+      supabase
+        .from('listing_photos')
+        .update({
+          sort_order: index,
+          is_cover: index === 0,
+        })
+        .eq('id', photo.id),
+    )
+
+    const results = await Promise.all(updates)
+    const firstError = results.find((result) => result.error)?.error
+
+    if (firstError) {
+      setMessage(firstError.message)
+      return
+    }
+
+    startTransition(() => router.refresh())
+  }
+
+  async function movePhoto(index: number, direction: -1 | 1) {
+    const targetIndex = index + direction
+    if (targetIndex < 0 || targetIndex >= photos.length) return
+
+    await reorderPhotos(index, targetIndex)
+  }
+
+  async function reorderPhotos(fromIndex: number, toIndex: number) {
+    if (fromIndex === toIndex) return
+
+    const nextPhotos = [...photos]
+    const [photo] = nextPhotos.splice(fromIndex, 1)
+    nextPhotos.splice(toIndex, 0, photo)
+    await persistPhotoOrder(nextPhotos.map((item, itemIndex) => ({
+      ...item,
+      sort_order: itemIndex,
+      is_cover: itemIndex === 0,
+    })))
+  }
+
+  async function dropPhoto(targetIndex: number) {
+    if (draggingPhotoIndex === null) return
+    await reorderPhotos(draggingPhotoIndex, targetIndex)
+    setDraggingPhotoIndex(null)
+  }
+
+  async function updatePhotoLabel(photoId: string, label: string) {
+    setMessage('')
+    setPhotos((current) =>
+      current.map((photo) => (photo.id === photoId ? { ...photo, label } : photo)),
+    )
+
+    const { error } = await supabase
+      .from('listing_photos')
+      .update({ label: label.trim() || null })
+      .eq('id', photoId)
+
+    if (error) {
+      setMessage(error.message)
+      return
+    }
+
     startTransition(() => router.refresh())
   }
 
@@ -101,7 +173,21 @@ export function ApplicationPhotoManager({
       await supabase.storage.from('listing-photos').remove([photo.storage_path])
     }
 
-    setPhotos((current) => current.filter((item) => item.id !== photo.id))
+    const remainingPhotos = photos
+      .filter((item) => item.id !== photo.id)
+      .map((item, index) => ({
+        ...item,
+        sort_order: index,
+        is_cover: index === 0,
+      }))
+
+    setPhotos(remainingPhotos)
+
+    if (remainingPhotos.length > 0) {
+      await persistPhotoOrder(remainingPhotos)
+      return
+    }
+
     startTransition(() => router.refresh())
   }
 
@@ -124,21 +210,57 @@ export function ApplicationPhotoManager({
 
       {photos.length > 0 && (
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {photos.map((photo) => (
-            <div key={photo.id} className="group relative overflow-hidden rounded-2xl">
-              <img src={photo.photo_url} alt="" className="aspect-[4/3] w-full object-cover" />
-              <button
-                type="button"
-                onClick={() => void removePhoto(photo)}
-                className="absolute right-3 top-3 rounded-full bg-white px-3 py-1 text-xs font-bold text-stone-800 shadow-sm transition hover:bg-stone-100"
-              >
-                Remove
-              </button>
-              {photo.is_cover && (
-                <span className="absolute bottom-3 left-3 rounded-full bg-white px-3 py-1 text-xs font-bold text-stone-800 shadow-sm">
-                  Cover
-                </span>
-              )}
+          {photos.map((photo, index) => (
+            <div
+              key={photo.id}
+              draggable
+              onDragStart={() => setDraggingPhotoIndex(index)}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={() => void dropPhoto(index)}
+              onDragEnd={() => setDraggingPhotoIndex(null)}
+              className={`overflow-hidden rounded-2xl bg-[#F8F5F2] ${draggingPhotoIndex === index ? 'opacity-60' : ''}`}
+            >
+              <div className="group relative">
+                <img src={photo.photo_url} alt={photo.label || ''} className="aspect-[4/3] w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => void removePhoto(photo)}
+                  className="absolute right-3 top-3 rounded-full bg-white px-3 py-1 text-xs font-bold text-stone-800 shadow-sm transition hover:bg-stone-100"
+                >
+                  Remove
+                </button>
+                {photo.is_cover && (
+                  <span className="absolute bottom-3 left-3 rounded-full bg-white px-3 py-1 text-xs font-bold text-stone-800 shadow-sm">
+                    Cover
+                  </span>
+                )}
+              </div>
+              <div className="space-y-2 p-3">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void movePhoto(index, -1)}
+                    disabled={index === 0 || isPending}
+                    className="flex-1 rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-400 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Move up
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void movePhoto(index, 1)}
+                    disabled={index === photos.length - 1 || isPending}
+                    className="flex-1 rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-400 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Move down
+                  </button>
+                </div>
+                <input
+                  defaultValue={photo.label || ''}
+                  onBlur={(event) => void updatePhotoLabel(photo.id, event.target.value)}
+                  placeholder="Photo label, e.g. Bedroom 1"
+                  className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#c76f55]"
+                />
+              </div>
             </div>
           ))}
         </div>

@@ -177,7 +177,7 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
   ] = await Promise.all([
     supabase
       .from('listing_photos')
-      .select('id, photo_url, is_cover')
+      .select('id, photo_url, is_cover, label')
       .eq('listing_id', id)
       .order('sort_order', { ascending: true }),
     listing.host_id

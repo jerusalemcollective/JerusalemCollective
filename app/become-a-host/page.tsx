@@ -5,12 +5,14 @@ import Link from 'next/link'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { ensureHostProfile } from '@/lib/host-profile'
+import { HOST_TERMS, HOST_TERMS_LAST_UPDATED, HOST_TERMS_VERSION } from '@/lib/host-terms'
 import { STAY_AMENITIES } from '@/lib/stay-amenities'
 import { GoogleAddressField } from '@/components/google-address-field'
 
 type PhotoUpload = {
   file: File
   preview: string
+  label: string
 }
 
 type DocumentUpload = {
@@ -759,7 +761,6 @@ const steps = [
 ]
 
 const minimumPhotoCount = 5
-const hostTermsVersion = '2026-05-18'
 const listingDraftStorageKey = 'jlm-listing-draft-v1'
 const isSupabaseEnvReady = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -777,9 +778,12 @@ export default function BecomeAHostPage() {
   const [checkingHost, setCheckingHost] = useState(true)
   const [accountUser, setAccountUser] = useState<User | null>(null)
   const [requiresHostTermsAcceptance, setRequiresHostTermsAcceptance] = useState(true)
+  const [hostTermsAcceptedAt, setHostTermsAcceptedAt] = useState<string | null>(null)
+  const [showHostTermsModal, setShowHostTermsModal] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
   const [aiSuggestion, setAiSuggestion] = useState<AiSuggestion | null>(null)
+  const [draggingPhotoIndex, setDraggingPhotoIndex] = useState<number | null>(null)
 
   const progress = useMemo(() => {
     return Math.round(((step + 1) / steps.length) * 100)
@@ -852,6 +856,7 @@ export default function BecomeAHostPage() {
         setHostId(hostProfile.id)
         setAccountUser(user)
         setRequiresHostTermsAcceptance(!hostProfile.host_terms_accepted_at)
+        setHostTermsAcceptedAt(hostProfile.host_terms_accepted_at || null)
         setForm((current) => ({
           ...current,
           host_name:
@@ -898,6 +903,37 @@ export default function BecomeAHostPage() {
           : [...current.amenities, item],
       }
     })
+  }
+
+  function movePhoto(index: number, direction: -1 | 1) {
+    const targetIndex = index + direction
+    if (targetIndex < 0 || targetIndex >= form.photos.length) return
+
+    reorderPhotos(index, targetIndex)
+  }
+
+  function reorderPhotos(fromIndex: number, toIndex: number) {
+    if (fromIndex === toIndex) return
+
+    const nextPhotos = [...form.photos]
+    const [photo] = nextPhotos.splice(fromIndex, 1)
+    nextPhotos.splice(toIndex, 0, photo)
+    updateField('photos', nextPhotos)
+  }
+
+  function dropPhoto(targetIndex: number) {
+    if (draggingPhotoIndex === null) return
+    reorderPhotos(draggingPhotoIndex, targetIndex)
+    setDraggingPhotoIndex(null)
+  }
+
+  function updatePhotoLabel(index: number, label: string) {
+    updateField(
+      'photos',
+      form.photos.map((photo, photoIndex) =>
+        photoIndex === index ? { ...photo, label } : photo,
+      ),
+    )
   }
 
   async function generateListingCopy() {
@@ -1120,9 +1156,12 @@ async function handleSubmit() {
 
     const supabase = createClient()
 
+    let acceptedTermsAt = hostTermsAcceptedAt
+
     if (requiresHostTermsAcceptance) {
-      const { error: termsError } = await supabase.rpc('accept_current_host_terms', {
-        accepted_version: hostTermsVersion,
+      const { data: acceptedHost, error: termsError } = await supabase.rpc('accept_current_host_terms_for_host', {
+        accepted_version: HOST_TERMS_VERSION,
+        target_host_id: hostId,
       })
 
       if (termsError) {
@@ -1132,6 +1171,10 @@ async function handleSubmit() {
         return
       }
 
+      acceptedTermsAt =
+        acceptedHost?.host_terms_accepted_at ||
+        new Date().toISOString()
+      setHostTermsAcceptedAt(acceptedTermsAt)
       setRequiresHostTermsAcceptance(false)
     }
 
@@ -1171,6 +1214,8 @@ async function handleSubmit() {
       id_doc_type: form.id_doc_type,
       id_verified: false,
 
+      host_terms_accepted_at: acceptedTermsAt,
+      host_terms_version: HOST_TERMS_VERSION,
       status: 'new',
     }
 
@@ -1266,6 +1311,7 @@ async function handleSubmit() {
             storage_path: storagePath,
             sort_order: i,
             is_cover: i === 0, // First photo is cover
+            label: photo.label.trim() || null,
           })
 
         if (photoRecordError) {
@@ -1754,7 +1800,8 @@ async function handleSubmit() {
                           })
                           const newPhotos = validFiles.map(file => ({
                             file,
-                            preview: URL.createObjectURL(file)
+                            preview: URL.createObjectURL(file),
+                            label: '',
                           }))
                           updateField('photos', [...form.photos, ...newPhotos])
                           e.target.value = '' // Reset input
@@ -1764,31 +1811,67 @@ async function handleSubmit() {
                     </label>
 
                     {form.photos.length > 0 && (
-                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
                         {form.photos.map((photo, index) => (
-                          <div key={index} className="group relative aspect-square overflow-hidden rounded-xl bg-stone-100">
-                            <img
-                              src={photo.preview}
-                              alt={`Upload ${index + 1}`}
-                              className="h-full w-full object-cover"
-                            />
-                            {index === 0 && (
-                              <span className="absolute left-2 top-2 rounded-full bg-[#c76f55] px-2 py-0.5 text-xs font-bold text-white">
-                                Cover
-                              </span>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                URL.revokeObjectURL(photo.preview)
-                                updateField('photos', form.photos.filter((_, i) => i !== index))
-                              }}
-                              className="absolute right-2 top-2 rounded-full bg-white/90 p-1.5 text-stone-600 opacity-0 shadow-sm transition hover:bg-white hover:text-red-600 group-hover:opacity-100"
-                            >
-                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
+                          <div
+                            key={`${photo.preview}-${index}`}
+                            draggable
+                            onDragStart={() => setDraggingPhotoIndex(index)}
+                            onDragOver={(event) => event.preventDefault()}
+                            onDrop={() => dropPhoto(index)}
+                            onDragEnd={() => setDraggingPhotoIndex(null)}
+                            className={`overflow-hidden rounded-xl bg-stone-100 ${draggingPhotoIndex === index ? 'opacity-60' : ''}`}
+                          >
+                            <div className="group relative aspect-square">
+                              <img
+                                src={photo.preview}
+                                alt={photo.label || `Upload ${index + 1}`}
+                                className="h-full w-full object-cover"
+                              />
+                              {index === 0 && (
+                                <span className="absolute left-2 top-2 rounded-full bg-[#c76f55] px-2 py-0.5 text-xs font-bold text-white">
+                                  Cover
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  URL.revokeObjectURL(photo.preview)
+                                  updateField('photos', form.photos.filter((_, i) => i !== index))
+                                }}
+                                className="absolute right-2 top-2 rounded-full bg-white/90 p-1.5 text-stone-600 opacity-0 shadow-sm transition hover:bg-white hover:text-red-600 group-hover:opacity-100"
+                              >
+                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                            <div className="space-y-2 bg-white p-3">
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => movePhoto(index, -1)}
+                                  disabled={index === 0}
+                                  className="flex-1 rounded-full border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-400 disabled:cursor-not-allowed disabled:opacity-40"
+                                >
+                                  Move up
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => movePhoto(index, 1)}
+                                  disabled={index === form.photos.length - 1}
+                                  className="flex-1 rounded-full border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-400 disabled:cursor-not-allowed disabled:opacity-40"
+                                >
+                                  Move down
+                                </button>
+                              </div>
+                              <input
+                                value={photo.label}
+                                onChange={(event) => updatePhotoLabel(index, event.target.value)}
+                                placeholder="Photo label, e.g. Bedroom 1"
+                                className="w-full rounded-xl border border-stone-200 px-3 py-2 text-xs text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#c76f55]"
+                              />
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -2152,9 +2235,13 @@ async function handleSubmit() {
 
                     <span>
                       I agree to the{' '}
-                      <Link href="/terms" target="_blank" rel="noopener noreferrer" className="font-semibold text-[#c76f55] hover:underline">
+                      <button
+                        type="button"
+                        onClick={() => setShowHostTermsModal(true)}
+                        className="font-semibold text-[#c76f55] hover:underline"
+                      >
                         Host Terms and Conditions
-                      </Link>{' '}
+                      </button>{' '}
                       and confirm that I am authorised to list this stay.
                     </span>
                   </label>
@@ -2192,9 +2279,80 @@ async function handleSubmit() {
               )}
             </div>
           </section>
+          {showHostTermsModal && (
+            <HostTermsModal onClose={() => setShowHostTermsModal(false)} />
+          )}
         </div>
       </section>
     </main>
+  )
+}
+
+function HostTermsModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/50 px-4 py-6"
+      onClick={onClose}
+    >
+      <div
+        className="flex max-h-[88vh] w-full max-w-3xl flex-col rounded-3xl bg-white shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-stone-100 px-6 py-5">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
+              Host agreement
+            </p>
+            <h2 className="mt-1 text-2xl font-bold text-stone-950">
+              Host Terms and Conditions
+            </h2>
+            <p className="mt-1 text-sm text-stone-500">
+              Version {HOST_TERMS_VERSION}. Last updated {HOST_TERMS_LAST_UPDATED}.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-stone-200 px-4 py-2 text-sm font-bold text-stone-700 transition hover:border-stone-400"
+          >
+            Close
+          </button>
+        </div>
+
+        <div className="overflow-y-auto px-6 py-5">
+          <p className="text-sm leading-6 text-stone-700">
+            These host terms explain the standards expected when submitting and managing a stay on
+            JLM Collective. They are intended to protect guests, hosts, and the quality of the
+            marketplace.
+          </p>
+
+          <div className="mt-6 space-y-6">
+            {HOST_TERMS.map((term) => (
+              <section key={term.title}>
+                <h3 className="text-base font-bold text-stone-950">{term.title}</h3>
+                <div className="mt-2 space-y-3">
+                  {term.body.map((paragraph) => (
+                    <p key={paragraph} className="text-sm leading-6 text-stone-700">
+                      {paragraph}
+                    </p>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        </div>
+
+        <div className="border-t border-stone-100 px-6 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full rounded-full bg-[#c76f55] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47]"
+          >
+            I have read these terms
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 

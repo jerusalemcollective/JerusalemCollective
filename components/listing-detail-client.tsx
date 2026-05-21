@@ -34,6 +34,7 @@ export type ListingDetailPhoto = {
   id: string
   photo_url: string
   is_cover: boolean | null
+  label?: string | null
 }
 
 export type ListingDetailHost = {
@@ -182,7 +183,7 @@ export function ListingDetailClient({
                 >
                   <img
                     src={photos[0]?.photo_url}
-                    alt={listing.title}
+                    alt={photos[0]?.label || listing.title}
                     className="h-full w-full object-cover transition hover:scale-105"
                   />
                 </div>
@@ -199,7 +200,7 @@ export function ListingDetailClient({
                     >
                       <img
                         src={photo.photo_url}
-                        alt={`${listing.title} photo ${index + 2}`}
+                        alt={photo.label || `${listing.title} photo ${index + 2}`}
                         className="h-full w-full object-cover transition hover:scale-105"
                       />
                     </div>
@@ -220,7 +221,7 @@ export function ListingDetailClient({
                     >
                       <img
                         src={photo.photo_url}
-                        alt={`${listing.title} photo ${index + 4}`}
+                        alt={photo.label || `${listing.title} photo ${index + 4}`}
                         className="h-full w-full object-cover transition hover:scale-105"
                       />
                     </div>
@@ -641,7 +642,7 @@ function GalleryOverlay({ photos, index, title, onClose, onIndexChange }: Galler
         <img
           key={photos[index]?.id}
           src={photos[index]?.photo_url}
-          alt={`${title} - photo ${index + 1}`}
+          alt={photos[index]?.label || `${title} - photo ${index + 1}`}
           className="max-h-full max-w-full object-contain"
         />
 

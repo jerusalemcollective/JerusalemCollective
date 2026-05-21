@@ -44,6 +44,7 @@ type ApplicationPhoto = {
   storage_path: string | null
   is_cover: boolean
   sort_order: number
+  label?: string | null
 }
 
 const amenityOptions = STAY_AMENITIES
@@ -77,7 +78,7 @@ export default async function HostApplicationEditPage({
       .single(),
     supabase
       .from('listing_photos')
-      .select('id, photo_url, storage_path, is_cover, sort_order')
+      .select('id, photo_url, storage_path, is_cover, sort_order, label')
       .eq('application_id', id)
       .order('is_cover', { ascending: false })
       .order('sort_order', { ascending: true }),

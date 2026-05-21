@@ -80,7 +80,7 @@ type AddressSuggestion = {
 }
 
 function cleanAddressLabel(label: string) {
-  return label
+  const cleaned = label
     .replace(/,\s*ישראל/g, ', Israel')
     .replace(/,\s*إسرائيل/g, ', Israel')
     .replace(/,\s*ירושלים/g, ', Jerusalem')
@@ -89,6 +89,20 @@ function cleanAddressLabel(label: string) {
     .replace(/,\s*منطقة القدس/g, ', Jerusalem District')
     .replace(/\s+/g, ' ')
     .trim()
+
+  const parts = cleaned
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .filter((part) => !['Israel', 'Jerusalem District'].includes(part))
+
+  const dedupedParts = parts.filter((part, index) => parts.indexOf(part) === index)
+  const hasJerusalem = dedupedParts.some((part) => part.toLowerCase() === 'jerusalem')
+  const shortenedParts = dedupedParts.slice(0, hasJerusalem ? 3 : 2)
+
+  if (!hasJerusalem) shortenedParts.push('Jerusalem')
+
+  return shortenedParts.join(', ')
 }
 
 type BackupAddressSuggestion = {
@@ -357,7 +371,7 @@ export function GoogleAddressField({
           setIsSearching(false)
         }
       }
-    }, 250)
+    }, 120)
 
     return () => window.clearTimeout(timer)
   }, [addressValue, isLoading, loadError])

@@ -7,6 +7,32 @@ type NominatimResult = {
   lon: string
 }
 
+function cleanAddressLabel(label: string) {
+  const cleaned = label
+    .replace(/,\s*ישראל/g, ', Israel')
+    .replace(/,\s*إسرائيل/g, ', Israel')
+    .replace(/,\s*ירושלים/g, ', Jerusalem')
+    .replace(/,\s*القدس/g, ', Jerusalem')
+    .replace(/,\s*מחוז ירושלים/g, ', Jerusalem District')
+    .replace(/,\s*منطقة القدس/g, ', Jerusalem District')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  const parts = cleaned
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .filter((part) => !['Israel', 'Jerusalem District'].includes(part))
+
+  const dedupedParts = parts.filter((part, index) => parts.indexOf(part) === index)
+  const hasJerusalem = dedupedParts.some((part) => part.toLowerCase() === 'jerusalem')
+  const shortenedParts = dedupedParts.slice(0, hasJerusalem ? 3 : 2)
+
+  if (!hasJerusalem) shortenedParts.push('Jerusalem')
+
+  return shortenedParts.join(', ')
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const query = searchParams.get('q')?.trim()
@@ -41,13 +67,7 @@ export async function GET(request: Request) {
     const results = (await response.json()) as NominatimResult[]
     const suggestions = results.map((result) => ({
       id: String(result.place_id),
-      label: result.display_name
-        .replace(/,\s*ישראל/g, ', Israel')
-        .replace(/,\s*إسرائيل/g, ', Israel')
-        .replace(/,\s*ירושלים/g, ', Jerusalem')
-        .replace(/,\s*القدس/g, ', Jerusalem')
-        .replace(/,\s*מחוז ירושלים/g, ', Jerusalem District')
-        .replace(/,\s*منطقة القدس/g, ', Jerusalem District'),
+      label: cleanAddressLabel(result.display_name),
       latitude: Number(result.lat),
       longitude: Number(result.lon),
     }))

@@ -93,12 +93,23 @@ export default async function AdminApplicationPage({
               {photos?.length ? (
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {photos.map((photo) => (
-                    <img
-                      key={photo.id}
-                      src={photo.photo_url}
-                      alt=""
-                      className="aspect-[4/3] w-full rounded-2xl object-cover"
-                    />
+                    <div key={photo.id} className="overflow-hidden rounded-2xl bg-[#F8F5F2]">
+                      <div className="relative">
+                        <img
+                          src={photo.photo_url}
+                          alt={photo.label || ''}
+                          className="aspect-[4/3] w-full object-cover"
+                        />
+                        {photo.is_cover && (
+                          <span className="absolute bottom-3 left-3 rounded-full bg-white px-3 py-1 text-xs font-bold text-stone-800 shadow-sm">
+                            Cover
+                          </span>
+                        )}
+                      </div>
+                      {photo.label && (
+                        <p className="px-3 py-2 text-xs font-semibold text-stone-700">{photo.label}</p>
+                      )}
+                    </div>
                   ))}
                 </div>
               ) : (
