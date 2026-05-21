@@ -177,8 +177,11 @@ export function MessagesInbox({ mode, initialConversationId = null }: MessagesIn
   const [draft, setDraft] = useState('')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
+  const [isAccepting, setIsAccepting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [guestProfile, setGuestProfile] = useState<GuestProfile | null>(null)
+  const [listingFilter, setListingFilter] = useState<string>('all')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -495,6 +498,35 @@ export function MessagesInbox({ mode, initialConversationId = null }: MessagesIn
     [conversations, selectedConversationId],
   )
 
+  const listingOptions = useMemo(() => {
+    const seen = new Map<string, string>()
+    for (const conversation of conversations) {
+      if (conversation.listing_id && conversation.listing) {
+        seen.set(conversation.listing_id, conversation.listing.title)
+      }
+    }
+    return Array.from(seen.entries())
+  }, [conversations])
+
+  const filteredConversations = useMemo(() => {
+    return conversations.filter((conversation) => {
+      const matchesListing = listingFilter === 'all' || conversation.listing_id === listingFilter
+      const matchesStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'new' && conversation.request?.status === 'new') ||
+        (statusFilter === 'replied' && conversation.request?.status === 'host_replied') ||
+        (statusFilter === 'accepted' && conversation.request?.status === 'accepted') ||
+        (statusFilter === 'no_request' && !conversation.request)
+
+      return matchesListing && matchesStatus
+    })
+  }, [conversations, listingFilter, statusFilter])
+
+  const canAcceptSelectedConversation =
+    mode === 'host' &&
+    (selectedConversation?.request?.status === 'new' ||
+      selectedConversation?.request?.status === 'host_replied')
+
   const handleSend = async () => {
     if (!user || !selectedConversationId || !draft.trim()) return
 
@@ -576,6 +608,37 @@ export function MessagesInbox({ mode, initialConversationId = null }: MessagesIn
     }
   }
 
+  const handleAcceptEnquiry = async () => {
+    if (!selectedConversation?.request?.id) return
+
+    setIsAccepting(true)
+    setError(null)
+
+    try {
+      const supabase = createClient()
+      await updateBookingRequestStatus(supabase, selectedConversation.request.id, 'accepted')
+      setConversations((current) =>
+        current.map((conversation) =>
+          conversation.id === selectedConversation.id
+            ? {
+                ...conversation,
+                request: conversation.request
+                  ? {
+                      ...conversation.request,
+                      status: 'accepted',
+                    }
+                  : conversation.request,
+              }
+            : conversation,
+        ),
+      )
+    } catch (err) {
+      console.error('Failed to accept enquiry', err)
+    } finally {
+      setIsAccepting(false)
+    }
+  }
+
   if (loading) {
     return <MessagesInboxSkeleton />
   }
@@ -600,8 +663,36 @@ export function MessagesInbox({ mode, initialConversationId = null }: MessagesIn
           <div className="border-b border-stone-100 px-5 py-4">
             <h2 className="text-lg font-bold text-stone-900">Messages</h2>
           </div>
+          {mode === 'host' && (
+            <div className="space-y-2 border-b border-stone-100 px-3 py-3">
+              {listingOptions.length > 1 && (
+                <select
+                  value={listingFilter}
+                  onChange={(event) => setListingFilter(event.target.value)}
+                  className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs text-stone-700"
+                >
+                  <option value="all">All listings</option>
+                  {listingOptions.map(([id, title]) => (
+                    <option key={id} value={id}>
+                      {title}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <select
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value)}
+                className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs text-stone-700"
+              >
+                <option value="all">All messages</option>
+                <option value="new">New enquiries</option>
+                <option value="replied">Awaiting reply</option>
+                <option value="accepted">Accepted</option>
+              </select>
+            </div>
+          )}
           <div className="divide-y divide-stone-100">
-            {conversations.map((conversation) => (
+            {filteredConversations.map((conversation) => (
               <button
                 key={conversation.id}
                 type="button"
@@ -754,6 +845,23 @@ export function MessagesInbox({ mode, initialConversationId = null }: MessagesIn
 
           <div className="border-t border-stone-100 p-4">
             {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+            {canAcceptSelectedConversation && (
+              <div className="border-b border-stone-100 bg-[#fff4ef] px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-stone-900">
+                    Ready to confirm this booking?
+                  </p>
+                  <button
+                    type="button"
+                    disabled={isAccepting}
+                    onClick={handleAcceptEnquiry}
+                    className="rounded-full bg-[#c76f55] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#b85f47] disabled:opacity-60"
+                  >
+                    {isAccepting ? 'Confirming...' : 'Accept booking'}
+                  </button>
+                </div>
+              </div>
+            )}
             {mode === 'host' && (
               <div className="border-t border-stone-100 bg-white px-4 pb-1 pt-3">
                 <p className="mb-2 text-xs font-bold uppercase tracking-widest text-stone-400">

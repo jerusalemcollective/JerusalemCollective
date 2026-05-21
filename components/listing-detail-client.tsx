@@ -109,7 +109,9 @@ export function ListingDetailClient({
   const [bookingDateRange, setBookingDateRange] = useState<DateRange>({})
   const [guestCount, setGuestCount] = useState(1)
   const [existingConversationId, setExistingConversationId] = useState<string | null>(null)
+  const [showQuickQuestion, setShowQuickQuestion] = useState(false)
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const shareUrl = typeof window !== 'undefined' ? window.location.href : ''
   const nights =
     bookingDateRange.from && bookingDateRange.to
       ? Math.round(
@@ -172,6 +174,24 @@ export function ListingDetailClient({
     copyTimeoutRef.current = setTimeout(() => setCopiedLink(false), 2000)
   }
 
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: listing.title,
+          text: 'Check out this Jerusalem stay on JLM Collective',
+          url: shareUrl,
+        })
+      } catch {
+        // User cancelled share - do nothing
+      }
+    } else {
+      await navigator.clipboard.writeText(shareUrl)
+      setCopiedLink(true)
+      setTimeout(() => setCopiedLink(false), 2000)
+    }
+  }
+
   const averageRating =
     reviews.length > 0
       ? (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1)
@@ -205,14 +225,29 @@ export function ListingDetailClient({
         )}
 
         <div className="mb-5 flex items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={handleCopyListingLink}
-            className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-300 hover:bg-stone-50"
-          >
-            <Link2 className="h-4 w-4" />
-            {copiedLink ? 'Copied!' : 'Copy link'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleCopyListingLink}
+              className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-300 hover:bg-stone-50"
+            >
+              <Link2 className="h-4 w-4" />
+              {copiedLink ? 'Copied!' : 'Copy link'}
+            </button>
+            <button
+              type="button"
+              onClick={handleShare}
+              className="flex items-center gap-1.5 rounded-full border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-600 transition hover:border-stone-300"
+              aria-label="Share listing"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                <polyline points="16 6 12 2 8 6" />
+                <line x1="12" y1="2" x2="12" y2="15" />
+              </svg>
+              Share
+            </button>
+          </div>
           <SaveListingButton listingId={listing.id} />
         </div>
 
@@ -432,6 +467,8 @@ export function ListingDetailClient({
                 totalILS={totalILS}
                 totalUSD={totalUSD}
                 existingConversationId={existingConversationId}
+                showQuickQuestion={showQuickQuestion}
+                setShowQuickQuestion={setShowQuickQuestion}
                 onConversationCreated={setExistingConversationId}
               />
               <HostCard host={host} publicHostName={publicHostName} />
@@ -522,6 +559,8 @@ export function ListingDetailClient({
                 totalILS={totalILS}
                 totalUSD={totalUSD}
                 existingConversationId={existingConversationId}
+                showQuickQuestion={showQuickQuestion}
+                setShowQuickQuestion={setShowQuickQuestion}
                 onConversationCreated={setExistingConversationId}
                 mobile
               />
@@ -595,6 +634,8 @@ function BookingControls({
   totalILS,
   totalUSD,
   existingConversationId,
+  showQuickQuestion,
+  setShowQuickQuestion,
   onConversationCreated,
   mobile = false,
 }: {
@@ -608,6 +649,8 @@ function BookingControls({
   totalILS: number | null
   totalUSD: number | null
   existingConversationId: string | null
+  showQuickQuestion: boolean
+  setShowQuickQuestion: (value: boolean) => void
   onConversationCreated: (conversationId: string) => void
   mobile?: boolean
 }) {
@@ -675,6 +718,26 @@ function BookingControls({
             buttonClassName={`${mobile ? 'flex w-full items-center justify-center rounded-xl bg-[#c76f55] py-4' : 'mb-3 flex w-full items-center justify-center rounded-xl bg-[#c76f55] py-3.5'} font-semibold text-white transition hover:bg-[#b55f47]`}
             onConversationCreated={onConversationCreated}
           />
+        )}
+        {!existingConversationId && (
+          <>
+            <button
+              type="button"
+              onClick={() => setShowQuickQuestion(true)}
+              className="mt-2 w-full rounded-full border border-stone-200 px-6 py-3 text-sm font-semibold text-stone-700 transition hover:border-[#c76f55] hover:text-[#c76f55]"
+            >
+              Ask a quick question
+            </button>
+            <MessageHostDialog
+              listingId={listing.id}
+              listingTitle={listing.title}
+              hostId={listing.host_id}
+              quickQuestion
+              open={showQuickQuestion}
+              onOpenChange={setShowQuickQuestion}
+              onConversationCreated={onConversationCreated}
+            />
+          </>
         )}
         {!mobile && <p className="mb-4 text-center text-xs text-stone-500">You won&apos;t be charged yet</p>}
         <div className={`${mobile ? 'space-y-3' : 'space-y-2 border-t border-stone-100 pt-4'}`}>

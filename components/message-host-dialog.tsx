@@ -19,6 +19,9 @@ type MessageHostDialogProps = {
   intent?: 'message' | 'request'
   buttonLabel?: string
   buttonClassName?: string
+  quickQuestion?: boolean
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
   onConversationCreated?: (conversationId: string) => void
 }
 
@@ -58,11 +61,14 @@ export function MessageHostDialog({
   intent = 'message',
   buttonLabel,
   buttonClassName,
+  quickQuestion = false,
+  open: controlledOpen,
+  onOpenChange,
   onConversationCreated,
 }: MessageHostDialogProps) {
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
   const [message, setMessage] = useState(
-    intent === 'request'
+    intent === 'request' && !quickQuestion
       ? 'Hi, I would like to request this stay for my dates. Please let me know if it is available.'
       : '',
   )
@@ -72,13 +78,21 @@ export function MessageHostDialog({
   const [submitted, setSubmitted] = useState(false)
   const router = useRouter()
   const isRequest = intent === 'request'
+  const dialogOpen = controlledOpen ?? internalOpen
   const checkIn = dateRange?.from ? formatDateISO(dateRange.from) : null
   const checkOut = dateRange?.to ? formatDateISO(dateRange.to) : null
   const checkInDisplay = dateRange?.from ? formatDateDisplay(dateRange.from) : null
   const checkOutDisplay = dateRange?.to ? formatDateDisplay(dateRange.to) : null
 
+  const setDialogOpen = (nextOpen: boolean) => {
+    if (controlledOpen === undefined) {
+      setInternalOpen(nextOpen)
+    }
+    onOpenChange?.(nextOpen)
+  }
+
   if (!hostId) {
-    return (
+    return controlledOpen === undefined ? (
       <button
         type="button"
         disabled
@@ -89,7 +103,7 @@ export function MessageHostDialog({
         </svg>
         Messaging unavailable
       </button>
-    )
+    ) : null
   }
 
   const handleSend = async () => {
@@ -109,7 +123,7 @@ export function MessageHostDialog({
         return
       }
 
-      if (isRequest && (!checkIn || !checkOut)) {
+      if (isRequest && !quickQuestion && (!checkIn || !checkOut)) {
         setError('Please choose check-in and check-out dates first.')
         return
       }
@@ -156,30 +170,36 @@ export function MessageHostDialog({
   }
 
   const closeDialog = () => {
-    setOpen(false)
+    setDialogOpen(false)
     setSubmitted(false)
     setConversationId(null)
-    setMessage('')
+    setMessage(
+      intent === 'request' && !quickQuestion
+        ? 'Hi, I would like to request this stay for my dates. Please let me know if it is available.'
+        : '',
+    )
     setError(null)
   }
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className={
-          buttonClassName ||
-          'flex w-full items-center justify-center gap-2 rounded-xl border border-stone-200 bg-white py-3 text-sm font-semibold text-stone-700 transition hover:border-stone-300 hover:bg-stone-50'
-        }
-      >
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-        </svg>
-        {buttonLabel || (isRequest ? 'Request to book' : 'Message host')}
-      </button>
+      {controlledOpen === undefined && (
+        <button
+          type="button"
+          onClick={() => setDialogOpen(true)}
+          className={
+            buttonClassName ||
+            'flex w-full items-center justify-center gap-2 rounded-xl border border-stone-200 bg-white py-3 text-sm font-semibold text-stone-700 transition hover:border-stone-300 hover:bg-stone-50'
+          }
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+          {buttonLabel || (isRequest ? 'Request to book' : 'Message host')}
+        </button>
+      )}
 
-      {open && (
+      {dialogOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
           <button
             type="button"
@@ -221,7 +241,7 @@ export function MessageHostDialog({
                     {[
                       {
                         step: '1',
-                        text: 'The host reviews your enquiry and replies — usually within a few hours.',
+                        text: 'The host reviews your enquiry and replies â€” usually within a few hours.',
                       },
                       {
                         step: '2',
@@ -277,10 +297,12 @@ export function MessageHostDialog({
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
-                      {isRequest ? 'Request to book' : 'Message host'}
+                      {quickQuestion ? 'Quick question' : isRequest ? 'Request to book' : 'Message host'}
                     </p>
-                    <h2 className="mt-2 text-2xl font-bold text-stone-950">{listingTitle}</h2>
-                    {isRequest && (
+                    <h2 className="mt-2 text-2xl font-bold text-stone-950">
+                      {quickQuestion ? 'Ask a quick question' : listingTitle}
+                    </h2>
+                    {isRequest && !quickQuestion && (
                       <p className="mt-2 text-sm text-stone-600">
                         {checkInDisplay && checkOutDisplay
                           ? `${checkInDisplay} to ${checkOutDisplay} | ${guests} guest${guests === 1 ? '' : 's'}`
@@ -301,12 +323,16 @@ export function MessageHostDialog({
                 </div>
 
                 <label className="mt-6 block">
-                  <span className="text-sm font-semibold text-stone-800">Your message</span>
+                  <span className="text-sm font-semibold text-stone-800">
+                    {quickQuestion ? 'Your question' : 'Your message'}
+                  </span>
                   <textarea
                     value={message}
                     onChange={(event) => setMessage(event.target.value)}
                     placeholder={
-                      isRequest
+                      quickQuestion
+                        ? 'e.g. Is there a Shabbat lift? Is the kitchen kosher?'
+                        : isRequest
                         ? 'Add anything the host should know about your stay...'
                         : 'Hi, is this stay available for my dates?'
                     }
@@ -330,7 +356,7 @@ export function MessageHostDialog({
                     disabled={!message.trim() || loading}
                     className="rounded-full bg-[#c76f55] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#b55f47] disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {loading ? 'Sending...' : isRequest ? 'Send request' : 'Send message'}
+                    {loading ? 'Sending...' : quickQuestion ? 'Send question' : isRequest ? 'Send request' : 'Send message'}
                   </button>
                 </div>
               </>

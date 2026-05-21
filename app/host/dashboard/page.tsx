@@ -110,11 +110,7 @@ export default async function HostDashboardPage() {
     ? `https://jlmcollective.co/api/host-calendar/${hostCalendar.calendar_token}.ics`
     : null
   const isNewHost = totalListings === 0 && totalApplications === 0
-  const hasActions =
-    newEnquiries > 0 ||
-    awaitingResponses > 0 ||
-    openSupportCases.length > 0 ||
-    Boolean(pendingApplication)
+  const hasActions = awaitingResponses > 0 || openSupportCases.length > 0 || Boolean(pendingApplication)
 
   return (
     <main className="min-h-screen bg-[#F8F5F2] px-5 py-8 text-[#252525] md:px-6">
@@ -136,6 +132,37 @@ export default async function HostDashboardPage() {
             Add another stay
           </Link>
         </header>
+
+        <section className="border-b border-stone-200 py-6">
+          {newEnquiries > 0 ? (
+            <Link
+              href="/host/dashboard/messages"
+              className="block rounded-3xl bg-[#c76f55] p-6 text-white shadow-sm transition hover:bg-[#b85f47]"
+            >
+              <p className="text-5xl font-bold">{newEnquiries}</p>
+              <p className="mt-2 text-lg font-semibold">
+                {newEnquiries === 1
+                  ? 'guest is waiting for your reply'
+                  : 'guests are waiting for your reply'}
+              </p>
+              <p className="mt-1 text-sm text-white/80">Tap to open messages →</p>
+            </Link>
+          ) : (
+            <div className="rounded-3xl bg-white p-6 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5">
+                    <path d="M20 6L9 17l-5-5" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-bold text-stone-950">All caught up</p>
+                  <p className="text-sm text-stone-500">No new enquiries waiting</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
 
         <section className="border-b border-stone-200 py-6">
           <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
@@ -163,14 +190,6 @@ export default async function HostDashboardPage() {
             </div>
           ) : hasActions ? (
             <div className="mt-4 grid gap-4 md:grid-cols-2">
-              {newEnquiries > 0 ? (
-                <ActionCard
-                  href="/host/dashboard/messages"
-                  title={`${newEnquiries} new ${newEnquiries === 1 ? 'enquiry' : 'enquiries'}`}
-                  detail="Review the latest guest messages and respond while the enquiry is fresh."
-                  tone="amber"
-                />
-              ) : null}
               {awaitingResponses > 0 ? (
                 <ActionCard
                   href="/host/dashboard/messages"

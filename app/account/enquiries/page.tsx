@@ -58,34 +58,51 @@ export default async function EnquiriesPage() {
           <EmptyState />
         ) : (
           <div className="divide-y divide-stone-200 border-y border-stone-200">
-            {enquiries.map((enquiry) => (
-              <Link
-                key={enquiry.id}
-                href={
-                  enquiry.conversation_id
-                    ? `/account/messages?conversation=${enquiry.conversation_id}`
-                    : enquiry.listings?.id
-                      ? `/listings/${enquiry.listings.id}`
-                      : '/stays'
-                }
-                className="grid gap-3 py-5 transition hover:bg-white/50 md:grid-cols-[1fr_auto] md:items-center"
-              >
-                <div>
-                  <p className="font-bold text-stone-950">{enquiry.listings?.title || 'Stay enquiry'}</p>
-                  <p className="mt-1 text-sm text-stone-600">{enquiry.listings?.area || 'Jerusalem'}</p>
-                  <p className="mt-2 text-sm font-medium text-stone-700">
-                    {formatDate(enquiry.check_in)} to {formatDate(enquiry.check_out)}
-                  </p>
-                  <p className="mt-1 text-sm text-stone-600">
-                    {enquiry.guests} guest{enquiry.guests === 1 ? '' : 's'}
-                  </p>
-                  {enquiry.message && (
-                    <p className="mt-3 line-clamp-2 text-sm text-stone-600">{enquiry.message}</p>
-                  )}
+            {enquiries.map((enquiry) => {
+              const waitTime = formatWaitTime(enquiry.created_at, enquiry.status)
+              const shouldShowSimilarStays = shouldShowSimilarStaysLink(enquiry.created_at, enquiry.status)
+              const enquiryHref = enquiry.conversation_id
+                ? `/account/messages?conversation=${enquiry.conversation_id}`
+                : enquiry.listings?.id
+                  ? `/listings/${enquiry.listings.id}`
+                  : '/stays'
+              const similarStaysHref = enquiry.listings?.id
+                ? `/stays?area=${encodeURIComponent(enquiry.listings.area || '')}`
+                : '/stays'
+
+              return (
+                <div
+                  key={enquiry.id}
+                  className="grid gap-3 py-5 transition hover:bg-white/50 md:grid-cols-[1fr_auto] md:items-center"
+                >
+                  <Link href={enquiryHref}>
+                    <p className="font-bold text-stone-950">{enquiry.listings?.title || 'Stay enquiry'}</p>
+                    <p className="mt-1 text-sm text-stone-600">{enquiry.listings?.area || 'Jerusalem'}</p>
+                    <p className="mt-2 text-sm font-medium text-stone-700">
+                      {formatDate(enquiry.check_in)} to {formatDate(enquiry.check_out)}
+                    </p>
+                    <p className="mt-1 text-sm text-stone-600">
+                      {enquiry.guests} guest{enquiry.guests === 1 ? '' : 's'}
+                    </p>
+                    {enquiry.message && (
+                      <p className="mt-3 line-clamp-2 text-sm text-stone-600">{enquiry.message}</p>
+                    )}
+                  </Link>
+                  <div>
+                    <StatusBadge status={enquiry.status} scheme="enquiry" />
+                    {waitTime && <p className="mt-1 text-xs text-stone-500">{waitTime}</p>}
+                    {shouldShowSimilarStays && (
+                      <Link
+                        href={similarStaysHref}
+                        className="mt-2 inline-flex text-xs font-semibold text-[#c76f55] hover:underline"
+                      >
+                        Browse similar stays →
+                      </Link>
+                    )}
+                  </div>
                 </div>
-                <StatusBadge status={enquiry.status} scheme="enquiry" />
-              </Link>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
@@ -118,4 +135,19 @@ function formatDate(value?: string | null) {
     month: 'short',
     year: 'numeric',
   })
+}
+
+function formatWaitTime(createdAt: string | null, status: string): string | null {
+  if (status !== 'new' || !createdAt) return null
+  const hours = Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60))
+  if (hours < 1) return 'Sent just now'
+  if (hours < 24) return `Sent ${hours} hour${hours === 1 ? '' : 's'} ago — awaiting reply`
+  const days = Math.floor(hours / 24)
+  return `Sent ${days} day${days === 1 ? '' : 's'} ago — awaiting reply`
+}
+
+function shouldShowSimilarStaysLink(createdAt: string | null, status: string): boolean {
+  if (status !== 'new' || !createdAt) return false
+  const hours = Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60))
+  return hours >= 48
 }
