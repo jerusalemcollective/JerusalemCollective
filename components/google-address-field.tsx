@@ -75,6 +75,15 @@ type AddressSuggestion = {
   label: string
   newPrediction?: NewPlacePrediction
   legacyPlaceId?: string
+  fallbackLatitude?: number
+  fallbackLongitude?: number
+}
+
+type BackupAddressSuggestion = {
+  id: string
+  label: string
+  latitude: number
+  longitude: number
 }
 
 type GoogleAddressFieldProps = {
@@ -198,12 +207,24 @@ export function GoogleAddressField({
   const [loadError, setLoadError] = useState('')
   const addressValue = isControlled ? value || '' : internalValue
 
+  async function fetchBackupSuggestions(query: string): Promise<AddressSuggestion[]> {
+    const response = await fetch(`/api/address-suggestions?q=${encodeURIComponent(query)}`)
+    if (!response.ok) return []
+
+    const data = (await response.json()) as { suggestions?: BackupAddressSuggestion[] }
+    return (data.suggestions || []).map((suggestion) => ({
+      label: suggestion.label,
+      fallbackLatitude: suggestion.latitude,
+      fallbackLongitude: suggestion.longitude,
+    }))
+  }
+
   useEffect(() => {
     let isMounted = true
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 
     if (!apiKey) {
-      setLoadError('Google address lookup is not configured. Type the address manually and continue.')
+      setLoadError('')
       setIsLoading(false)
       return
     }
@@ -214,7 +235,7 @@ export function GoogleAddressField({
         if (!isMounted) return
 
         if (!places.AutocompleteService && !places.AutocompleteSuggestion) {
-          setLoadError('Google address lookup is unavailable. Type the address manually and continue.')
+          setLoadError('')
           setIsLoading(false)
           return
         }
@@ -226,7 +247,7 @@ export function GoogleAddressField({
       } catch (error) {
         console.error('Google address lookup failed:', error)
         if (isMounted) {
-          setLoadError('Google address lookup is unavailable. Type the address manually and continue.')
+          setLoadError('')
           setIsLoading(false)
         }
       }
@@ -249,15 +270,13 @@ export function GoogleAddressField({
     const timer = window.setTimeout(async () => {
       const places = placesLibrary.current
       const mapsWindow = getMapsWindow()
-      if (!places?.AutocompleteService && !places?.AutocompleteSuggestion) return
-
       const currentRequestId = ++requestIdRef.current
       setIsSearching(true)
 
       try {
         let nextSuggestions: AddressSuggestion[] = []
 
-        if (places.AutocompleteService) {
+        if (places?.AutocompleteService) {
           const service = new places.AutocompleteService()
           const predictions = await new Promise<LegacyPlacePrediction[]>((resolve) => {
             service.getPlacePredictions(
@@ -274,7 +293,7 @@ export function GoogleAddressField({
             label: prediction.description,
             legacyPlaceId: prediction.place_id,
           }))
-        } else if (places.AutocompleteSuggestion) {
+        } else if (places?.AutocompleteSuggestion) {
           const request: Record<string, unknown> = {
             input: `${addressValue} Jerusalem`,
             sessionToken: sessionToken.current,
@@ -303,6 +322,10 @@ export function GoogleAddressField({
             .slice(0, 8)
         }
 
+        if (nextSuggestions.length === 0) {
+          nextSuggestions = await fetchBackupSuggestions(addressValue)
+        }
+
         if (currentRequestId !== requestIdRef.current) return
 
         setSuggestions(nextSuggestions)
@@ -311,8 +334,9 @@ export function GoogleAddressField({
       } catch (error) {
         console.error('Google address suggestions failed:', error)
         if (currentRequestId === requestIdRef.current) {
-          setSuggestions([])
-          setIsOpen(false)
+          const backupSuggestions = await fetchBackupSuggestions(addressValue)
+          setSuggestions(backupSuggestions)
+          setIsOpen(backupSuggestions.length > 0)
         }
       } finally {
         if (currentRequestId === requestIdRef.current) {
@@ -372,6 +396,9 @@ export function GoogleAddressField({
         nextAddress = place.formattedAddress || suggestion.label
         nextLatitude = place.location?.lat() ?? null
         nextLongitude = place.location?.lng() ?? null
+      } else if (suggestion.fallbackLatitude !== undefined && suggestion.fallbackLongitude !== undefined) {
+        nextLatitude = suggestion.fallbackLatitude
+        nextLongitude = suggestion.fallbackLongitude
       }
 
       setAddress(nextAddress)
@@ -381,7 +408,7 @@ export function GoogleAddressField({
       setSuggestions([])
     } catch (error) {
       console.error('Google address selection failed:', error)
-      setLoadError('Google address lookup is unavailable. Type the address manually and continue.')
+      setLoadError('Address lookup is unavailable. Type the address manually and continue.')
     }
   }
 
