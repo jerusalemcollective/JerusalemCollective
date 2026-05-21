@@ -1,12 +1,10 @@
-import { Suspense, type ReactNode } from 'react'
+import { Suspense } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { allNeighborhoods } from '@/lib/neighborhoods'
 import { getAmenityLabel } from '@/lib/stay-amenities'
 import { StaysFilterBar } from '@/components/stays-filter-bar'
 import { StaysMapView } from '@/components/stays-map-view'
-import { StaysNeighborhoodNav } from '@/components/stays-neighborhood-nav'
 
 export const metadata = {
   title: 'Jerusalem Stays | JLM Collective',
@@ -14,8 +12,6 @@ export const metadata = {
 }
 
 export const revalidate = 1800
-
-const neighborhoods = ['All', ...allNeighborhoods]
 
 type SearchParams = Record<string, string>
 
@@ -28,6 +24,7 @@ type Listing = {
   price_ils: number | null
   price_usd: number | null
   booking_type: string
+  is_featured: boolean | null
   latitude: number
   longitude: number
   amenities: string[]
@@ -45,23 +42,6 @@ type ListingPhotoRow = {
 
 type StaysPageProps = {
   searchParams: Promise<SearchParams>
-}
-
-function Badge({ children }: { children: ReactNode }) {
-  return (
-    <span className="rounded-full border border-white/70 bg-white/90 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-stone-700 shadow-sm">
-      {children}
-    </span>
-  )
-}
-
-function formatBookingType(type: string): string {
-  switch (type) {
-    case 'request': return 'Request to Book'
-    case 'enquiry': return 'Enquiry Only'
-    case 'instant': return 'Instant Book'
-    default: return 'Request to Book'
-  }
 }
 
 function formatPrice(listing: Pick<Listing, 'price_ils' | 'price_usd'>) {
@@ -126,16 +106,6 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
   const minPrice = parsePositiveNumber(params.minPrice)
   const maxPrice = parsePositiveNumber(params.maxPrice)
   const amenityLabels = parseAmenityLabels(params.amenities)
-  const hasActiveSearch = Boolean(
-    params.neighborhood ||
-      params.area ||
-      params.checkIn ||
-      params.checkOut ||
-      params.guests ||
-      params.minPrice ||
-      params.maxPrice ||
-      params.amenities,
-  )
   const listings = await loadListings({
     selectedArea,
     checkIn,
@@ -148,17 +118,13 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
 
   return (
     <div className="min-h-screen">
-      <div className="sticky top-[73px] z-30 border-b border-stone-200 bg-[#F8F5F2]/95 backdrop-blur-sm">
-        <div className={`mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:px-6 lg:flex-row lg:items-center ${hasActiveSearch ? 'lg:justify-end' : 'lg:justify-between'}`}>
-          {!hasActiveSearch && (
-            <StaysNeighborhoodNav
-              neighborhoods={neighborhoods}
-              selectedArea={selectedArea}
-              baseQuery={params}
-            />
-          )}
+      <div className="border-b border-stone-200 bg-[#F8F5F2]">
+        <div className="mx-auto grid max-w-7xl gap-3 px-4 py-4 sm:px-6 lg:grid-cols-[1fr_auto] lg:items-start">
+          <Suspense fallback={<div className="h-14 rounded-3xl bg-white shadow-sm" />}>
+            <StaysFilterBar />
+          </Suspense>
 
-          <div className="flex w-fit items-center gap-1 rounded-full border border-stone-200 bg-white p-1">
+          <div className="flex w-fit items-center gap-1 rounded-full border border-stone-200 bg-white p-1 shadow-sm">
             <Link
               href={buildHref(params, { view: null })}
               className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
@@ -177,18 +143,12 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
             </Link>
           </div>
         </div>
-
-        <div className="mx-auto max-w-7xl px-4 pb-4 sm:px-6">
-          <Suspense fallback={<div className="h-24 rounded-3xl bg-white shadow-sm" />}>
-            <StaysFilterBar />
-          </Suspense>
-        </div>
       </div>
 
       {view === 'list' ? (
         <div className="mx-auto max-w-7xl px-6 py-10">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold tracking-tight text-stone-950">
+            <h1 className="font-display text-3xl font-bold tracking-tight text-stone-950">
               {selectedArea === 'All' ? 'All stays in Jerusalem' : `Stays in ${selectedArea}`}
             </h1>
             <p className="mt-2 text-stone-500">{listings.length} verified apartments available</p>
@@ -211,43 +171,9 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
               </Link>
             </div>
           ) : (
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-              {listings.map((stay) => (
-                <Link key={stay.id} href={`/listings/${stay.id}?from=stays`}>
-                  <article className="group cursor-pointer">
-                    <div className="relative mb-4 aspect-[4/3] overflow-hidden rounded-3xl bg-stone-200 shadow-sm">
-                      {stay.cover_photo_url ? (
-                        <Image
-                          src={stay.cover_photo_url}
-                          alt={stay.title}
-                          fill
-                          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 400px"
-                          loading="lazy"
-                          className="object-cover transition hover:scale-105"
-                        />
-                      ) : (
-                        <div className="absolute inset-0 bg-gradient-to-br from-stone-200 via-stone-100 to-stone-300 transition group-hover:scale-105" />
-                      )}
-                      <div className="absolute left-3 top-3"><Badge>{formatBookingType(stay.booking_type)}</Badge></div>
-                      <div className="absolute bottom-3 left-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-stone-700 shadow-sm">Verified stay</div>
-                    </div>
-                    <div className="flex justify-between gap-4">
-                      <div>
-                        <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">{stay.area}</p>
-                        <h3 className="text-lg font-bold leading-tight text-stone-900 group-hover:underline">{stay.title}</h3>
-                        <p className="mt-1 text-sm text-stone-500">{stay.bedrooms} bedrooms | sleeps {stay.max_guests}</p>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <p className="text-lg font-bold text-stone-900">
-                          {formatPrice(stay)}
-                          {formatPrice(stay) !== 'Price on request' && (
-                            <span className="ml-1 text-sm font-normal text-stone-500">/ night</span>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </article>
-                </Link>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
+              {listings.map((listing) => (
+                <ListingCard key={listing.id} listing={listing} />
               ))}
             </div>
           )}
@@ -310,7 +236,7 @@ async function loadListings({
 
   let listingsQuery = supabase
     .from('listings')
-    .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, latitude, longitude, amenities')
+    .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, is_featured, latitude, longitude, amenities')
     .eq('is_published', true)
     .order('is_featured', { ascending: false })
     .order('created_at', { ascending: false })
@@ -359,4 +285,70 @@ async function loadListings({
     ...listing,
     cover_photo_url: photoMap.get(listing.id) || null,
   }))
+}
+
+function ListingCard({
+  listing,
+}: {
+  listing: Listing & {
+    cover_photo_url?: string | null
+  }
+}) {
+  return (
+    <Link
+      href={`/listings/${listing.id}?from=stays`}
+      className="group block"
+    >
+      <div className="relative aspect-square overflow-hidden rounded-2xl bg-stone-100">
+        {listing.cover_photo_url ? (
+          <Image
+            src={listing.cover_photo_url}
+            alt={listing.title}
+            fill
+            className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            loading="lazy"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-stone-100">
+            <svg
+              width="28"
+              height="28"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#d6d3d1"
+              strokeWidth="1.5"
+            >
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <path d="m21 15-5-5L5 21" />
+            </svg>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-3 space-y-0.5">
+        <p className="text-[11px] font-bold uppercase tracking-widest text-[#c76f55]">
+          {listing.area}
+        </p>
+        <p className="line-clamp-1 font-semibold leading-snug text-stone-950">
+          {listing.title}
+        </p>
+        <p className="text-sm text-stone-500">
+          {[
+            listing.bedrooms ? `${listing.bedrooms} bed` : null,
+            listing.max_guests ? `sleeps ${listing.max_guests}` : null,
+          ]
+            .filter(Boolean)
+            .join(' \u00b7 ')}
+        </p>
+        <p className="pt-1 text-sm font-semibold text-stone-950">
+          {formatPrice(listing)}
+          {(listing.price_ils || listing.price_usd) && (
+            <span className="font-normal text-stone-500"> / night</span>
+          )}
+        </p>
+      </div>
+    </Link>
+  )
 }

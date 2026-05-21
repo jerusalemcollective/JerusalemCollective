@@ -74,7 +74,7 @@ export function StaysFilterBar() {
       ),
     [searchParams],
   )
-  const showSummary = hasFilters && !filtersOpen
+  const showSummary = !filtersOpen
   const activeArea = searchParams.get('neighborhood') || searchParams.get('area')
   const summaryItems = useMemo(() => {
     const items: string[] = []
@@ -160,9 +160,11 @@ export function StaysFilterBar() {
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="min-w-0">
             <p className="truncate text-sm font-bold text-stone-950">
-              {summaryItems.length > 0 ? summaryItems.join(' · ') : 'Search filters'}
+              {summaryItems.length > 0 ? summaryItems.join(' · ') : 'All Jerusalem stays'}
             </p>
-            <p className="mt-1 text-xs text-stone-500">Filtered stays</p>
+            <p className="mt-1 text-xs text-stone-500">
+              {hasFilters ? 'Filtered stays' : 'Dates, guests, price, amenities'}
+            </p>
           </div>
           <div className="flex shrink-0 gap-2">
             <button
@@ -172,13 +174,15 @@ export function StaysFilterBar() {
             >
               Edit filters
             </button>
-            <button
-              type="button"
-              onClick={handleClear}
-              className="rounded-full bg-[#c76f55] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#b85f47]"
-            >
-              Clear
-            </button>
+            {hasFilters && (
+              <button
+                type="button"
+                onClick={handleClear}
+                className="rounded-full bg-[#c76f55] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#b85f47]"
+              >
+                Clear
+              </button>
+            )}
           </div>
         </div>
       ) : (
@@ -197,7 +201,7 @@ export function StaysFilterBar() {
         </div>
       )}
 
-      <div className={`${filtersOpen ? 'mt-4 grid' : 'hidden'} gap-4 ${hasFilters ? '' : 'lg:grid'} lg:grid-cols-[minmax(260px,1.4fr)_0.55fr_0.8fr_1.3fr_auto] lg:items-start`}>
+      <div className={`${filtersOpen ? 'mt-4 grid' : 'hidden'} gap-4 lg:grid-cols-[minmax(260px,1.4fr)_0.55fr_0.8fr_1.3fr_auto] lg:items-start`}>
         <BookingDateRangePicker dateRange={dateRange} setDateRange={setDateRange} />
 
         <label className="block text-sm font-semibold text-stone-700">

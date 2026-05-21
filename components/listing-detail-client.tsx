@@ -90,8 +90,8 @@ function formatListingPrice(listing: Pick<SimilarListing, 'price_ils' | 'price_u
   const ils = formatPrice(listing.price_ils)
   const usd = formatPrice(listing.price_usd)
 
-  if (ils && usd) return `₪${ils} / $${usd}`
-  if (ils) return `₪${ils}`
+  if (ils && usd) return `\u20aa${ils} / $${usd}`
+  if (ils) return `\u20aa${ils}`
   if (usd) return `$${usd}`
   return 'Price on request'
 }
@@ -258,133 +258,129 @@ export function ListingDetailClient({
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-8 pb-28 lg:pb-8">
+      <main className="pb-28 lg:pb-8">
+        <div className="mx-auto max-w-6xl px-5 py-8 md:px-8">
         {fromStays && (
           <Link href="/stays" className="mb-4 inline-flex text-sm font-medium text-stone-500 transition hover:text-stone-900">
             &larr; Back to search
           </Link>
         )}
 
-        <div className="mb-5 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleCopyListingLink}
-              className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-300 hover:bg-stone-50"
-            >
-              <Link2 className="h-4 w-4" />
-              {copiedLink ? 'Copied!' : 'Copy link'}
-            </button>
-            <button
-              type="button"
-              onClick={handleShare}
-              className="flex items-center gap-1.5 rounded-full border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-600 transition hover:border-stone-300"
-              aria-label="Share listing"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-                <polyline points="16 6 12 2 8 6" />
-                <line x1="12" y1="2" x2="12" y2="15" />
-              </svg>
-              Share
-            </button>
+        <div className="mb-5 flex items-center justify-end">
+          <div className="flex items-center justify-between gap-3 md:justify-end">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleCopyListingLink}
+                className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-300 hover:bg-stone-50"
+              >
+                <Link2 className="h-4 w-4" />
+                {copiedLink ? 'Copied!' : 'Copy link'}
+              </button>
+              <button
+                type="button"
+                onClick={handleShare}
+                className="flex items-center gap-1.5 rounded-full border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-600 transition hover:border-stone-300"
+                aria-label="Share listing"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                  <polyline points="16 6 12 2 8 6" />
+                  <line x1="12" y1="2" x2="12" y2="15" />
+                </svg>
+                Share
+              </button>
+            </div>
+            <SaveListingButton listingId={listing.id} />
           </div>
-          <SaveListingButton listingId={listing.id} />
         </div>
 
-        <section className="mb-8">
+        <div className="relative mb-8 overflow-hidden rounded-3xl">
           {photos.length > 0 ? (
-            <div className="relative mb-6 overflow-hidden rounded-3xl bg-white shadow-sm">
-              <div
-                className="relative aspect-[16/11] overflow-hidden md:hidden"
-                onTouchStart={(event) => handleMobilePhotoDragStart(event.touches[0])}
-                onTouchEnd={(event) => handleMobilePhotoDragEnd(event.changedTouches[0])}
-                onMouseDown={(event) => handleMobilePhotoDragStart(event)}
-                onMouseUp={(event) => handleMobilePhotoDragEnd(event)}
-              >
-                {currentMobilePhoto && (
-                  <button
-                    type="button"
-                    className="block h-full w-full cursor-grab active:cursor-grabbing"
-                    onClick={handleMobilePhotoClick}
-                  >
+            <>
+              <div className="relative md:hidden">
+                <div
+                  className="relative aspect-[4/3] overflow-hidden bg-stone-100"
+                  onTouchStart={(event) => handleMobilePhotoDragStart(event.touches[0])}
+                  onTouchEnd={(event) => handleMobilePhotoDragEnd(event.changedTouches[0])}
+                  onMouseDown={(event) => handleMobilePhotoDragStart(event)}
+                  onMouseUp={(event) => handleMobilePhotoDragEnd(event)}
+                  onClick={handleMobilePhotoClick}
+                >
+                  {photos[mobilePhotoIndex] && (
                     <Image
-                      src={currentMobilePhoto.photo_url}
-                      alt={`${listing.title} photo ${mobilePhotoIndex + 1}`}
+                      src={photos[mobilePhotoIndex].photo_url}
+                      alt={listing.title}
                       fill
                       className="object-cover"
-                      priority={mobilePhotoIndex === 0}
-                      loading={mobilePhotoIndex === 0 ? undefined : 'lazy'}
+                      priority
                       sizes="100vw"
                     />
-                  </button>
-                )}
-
+                  )}
+                </div>
                 {photos.length > 1 && (
-                  <>
-                    <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-1.5 rounded-full bg-black/35 px-3 py-2">
-                      {photos.slice(0, 8).map((photo, index) => (
-                        <button
-                          key={photo.id}
-                          type="button"
-                          onClick={() => goToMobilePhoto(index)}
-                          aria-label={`Show photo ${index + 1}`}
-                          className={`h-1.5 rounded-full transition ${
-                            index === mobilePhotoIndex ? 'w-5 bg-white' : 'w-1.5 bg-white/60'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setGalleryIndex(mobilePhotoIndex)
-                        setShowGallery(true)
-                      }}
-                      className="absolute bottom-4 right-4 rounded-full bg-black/45 px-3 py-1.5 text-xs font-semibold text-white"
-                    >
-                      {mobilePhotoIndex + 1} / {photos.length}
-                    </button>
-                  </>
+                  <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
+                    {photos.slice(0, 5).map((photo, i) => (
+                      <button
+                        key={photo.id}
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          setMobilePhotoIndex(i)
+                        }}
+                        className={`h-1.5 rounded-full transition-all ${
+                          i === mobilePhotoIndex
+                            ? 'w-4 bg-white'
+                            : 'w-1.5 bg-white/60'
+                        }`}
+                      />
+                    ))}
+                  </div>
                 )}
               </div>
 
-              <div className="hidden grid-cols-1 gap-1.5 md:grid md:grid-cols-[1.65fr_1fr]">
+              <div className="hidden md:grid md:grid-cols-2 md:gap-2">
                 <div
-                  className="relative aspect-[16/9] cursor-pointer overflow-hidden"
+                  className="relative aspect-[4/3] cursor-pointer overflow-hidden bg-stone-100"
                   onClick={() => {
                     setGalleryIndex(0)
                     setShowGallery(true)
                   }}
                 >
-                  <Image
-                    src={photos[0]?.photo_url || ''}
-                    alt={listing.title}
-                    fill
-                    className="object-cover transition hover:scale-105"
-                    priority
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 60vw, 800px"
-                  />
+                  {photos[0] && (
+                    <Image
+                      src={photos[0].photo_url}
+                      alt={listing.title}
+                      fill
+                      className="object-cover transition-transform duration-300 hover:scale-[1.02]"
+                      priority
+                      sizes="50vw"
+                    />
+                  )}
                 </div>
 
-                <div className="hidden gap-1.5 md:grid md:grid-rows-2">
-                  {photos.slice(1, 3).map((photo, index) => (
+                <div className="grid grid-cols-2 gap-2">
+                  {[1, 2, 3, 4].map((index) => (
                     <div
-                      key={photo.id}
-                      className="relative cursor-pointer overflow-hidden"
+                      key={index}
+                      className="relative aspect-square cursor-pointer overflow-hidden bg-stone-100"
                       onClick={() => {
-                        setGalleryIndex(index + 1)
+                        setGalleryIndex(index)
                         setShowGallery(true)
                       }}
                     >
-                      <Image
-                        src={photo.photo_url}
-                        alt={`${listing.title} photo ${index + 2}`}
-                        fill
-                        className="object-cover transition hover:scale-105"
-                        loading="lazy"
-                        sizes="(max-width: 768px) 100vw, 300px"
-                      />
+                      {photos[index] ? (
+                        <Image
+                          src={photos[index].photo_url}
+                          alt={`${listing.title} photo ${index + 1}`}
+                          fill
+                          className="object-cover transition-transform duration-300 hover:scale-[1.02]"
+                          loading="lazy"
+                          sizes="25vw"
+                        />
+                      ) : (
+                        <div className="h-full w-full bg-stone-100" />
+                      )}
                     </div>
                   ))}
                 </div>
@@ -397,102 +393,126 @@ export function ListingDetailClient({
                     setGalleryIndex(0)
                     setShowGallery(true)
                   }}
-                  className="absolute bottom-4 right-4 hidden rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-800 shadow-sm transition hover:bg-stone-50 md:block"
+                  className="absolute bottom-4 right-4 flex items-center gap-2 rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 shadow-sm transition hover:bg-stone-50 hover:shadow-md"
                 >
-                  View all {photos.length} photos
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="3" width="7" height="7" />
+                    <rect x="14" y="3" width="7" height="7" />
+                    <rect x="3" y="14" width="7" height="7" />
+                    <rect x="14" y="14" width="7" height="7" />
+                  </svg>
+                  Show all {photos.length} photos
                 </button>
               )}
-            </div>
+            </>
           ) : (
-            <div className="aspect-[16/9] rounded-2xl bg-gradient-to-br from-stone-200 via-stone-100 to-stone-300" />
+            <div className="aspect-[4/3] rounded-3xl bg-gradient-to-br from-stone-200 via-stone-100 to-stone-300" />
           )}
-        </section>
+        </div>
 
-        <div className="grid gap-8 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <div className="mb-6 border-b border-stone-200 pb-6">
-              <h1 className="mb-2 text-2xl font-bold text-stone-900">{listing.title}</h1>
-              <p className="text-stone-500">{listing.area}, Jerusalem</p>
-            </div>
-
-            <div className="mb-6 flex flex-wrap gap-3 border-b border-stone-200 pb-6">
-              <Stat label="Bedrooms" value={listing.bedrooms || '-'} />
-              <Stat label="Bathrooms" value={listing.bathrooms || '-'} />
-              <Stat label="Max Guests" value={listing.max_guests || '-'} />
-              {averageRating && (
-                <div className="flex items-center gap-2 rounded-xl bg-[#F8F5F2] px-4 py-2.5">
-                  <StarIcon className="h-4 w-4 text-yellow-500" />
-                  <div>
-                    <p className="text-lg font-bold text-stone-900">{averageRating}</p>
-                    <p className="text-[10px] text-stone-500">{reviews.length} reviews</p>
-                  </div>
-                </div>
-              )}
+        <div className="grid gap-10 lg:grid-cols-[1fr_360px] lg:items-start">
+          <div className="space-y-8">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-widest text-[#c76f55]">
+                {listing.area}, Jerusalem
+              </p>
+              <h1 className="font-display mt-2 text-3xl font-bold tracking-tight text-stone-950 md:text-4xl">
+                {listing.title}
+              </h1>
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-stone-500">
+                {listing.bedrooms !== null && (
+                  <span>
+                    {listing.bedrooms} bedroom{listing.bedrooms !== 1 ? 's' : ''}
+                  </span>
+                )}
+                {listing.bathrooms !== null && (
+                  <span>
+                    {listing.bathrooms} bathroom{listing.bathrooms !== 1 ? 's' : ''}
+                  </span>
+                )}
+                {listing.max_guests !== null && (
+                  <span>Sleeps {listing.max_guests}</span>
+                )}
+              </div>
             </div>
 
             {listing.description && (
-              <div className="mb-6 border-b border-stone-200 pb-6">
-                <h2 className="mb-3 text-lg font-bold text-stone-900">About this stay</h2>
-                <p className="whitespace-pre-line text-sm leading-relaxed text-stone-600">{listing.description}</p>
-              </div>
+              <>
+                <hr className="border-stone-100" />
+                <section>
+                  <h2 className="mb-3 text-lg font-bold text-stone-900">About this stay</h2>
+                  <p className="whitespace-pre-line text-base leading-8 text-stone-700">{listing.description}</p>
+                </section>
+              </>
             )}
 
             {listing.house_rules?.trim() && (
-              <section className="mb-6 rounded-3xl bg-white p-6 shadow-sm">
-                <h2 className="text-lg font-bold text-stone-950">House rules</h2>
-                <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-stone-700">
-                  {listing.house_rules}
-                </p>
-              </section>
+              <>
+                <hr className="border-stone-100" />
+                <section>
+                  <h2 className="text-lg font-bold text-stone-950">House rules</h2>
+                  <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-stone-700">
+                    {listing.house_rules}
+                  </p>
+                </section>
+              </>
             )}
 
             {listing.amenities && listing.amenities.length > 0 && (
-              <div className="mb-6 border-b border-stone-200 pb-6">
-                <h2 className="mb-3 text-lg font-bold text-stone-900">Amenities</h2>
-                <AmenityDisplay amenities={listing.amenities} />
-              </div>
+              <>
+                <hr className="border-stone-100" />
+                <section>
+                  <h2 className="mb-3 text-lg font-bold text-stone-900">Amenities</h2>
+                  <AmenityDisplay amenities={listing.amenities} />
+                </section>
+              </>
             )}
 
             {listing.host_id && (
-              <section className="mb-6 rounded-3xl bg-white p-6 shadow-sm">
-                <h2 className="text-lg font-bold text-stone-950">Enhance your stay</h2>
-                <p className="mt-1 text-sm text-stone-600">
-                  Arranged by JLM Collective and delivered to this property.
-                </p>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <Link
-                    href="/services/catering"
-                    className="flex items-center gap-3 rounded-2xl border border-stone-200 bg-[#F8F5F2] px-4 py-4 transition hover:border-[#c76f55] hover:bg-white"
-                  >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c76f55" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" />
-                      <path d="M7 2v20" />
-                      <path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7" />
-                    </svg>
-                    <div>
-                      <p className="text-sm font-bold text-stone-950">Catering & meals</p>
-                      <p className="text-xs text-stone-500">Shabbat packages, custom menus</p>
-                    </div>
-                  </Link>
+              <>
+                <hr className="border-stone-100" />
+                <section>
+                  <h2 className="text-lg font-bold text-stone-950">Enhance your stay</h2>
+                  <p className="mt-1 text-sm text-stone-600">
+                    Arranged by JLM Collective and delivered to this property.
+                  </p>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <Link
+                      href="/services/catering"
+                      className="flex items-center gap-3 rounded-2xl border border-stone-200 bg-[#F8F5F2] px-4 py-4 transition hover:border-[#c76f55] hover:bg-white"
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c76f55" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" />
+                        <path d="M7 2v20" />
+                        <path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7" />
+                      </svg>
+                      <div>
+                        <p className="text-sm font-bold text-stone-950">Catering & meals</p>
+                        <p className="text-xs text-stone-500">Shabbat packages, custom menus</p>
+                      </div>
+                    </Link>
 
-                  <Link
-                    href="/services/cleaning"
-                    className="flex items-center gap-3 rounded-2xl border border-stone-200 bg-[#F8F5F2] px-4 py-4 transition hover:border-[#c76f55] hover:bg-white"
-                  >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c76f55" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
-                    </svg>
-                    <div>
-                      <p className="text-sm font-bold text-stone-950">Housekeeping</p>
-                      <p className="text-xs text-stone-500">Mid-stay cleaning arranged</p>
-                    </div>
-                  </Link>
-                </div>
-              </section>
+                    <Link
+                      href="/services/cleaning"
+                      className="flex items-center gap-3 rounded-2xl border border-stone-200 bg-[#F8F5F2] px-4 py-4 transition hover:border-[#c76f55] hover:bg-white"
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c76f55" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+                      </svg>
+                      <div>
+                        <p className="text-sm font-bold text-stone-950">Housekeeping</p>
+                        <p className="text-xs text-stone-500">Mid-stay cleaning arranged</p>
+                      </div>
+                    </Link>
+                  </div>
+                </section>
+              </>
             )}
 
+            <hr className="border-stone-100" />
             <AvailabilityCalendar blockedRanges={blockedRanges} />
 
+            <hr className="border-stone-100" />
             <div>
               <h2 className="mb-3 text-lg font-bold text-stone-900">Reviews ({reviews.length})</h2>
               {reviews.length === 0 ? (
@@ -522,63 +542,80 @@ export function ListingDetailClient({
                 </>
               )}
             </div>
+
+            {similarListings.length > 0 && (
+              <>
+                <hr className="border-stone-100" />
+                <section>
+                  <h2 className="mb-4 text-xl font-bold text-stone-950">You might also like</h2>
+                  <div className="grid gap-4 md:grid-cols-3">
+                    {similarListings.map((similarListing) => (
+                      <Link
+                        key={similarListing.id}
+                        href={`/listings/${similarListing.id}?from=stays`}
+                        className="rounded-2xl bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                      >
+                        <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
+                          {similarListing.area}
+                        </p>
+                        <h3 className="mt-2 font-bold text-stone-950">{similarListing.title}</h3>
+                        <p className="mt-2 text-sm text-stone-600">
+                          {similarListing.bedrooms || 0} bedrooms \u00b7 sleeps {similarListing.max_guests || 0}
+                        </p>
+                        <p className="mt-4 text-sm font-semibold text-stone-900">
+                          {formatListingPrice(similarListing)}
+                        </p>
+                      </Link>
+                    ))}
+                  </div>
+                </section>
+              </>
+            )}
           </div>
 
-          <div className="hidden lg:col-span-1 lg:block">
-            <div className="sticky top-8 rounded-2xl border border-stone-200 bg-white p-6 shadow-lg">
-              <Pricing priceIls={priceIls} priceUsd={priceUsd} />
-              <BookingControls
-                listing={listing}
-                dateRange={bookingDateRange}
-                setDateRange={setBookingDateRange}
-                guestCount={guestCount}
-                setGuestCount={setGuestCount}
-                maxGuests={maxGuests}
-                nights={nights}
-                totalILS={totalILS}
-                totalUSD={totalUSD}
-                existingConversationId={existingConversationId}
-                showQuickQuestion={showQuickQuestion}
-                setShowQuickQuestion={setShowQuickQuestion}
-                onConversationCreated={setExistingConversationId}
-              />
-              <HostCard host={host} publicHostName={publicHostName} />
+          <div className="hidden lg:block">
+            <div className="lg:sticky lg:top-8">
+              <div className="rounded-3xl border border-stone-200 bg-white p-6 shadow-lg">
+                <div className="mb-5 flex items-baseline gap-1.5">
+                  <span className="text-2xl font-bold text-stone-950">
+                    {listing.price_usd
+                      ? `$${Number(listing.price_usd).toLocaleString()}`
+                      : listing.price_ils
+                        ? `\u20aa${Number(listing.price_ils).toLocaleString()}`
+                        : 'Price on request'}
+                  </span>
+                  {(listing.price_usd || listing.price_ils) && (
+                    <span className="text-sm text-stone-500">/ night</span>
+                  )}
+                </div>
+                <BookingControls
+                  listing={listing}
+                  dateRange={bookingDateRange}
+                  setDateRange={setBookingDateRange}
+                  guestCount={guestCount}
+                  setGuestCount={setGuestCount}
+                  maxGuests={maxGuests}
+                  nights={nights}
+                  totalILS={totalILS}
+                  totalUSD={totalUSD}
+                  existingConversationId={existingConversationId}
+                  showQuickQuestion={showQuickQuestion}
+                  setShowQuickQuestion={setShowQuickQuestion}
+                  onConversationCreated={setExistingConversationId}
+                />
+                <HostCard host={host} publicHostName={publicHostName} />
+              </div>
             </div>
           </div>
         </div>
-
-        {similarListings.length > 0 && (
-          <section className="mt-10">
-            <h2 className="mb-4 text-xl font-bold text-stone-950">You might also like</h2>
-            <div className="grid gap-4 md:grid-cols-3">
-              {similarListings.map((similarListing) => (
-                <Link
-                  key={similarListing.id}
-                  href={`/listings/${similarListing.id}?from=stays`}
-                  className="rounded-2xl bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                >
-                  <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
-                    {similarListing.area}
-                  </p>
-                  <h3 className="mt-2 font-bold text-stone-950">{similarListing.title}</h3>
-                  <p className="mt-2 text-sm text-stone-600">
-                    {similarListing.bedrooms || 0} bedrooms · sleeps {similarListing.max_guests || 0}
-                  </p>
-                  <p className="mt-4 text-sm font-semibold text-stone-900">
-                    {formatListingPrice(similarListing)}
-                  </p>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
+        </div>
       </main>
 
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-stone-200 bg-white p-4 shadow-lg lg:hidden">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-lg font-bold text-stone-900">
-              {priceIls ? `₪${priceIls}` : 'Price on request'}
+              {priceIls ? `\u20aa${priceIls}` : 'Price on request'}
               {priceIls && <span className="ml-1 text-sm font-normal text-stone-500">/ night</span>}
             </p>
             {priceUsd && <p className="text-xs text-stone-500">~${priceUsd} USD</p>}
@@ -667,7 +704,7 @@ function Pricing({ priceIls, priceUsd }: { priceIls: string | null; priceUsd: st
   return (
     <div className="mb-6">
       <p className="text-2xl font-bold text-stone-900">
-        {priceIls ? `₪${priceIls}` : 'Price on request'}
+        {priceIls ? `\u20aa${priceIls}` : 'Price on request'}
         {priceIls && <span className="ml-1 text-base font-normal text-stone-500">/ night</span>}
       </p>
       {priceUsd && <p className="text-sm text-stone-500">~${priceUsd} USD / night</p>}
@@ -738,7 +775,7 @@ function BookingControls({
               <p className="text-sm font-bold text-stone-950">
                 {[
                   totalILS
-                    ? `₪${totalILS.toLocaleString()}`
+                    ? `\u20aa${totalILS.toLocaleString()}`
                     : null,
                   totalUSD
                     ? `$${totalUSD.toLocaleString()}`

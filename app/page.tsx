@@ -1,4 +1,5 @@
-﻿import Link from 'next/link'
+import Link from 'next/link'
+import Image from 'next/image'
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { sampleListings } from '@/lib/sample-listings'
@@ -18,6 +19,7 @@ type ListingRow = {
   amenities: string[] | null
   latitude: number | null
   longitude: number | null
+  is_featured?: boolean | null
 }
 
 type ListingPhotoRow = {
@@ -29,9 +31,11 @@ type FeaturedStay = {
   id: string
   title: string
   area: string
-  details: string
-  priceILS: string
-  priceUSD: string
+  bedrooms: number | null
+  max_guests: number | null
+  price_ils: number | null
+  price_usd: number | null
+  is_featured?: boolean | null
   coverPhotoUrl: string | null
 }
 
@@ -93,9 +97,11 @@ function toFeaturedStay(listing: ListingRow & { cover_photo_url?: string | null 
     id: listing.id,
     title: listing.title,
     area: listing.area,
-    details: `${listing.bedrooms || 0} bedrooms · sleeps ${listing.max_guests || 0}`,
-    priceILS: listing.price_ils ? `₪${listing.price_ils.toLocaleString()}` : 'Price on request',
-    priceUSD: listing.price_usd ? `$${listing.price_usd.toLocaleString()}` : '',
+    bedrooms: listing.bedrooms,
+    max_guests: listing.max_guests,
+    price_ils: listing.price_ils,
+    price_usd: listing.price_usd,
+    is_featured: listing.is_featured ?? null,
     coverPhotoUrl: listing.cover_photo_url || null,
   }
 }
@@ -117,7 +123,7 @@ async function getHomepageData() {
   const [{ data: listingsData }, { data: neighborhoodsData }] = await Promise.all([
     supabase
       .from('listings')
-      .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, amenities, latitude, longitude')
+      .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, amenities, latitude, longitude, is_featured')
       .eq('is_published', true)
       .eq('is_featured', true)
       .limit(6),
@@ -200,7 +206,7 @@ export default async function JLMCollectiveHomePage() {
           </div>
 
           <div className="mx-auto mb-8 max-w-4xl">
-            <h1 className="text-4xl font-bold tracking-tight text-stone-950 md:text-6xl">
+            <h1 className="font-display text-4xl font-bold tracking-tight text-stone-950 md:text-6xl">
               Discover places to stay in Jerusalem
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-stone-600 md:text-lg">
@@ -294,31 +300,9 @@ export default async function JLMCollectiveHomePage() {
 
             <HomeNeighborhoodSearch popularNeighborhoods={popularNeighborhoods.slice(0, 4)} />
 
-            <div className="grid gap-5 md:grid-cols-3">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
               {featuredStays.map((stay) => (
-                <Link key={stay.id} href={`/listings/${stay.id}`} className="group cursor-pointer">
-                  <div className="relative mb-3 aspect-[4/3] overflow-hidden rounded-xl bg-stone-200 shadow-sm">
-                    <div className="absolute inset-0 bg-gradient-to-br from-stone-100 via-stone-200 to-stone-300" />
-                    {stay.coverPhotoUrl ? (
-                      <img
-                        src={stay.coverPhotoUrl}
-                        alt=""
-                        className="absolute inset-0 h-full w-full object-cover"
-                      />
-                    ) : null}
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-[#c76f55]">{stay.area}</p>
-                      <h3 className="mt-0.5 text-sm font-bold leading-tight group-hover:underline">{stay.title}</h3>
-                      <p className="mt-0.5 text-xs text-stone-500">{stay.details}</p>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <p className="text-sm font-bold">{stay.priceILS}</p>
-                      <p className="text-[10px] font-medium text-stone-400">{stay.priceUSD}</p>
-                    </div>
-                  </div>
-                </Link>
+                <HomeListingCard key={stay.id} listing={stay} />
               ))}
             </div>
           </div>
@@ -370,6 +354,72 @@ export default async function JLMCollectiveHomePage() {
       </main>
     </div>
   )
+}
+
+function HomeListingCard({ listing }: { listing: FeaturedStay }) {
+  return (
+    <Link
+      href={`/listings/${listing.id}?from=stays`}
+      className="group block"
+    >
+      <div className="relative aspect-square overflow-hidden rounded-2xl bg-stone-100">
+        {listing.coverPhotoUrl ? (
+          <Image
+            src={listing.coverPhotoUrl}
+            alt={listing.title}
+            fill
+            className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            loading="lazy"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-stone-100">
+            <svg
+              width="28"
+              height="28"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#d6d3d1"
+              strokeWidth="1.5"
+            >
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <path d="m21 15-5-5L5 21" />
+            </svg>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-3 space-y-0.5">
+        <p className="text-[11px] font-bold uppercase tracking-widest text-[#c76f55]">
+          {listing.area}
+        </p>
+        <p className="line-clamp-1 font-semibold leading-snug text-stone-950">
+          {listing.title}
+        </p>
+        <p className="text-sm text-stone-500">
+          {[
+            listing.bedrooms ? `${listing.bedrooms} bed` : null,
+            listing.max_guests ? `sleeps ${listing.max_guests}` : null,
+          ]
+            .filter(Boolean)
+            .join(' \u00b7 ')}
+        </p>
+        <p className="pt-1 text-sm font-semibold text-stone-950">
+          {formatFeaturedPrice(listing)}
+          {(listing.price_ils || listing.price_usd) && (
+            <span className="font-normal text-stone-500"> / night</span>
+          )}
+        </p>
+      </div>
+    </Link>
+  )
+}
+
+function formatFeaturedPrice(listing: Pick<FeaturedStay, 'price_ils' | 'price_usd'>) {
+  if (listing.price_usd) return `$${Number(listing.price_usd).toLocaleString()}`
+  if (listing.price_ils) return `\u20aa${Number(listing.price_ils).toLocaleString()}`
+  return 'Price on request'
 }
 
 function SavedStayIcon({ className = '' }: { className?: string }) {

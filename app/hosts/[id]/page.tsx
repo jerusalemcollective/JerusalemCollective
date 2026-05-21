@@ -1,4 +1,4 @@
-﻿import Link from 'next/link'
+import Link from 'next/link'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
@@ -156,7 +156,7 @@ export default async function HostProfilePage({ params }: HostPageProps) {
 
           <div className="flex-1">
             <div className="mb-2 flex flex-col items-center gap-2 sm:flex-row sm:items-center">
-              <h1 className="text-3xl font-bold text-stone-900">{publicName}</h1>
+              <h1 className="font-display text-3xl font-bold text-stone-900">{publicName}</h1>
               {host.is_verified && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
                   <CheckIcon className="h-3.5 w-3.5" />

@@ -11,7 +11,7 @@ export default function ServicesPage() {
     <main className="min-h-screen bg-[#F8F5F2] px-5 py-12 text-[#252525] md:px-6">
       <section className="mx-auto max-w-6xl">
         <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">For guests & hosts</p>
-        <h1 className="mt-3 text-4xl font-bold tracking-tight text-stone-950 md:text-5xl">JLM Services</h1>
+        <h1 className="font-display mt-3 text-4xl font-bold tracking-tight text-stone-950 md:text-5xl">JLM Services</h1>
         <p className="mt-4 max-w-2xl text-lg leading-8 text-stone-600">
           Everything you need for a perfect Jerusalem stay — arranged by us, delivered to your door.
         </p>
