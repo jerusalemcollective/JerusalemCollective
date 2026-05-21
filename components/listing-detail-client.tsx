@@ -294,9 +294,9 @@ export function ListingDetailClient({
 
         <section className="mb-8">
           {photos.length > 0 ? (
-            <div className="relative mb-6 overflow-hidden rounded-3xl">
+            <div className="relative mb-6 overflow-hidden rounded-3xl bg-white shadow-sm">
               <div
-                className="relative aspect-[4/3] overflow-hidden md:hidden"
+                className="relative aspect-[16/11] overflow-hidden md:hidden"
                 onTouchStart={(event) => handleMobilePhotoDragStart(event.touches[0])}
                 onTouchEnd={(event) => handleMobilePhotoDragEnd(event.changedTouches[0])}
                 onMouseDown={(event) => handleMobilePhotoDragStart(event)}
@@ -349,9 +349,9 @@ export function ListingDetailClient({
                 )}
               </div>
 
-              <div className="hidden grid-cols-1 gap-2 md:grid md:grid-cols-[2fr_1fr]">
+              <div className="hidden grid-cols-1 gap-1.5 md:grid md:grid-cols-[1.65fr_1fr]">
                 <div
-                  className="relative aspect-[4/3] cursor-pointer overflow-hidden"
+                  className="relative aspect-[16/9] cursor-pointer overflow-hidden"
                   onClick={() => {
                     setGalleryIndex(0)
                     setShowGallery(true)
@@ -367,7 +367,7 @@ export function ListingDetailClient({
                   />
                 </div>
 
-                <div className="hidden gap-2 md:grid md:grid-rows-2">
+                <div className="hidden gap-1.5 md:grid md:grid-rows-2">
                   {photos.slice(1, 3).map((photo, index) => (
                     <div
                       key={photo.id}
@@ -389,30 +389,6 @@ export function ListingDetailClient({
                   ))}
                 </div>
               </div>
-
-              {photos.length > 3 && (
-                <div className="mt-2 hidden grid-cols-2 gap-2 md:grid">
-                  {photos.slice(3, 5).map((photo, index) => (
-                    <div
-                      key={photo.id}
-                      className="relative aspect-[4/3] cursor-pointer overflow-hidden"
-                      onClick={() => {
-                        setGalleryIndex(index + 3)
-                        setShowGallery(true)
-                      }}
-                    >
-                      <Image
-                        src={photo.photo_url}
-                        alt={`${listing.title} photo ${index + 4}`}
-                        fill
-                        className="object-cover transition hover:scale-105"
-                        loading="lazy"
-                        sizes="(max-width: 768px) 100vw, 300px"
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
 
               {photos.length > 1 && (
                 <button

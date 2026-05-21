@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { BookingDateRangePicker } from '@/components/booking-date-range-picker'
-import { STAY_AMENITY_GROUPS, slugifyAmenity } from '@/lib/stay-amenities'
+import { STAY_AMENITY_GROUPS, getAmenityLabel, slugifyAmenity } from '@/lib/stay-amenities'
 
 type DateRange = {
   from?: Date
@@ -25,10 +25,18 @@ function formatDateParam(date?: Date) {
   return `${year}-${month}-${day}`
 }
 
+function formatSummaryDate(value: string | null) {
+  if (!value) return null
+  return parseLocalDate(value)?.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+  }) || null
+}
+
 export function StaysFilterBar() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [mobileOpen, setMobileOpen] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [dateRange, setDateRange] = useState<DateRange>({
     from: parseLocalDate(searchParams.get('checkIn')),
     to: parseLocalDate(searchParams.get('checkOut')),
@@ -49,12 +57,15 @@ export function StaysFilterBar() {
     setMinPrice(searchParams.get('minPrice') || '')
     setMaxPrice(searchParams.get('maxPrice') || '')
     setSelectedAmenities(searchParams.get('amenities')?.split(',').filter(Boolean) || [])
+    setFiltersOpen(false)
   }, [searchParams])
 
   const hasFilters = useMemo(
     () =>
       Boolean(
-        searchParams.get('checkIn') ||
+        searchParams.get('neighborhood') ||
+          searchParams.get('area') ||
+          searchParams.get('checkIn') ||
           searchParams.get('checkOut') ||
           searchParams.get('guests') ||
           searchParams.get('minPrice') ||
@@ -63,6 +74,40 @@ export function StaysFilterBar() {
       ),
     [searchParams],
   )
+  const showSummary = hasFilters && !filtersOpen
+  const activeArea = searchParams.get('neighborhood') || searchParams.get('area')
+  const summaryItems = useMemo(() => {
+    const items: string[] = []
+    const checkIn = formatSummaryDate(searchParams.get('checkIn'))
+    const checkOut = formatSummaryDate(searchParams.get('checkOut'))
+    const activeGuests = searchParams.get('guests')
+    const activeMinPrice = searchParams.get('minPrice')
+    const activeMaxPrice = searchParams.get('maxPrice')
+    const activeAmenities = searchParams.get('amenities')?.split(',').filter(Boolean) || []
+
+    if (activeArea && activeArea !== 'All') items.push(activeArea)
+    if (checkIn && checkOut) items.push(`${checkIn}–${checkOut}`)
+    else if (checkIn) items.push(`From ${checkIn}`)
+    else if (checkOut) items.push(`Until ${checkOut}`)
+    if (activeGuests) items.push(`${activeGuests} guest${activeGuests === '1' ? '' : 's'}`)
+    if (activeMinPrice && activeMaxPrice) items.push(`$${activeMinPrice}–$${activeMaxPrice}`)
+    else if (activeMinPrice) items.push(`From $${activeMinPrice}`)
+    else if (activeMaxPrice) items.push(`Up to $${activeMaxPrice}`)
+
+    if (activeAmenities.length > 0) {
+      const amenityLabels = activeAmenities
+        .map((amenity) => getAmenityLabel(amenity) || amenity)
+        .slice(0, 2)
+      const remainingCount = activeAmenities.length - amenityLabels.length
+      items.push(
+        remainingCount > 0
+          ? `${amenityLabels.join(', ')} +${remainingCount} more`
+          : amenityLabels.join(', '),
+      )
+    }
+
+    return items
+  }, [activeArea, searchParams])
 
   const toggleAmenity = (amenity: string) => {
     const value = slugifyAmenity(amenity)
@@ -96,7 +141,7 @@ export function StaysFilterBar() {
 
     const nextQuery = next.toString()
     router.push(nextQuery ? `/stays?${nextQuery}` : '/stays')
-    setMobileOpen(false)
+    setFiltersOpen(false)
   }
 
   const handleClear = () => {
@@ -106,26 +151,53 @@ export function StaysFilterBar() {
     setMinPrice('')
     setMaxPrice('')
     setSelectedAmenities([])
-    setMobileOpen(false)
+    setFiltersOpen(false)
   }
 
   return (
     <div className="rounded-3xl border border-stone-200 bg-white p-4 shadow-sm">
-      <div className="flex items-center justify-between gap-3 lg:hidden">
-        <div>
-          <p className="text-sm font-bold text-stone-950">Search filters</p>
-          <p className="text-xs text-stone-500">Dates, guests, price, amenities</p>
+      {showSummary ? (
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold text-stone-950">
+              {summaryItems.length > 0 ? summaryItems.join(' · ') : 'Search filters'}
+            </p>
+            <p className="mt-1 text-xs text-stone-500">Filtered stays</p>
+          </div>
+          <div className="flex shrink-0 gap-2">
+            <button
+              type="button"
+              onClick={() => setFiltersOpen(true)}
+              className="rounded-full border border-stone-200 px-4 py-2 text-sm font-bold text-stone-700 transition hover:border-stone-300"
+            >
+              Edit filters
+            </button>
+            <button
+              type="button"
+              onClick={handleClear}
+              className="rounded-full bg-[#c76f55] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#b85f47]"
+            >
+              Clear
+            </button>
+          </div>
         </div>
-        <button
-          type="button"
-          onClick={() => setMobileOpen((open) => !open)}
-          className="rounded-full border border-stone-200 px-4 py-2 text-sm font-bold text-stone-700"
-        >
-          {mobileOpen ? 'Close' : 'Filters'}
-        </button>
-      </div>
+      ) : (
+        <div className="flex items-center justify-between gap-3 lg:hidden">
+          <div>
+            <p className="text-sm font-bold text-stone-950">Search filters</p>
+            <p className="text-xs text-stone-500">Dates, guests, price, amenities</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((open) => !open)}
+            className="rounded-full border border-stone-200 px-4 py-2 text-sm font-bold text-stone-700"
+          >
+            {filtersOpen ? 'Close' : 'Filters'}
+          </button>
+        </div>
+      )}
 
-      <div className={`${mobileOpen ? 'mt-4 grid' : 'hidden'} gap-4 lg:grid lg:grid-cols-[minmax(260px,1.4fr)_0.55fr_0.8fr_1.3fr_auto] lg:items-start`}>
+      <div className={`${filtersOpen ? 'mt-4 grid' : 'hidden'} gap-4 ${hasFilters ? '' : 'lg:grid'} lg:grid-cols-[minmax(260px,1.4fr)_0.55fr_0.8fr_1.3fr_auto] lg:items-start`}>
         <BookingDateRangePicker dateRange={dateRange} setDateRange={setDateRange} />
 
         <label className="block text-sm font-semibold text-stone-700">
@@ -223,11 +295,11 @@ export function StaysFilterBar() {
         </div>
       </div>
 
-      {hasFilters && !mobileOpen && (
+      {hasFilters && filtersOpen && (
         <button
           type="button"
           onClick={handleClear}
-          className="mt-3 text-sm font-semibold text-[#c76f55] hover:underline lg:hidden"
+          className="mt-3 text-sm font-semibold text-[#c76f55] hover:underline"
         >
           Clear filters
         </button>

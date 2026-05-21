@@ -625,7 +625,7 @@ export function MessagesInbox({ mode, initialConversationId = null }: MessagesIn
                 request: conversation.request
                   ? {
                       ...conversation.request,
-                      status: 'accepted',
+                      status: 'accepted' as const,
                     }
                   : conversation.request,
               }
