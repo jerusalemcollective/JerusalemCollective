@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useCallback, Component, ReactNode } from 'react'
-import { GoogleMap, useJsApiLoader, OverlayView } from '@react-google-maps/api'
+import { GoogleMap, useJsApiLoader, OverlayView, type Libraries } from '@react-google-maps/api'
 import Link from 'next/link'
 
 interface Listing {
@@ -28,6 +28,7 @@ const mapContainerStyle = {
 }
 
 const center = { lat: 31.7683, lng: 35.2137 }
+const googleMapsLibraries: Libraries = ['places']
 
 function formatListingPrice(listing: Pick<Listing, 'price' | 'price_ils' | 'price_usd'>) {
   const prices = []
@@ -94,6 +95,7 @@ function JerusalemMapInner({ listings }: JerusalemMapProps) {
 
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+    libraries: googleMapsLibraries,
     language: 'en',
     region: 'IL',
   })

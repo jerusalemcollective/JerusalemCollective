@@ -6,6 +6,7 @@ import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { ensureHostProfile } from '@/lib/host-profile'
 import { STAY_AMENITIES } from '@/lib/stay-amenities'
+import { GoogleAddressField } from '@/components/google-address-field'
 
 type PhotoUpload = {
   file: File
@@ -1580,20 +1581,20 @@ async function handleSubmit() {
                   </Field>
 
 <Field label="Exact address" required>
-                    <AddressAutocomplete
+                    <GoogleAddressField
                       value={form.exact_address}
-                      onChange={(val) => {
+                      onAddressChange={(val) => {
                         updateField('exact_address', val)
                         updateField('address_latitude', null)
                         updateField('address_longitude', null)
                       }}
-                      onSelect={({ address, latitude, longitude }) => {
-                        updateField('exact_address', address)
+                      onCoordinatesChange={(latitude, longitude) => {
                         updateField('address_latitude', latitude)
                         updateField('address_longitude', longitude)
                       }}
                       placeholder="Start typing an address in Jerusalem..."
                       className={inputClass}
+                      required
                     />
                   </Field>
                 </div>

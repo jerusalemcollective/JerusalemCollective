@@ -6,6 +6,7 @@ import { updateHostApplication } from '../../listings/actions'
 import { ApplicationPhotoManager } from '@/components/application-photo-manager'
 import { STAY_AMENITIES } from '@/lib/stay-amenities'
 import { ListingAiAssistant } from '@/components/listing-ai-assistant'
+import { GoogleAddressField } from '@/components/google-address-field'
 
 type HostApplication = {
   id: string
@@ -103,9 +104,6 @@ export default async function HostApplicationEditPage({
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           <form id="host-application-edit-form" action={updateHostApplication} className="space-y-6">
             <input type="hidden" name="applicationId" value={hostApplication.id} />
-            <input type="hidden" name="latitude" value={hostApplication.latitude ?? ''} />
-            <input type="hidden" name="longitude" value={hostApplication.longitude ?? ''} />
-
             <section className="rounded-3xl bg-white p-6 shadow-sm">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
@@ -190,7 +188,17 @@ export default async function HostApplicationEditPage({
 
             <EditorSection title="Location">
               <Field label="Exact address">
-                <input name="exactAddress" defaultValue={hostApplication.exact_address || ''} required className={inputClass} />
+                <GoogleAddressField
+                  name="exactAddress"
+                  latitudeName="latitude"
+                  longitudeName="longitude"
+                  defaultValue={hostApplication.exact_address || ''}
+                  defaultLatitude={hostApplication.latitude ?? null}
+                  defaultLongitude={hostApplication.longitude ?? null}
+                  placeholder="Start typing an address in Jerusalem..."
+                  required
+                  className={inputClass}
+                />
               </Field>
             </EditorSection>
 
