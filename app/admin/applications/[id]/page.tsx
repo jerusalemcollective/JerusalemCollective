@@ -4,9 +4,20 @@ import { requireAdminPermission } from '@/lib/admin'
 import { StatusBadge } from '@/components/status-badge'
 import {
   approveAndPublishApplication,
+  rejectApplicationAndReturn,
+  unrejectApplicationAndReturn,
+  updateAdminApplicationDetails,
 } from '@/app/admin/application-actions'
 import { AdminRequestChangesForm } from '@/components/admin-request-changes-form'
 import { AdminApplicationStatusForm } from '@/components/admin-application-status-form'
+import { AmenitySelector } from '@/components/amenity-selector'
+
+type ApplicationPhoto = {
+  id: string
+  photo_url: string
+  is_cover: boolean | null
+  label: string | null
+}
 
 type AdminApplication = {
   id: string
@@ -30,6 +41,9 @@ type AdminApplication = {
   id_doc_type?: string | null
   verification_status?: string | null
   id_verified?: boolean | null
+  verification_doc_path?: string | null
+  id_doc_path?: string | null
+  rejected_at?: string | null
 }
 
 export default async function AdminApplicationPage({
@@ -43,13 +57,20 @@ export default async function AdminApplicationPage({
     supabase.from('host_applications').select('*').eq('id', id).single(),
     supabase
       .from('listing_photos')
-      .select('*')
+      .select('id, photo_url, is_cover, label')
       .eq('application_id', id)
       .order('sort_order', { ascending: true }),
   ])
 
   if (!application) notFound()
   const adminApplication = application as AdminApplication
+  const applicationPhotos = (photos || []) as ApplicationPhoto[]
+  const canUnrejectApplication =
+    adminApplication.status === 'rejected' && isWithinRejectionWindow(adminApplication.rejected_at)
+  const [propertyDocumentUrl, identityDocumentUrl] = await Promise.all([
+    createDocumentUrl(supabase, adminApplication.verification_doc_path),
+    createDocumentUrl(supabase, adminApplication.id_doc_path),
+  ])
 
   return (
     <div>
@@ -89,17 +110,54 @@ export default async function AdminApplicationPage({
               <InfoRow label="Description" value={adminApplication.description || 'Not provided'} />
             </InfoSection>
 
+            <InfoSection title="Edit listing details">
+              <form action={updateAdminApplicationDetails} className="grid gap-4">
+                <input type="hidden" name="applicationId" value={adminApplication.id} />
+                <div className="grid gap-4 md:grid-cols-2">
+                  <EditField label="Title" name="apartment_title" defaultValue={adminApplication.apartment_title} required />
+                  <EditField label="Neighbourhood" name="area" defaultValue={adminApplication.area} required />
+                  <div className="md:col-span-2">
+                    <EditField label="Exact address" name="exact_address" defaultValue={adminApplication.exact_address || ''} />
+                  </div>
+                  <EditField label="Bedrooms" name="bedrooms" type="number" defaultValue={String(adminApplication.bedrooms || '')} />
+                  <EditField label="Bathrooms" name="bathrooms" type="number" step="0.5" defaultValue={String(adminApplication.bathrooms || '')} />
+                  <EditField label="Sleeps" name="sleeps" type="number" defaultValue={String(adminApplication.sleeps || '')} />
+                  <EditField label="Price ILS" name="price_ils" type="number" defaultValue={String(adminApplication.price_ils || '')} />
+                  <EditField label="Price USD" name="price_usd" type="number" defaultValue={String(adminApplication.price_usd || '')} />
+                </div>
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-widest text-stone-400">Amenities</span>
+                  <div className="mt-2">
+                    <AmenitySelector defaultSelectedAmenities={adminApplication.amenities || []} />
+                  </div>
+                </div>
+                <label className="block">
+                  <span className="text-xs font-bold uppercase tracking-widest text-stone-400">Description</span>
+                  <textarea
+                    name="description"
+                    defaultValue={adminApplication.description || ''}
+                    className="mt-2 min-h-36 w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
+                  />
+                </label>
+                <button className="rounded-2xl bg-stone-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-stone-800">
+                  Save admin edits
+                </button>
+              </form>
+            </InfoSection>
+
             <InfoSection title="Photos">
-              {photos?.length ? (
+              {applicationPhotos.length ? (
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {photos.map((photo) => (
+                  {applicationPhotos.map((photo) => (
                     <div key={photo.id} className="overflow-hidden rounded-2xl bg-[#F8F5F2]">
                       <div className="relative">
-                        <img
-                          src={photo.photo_url}
-                          alt={photo.label || ''}
-                          className="aspect-[4/3] w-full object-cover"
-                        />
+                        <a href={photo.photo_url} target="_blank" rel="noopener noreferrer">
+                          <img
+                            src={photo.photo_url}
+                            alt={photo.label || ''}
+                            className="aspect-[4/3] w-full object-cover transition hover:scale-[1.02]"
+                          />
+                        </a>
                         {photo.is_cover && (
                           <span className="absolute bottom-3 left-3 rounded-full bg-white px-3 py-1 text-xs font-bold text-stone-800 shadow-sm">
                             Cover
@@ -109,6 +167,14 @@ export default async function AdminApplicationPage({
                       {photo.label && (
                         <p className="px-3 py-2 text-xs font-semibold text-stone-700">{photo.label}</p>
                       )}
+                      <a
+                        href={photo.photo_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block border-t border-white px-3 py-2 text-xs font-bold text-[#c76f55] hover:underline"
+                      >
+                        Open full photo
+                      </a>
                     </div>
                   ))}
                 </div>
@@ -119,7 +185,9 @@ export default async function AdminApplicationPage({
 
             <InfoSection title="Verification">
               <InfoRow label="Property document" value={adminApplication.verification_doc_type || 'Not provided'} />
+              <DocumentLink href={propertyDocumentUrl} label="Open property document" fallback="No property document file available." />
               <InfoRow label="Identity document" value={adminApplication.id_doc_type || 'Not provided'} />
+              <DocumentLink href={identityDocumentUrl} label="Open ID document" fallback="No ID document file available." />
               <InfoRow label="Verification status" value={adminApplication.verification_status || 'pending'} />
               <InfoRow label="ID verified" value={adminApplication.id_verified ? 'Yes' : 'No'} />
             </InfoSection>
@@ -129,6 +197,15 @@ export default async function AdminApplicationPage({
             <div className="rounded-3xl bg-white p-5 shadow-sm">
               <h2 className="text-lg font-bold text-stone-950">Actions</h2>
               <div className="mt-4 space-y-3">
+                {canUnrejectApplication && (
+                  <form action={unrejectApplicationAndReturn}>
+                    <input type="hidden" name="applicationId" value={adminApplication.id} />
+                    <button className="w-full rounded-2xl border border-green-200 px-4 py-3 text-sm font-bold text-green-700 transition hover:bg-green-50">
+                      Unreject and continue review
+                    </button>
+                  </form>
+                )}
+
                 <form action={approveAndPublishApplication}>
                   <input type="hidden" name="applicationId" value={adminApplication.id} />
                   <button className="w-full rounded-2xl bg-[#c76f55] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#b55f47]">
@@ -146,18 +223,48 @@ export default async function AdminApplicationPage({
 
                 <AdminRequestChangesForm applicationId={adminApplication.id} />
 
-                <AdminApplicationStatusForm
-                  applicationId={adminApplication.id}
-                  status="rejected"
-                  label="Reject"
-                  tone="danger"
-                />
+                <form action={rejectApplicationAndReturn}>
+                  <input type="hidden" name="applicationId" value={adminApplication.id} />
+                  <button className="w-full rounded-2xl border border-red-200 px-4 py-3 text-sm font-bold text-red-700 transition hover:bg-red-50">
+                    Reject
+                  </button>
+                </form>
+                {adminApplication.status === 'rejected' && (
+                  <p className="rounded-2xl bg-stone-50 px-4 py-3 text-xs leading-5 text-stone-500">
+                    Rejected applications stay in the admin queue for 25 hours. During that time you can edit the details or unreject it.
+                  </p>
+                )}
               </div>
             </div>
           </aside>
         </div>
     </div>
   )
+}
+
+function isWithinRejectionWindow(rejectedAt?: string | null) {
+  if (!rejectedAt) return false
+  const rejectedTime = new Date(rejectedAt).getTime()
+  if (!Number.isFinite(rejectedTime)) return false
+  return Date.now() - rejectedTime < 25 * 60 * 60 * 1000
+}
+
+async function createDocumentUrl(
+  supabase: Awaited<ReturnType<typeof requireAdminPermission>>['supabase'],
+  path?: string | null,
+) {
+  if (!path) return null
+
+  const { data, error } = await supabase.storage
+    .from('verification-docs')
+    .createSignedUrl(path, 60 * 10)
+
+  if (error) {
+    console.error('Unable to create verification document URL', error)
+    return null
+  }
+
+  return data.signedUrl
 }
 
 function InfoSection({
@@ -181,5 +288,60 @@ function InfoRow({ label, value }: { label: string; value: string }) {
       <p className="text-xs font-bold uppercase tracking-widest text-stone-400">{label}</p>
       <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-stone-800">{value}</p>
     </div>
+  )
+}
+
+function EditField({
+  label,
+  name,
+  defaultValue,
+  type = 'text',
+  step,
+  required = false,
+}: {
+  label: string
+  name: string
+  defaultValue: string
+  type?: string
+  step?: string
+  required?: boolean
+}) {
+  return (
+    <label className="block">
+      <span className="text-xs font-bold uppercase tracking-widest text-stone-400">{label}</span>
+      <input
+        name={name}
+        type={type}
+        step={step}
+        required={required}
+        defaultValue={defaultValue}
+        className="mt-2 w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
+      />
+    </label>
+  )
+}
+
+function DocumentLink({
+  href,
+  label,
+  fallback,
+}: {
+  href: string | null
+  label: string
+  fallback: string
+}) {
+  if (!href) {
+    return <p className="text-sm text-stone-500">{fallback}</p>
+  }
+
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex rounded-full border border-stone-200 px-4 py-2 text-sm font-bold text-[#c76f55] transition hover:border-[#c76f55]"
+    >
+      {label}
+    </a>
   )
 }

@@ -4,6 +4,7 @@ import { StatusBadge } from '@/components/status-badge'
 import { Pagination, normalizePaginationSearchParams, type PaginationSearchParams } from '@/components/pagination'
 
 const PAGE_SIZE = 25
+const REJECTED_APPLICATION_VISIBLE_HOURS = 25
 
 type ApplicationRow = {
   id: string
@@ -12,6 +13,7 @@ type ApplicationRow = {
   area: string
   status: string
   created_at: string
+  rejected_at: string | null
 }
 
 export default async function AdminApplicationsPage({
@@ -22,13 +24,20 @@ export default async function AdminApplicationsPage({
   const { supabase } = await requireAdminPermission('applications')
   const currentSearchParams = normalizePaginationSearchParams(await searchParams)
   const page = Math.max(1, Number(currentSearchParams.page) || 1)
+  const rejectedVisibilityCutoff = new Date(
+    Date.now() - REJECTED_APPLICATION_VISIBLE_HOURS * 60 * 60 * 1000,
+  ).toISOString()
   const [{ data }, { count }] = await Promise.all([
     supabase
       .from('host_applications')
-      .select('id, host_name, apartment_title, area, status, created_at')
+      .select('id, host_name, apartment_title, area, status, created_at, rejected_at')
+      .or(`status.neq.rejected,rejected_at.gte.${rejectedVisibilityCutoff}`)
       .order('created_at', { ascending: false })
       .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1),
-    supabase.from('host_applications').select('*', { count: 'exact', head: true }),
+    supabase
+      .from('host_applications')
+      .select('*', { count: 'exact', head: true })
+      .or(`status.neq.rejected,rejected_at.gte.${rejectedVisibilityCutoff}`),
   ])
 
   const applications = (data || []) as ApplicationRow[]
@@ -39,6 +48,9 @@ export default async function AdminApplicationsPage({
       <div className="mb-8">
         <h2 className="text-3xl font-bold tracking-tight text-stone-950">Applications</h2>
         <p className="mt-2 text-stone-600">Review incoming host submissions and publish approved stays.</p>
+        <p className="mt-1 text-sm text-stone-500">
+          Rejected applications remain here for 25 hours so they can be edited or unrejected, then leave this queue.
+        </p>
       </div>
 
       <div className="overflow-hidden rounded-3xl bg-white shadow-sm">

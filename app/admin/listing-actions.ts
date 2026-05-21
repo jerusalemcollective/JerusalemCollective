@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { requireAdminPermission } from '@/lib/admin'
 import { logAdminAction } from '@/lib/audit'
+import { sendListingHostAdminUpdateEmail } from '@/lib/transactional-email'
 
 export type ListingMessageState = {
   status: 'idle' | 'success' | 'error'
@@ -32,6 +33,14 @@ export async function updateListingVisibility(formData: FormData) {
 
   if (error) throw error
   await logAdminAction(supabase, `set_${field}_${value}`, 'listing', listingId)
+  await sendListingHostAdminUpdateEmail({
+    supabase,
+    listingId,
+    subject: 'JLM Collective updated your listing',
+    intro: `JLM Collective updated your listing ${field === 'is_published' ? 'publication status' : 'featured status'}. Please sign in to view the latest status.`,
+    ctaPath: `/host/dashboard/listings/${listingId}`,
+    ctaLabel: 'View listing update',
+  })
 
   revalidatePath('/admin')
   revalidatePath('/admin/listings')
@@ -72,6 +81,15 @@ export async function sendListingMessage(
 
       throw error
     }
+
+    await sendListingHostAdminUpdateEmail({
+      supabase,
+      listingId,
+      subject: 'New message from JLM Collective about your listing',
+      intro: 'JLM Collective sent you an update about your listing. Please sign in to your host dashboard to view the message and make any needed changes.',
+      ctaPath: `/host/dashboard/listings/${listingId}`,
+      ctaLabel: 'View message',
+    })
 
     revalidatePath('/admin/listings')
     revalidatePath(`/admin/listings/${listingId}`)

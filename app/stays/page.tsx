@@ -123,6 +123,16 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
   const minPrice = parsePositiveNumber(params.minPrice)
   const maxPrice = parsePositiveNumber(params.maxPrice)
   const amenityLabels = parseAmenityLabels(params.amenities)
+  const hasActiveSearch = Boolean(
+    params.neighborhood ||
+      params.area ||
+      params.checkIn ||
+      params.checkOut ||
+      params.guests ||
+      params.minPrice ||
+      params.maxPrice ||
+      params.amenities,
+  )
   const listings = await loadListings({
     selectedArea,
     checkIn,
@@ -136,12 +146,14 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
   return (
     <div className="min-h-screen">
       <div className="sticky top-[73px] z-30 border-b border-stone-200 bg-[#F8F5F2]/95 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
-          <StaysNeighborhoodNav
-            neighborhoods={neighborhoods}
-            selectedArea={selectedArea}
-            baseQuery={params}
-          />
+        <div className={`mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:px-6 lg:flex-row lg:items-center ${hasActiveSearch ? 'lg:justify-end' : 'lg:justify-between'}`}>
+          {!hasActiveSearch && (
+            <StaysNeighborhoodNav
+              neighborhoods={neighborhoods}
+              selectedArea={selectedArea}
+              baseQuery={params}
+            />
+          )}
 
           <div className="flex w-fit items-center gap-1 rounded-full border border-stone-200 bg-white p-1">
             <Link

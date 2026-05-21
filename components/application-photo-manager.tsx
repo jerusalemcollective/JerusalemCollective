@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useTransition } from 'react'
+import { useRef, useState, useTransition, type PointerEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
@@ -18,6 +18,34 @@ type ApplicationPhotoManagerProps = {
   initialPhotos: ApplicationPhoto[]
 }
 
+const maxListingPhotoSizeMb = 10
+
+function getImageExtension(file: File) {
+  if (file.type === 'image/png') return 'png'
+  if (file.type === 'image/webp') return 'webp'
+  return 'jpg'
+}
+
+function getUploadFailureMessage(fileName: string, message?: string) {
+  const lowerMessage = message?.toLowerCase() || ''
+
+  if (lowerMessage.includes('bucket') || lowerMessage.includes('not found')) {
+    return 'Photo upload storage is not set up yet. Please run the listing photos storage SQL in Supabase.'
+  }
+
+  if (lowerMessage.includes('row-level security') || lowerMessage.includes('permission')) {
+    return 'Photo upload permission is blocked in Supabase. Please run the listing photos storage SQL in Supabase.'
+  }
+
+  if (lowerMessage.includes('size') || lowerMessage.includes('too large')) {
+    return `${fileName} is too large. Please use an image under ${maxListingPhotoSizeMb}MB.`
+  }
+
+  return message
+    ? `Failed to upload ${fileName}: ${message}`
+    : `Failed to upload ${fileName}. Please try again.`
+}
+
 export function ApplicationPhotoManager({
   applicationId,
   initialPhotos,
@@ -28,6 +56,7 @@ export function ApplicationPhotoManager({
   const [message, setMessage] = useState('')
   const [isPending, startTransition] = useTransition()
   const [draggingPhotoIndex, setDraggingPhotoIndex] = useState<number | null>(null)
+  const photoSwipeStartRef = useRef<{ index: number; x: number; pointerId: number } | null>(null)
   const supabase = createClient()
 
   async function handleUpload(files: FileList | null) {
@@ -42,16 +71,25 @@ export function ApplicationPhotoManager({
         continue
       }
 
-      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+      if (file.size > maxListingPhotoSizeMb * 1024 * 1024) {
+        setMessage(`${file.name} is too large. Please use an image under ${maxListingPhotoSizeMb}MB.`)
+        continue
+      }
+
+      const fileExt = getImageExtension(file)
       const fileName = `photo-${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
       const storagePath = `listings/${applicationId}/${fileName}`
 
       const { error: uploadError } = await supabase.storage
         .from('listing-photos')
-        .upload(storagePath, file)
+        .upload(storagePath, file, {
+          cacheControl: '3600',
+          contentType: file.type || 'image/jpeg',
+          upsert: false,
+        })
 
       if (uploadError) {
-        setMessage(uploadError.message)
+        setMessage(getUploadFailureMessage(file.name, uploadError.message))
         continue
       }
 
@@ -111,13 +149,6 @@ export function ApplicationPhotoManager({
     startTransition(() => router.refresh())
   }
 
-  async function movePhoto(index: number, direction: -1 | 1) {
-    const targetIndex = index + direction
-    if (targetIndex < 0 || targetIndex >= photos.length) return
-
-    await reorderPhotos(index, targetIndex)
-  }
-
   async function reorderPhotos(fromIndex: number, toIndex: number) {
     if (fromIndex === toIndex) return
 
@@ -135,6 +166,33 @@ export function ApplicationPhotoManager({
     if (draggingPhotoIndex === null) return
     await reorderPhotos(draggingPhotoIndex, targetIndex)
     setDraggingPhotoIndex(null)
+  }
+
+  function startPhotoSwipe(index: number, event: PointerEvent<HTMLDivElement>) {
+    photoSwipeStartRef.current = {
+      index,
+      x: event.clientX,
+      pointerId: event.pointerId,
+    }
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+
+  async function finishPhotoSwipe(index: number, event: PointerEvent<HTMLDivElement>) {
+    const start = photoSwipeStartRef.current
+    photoSwipeStartRef.current = null
+
+    if (!start || start.index !== index || start.pointerId !== event.pointerId) return
+
+    const deltaX = event.clientX - start.x
+
+    if (Math.abs(deltaX) < 45) return
+
+    const direction = deltaX < 0 ? 1 : -1
+    const targetIndex = index + direction
+
+    if (targetIndex < 0 || targetIndex >= photos.length) return
+
+    await reorderPhotos(index, targetIndex)
   }
 
   async function updatePhotoLabel(photoId: string, label: string) {
@@ -205,21 +263,30 @@ export function ApplicationPhotoManager({
         <span className="text-sm font-bold text-stone-800">
           {isPending ? 'Updating photos...' : 'Add photos'}
         </span>
-        <span className="mt-1 text-xs text-stone-500">JPG, PNG or WebP</span>
+        <span className="mt-1 text-xs text-stone-500">JPG, PNG or WebP up to {maxListingPhotoSizeMb}MB</span>
       </label>
 
       {photos.length > 0 && (
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {photos.map((photo, index) => (
-            <div
-              key={photo.id}
-              draggable
-              onDragStart={() => setDraggingPhotoIndex(index)}
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={() => void dropPhoto(index)}
-              onDragEnd={() => setDraggingPhotoIndex(null)}
-              className={`overflow-hidden rounded-2xl bg-[#F8F5F2] ${draggingPhotoIndex === index ? 'opacity-60' : ''}`}
-            >
+        <div className="mt-5">
+          <p className="mb-3 text-xs font-semibold text-stone-500">
+            Swipe a photo left or right to change the order. The first photo is the cover.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {photos.map((photo, index) => (
+              <div
+                key={photo.id}
+                draggable
+                onDragStart={() => setDraggingPhotoIndex(index)}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={() => void dropPhoto(index)}
+                onDragEnd={() => setDraggingPhotoIndex(null)}
+                onPointerDown={(event) => startPhotoSwipe(index, event)}
+                onPointerUp={(event) => void finishPhotoSwipe(index, event)}
+                onPointerCancel={() => {
+                  photoSwipeStartRef.current = null
+                }}
+                className={`touch-pan-y cursor-grab overflow-hidden rounded-2xl bg-[#F8F5F2] active:cursor-grabbing ${draggingPhotoIndex === index ? 'opacity-60' : ''}`}
+              >
               <div className="group relative">
                 <img src={photo.photo_url} alt={photo.label || ''} className="aspect-[4/3] w-full object-cover" />
                 <button
@@ -236,24 +303,6 @@ export function ApplicationPhotoManager({
                 )}
               </div>
               <div className="space-y-2 p-3">
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => void movePhoto(index, -1)}
-                    disabled={index === 0 || isPending}
-                    className="flex-1 rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-400 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Move up
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void movePhoto(index, 1)}
-                    disabled={index === photos.length - 1 || isPending}
-                    className="flex-1 rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-400 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Move down
-                  </button>
-                </div>
                 <input
                   defaultValue={photo.label || ''}
                   onBlur={(event) => void updatePhotoLabel(photo.id, event.target.value)}
@@ -261,8 +310,9 @@ export function ApplicationPhotoManager({
                   className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#c76f55]"
                 />
               </div>
-            </div>
-          ))}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

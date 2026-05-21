@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react'
 import Link from 'next/link'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { ensureHostProfile } from '@/lib/host-profile'
 import { HOST_TERMS, HOST_TERMS_LAST_UPDATED, HOST_TERMS_VERSION } from '@/lib/host-terms'
-import { STAY_AMENITIES } from '@/lib/stay-amenities'
 import { GoogleAddressField } from '@/components/google-address-field'
+import { AmenitySelector } from '@/components/amenity-selector'
 
 type PhotoUpload = {
   file: File
@@ -194,8 +194,6 @@ const neighbourhoods = [
   'Neve Shaanan',
   'Beit Hakerem',
 ]
-
-const amenitiesList = STAY_AMENITIES
 
 type NeighbourhoodAutocompleteProps = {
   value: string
@@ -761,16 +759,45 @@ const steps = [
 ]
 
 const minimumPhotoCount = 5
+const maxListingPhotoSizeMb = 10
 const listingDraftStorageKey = 'jlm-listing-draft-v1'
 const isSupabaseEnvReady = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL &&
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
 )
 
+function getImageExtension(file: File) {
+  if (file.type === 'image/png') return 'png'
+  if (file.type === 'image/webp') return 'webp'
+  return 'jpg'
+}
+
+function getUploadFailureMessage(fileName: string, message?: string) {
+  const lowerMessage = message?.toLowerCase() || ''
+
+  if (lowerMessage.includes('bucket') || lowerMessage.includes('not found')) {
+    return 'Photo upload storage is not set up yet. Please run the listing photos storage SQL in Supabase.'
+  }
+
+  if (lowerMessage.includes('row-level security') || lowerMessage.includes('permission')) {
+    return 'Photo upload permission is blocked in Supabase. Please run the listing photos storage SQL in Supabase.'
+  }
+
+  if (lowerMessage.includes('size') || lowerMessage.includes('too large')) {
+    return `${fileName} is too large. Please use an image under ${maxListingPhotoSizeMb}MB.`
+  }
+
+  return message
+    ? `Failed to upload ${fileName}: ${message}`
+    : `Failed to upload ${fileName}. Please try again.`
+}
+
 export default function BecomeAHostPage() {
   const [step, setStep] = useState(0)
   const [form, setForm] = useState<FormState>(initialForm)
   const [draftReady, setDraftReady] = useState(false)
+  const [restoredDraft, setRestoredDraft] = useState(false)
+  const [showMissingStepWarnings, setShowMissingStepWarnings] = useState(false)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
@@ -784,10 +811,20 @@ export default function BecomeAHostPage() {
   const [aiError, setAiError] = useState('')
   const [aiSuggestion, setAiSuggestion] = useState<AiSuggestion | null>(null)
   const [draggingPhotoIndex, setDraggingPhotoIndex] = useState<number | null>(null)
+  const photoSwipeStartRef = useRef<{ index: number; x: number; pointerId: number } | null>(null)
 
   const progress = useMemo(() => {
     return Math.round(((step + 1) / steps.length) * 100)
   }, [step])
+
+  const stepIssues = useMemo(() => {
+    return steps.map((_, index) => getStepIssues(index))
+  }, [form, requiresHostTermsAcceptance, restoredDraft])
+
+  const currentStepIssues = stepIssues[step] || []
+  const incompleteStepNames = stepIssues
+    .map((issues, index) => (issues.length > 0 ? steps[index] : null))
+    .filter((item): item is string => Boolean(item))
 
   useEffect(() => {
     try {
@@ -799,6 +836,8 @@ export default function BecomeAHostPage() {
 
       const parsedDraft = JSON.parse(savedDraft) as Partial<SavedListingDraft>
       const { step: savedStep, saved_at: _savedAt, ...draftFields } = parsedDraft
+      setRestoredDraft(true)
+      setShowMissingStepWarnings(true)
       setForm((current) => ({
         ...current,
         ...draftFields,
@@ -905,13 +944,6 @@ export default function BecomeAHostPage() {
     })
   }
 
-  function movePhoto(index: number, direction: -1 | 1) {
-    const targetIndex = index + direction
-    if (targetIndex < 0 || targetIndex >= form.photos.length) return
-
-    reorderPhotos(index, targetIndex)
-  }
-
   function reorderPhotos(fromIndex: number, toIndex: number) {
     if (fromIndex === toIndex) return
 
@@ -925,6 +957,33 @@ export default function BecomeAHostPage() {
     if (draggingPhotoIndex === null) return
     reorderPhotos(draggingPhotoIndex, targetIndex)
     setDraggingPhotoIndex(null)
+  }
+
+  function startPhotoSwipe(index: number, event: PointerEvent<HTMLDivElement>) {
+    photoSwipeStartRef.current = {
+      index,
+      x: event.clientX,
+      pointerId: event.pointerId,
+    }
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+
+  function finishPhotoSwipe(index: number, event: PointerEvent<HTMLDivElement>) {
+    const start = photoSwipeStartRef.current
+    photoSwipeStartRef.current = null
+
+    if (!start || start.index !== index || start.pointerId !== event.pointerId) return
+
+    const deltaX = event.clientX - start.x
+
+    if (Math.abs(deltaX) < 45) return
+
+    const direction = deltaX < 0 ? 1 : -1
+    const targetIndex = index + direction
+
+    if (targetIndex < 0 || targetIndex >= form.photos.length) return
+
+    reorderPhotos(index, targetIndex)
   }
 
   function updatePhotoLabel(index: number, label: string) {
@@ -986,109 +1045,125 @@ export default function BecomeAHostPage() {
     }))
   }
 
+  function getStepIssues(stepIndex: number) {
+    const issues: string[] = []
+
+    if (stepIndex === 0) {
+      if (!form.display_name.trim()) {
+        issues.push('Add the public display name guests should see.')
+      }
+      if (!form.phone.trim() && !form.whatsapp_number.trim()) {
+        issues.push('Add either a phone number or WhatsApp number.')
+      }
+      if (form.host_type === 'representative' && !form.has_permission) {
+        issues.push('Confirm that you have permission to submit this stay.')
+      }
+    }
+
+    if (stepIndex === 1) {
+      if (!form.apartment_title.trim()) {
+        issues.push('Add a name for the stay.')
+      }
+      if (!form.description.trim()) {
+        issues.push('Add a description for guests.')
+      }
+    }
+
+    if (stepIndex === 2) {
+      if (!form.area.trim()) {
+        issues.push('Add the neighbourhood.')
+      }
+      if (!form.exact_address.trim()) {
+        issues.push('Add the exact address manually or choose it from Google suggestions.')
+      }
+    }
+
+    if (stepIndex === 3) {
+      if (!form.bedrooms || Number(form.bedrooms) < 0) {
+        issues.push('Add the number of bedrooms.')
+      }
+      if (!form.bathrooms || Number(form.bathrooms) < 0) {
+        issues.push('Add the number of bathrooms.')
+      }
+      if (!form.sleeps || Number(form.sleeps) < 1) {
+        issues.push('Add how many guests the stay sleeps.')
+      }
+    }
+
+    if (stepIndex === 4) {
+      if (
+        (!form.price_ils || Number(form.price_ils) <= 0) &&
+        (!form.price_usd || Number(form.price_usd) <= 0)
+      ) {
+        issues.push('Add at least one nightly price.')
+      }
+    }
+
+    if (stepIndex === 5 && form.amenities.length === 0) {
+      issues.push('Select at least one amenity.')
+    }
+
+    if (stepIndex === 6 && form.photos.length < minimumPhotoCount) {
+      issues.push(
+        restoredDraft && form.photos.length === 0
+          ? `Upload at least ${minimumPhotoCount} photos again. Uploaded files cannot be restored after signing out.`
+          : `Upload at least ${minimumPhotoCount} photos.`,
+      )
+    }
+
+    if (stepIndex === 7) {
+      if (!form.verification_doc_type) {
+        issues.push('Select a property verification document type.')
+      }
+      if (!form.verification_doc) {
+        issues.push(
+          restoredDraft
+            ? 'Upload the property verification document again. Uploaded files cannot be restored after signing out.'
+            : 'Upload the property verification document.',
+        )
+      }
+      if (!form.id_doc_type) {
+        issues.push('Select your ID document type.')
+      }
+      if (!form.id_doc) {
+        issues.push(
+          restoredDraft
+            ? 'Upload your ID document again. Uploaded files cannot be restored after signing out.'
+            : 'Upload your ID document.',
+        )
+      }
+    }
+
+    if (stepIndex === 8) {
+      if (!form.confirmation) {
+        issues.push('Confirm that the listing details are accurate.')
+      }
+      if (requiresHostTermsAcceptance && !form.host_terms_accepted) {
+        issues.push('Agree to the host terms and conditions.')
+      }
+    }
+
+    return issues
+  }
+
+  function goToFirstIssue() {
+    const firstIssueStep = stepIssues.findIndex((issues) => issues.length > 0)
+    if (firstIssueStep === -1) return false
+
+    setShowMissingStepWarnings(true)
+    setStep(firstIssueStep)
+    setError(`${steps[firstIssueStep]} needs attention: ${stepIssues[firstIssueStep][0]}`)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    return true
+  }
+
   function nextStep() {
     setError('')
 
-    if (step === 0 && !form.display_name) {
-      setError('Please add the public display name guests should see.')
-      return
-    }
-
-if (step === 0 && !form.phone && !form.whatsapp_number) {
-      setError('Please provide either a phone number or WhatsApp number.')
-      return
-    }
-
-    if (
-      step === 0 &&
-      form.host_type === 'representative' &&
-      !form.has_permission
-    ) {
-      setError('Please confirm you have permission to submit this stay.')
-      return
-    }
-
-    if (step === 1 && !form.apartment_title) {
-      setError('Please give your stay a name before continuing.')
-      return
-    }
-
-    if (step === 1 && !form.description.trim()) {
-      setError('Please add a description before continuing.')
-      return
-    }
-
-if (step === 2 && (!form.area || !form.area.trim())) {
-      setError('Please enter a neighbourhood before continuing.')
-      return
-    }
-
-    if (step === 2 && (!form.exact_address || !form.exact_address.trim())) {
-      setError('Please type the exact address manually or choose it from Google suggestions before continuing.')
-      return
-    }
-
-    if (step === 3 && (!form.bedrooms || Number(form.bedrooms) < 0)) {
-      setError('Please enter the number of bedrooms.')
-      return
-    }
-
-    if (step === 3 && (!form.bathrooms || Number(form.bathrooms) < 0)) {
-      setError('Please enter the number of bathrooms.')
-      return
-    }
-
-    if (step === 3 && (!form.sleeps || Number(form.sleeps) < 1)) {
-      setError('Please enter how many guests the stay sleeps.')
-      return
-    }
-
-    if (
-      step === 4 &&
-      (!form.price_ils || Number(form.price_ils) <= 0) &&
-      (!form.price_usd || Number(form.price_usd) <= 0)
-    ) {
-      setError('Please enter at least one nightly price.')
-      return
-    }
-
-    if (step === 5 && form.amenities.length === 0) {
-      setError('Please select at least one amenity before continuing.')
-      return
-    }
-
-    if (step === 6 && form.photos.length < minimumPhotoCount) {
-      setError(`Please upload at least ${minimumPhotoCount} photos before continuing.`)
-      return
-    }
-
-if (step === 7 && !form.verification_doc_type) {
-      setError('Please select a document type.')
-      return
-    }
-
-    if (step === 7 && !form.verification_doc) {
-      setError('Please upload a verification document.')
-      return
-    }
-
-    if (step === 7 && !form.id_doc_type) {
-      setError('Please select your ID document type.')
-      return
-    }
-
-    if (step === 7 && !form.id_doc) {
-      setError('Please upload a valid ID document.')
-      return
-    }
-
-    if (step === 8 && !form.confirmation) {
-      setError('Please confirm the listing details before submitting.')
-      return
-    }
-
-    if (step === 8 && requiresHostTermsAcceptance && !form.host_terms_accepted) {
-      setError('Please agree to the host terms and conditions before submitting.')
+    const issues = getStepIssues(step)
+    if (issues.length > 0) {
+      setShowMissingStepWarnings(true)
+      setError(issues[0])
       return
     }
 
@@ -1118,32 +1193,7 @@ async function handleSubmit() {
       return
     }
 
-    if (!form.confirmation) {
-      setError('Please confirm the listing details before submitting.')
-      setLoading(false)
-      return
-    }
-
-    if (requiresHostTermsAcceptance && !form.host_terms_accepted) {
-      setError('Please agree to the host terms and conditions before submitting.')
-      setLoading(false)
-      return
-    }
-
-    if (
-      !form.apartment_title.trim() ||
-      !form.description.trim() ||
-      !form.area.trim() ||
-      !form.exact_address.trim() ||
-      Number(form.bedrooms) < 0 ||
-      Number(form.bathrooms) < 0 ||
-      Number(form.sleeps) < 1 ||
-      ((!form.price_ils || Number(form.price_ils) <= 0) &&
-        (!form.price_usd || Number(form.price_usd) <= 0)) ||
-      form.amenities.length === 0 ||
-      form.photos.length < minimumPhotoCount
-    ) {
-      setError('Please complete all required listing details before submitting.')
+    if (goToFirstIssue()) {
       setLoading(false)
       return
     }
@@ -1282,17 +1332,21 @@ async function handleSubmit() {
     if (form.photos.length > 0) {
       for (let i = 0; i < form.photos.length; i++) {
         const photo = form.photos[i]
-        const fileExt = photo.file.name.split('.').pop()?.toLowerCase() || 'file'
-        const fileName = `photo-${i + 1}-${Date.now()}.${fileExt}`
+        const fileExt = getImageExtension(photo.file)
+        const fileName = `photo-${i + 1}-${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
         const storagePath = `listings/${applicationId}/${fileName}`
 
         const { error: uploadError } = await supabase.storage
           .from('listing-photos')
-          .upload(storagePath, photo.file)
+          .upload(storagePath, photo.file, {
+            cacheControl: '3600',
+            contentType: photo.file.type || 'image/jpeg',
+            upsert: false,
+          })
 
         if (uploadError) {
           console.error('Upload error:', uploadError)
-          setError(`Failed to upload ${photo.file.name}. Please try again.`)
+          setError(getUploadFailureMessage(photo.file.name, uploadError.message))
           setLoading(false)
           return
         }
@@ -1369,45 +1423,98 @@ async function handleSubmit() {
         </div>
 
         {success && (
-          <div className="mb-8 rounded-3xl bg-emerald-50 p-6 text-emerald-800 ring-1 ring-emerald-100">
-            <h2 className="text-xl font-bold">
-              Your listing has been submitted.
-            </h2>
-            <p className="mt-2 text-sm">
-              Thank you. We are checking your submission and will notify you
-              once it is ready to go live.
+          <div className="mx-auto max-w-2xl rounded-[2rem] bg-white p-8 text-center shadow-xl ring-1 ring-stone-200 md:p-12">
+            <img
+              src="/logos/JLM_Collective_Primary_Horizontal_Terracotta_UI.webp"
+              alt="JLM Collective"
+              className="mx-auto h-14 w-auto"
+            />
+            <p className="mt-8 text-xs font-bold uppercase tracking-[0.2em] text-[#c76f55]">
+              Listing submitted
             </p>
+            <h2 className="mt-3 text-3xl font-bold tracking-tight text-stone-950 md:text-4xl">
+              Thank you for your listing
+            </h2>
+            <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-stone-600">
+              We have received your stay and JLM Collective will review it carefully. You can follow the status from your host dashboard.
+            </p>
+            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+              <Link
+                href="/host/dashboard"
+                className="rounded-full bg-[#c76f55] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47]"
+              >
+                Open host dashboard
+              </Link>
+              <Link
+                href="/"
+                className="rounded-full border border-stone-200 bg-white px-6 py-3 text-sm font-bold text-stone-700 transition hover:border-stone-400"
+              >
+                Go to homepage
+              </Link>
+            </div>
           </div>
         )}
 
+        {!success && showMissingStepWarnings && incompleteStepNames.length > 0 && (
+          <div className="mb-8 rounded-3xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-800">
+            <p className="font-bold">Some sections still need information</p>
+            <p className="mt-1 text-amber-700">
+              {restoredDraft
+                ? 'Your written details were saved, but uploaded files must be added again after signing out or refreshing.'
+                : 'Complete the highlighted sections before submitting your stay.'}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {incompleteStepNames.map((item) => (
+                <span key={item} className="rounded-full bg-white px-3 py-1 text-xs font-bold text-amber-800">
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!success && (
         <div className="grid gap-8 lg:grid-cols-[260px_1fr]">
           <aside className="hidden lg:block">
             <div className="sticky top-28 rounded-[2rem] bg-white p-4 shadow-sm ring-1 ring-stone-200">
-              {steps.map((item, index) => (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => setStep(index)}
-                  className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold transition ${
-                    index === step
-                      ? 'bg-[#c76f55] text-white'
-                      : index < step
-                        ? 'text-stone-900 hover:bg-stone-50'
-                        : 'text-stone-400 hover:bg-stone-50'
-                  }`}
-                >
-                  <span
-                    className={`flex h-7 w-7 items-center justify-center rounded-full text-xs ${
+              {steps.map((item, index) => {
+                const hasIssue = showMissingStepWarnings && stepIssues[index]?.length > 0
+
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => setStep(index)}
+                    className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold transition ${
                       index === step
-                        ? 'bg-white text-[#c76f55]'
-                        : 'bg-[#F8F5F2] text-stone-500'
+                        ? 'bg-[#c76f55] text-white'
+                        : index < step
+                          ? 'text-stone-900 hover:bg-stone-50'
+                          : 'text-stone-400 hover:bg-stone-50'
                     }`}
                   >
-                    {index + 1}
-                  </span>
-                  {item}
-                </button>
-              ))}
+                    <span
+                      className={`flex h-7 w-7 items-center justify-center rounded-full text-xs ${
+                        index === step
+                          ? 'bg-white text-[#c76f55]'
+                          : hasIssue
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'bg-[#F8F5F2] text-stone-500'
+                      }`}
+                    >
+                      {hasIssue ? '!' : index + 1}
+                    </span>
+                    <span className="flex-1">
+                      {item}
+                      {hasIssue && (
+                        <span className={`mt-0.5 block text-[11px] ${index === step ? 'text-white/80' : 'text-amber-700'}`}>
+                          Needs info
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                )
+              })}
             </div>
           </aside>
 
@@ -1415,6 +1522,17 @@ async function handleSubmit() {
             {error && (
               <div className="mb-6 rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-700">
                 {error}
+              </div>
+            )}
+
+            {showMissingStepWarnings && currentStepIssues.length > 0 && (
+              <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                <p className="font-bold">{steps[step]} still needs attention</p>
+                <ul className="mt-2 list-disc space-y-1 pl-5">
+                  {currentStepIssues.map((issue) => (
+                    <li key={issue}>{issue}</li>
+                  ))}
+                </ul>
               </div>
             )}
 
@@ -1746,22 +1864,7 @@ async function handleSubmit() {
                 title="What does the stay include?"
                 description="Select the features guests commonly look for when choosing a short-term stay."
               >
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {amenitiesList.map((item) => (
-                    <button
-                      key={item}
-                      type="button"
-                      onClick={() => toggleAmenity(item)}
-                      className={`rounded-2xl border px-4 py-4 text-left text-sm font-semibold transition ${
-                        form.amenities.includes(item)
-                          ? 'border-[#c76f55] bg-[#fff4ef] text-[#9e4f39]'
-                          : 'border-stone-200 bg-white text-stone-700 hover:border-stone-300'
-                      }`}
-                    >
-                      {item}
-                    </button>
-                  ))}
-                </div>
+                <AmenitySelector selectedAmenities={form.amenities} onToggle={toggleAmenity} />
               </StepShell>
             )}
 
@@ -1771,7 +1874,7 @@ async function handleSubmit() {
                 title="Add photos of your stay"
                 description={`Upload at least ${minimumPhotoCount} clear photos to showcase your property. You'll be able to manage availability and block out dates from your Host Portal after approval.`}
               >
-                <Field label={`Upload photos (minimum ${minimumPhotoCount}, JPG, PNG, WebP - max 5MB each)`}>
+                <Field label={`Upload photos (minimum ${minimumPhotoCount}, JPG, PNG, WebP - max ${maxListingPhotoSizeMb}MB each)`}>
                   <div className="space-y-4">
                     <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-stone-300 bg-[#F8F5F2] p-8 transition hover:border-[#c76f55] hover:bg-[#F5F0EB]">
                       <svg className="mb-3 h-10 w-10 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1787,13 +1890,13 @@ async function handleSubmit() {
                           const files = Array.from(e.target.files || [])
                           const validFiles = files.filter(file => {
                             const validTypes = ['image/jpeg', 'image/png', 'image/webp']
-                            const maxSize = 5 * 1024 * 1024 // 5MB
+                            const maxSize = maxListingPhotoSizeMb * 1024 * 1024
                             if (!validTypes.includes(file.type)) {
                               alert(`${file.name} is not a valid image type. Please use JPG, PNG, or WebP.`)
                               return false
                             }
                             if (file.size > maxSize) {
-                              alert(`${file.name} is too large. Maximum size is 5MB.`)
+                              alert(`${file.name} is too large. Maximum size is ${maxListingPhotoSizeMb}MB.`)
                               return false
                             }
                             return true
@@ -1811,17 +1914,26 @@ async function handleSubmit() {
                     </label>
 
                     {form.photos.length > 0 && (
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
-                        {form.photos.map((photo, index) => (
-                          <div
-                            key={`${photo.preview}-${index}`}
-                            draggable
-                            onDragStart={() => setDraggingPhotoIndex(index)}
-                            onDragOver={(event) => event.preventDefault()}
-                            onDrop={() => dropPhoto(index)}
-                            onDragEnd={() => setDraggingPhotoIndex(null)}
-                            className={`overflow-hidden rounded-xl bg-stone-100 ${draggingPhotoIndex === index ? 'opacity-60' : ''}`}
-                          >
+                      <div>
+                        <p className="mb-3 text-xs font-semibold text-stone-500">
+                          Swipe a photo left or right to change the order. The first photo is the cover.
+                        </p>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
+                          {form.photos.map((photo, index) => (
+                            <div
+                              key={`${photo.preview}-${index}`}
+                              draggable
+                              onDragStart={() => setDraggingPhotoIndex(index)}
+                              onDragOver={(event) => event.preventDefault()}
+                              onDrop={() => dropPhoto(index)}
+                              onDragEnd={() => setDraggingPhotoIndex(null)}
+                              onPointerDown={(event) => startPhotoSwipe(index, event)}
+                              onPointerUp={(event) => finishPhotoSwipe(index, event)}
+                              onPointerCancel={() => {
+                                photoSwipeStartRef.current = null
+                              }}
+                              className={`touch-pan-y cursor-grab overflow-hidden rounded-xl bg-stone-100 active:cursor-grabbing ${draggingPhotoIndex === index ? 'opacity-60' : ''}`}
+                            >
                             <div className="group relative aspect-square">
                               <img
                                 src={photo.preview}
@@ -1847,24 +1959,6 @@ async function handleSubmit() {
                               </button>
                             </div>
                             <div className="space-y-2 bg-white p-3">
-                              <div className="flex gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => movePhoto(index, -1)}
-                                  disabled={index === 0}
-                                  className="flex-1 rounded-full border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-400 disabled:cursor-not-allowed disabled:opacity-40"
-                                >
-                                  Move up
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => movePhoto(index, 1)}
-                                  disabled={index === form.photos.length - 1}
-                                  className="flex-1 rounded-full border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-400 disabled:cursor-not-allowed disabled:opacity-40"
-                                >
-                                  Move down
-                                </button>
-                              </div>
                               <input
                                 value={photo.label}
                                 onChange={(event) => updatePhotoLabel(index, event.target.value)}
@@ -1872,8 +1966,9 @@ async function handleSubmit() {
                                 className="w-full rounded-xl border border-stone-200 px-3 py-2 text-xs text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#c76f55]"
                               />
                             </div>
-                          </div>
-                        ))}
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
 
@@ -2283,6 +2378,7 @@ async function handleSubmit() {
             <HostTermsModal onClose={() => setShowHostTermsModal(false)} />
           )}
         </div>
+        )}
       </section>
     </main>
   )

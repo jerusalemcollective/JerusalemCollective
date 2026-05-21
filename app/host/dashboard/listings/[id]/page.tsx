@@ -4,10 +4,8 @@ import { HostDashboardNav } from '@/components/host-dashboard-nav'
 import { ExternalCalendarSyncForm } from '@/components/external-calendar-sync-form'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { updateHostListing } from '../actions'
-import { STAY_AMENITIES } from '@/lib/stay-amenities'
 import { ListingAiAssistant } from '@/components/listing-ai-assistant'
-
-const amenityOptions = STAY_AMENITIES
+import { AmenitySelector } from '@/components/amenity-selector'
 
 export default async function HostListingEditPage({
   params,
@@ -110,19 +108,7 @@ export default async function HostListingEditPage({
             </EditorSection>
 
             <EditorSection title="Amenities">
-              <div className="grid gap-3 sm:grid-cols-2">
-                {amenityOptions.map((amenity) => (
-                  <label key={amenity} className="flex items-center gap-3 rounded-2xl bg-[#F8F5F2] px-4 py-3 text-sm font-medium text-stone-700">
-                    <input
-                      type="checkbox"
-                      name="amenities"
-                      value={amenity}
-                      defaultChecked={(listing.amenities || []).includes(amenity)}
-                    />
-                    <span>{amenity}</span>
-                  </label>
-                ))}
-              </div>
+              <AmenitySelector defaultSelectedAmenities={listing.amenities || []} />
             </EditorSection>
 
             <EditorSection title="Description">

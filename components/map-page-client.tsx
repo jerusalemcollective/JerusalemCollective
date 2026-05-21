@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { filterListings } from '@/lib/marketplace-rules'
+import { STAY_AMENITY_GROUPS } from '@/lib/stay-amenities'
 
 export type MapListing = {
   id: string
@@ -27,15 +28,6 @@ const JerusalemMap = dynamic(() => import('@/components/jerusalem-map'), {
     </div>
   ),
 })
-
-const amenityFilters = [
-  'Sukkah',
-  'Kosher kitchen',
-  'Shabbat-friendly',
-  'Near synagogues',
-  'Elevator',
-  'Parking',
-]
 
 export function MapPageClient({ listings }: { listings: MapListing[] }) {
   const [minimumBedrooms, setMinimumBedrooms] = useState(0)
@@ -70,7 +62,7 @@ export function MapPageClient({ listings }: { listings: MapListing[] }) {
         </Link>
       </div>
 
-      <div className="absolute left-4 right-4 top-16 z-20 flex flex-col gap-2 rounded-3xl border border-stone-200 bg-white/95 p-3 shadow-lg backdrop-blur md:left-auto md:right-4 md:w-[420px]">
+      <div className="absolute left-4 right-4 top-16 z-20 flex max-h-[calc(100vh-5rem)] flex-col gap-2 overflow-y-auto rounded-3xl border border-stone-200 bg-white/95 p-3 shadow-lg backdrop-blur md:left-auto md:right-4 md:w-[420px]">
         <div className="flex flex-wrap items-center gap-2">
           <label className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700">
             <span className="font-semibold">Bedrooms</span>
@@ -87,24 +79,35 @@ export function MapPageClient({ listings }: { listings: MapListing[] }) {
             </select>
           </label>
 
-          {amenityFilters.map((amenity) => {
-            const active = selectedAmenities.includes(amenity)
+          <div className="grid w-full gap-2 pt-1">
+            {STAY_AMENITY_GROUPS.map((group) => (
+              <section key={group.title} className="rounded-2xl bg-[#F8F5F2] p-2">
+                <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-widest text-stone-400">
+                  {group.title}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {group.amenities.map((amenity) => {
+                    const active = selectedAmenities.includes(amenity)
 
-            return (
-              <button
-                key={amenity}
-                type="button"
-                onClick={() => toggleAmenity(amenity)}
-                className={`rounded-full px-3 py-2 text-xs font-semibold transition ${
-                  active
-                    ? 'bg-[#c76f55] text-white'
-                    : 'border border-stone-200 bg-white text-stone-700 hover:border-[#c76f55] hover:text-[#c76f55]'
-                }`}
-              >
-                {amenity}
-              </button>
-            )
-          })}
+                    return (
+                      <button
+                        key={amenity}
+                        type="button"
+                        onClick={() => toggleAmenity(amenity)}
+                        className={`rounded-full px-3 py-2 text-xs font-semibold transition ${
+                          active
+                            ? 'bg-[#c76f55] text-white'
+                            : 'border border-stone-200 bg-white text-stone-700 hover:border-[#c76f55] hover:text-[#c76f55]'
+                        }`}
+                      >
+                        {amenity}
+                      </button>
+                    )
+                  })}
+                </div>
+              </section>
+            ))}
+          </div>
         </div>
 
         {(minimumBedrooms > 0 || selectedAmenities.length > 0) && (

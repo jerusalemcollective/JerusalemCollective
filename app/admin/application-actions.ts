@@ -1,8 +1,10 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 import { requireAdminPermission } from '@/lib/admin'
 import { logAdminAction } from '@/lib/audit'
+import { sendHostAdminUpdateEmail } from '@/lib/transactional-email'
 
 export type RequestChangesState = {
   status: 'idle' | 'success' | 'error'
@@ -13,6 +15,19 @@ export type ApplicationStatusState = {
   status: 'idle' | 'success' | 'error'
   message: string
 }
+
+const applicationEditableFields = [
+  'apartment_title',
+  'area',
+  'exact_address',
+  'bedrooms',
+  'bathrooms',
+  'sleeps',
+  'price_ils',
+  'price_usd',
+  'amenities',
+  'description',
+] as const
 
 type ListingWritePayload = {
   host_id: string
@@ -140,6 +155,14 @@ export async function requestApplicationChanges(
       applicationId,
       sections.length ? sections.join(', ') : undefined,
     )
+    await sendHostAdminUpdateEmail({
+      supabase,
+      hostId: application.host_id,
+      subject: 'JLM Collective requested changes to your listing',
+      intro: 'JLM Collective has reviewed your listing and requested a few changes before it can move forward.',
+      ctaPath: `/host/dashboard/applications/${applicationId}`,
+      ctaLabel: 'View requested changes',
+    })
 
     revalidatePath('/admin')
     revalidatePath(`/admin/applications/${applicationId}`)
@@ -162,6 +185,100 @@ export async function requestApplicationChanges(
             : JSON.stringify(error) || 'Unable to send the message.',
     }
   }
+}
+
+export async function updateAdminApplicationDetails(formData: FormData) {
+  const applicationId = String(formData.get('applicationId') || '')
+
+  if (!applicationId) {
+    throw new Error('Missing application id.')
+  }
+
+  const { supabase } = await requireAdminPermission('applications')
+  const { data: application, error: applicationError } = await supabase
+    .from('host_applications')
+    .select('id, host_id')
+    .eq('id', applicationId)
+    .single()
+
+  if (applicationError || !application) {
+    throw applicationError || new Error('Application not found.')
+  }
+
+  const update = {
+    apartment_title: String(formData.get('apartment_title') || '').trim(),
+    area: String(formData.get('area') || '').trim(),
+    exact_address: String(formData.get('exact_address') || '').trim() || null,
+    bedrooms: parseNullableNumber(formData.get('bedrooms')),
+    bathrooms: parseNullableNumber(formData.get('bathrooms')),
+    sleeps: parseNullableNumber(formData.get('sleeps')),
+    price_ils: parseNullableNumber(formData.get('price_ils')),
+    price_usd: parseNullableNumber(formData.get('price_usd')),
+    amenities: parseAmenities(formData.getAll('amenities')),
+    description: String(formData.get('description') || '').trim() || null,
+  }
+
+  if (!update.apartment_title || !update.area) {
+    throw new Error('Title and neighbourhood are required.')
+  }
+
+  const { error: updateError } = await supabase
+    .from('host_applications')
+    .update(update)
+    .eq('id', applicationId)
+
+  if (updateError) throw updateError
+
+  const { data: linkedListing } = await supabase
+    .from('listings')
+    .select('id')
+    .eq('application_id', applicationId)
+    .maybeSingle()
+
+  if (linkedListing?.id) {
+    const { error: listingUpdateError } = await supabase
+      .from('listings')
+      .update({
+        title: update.apartment_title,
+        area: update.area,
+        exact_address: update.exact_address,
+        bedrooms: update.bedrooms || 0,
+        bathrooms: update.bathrooms,
+        max_guests: update.sleeps || 1,
+        price_ils: update.price_ils,
+        price_usd: update.price_usd,
+        amenities: update.amenities,
+        description: update.description,
+      })
+      .eq('id', linkedListing.id)
+
+    if (listingUpdateError) throw listingUpdateError
+
+    revalidatePath(`/listings/${linkedListing.id}`)
+  }
+
+  await logAdminAction(
+    supabase,
+    'edit_application_details',
+    'application',
+    applicationId,
+    applicationEditableFields.join(', '),
+  )
+
+  await sendHostAdminUpdateEmail({
+    supabase,
+    hostId: application.host_id,
+    subject: 'JLM Collective updated your listing details',
+    intro: 'JLM Collective made an administrative update to your listing details. Please sign in to review the latest version.',
+    ctaPath: `/host/dashboard/applications/${applicationId}`,
+    ctaLabel: 'Review listing details',
+  })
+
+  revalidatePath('/admin/applications')
+  revalidatePath(`/admin/applications/${applicationId}`)
+  revalidatePath('/host/dashboard')
+  revalidatePath('/host/dashboard/listings')
+  revalidatePath(`/host/dashboard/applications/${applicationId}`)
 }
 
 export async function approveAndPublishApplication(formData: FormData) {
@@ -296,7 +413,22 @@ export async function approveAndPublishApplication(formData: FormData) {
     throw approvalError
   }
 
+  const { error: hostVerificationError } = await supabase
+    .from('hosts')
+    .update({ is_verified: true })
+    .eq('id', hostApplication.host_id)
+
+  if (hostVerificationError) throw hostVerificationError
+
   await logAdminAction(supabase, 'approve_application', 'application', applicationId)
+  await sendHostAdminUpdateEmail({
+    supabase,
+    hostId: hostApplication.host_id,
+    subject: 'Your JLM Collective listing has been approved',
+    intro: 'Good news. Your stay has been approved and published on JLM Collective.',
+    ctaPath: `/host/dashboard/applications/${applicationId}`,
+    ctaLabel: 'View your listing status',
+  })
 
   revalidatePath('/admin')
   revalidatePath(`/admin/applications/${applicationId}`)
@@ -306,6 +438,29 @@ export async function approveAndPublishApplication(formData: FormData) {
   revalidatePath(`/host/dashboard/applications/${applicationId}`)
   revalidatePath('/stays')
   revalidatePath(`/listings/${listingId}`)
+  redirect('/admin/applications')
+}
+
+export async function rejectApplicationAndReturn(formData: FormData) {
+  const applicationId = String(formData.get('applicationId') || '')
+
+  if (!applicationId) {
+    throw new Error('Missing application id.')
+  }
+
+  await setApplicationStatus(applicationId, 'rejected')
+  redirect('/admin/applications')
+}
+
+export async function unrejectApplicationAndReturn(formData: FormData) {
+  const applicationId = String(formData.get('applicationId') || '')
+
+  if (!applicationId) {
+    throw new Error('Missing application id.')
+  }
+
+  await setApplicationStatus(applicationId, 'in_review')
+  redirect(`/admin/applications/${applicationId}`)
 }
 
 function isApplicationReviewStatus(status: string): status is 'in_review' | 'rejected' {
@@ -324,12 +479,14 @@ async function setApplicationStatus(
           verification_status: 'rejected',
           admin_feedback: null,
           changes_requested_at: null,
+          rejected_at: new Date().toISOString(),
         }
       : {
           status,
           verification_status: 'pending',
           admin_feedback: null,
           changes_requested_at: null,
+          rejected_at: null,
         }
 
   const { data, error } = await supabase
@@ -354,6 +511,7 @@ async function setApplicationStatus(
     }
 
     await logAdminAction(supabase, `set_status_${status}`, 'application', applicationId)
+    await notifyHostOfApplicationStatus(supabase, applicationId, status)
 
     revalidatePath('/admin')
     revalidatePath('/admin/applications')
@@ -371,6 +529,7 @@ async function setApplicationStatus(
   }
 
   await logAdminAction(supabase, `set_status_${status}`, 'application', applicationId)
+  await notifyHostOfApplicationStatus(supabase, applicationId, status)
 
   revalidatePath('/admin')
   revalidatePath('/admin/applications')
@@ -385,8 +544,53 @@ function isMissingColumnError(error: unknown, column: string) {
   return message.includes(column.toLowerCase()) && message.includes('column')
 }
 
+function parseNullableNumber(value: FormDataEntryValue | null) {
+  const rawValue = String(value || '').trim()
+  if (!rawValue) return null
+  const parsed = Number(rawValue)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function parseAmenities(value: FormDataEntryValue | FormDataEntryValue[] | null) {
+  const values = Array.isArray(value) ? value : [value]
+
+  return values
+    .flatMap((item) => String(item || '').split(/\r?\n|,/))
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+async function notifyHostOfApplicationStatus(
+  supabase: Awaited<ReturnType<typeof requireAdminPermission>>['supabase'],
+  applicationId: string,
+  status: 'in_review' | 'rejected',
+) {
+  const { data: application } = await supabase
+    .from('host_applications')
+    .select('id, host_id')
+    .eq('id', applicationId)
+    .maybeSingle()
+
+  if (!application?.host_id) return
+
+  await sendHostAdminUpdateEmail({
+    supabase,
+    hostId: application.host_id,
+    subject:
+      status === 'rejected'
+        ? 'Update on your JLM Collective listing'
+        : 'Your JLM Collective listing is now in review',
+    intro:
+      status === 'rejected'
+        ? 'JLM Collective has updated your listing application. Please sign in to view the latest status.'
+        : 'JLM Collective has started reviewing your submitted stay.',
+    ctaPath: `/host/dashboard/applications/${applicationId}`,
+    ctaLabel: 'View update',
+  })
+}
+
 function isMissingOptionalApplicationColumnError(error: unknown) {
-  return ['verification_status', 'id_verified', 'admin_feedback', 'changes_requested_at'].some(
+  return ['verification_status', 'id_verified', 'admin_feedback', 'changes_requested_at', 'rejected_at'].some(
     (column) => isMissingColumnError(error, column),
   )
 }

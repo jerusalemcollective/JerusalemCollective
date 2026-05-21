@@ -28,6 +28,66 @@ export const STAY_AMENITIES = [
   'High chair',
 ]
 
+export const STAY_AMENITY_GROUPS = [
+  {
+    title: 'Everyday comfort',
+    description: 'The essentials guests expect for an easy stay.',
+    amenities: [
+      'WiFi',
+      'Air conditioning',
+      'Heating',
+      'Washer',
+      'Dryer',
+      'Linens and towels',
+      'Iron',
+      'Hair dryer',
+    ],
+  },
+  {
+    title: 'Kitchen',
+    description: 'Cooking and food preparation features.',
+    amenities: [
+      'Kosher kitchen',
+      'Oven',
+      'Microwave',
+      'Dishwasher',
+      'Coffee maker',
+    ],
+  },
+  {
+    title: 'Shabbat and Jewish stay',
+    description: 'Details that matter for Shabbat and yom tov stays.',
+    amenities: [
+      'Shabbat-friendly',
+      'Hot plate',
+      'Hot water urn',
+      'Shabbat elevator',
+      'Near synagogues',
+      'In eruv',
+      'Sukkah',
+    ],
+  },
+  {
+    title: 'Building and outdoor',
+    description: 'Access, parking, and outdoor space.',
+    amenities: [
+      'Parking',
+      'Elevator',
+      'Balcony',
+      'Garden',
+    ],
+  },
+  {
+    title: 'Families',
+    description: 'Helpful extras for guests travelling with children.',
+    amenities: [
+      'Family friendly',
+      'Crib',
+      'High chair',
+    ],
+  },
+] as const
+
 export function slugifyAmenity(value: string) {
   return value.toLowerCase().replaceAll('/', '').replaceAll(' ', '-')
 }

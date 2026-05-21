@@ -4,9 +4,9 @@ import { HostDashboardNav } from '@/components/host-dashboard-nav'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { updateHostApplication } from '../../listings/actions'
 import { ApplicationPhotoManager } from '@/components/application-photo-manager'
-import { STAY_AMENITIES } from '@/lib/stay-amenities'
 import { ListingAiAssistant } from '@/components/listing-ai-assistant'
 import { GoogleAddressField } from '@/components/google-address-field'
+import { AmenitySelector } from '@/components/amenity-selector'
 
 type HostApplication = {
   id: string
@@ -46,8 +46,6 @@ type ApplicationPhoto = {
   sort_order: number
   label?: string | null
 }
-
-const amenityOptions = STAY_AMENITIES
 
 const feedbackSectionLabels: Record<string, string> = {
   host_details: 'Host details',
@@ -236,19 +234,7 @@ export default async function HostApplicationEditPage({
             </EditorSection>
 
             <EditorSection title="Amenities">
-              <div className="grid gap-3 sm:grid-cols-2">
-                {amenityOptions.map((amenity) => (
-                  <label key={amenity} className="flex items-center gap-3 rounded-2xl bg-[#F8F5F2] px-4 py-3 text-sm font-medium text-stone-700">
-                    <input
-                      type="checkbox"
-                      name="amenities"
-                      value={amenity}
-                      defaultChecked={(hostApplication.amenities || []).includes(amenity)}
-                    />
-                    <span>{amenity}</span>
-                  </label>
-                ))}
-              </div>
+              <AmenitySelector defaultSelectedAmenities={hostApplication.amenities || []} />
             </EditorSection>
 
             <EditorSection title="Description">

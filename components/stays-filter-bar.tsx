@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { BookingDateRangePicker } from '@/components/booking-date-range-picker'
-import { STAY_AMENITIES, slugifyAmenity } from '@/lib/stay-amenities'
+import { STAY_AMENITY_GROUPS, slugifyAmenity } from '@/lib/stay-amenities'
 
 type DateRange = {
   from?: Date
@@ -168,28 +168,40 @@ export function StaysFilterBar() {
 
         <fieldset>
           <legend className="text-sm font-semibold text-stone-700">Amenities</legend>
-          <div className="mt-2 flex max-h-28 flex-wrap gap-2 overflow-y-auto rounded-2xl border border-stone-200 bg-white p-3">
-            {STAY_AMENITIES.map((amenity) => {
-              const value = slugifyAmenity(amenity)
-              const checked = selectedAmenities.includes(value)
+          <div className="mt-2 max-h-56 space-y-3 overflow-y-auto rounded-2xl border border-stone-200 bg-white p-3">
+            {STAY_AMENITY_GROUPS.map((group) => (
+              <section key={group.title}>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <p className="text-xs font-bold uppercase tracking-widest text-stone-400">{group.title}</p>
+                  <span className="text-[11px] font-semibold text-stone-400">
+                    {group.amenities.filter((amenity) => selectedAmenities.includes(slugifyAmenity(amenity))).length}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {group.amenities.map((amenity) => {
+                    const value = slugifyAmenity(amenity)
+                    const checked = selectedAmenities.includes(value)
 
-              return (
-                <label
-                  key={amenity}
-                  className={`flex cursor-pointer items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                    checked ? 'bg-[#c76f55] text-white' : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => toggleAmenity(amenity)}
-                    className="sr-only"
-                  />
-                  {amenity}
-                </label>
-              )
-            })}
+                    return (
+                      <label
+                        key={amenity}
+                        className={`flex cursor-pointer items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                          checked ? 'bg-[#c76f55] text-white' : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleAmenity(amenity)}
+                          className="sr-only"
+                        />
+                        {amenity}
+                      </label>
+                    )
+                  })}
+                </div>
+              </section>
+            ))}
           </div>
         </fieldset>
 

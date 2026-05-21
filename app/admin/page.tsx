@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { requireAdminPermission } from '@/lib/admin'
 import { StatusBadge } from '@/components/status-badge'
 
+const REJECTED_APPLICATION_VISIBLE_HOURS = 25
+
 type RecentApplication = {
   id: string
   host_name: string
@@ -9,6 +11,7 @@ type RecentApplication = {
   area: string
   status: string
   created_at: string
+  rejected_at: string | null
 }
 
 type RecentEnquiry = {
@@ -35,6 +38,9 @@ type EnquiryGuest = {
 
 export default async function AdminOverviewPage() {
   const { supabase } = await requireAdminPermission('overview')
+  const rejectedVisibilityCutoff = new Date(
+    Date.now() - REJECTED_APPLICATION_VISIBLE_HOURS * 60 * 60 * 1000,
+  ).toISOString()
   const [
     { count: applicationCount },
     { count: newApplicationCount },
@@ -45,7 +51,10 @@ export default async function AdminOverviewPage() {
     { data: recentApplications },
     { data: recentEnquiries },
   ] = await Promise.all([
-    supabase.from('host_applications').select('*', { count: 'exact', head: true }),
+    supabase
+      .from('host_applications')
+      .select('*', { count: 'exact', head: true })
+      .or(`status.neq.rejected,rejected_at.gte.${rejectedVisibilityCutoff}`),
     supabase.from('host_applications').select('*', { count: 'exact', head: true }).eq('status', 'new'),
     supabase.from('listings').select('*', { count: 'exact', head: true }).eq('is_published', true),
     supabase.from('listings').select('*', { count: 'exact', head: true }).eq('is_published', false),
@@ -53,7 +62,8 @@ export default async function AdminOverviewPage() {
     supabase.from('booking_requests').select('*', { count: 'exact', head: true }).eq('status', 'new'),
     supabase
       .from('host_applications')
-      .select('id, host_name, apartment_title, area, status, created_at')
+      .select('id, host_name, apartment_title, area, status, created_at, rejected_at')
+      .or(`status.neq.rejected,rejected_at.gte.${rejectedVisibilityCutoff}`)
       .order('created_at', { ascending: false })
       .limit(6),
     supabase
