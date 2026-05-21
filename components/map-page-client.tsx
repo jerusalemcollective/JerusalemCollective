@@ -29,7 +29,7 @@ const JerusalemMap = dynamic(() => import('@/components/jerusalem-map'), {
 })
 
 const amenityFilters = [
-  'Sukkah balcony',
+  'Sukkah',
   'Kosher kitchen',
   'Shabbat-friendly',
   'Near synagogues',

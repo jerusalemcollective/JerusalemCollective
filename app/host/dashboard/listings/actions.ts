@@ -57,6 +57,13 @@ export async function updateHostListing(formData: FormData) {
 
 export async function updateHostApplication(formData: FormData) {
   const applicationId = String(formData.get('applicationId') || '')
+  const hostName = String(formData.get('hostName') || '').trim()
+  const displayName = String(formData.get('displayName') || '').trim()
+  const showFullName = formData.get('showFullName') === 'on'
+  const email = String(formData.get('email') || '').trim()
+  const phone = String(formData.get('phone') || '').trim()
+  const whatsappNumber = String(formData.get('whatsappNumber') || '').trim()
+  const hostType = String(formData.get('hostType') || 'owner')
   const title = String(formData.get('title') || '')
   const area = String(formData.get('area') || '')
   const exactAddress = String(formData.get('exactAddress') || '')
@@ -68,10 +75,14 @@ export async function updateHostApplication(formData: FormData) {
   const sleeps = Number(formData.get('sleeps') || 0)
   const priceIlsValue = String(formData.get('priceIls') || '')
   const priceUsdValue = String(formData.get('priceUsd') || '')
+  const currencyPreference = String(formData.get('currencyPreference') || 'ILS')
   const priceIls = priceIlsValue ? Number(priceIlsValue) : null
   const priceUsd = priceUsdValue ? Number(priceUsdValue) : null
   const amenities = formData.getAll('amenities').map(String)
   const description = String(formData.get('description') || '')
+  const photoLink = String(formData.get('photoLink') || '').trim()
+  const verificationDocType = String(formData.get('verificationDocType') || '').trim()
+  const idDocType = String(formData.get('idDocType') || '').trim()
 
   if (!applicationId) {
     throw new Error('Missing application id.')
@@ -80,6 +91,13 @@ export async function updateHostApplication(formData: FormData) {
   const { supabase } = await requireHostDashboardAccess()
   const { error } = await supabase.rpc('update_current_host_application', {
     application_uuid: applicationId,
+    new_host_name: hostName,
+    new_display_name: displayName || hostName.split(' ')[0] || 'Host',
+    new_show_full_name: showFullName,
+    new_email: email,
+    new_phone: phone || null,
+    new_whatsapp_number: whatsappNumber || null,
+    new_host_type: hostType,
     new_title: title,
     new_area: area,
     new_exact_address: exactAddress,
@@ -88,10 +106,14 @@ export async function updateHostApplication(formData: FormData) {
     new_bedrooms: bedrooms,
     new_bathrooms: bathrooms,
     new_sleeps: sleeps,
+    new_currency_preference: currencyPreference,
     new_price_ils: priceIls,
     new_price_usd: priceUsd,
     new_amenities: amenities,
     new_description: description,
+    new_photo_link: photoLink || null,
+    new_verification_doc_type: verificationDocType,
+    new_id_doc_type: idDocType,
   })
 
   if (error) {

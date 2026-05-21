@@ -33,9 +33,9 @@ const collectionCards = [
     href: '/stays?feature=Family%20friendly',
   },
   {
-    title: 'Sukkah balcony',
+    title: 'Sukkah',
     description: 'Browse stays with a sukkah option for the right season.',
-    href: '/stays?feature=Sukkah%20balcony',
+    href: '/stays?feature=Sukkah',
   },
   {
     title: 'Near synagogues',

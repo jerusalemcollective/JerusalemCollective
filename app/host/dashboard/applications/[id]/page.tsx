@@ -3,9 +3,19 @@ import { notFound } from 'next/navigation'
 import { HostDashboardNav } from '@/components/host-dashboard-nav'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { updateHostApplication } from '../../listings/actions'
+import { ApplicationPhotoManager } from '@/components/application-photo-manager'
+import { STAY_AMENITIES } from '@/lib/stay-amenities'
+import { ListingAiAssistant } from '@/components/listing-ai-assistant'
 
 type HostApplication = {
   id: string
+  host_name: string
+  display_name?: string | null
+  show_full_name?: boolean | null
+  email: string
+  phone: string | null
+  whatsapp_number: string | null
+  host_type: string | null
   apartment_title: string
   area: string
   exact_address: string | null
@@ -14,30 +24,41 @@ type HostApplication = {
   bedrooms: number | null
   bathrooms: number | null
   sleeps: number | null
+  currency_preference?: string | null
   price_ils: number | null
   price_usd: number | null
   amenities: string[] | null
   description: string | null
+  photo_link: string | null
+  verification_doc_type?: string | null
+  id_doc_type?: string | null
   status: string
   admin_feedback?: string | null
+  admin_feedback_sections?: string[] | null
 }
 
-const amenityOptions = [
-  'WiFi',
-  'Air conditioning',
-  'Washer',
-  'Dryer',
-  'Parking',
-  'Elevator',
-  'Balcony',
-  'Garden',
-  'Kosher kitchen',
-  'Shabbat-friendly',
-  'Sukkah balcony',
-  'Near synagogues',
-  'Family friendly',
-  'Crib / high chair available',
-]
+type ApplicationPhoto = {
+  id: string
+  photo_url: string
+  storage_path: string | null
+  is_cover: boolean
+  sort_order: number
+}
+
+const amenityOptions = STAY_AMENITIES
+
+const feedbackSectionLabels: Record<string, string> = {
+  host_details: 'Host details',
+  ownership: 'Ownership / permission',
+  stay_basics: 'Stay basics',
+  location: 'Location',
+  capacity: 'Capacity',
+  pricing: 'Pricing',
+  amenities: 'Amenities',
+  description: 'Description',
+  photos: 'Photos',
+  verification: 'Verification',
+}
 
 export default async function HostApplicationEditPage({
   params,
@@ -46,15 +67,25 @@ export default async function HostApplicationEditPage({
 }) {
   const { id } = await params
   const { supabase, hostIds } = await requireHostDashboardAccess()
-  const { data: application } = await supabase
-    .from('host_applications')
-    .select('*')
-    .eq('id', id)
-    .in('host_id', hostIds)
-    .single()
+  const [{ data: application }, { data: photos }] = await Promise.all([
+    supabase
+      .from('host_applications')
+      .select('*')
+      .eq('id', id)
+      .in('host_id', hostIds)
+      .single(),
+    supabase
+      .from('listing_photos')
+      .select('id, photo_url, storage_path, is_cover, sort_order')
+      .eq('application_id', id)
+      .order('is_cover', { ascending: false })
+      .order('sort_order', { ascending: true }),
+  ])
 
   if (!application) notFound()
   const hostApplication = application as HostApplication
+  const applicationPhotos = (photos || []) as ApplicationPhoto[]
+  const sectionsToFix = hostApplication.admin_feedback_sections || []
 
   return (
     <main className="min-h-screen bg-[#F8F5F2] px-5 py-10 text-[#252525] md:px-6">
@@ -70,7 +101,7 @@ export default async function HostApplicationEditPage({
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-          <form action={updateHostApplication} className="space-y-6">
+          <form id="host-application-edit-form" action={updateHostApplication} className="space-y-6">
             <input type="hidden" name="applicationId" value={hostApplication.id} />
             <input type="hidden" name="latitude" value={hostApplication.latitude ?? ''} />
             <input type="hidden" name="longitude" value={hostApplication.longitude ?? ''} />
@@ -94,11 +125,57 @@ export default async function HostApplicationEditPage({
                 <p className="text-xs font-bold uppercase tracking-widest text-amber-700">
                   Message from JLM Collective
                 </p>
+                {sectionsToFix.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {sectionsToFix.map((section) => (
+                      <span
+                        key={section}
+                        className="rounded-full bg-white px-3 py-1 text-xs font-bold text-amber-800"
+                      >
+                        {feedbackSectionLabels[section] || section.replaceAll('_', ' ')}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-amber-900">
                   {hostApplication.admin_feedback}
                 </p>
               </section>
             )}
+
+            <EditorSection title="Host details">
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="Full name">
+                  <input name="hostName" defaultValue={hostApplication.host_name} required className={inputClass} />
+                </Field>
+                <Field label="Display name">
+                  <input name="displayName" defaultValue={hostApplication.display_name || ''} required className={inputClass} />
+                </Field>
+                <Field label="Email">
+                  <input name="email" type="email" defaultValue={hostApplication.email} required className={inputClass} />
+                </Field>
+                <Field label="Phone">
+                  <input name="phone" defaultValue={hostApplication.phone || ''} className={inputClass} />
+                </Field>
+                <Field label="WhatsApp">
+                  <input name="whatsappNumber" defaultValue={hostApplication.whatsapp_number || ''} className={inputClass} />
+                </Field>
+                <Field label="Host type">
+                  <select name="hostType" defaultValue={hostApplication.host_type || 'owner'} className={inputClass}>
+                    <option value="owner">I own this stay</option>
+                    <option value="representative">I manage this stay for someone else</option>
+                  </select>
+                </Field>
+              </div>
+              <label className="mt-4 flex items-center gap-3 rounded-2xl bg-[#F8F5F2] px-4 py-3 text-sm font-medium text-stone-700">
+                <input
+                  type="checkbox"
+                  name="showFullName"
+                  defaultChecked={Boolean(hostApplication.show_full_name)}
+                />
+                <span>Show my full name publicly</span>
+              </label>
+            </EditorSection>
 
             <EditorSection title="Basics">
               <div className="grid gap-4 md:grid-cols-2">
@@ -132,7 +209,14 @@ export default async function HostApplicationEditPage({
             </EditorSection>
 
             <EditorSection title="Pricing">
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-3">
+                <Field label="Preferred currency">
+                  <select name="currencyPreference" defaultValue={hostApplication.currency_preference || 'ILS'} className={inputClass}>
+                    <option value="ILS">ILS</option>
+                    <option value="USD">USD</option>
+                    <option value="Both">Both</option>
+                  </select>
+                </Field>
                 <Field label="Price ILS">
                   <input name="priceIls" type="number" min="0" defaultValue={hostApplication.price_ils ?? ''} className={inputClass} />
                 </Field>
@@ -159,6 +243,18 @@ export default async function HostApplicationEditPage({
             </EditorSection>
 
             <EditorSection title="Description">
+              <div className="mb-5">
+                <ListingAiAssistant
+                  formId="host-application-edit-form"
+                  titleField="title"
+                  areaField="area"
+                  bedroomsField="bedrooms"
+                  bathroomsField="bathrooms"
+                  guestsField="sleeps"
+                  amenitiesField="amenities"
+                  descriptionField="description"
+                />
+              </div>
               <textarea
                 name="description"
                 defaultValue={hostApplication.description || ''}
@@ -166,6 +262,48 @@ export default async function HostApplicationEditPage({
                 required
                 className={`${inputClass} resize-y`}
               />
+            </EditorSection>
+
+            <EditorSection title="Photos">
+              <Field label="Photo link">
+                <input
+                  name="photoLink"
+                  type="url"
+                  defaultValue={hostApplication.photo_link || ''}
+                  placeholder="https://..."
+                  className={inputClass}
+                />
+              </Field>
+              <div className="mt-5">
+                <ApplicationPhotoManager applicationId={hostApplication.id} initialPhotos={applicationPhotos} />
+              </div>
+              <p className="mt-3 text-xs leading-5 text-stone-500">
+                The first photo is treated as the cover image. Add a photo link as backup if you are sharing a professional gallery.
+              </p>
+            </EditorSection>
+
+            <EditorSection title="Verification">
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="Property document type">
+                  <select name="verificationDocType" defaultValue={hostApplication.verification_doc_type || ''} required className={inputClass}>
+                    <option value="">Choose document type</option>
+                    <option value="arnona">Arnona / municipal bill</option>
+                    <option value="mortgage_statement">Mortgage statement</option>
+                    <option value="lease_agreement">Lease agreement</option>
+                    <option value="authorisation_letter">Letter of authorisation</option>
+                    <option value="other">Other</option>
+                  </select>
+                </Field>
+                <Field label="Identity document type">
+                  <select name="idDocType" defaultValue={hostApplication.id_doc_type || ''} required className={inputClass}>
+                    <option value="">Choose ID type</option>
+                    <option value="passport">Passport</option>
+                    <option value="teudat_zehut">Teudat Zehut</option>
+                    <option value="driving_license">Driving licence</option>
+                    <option value="other">Other</option>
+                  </select>
+                </Field>
+              </div>
             </EditorSection>
 
             <div className="flex justify-end">

@@ -10,6 +10,20 @@ type ListingAssistantRequest = {
   description?: string
 }
 
+type ResponseContent = {
+  type?: string
+  text?: string
+}
+
+type ResponseOutputItem = {
+  content?: ResponseContent[]
+}
+
+type OpenAIResponseBody = {
+  output_text?: string
+  output?: ResponseOutputItem[]
+}
+
 export async function POST(request: Request) {
   const apiKey = process.env.OPENAI_API_KEY
 
@@ -120,12 +134,12 @@ export async function POST(request: Request) {
     )
   }
 
-  const data = await response.json()
+  const data = (await response.json()) as OpenAIResponseBody
   const outputText =
     data.output_text ||
     data.output
-      ?.flatMap((item: any) => item.content || [])
-      ?.find((content: any) => content.type === 'output_text')
+      ?.flatMap((item) => item.content || [])
+      ?.find((content) => content.type === 'output_text')
       ?.text
 
   if (!outputText) {

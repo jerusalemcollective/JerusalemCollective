@@ -85,6 +85,7 @@ export async function requestApplicationChanges(
 ): Promise<RequestChangesState> {
   const applicationId = String(formData.get('applicationId') || '')
   const feedback = String(formData.get('feedback') || '').trim()
+  const sections = formData.getAll('sections').map(String).filter(Boolean)
 
   if (!applicationId || !feedback) {
     return {
@@ -105,18 +106,40 @@ export async function requestApplicationChanges(
       throw applicationError || new Error('Application not found.')
     }
 
+    const updatePayload = {
+      status: 'changes_requested',
+      admin_feedback: feedback,
+      admin_feedback_sections: sections,
+      changes_requested_at: new Date().toISOString(),
+    }
+
     const { error: updateError } = await supabase
       .from('host_applications')
-      .update({
-        status: 'changes_requested',
-        admin_feedback: feedback,
-        changes_requested_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq('id', applicationId)
 
-    if (updateError) throw updateError
+    if (updateError && isMissingColumnError(updateError, 'admin_feedback_sections')) {
+      const { error: fallbackUpdateError } = await supabase
+        .from('host_applications')
+        .update({
+          status: 'changes_requested',
+          admin_feedback: feedback,
+          changes_requested_at: new Date().toISOString(),
+        })
+        .eq('id', applicationId)
 
-    await logAdminAction(supabase, 'request_changes', 'application', applicationId)
+      if (fallbackUpdateError) throw fallbackUpdateError
+    } else if (updateError) {
+      throw updateError
+    }
+
+    await logAdminAction(
+      supabase,
+      'request_changes',
+      'application',
+      applicationId,
+      sections.length ? sections.join(', ') : undefined,
+    )
 
     revalidatePath('/admin')
     revalidatePath(`/admin/applications/${applicationId}`)

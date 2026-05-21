@@ -1,25 +1,13 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { HostDashboardNav } from '@/components/host-dashboard-nav'
+import { ExternalCalendarSyncForm } from '@/components/external-calendar-sync-form'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { updateHostListing } from '../actions'
+import { STAY_AMENITIES } from '@/lib/stay-amenities'
+import { ListingAiAssistant } from '@/components/listing-ai-assistant'
 
-const amenityOptions = [
-  'WiFi',
-  'Air conditioning',
-  'Washer',
-  'Dryer',
-  'Parking',
-  'Elevator',
-  'Balcony',
-  'Garden',
-  'Kosher kitchen',
-  'Shabbat-friendly',
-  'Sukkah balcony',
-  'Near synagogues',
-  'Family friendly',
-  'Crib / high chair available',
-]
+const amenityOptions = STAY_AMENITIES
 
 export default async function HostListingEditPage({
   params,
@@ -32,7 +20,7 @@ export default async function HostListingEditPage({
     supabase
       .from('listings')
       .select(
-        'id, title, area, bedrooms, bathrooms, max_guests, price_ils, price_usd, booking_type, amenities, description, is_published',
+        'id, title, area, bedrooms, bathrooms, max_guests, price_ils, price_usd, booking_type, amenities, description, is_published, external_calendar_url, calendar_last_synced_at',
       )
       .eq('id', id)
       .in('host_id', hostIds)
@@ -60,22 +48,23 @@ export default async function HostListingEditPage({
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-          <form action={updateHostListing} className="space-y-6">
-            <input type="hidden" name="listingId" value={listing.id} />
+          <div className="space-y-6">
+            <form id="host-listing-edit-form" action={updateHostListing} className="space-y-6">
+              <input type="hidden" name="listingId" value={listing.id} />
 
-            <section className="rounded-3xl bg-white p-6 shadow-sm">
-              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Listing editor</p>
-                  <h1 className="mt-2 text-3xl font-bold text-stone-950">Edit stay details</h1>
+              <section className="rounded-3xl bg-white p-6 shadow-sm">
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Listing editor</p>
+                    <h1 className="mt-2 text-3xl font-bold text-stone-950">Edit stay details</h1>
+                  </div>
+                  <span className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-bold ${
+                    listing.is_published ? 'bg-green-100 text-green-700' : 'bg-stone-100 text-stone-700'
+                  }`}>
+                    {listing.is_published ? 'Live' : 'Hidden'}
+                  </span>
                 </div>
-                <span className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-bold ${
-                  listing.is_published ? 'bg-green-100 text-green-700' : 'bg-stone-100 text-stone-700'
-                }`}>
-                  {listing.is_published ? 'Live' : 'Hidden'}
-                </span>
-              </div>
-            </section>
+              </section>
 
             <EditorSection title="Basics">
               <div className="grid gap-4 md:grid-cols-2">
@@ -137,6 +126,18 @@ export default async function HostListingEditPage({
             </EditorSection>
 
             <EditorSection title="Description">
+              <div className="mb-5">
+                <ListingAiAssistant
+                  formId="host-listing-edit-form"
+                  titleField="title"
+                  areaField="area"
+                  bedroomsField="bedrooms"
+                  bathroomsField="bathrooms"
+                  guestsField="maxGuests"
+                  amenitiesField="amenities"
+                  descriptionField="description"
+                />
+              </div>
               <textarea
                 name="description"
                 defaultValue={listing.description || ''}
@@ -162,12 +163,19 @@ export default async function HostListingEditPage({
               </EditorSection>
             )}
 
-            <div className="flex justify-end">
-              <button className="rounded-full bg-[#c76f55] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47]">
-                Save changes
-              </button>
-            </div>
-          </form>
+              <div className="flex justify-end">
+                <button className="rounded-full bg-[#c76f55] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47]">
+                  Save changes
+                </button>
+              </div>
+            </form>
+
+            <ExternalCalendarSyncForm
+              listingId={listing.id}
+              externalCalendarUrl={listing.external_calendar_url || null}
+              calendarLastSyncedAt={listing.calendar_last_synced_at || null}
+            />
+          </div>
 
           <aside className="space-y-4">
             <div className="rounded-3xl bg-white p-5 shadow-sm">

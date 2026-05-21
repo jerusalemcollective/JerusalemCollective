@@ -8,6 +8,19 @@ const initialState: RequestChangesState = {
   message: '',
 }
 
+const reviewSections = [
+  { value: 'host_details', label: 'Host details' },
+  { value: 'ownership', label: 'Ownership / permission' },
+  { value: 'stay_basics', label: 'Stay basics' },
+  { value: 'location', label: 'Location' },
+  { value: 'capacity', label: 'Capacity' },
+  { value: 'pricing', label: 'Pricing' },
+  { value: 'amenities', label: 'Amenities' },
+  { value: 'description', label: 'Description' },
+  { value: 'photos', label: 'Photos' },
+  { value: 'verification', label: 'Verification' },
+]
+
 export function AdminRequestChangesForm({ applicationId }: { applicationId: string }) {
   const [state, formAction] = useActionState(requestApplicationChanges, initialState)
 
@@ -19,6 +32,17 @@ export function AdminRequestChangesForm({ applicationId }: { applicationId: stri
         <p className="mt-1 text-xs leading-5 text-stone-500">
           Use this for submitted stays that are not live yet. The host will see it as a message from JLM Collective and can edit the stay.
         </p>
+      </div>
+      <div className="rounded-2xl bg-[#F8F5F2] p-3">
+        <p className="text-xs font-bold uppercase tracking-widest text-stone-400">Parts to fix</p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          {reviewSections.map((section) => (
+            <label key={section.value} className="flex items-center gap-2 text-xs font-semibold text-stone-700">
+              <input type="checkbox" name="sections" value={section.value} />
+              <span>{section.label}</span>
+            </label>
+          ))}
+        </div>
       </div>
       <textarea
         name="feedback"

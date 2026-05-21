@@ -5,6 +5,7 @@ import Link from 'next/link'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { ensureHostProfile } from '@/lib/host-profile'
+import { STAY_AMENITIES } from '@/lib/stay-amenities'
 
 type PhotoUpload = {
   file: File
@@ -164,25 +165,7 @@ const neighbourhoods = [
   'Beit Hakerem',
 ]
 
-const amenitiesList = [
-  // Core Amenities
-  'WiFi',
-  'Air conditioning',
-  'Washer',
-  'Dryer',
-  'Parking',
-  'Elevator',
-  'Balcony',
-  'Garden',
-  // Religious-Friendly Essentials
-  'Kosher kitchen',
-  'Shabbat-friendly',
-  'Sukkah balcony',
-  'Near synagogues',
-  // Family-Friendly
-  'Family friendly',
-  'Crib / high chair available',
-]
+const amenitiesList = STAY_AMENITIES
 
 type NeighbourhoodAutocompleteProps = {
   value: string
