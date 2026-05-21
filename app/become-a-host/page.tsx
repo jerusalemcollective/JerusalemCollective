@@ -57,6 +57,11 @@ type FormState = {
   host_terms_accepted: boolean
 }
 
+type SavedListingDraft = Omit<FormState, 'photos' | 'verification_doc' | 'id_doc'> & {
+  step: number
+  saved_at: string
+}
+
 type AiSuggestion = {
   title?: string
   description?: string
@@ -405,7 +410,7 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
         if (!isMounted) return
 
         if (!places.AutocompleteSuggestion && !places.AutocompleteService) {
-          setLoadError('Address lookup is unavailable right now. You can still type the address manually.')
+          setLoadError('Google address lookup is unavailable right now. Type the address manually and continue.')
           setIsLoading(false)
           return
         }
@@ -418,7 +423,7 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
         console.log('[v0] Error initializing autocomplete:', err)
 
         if (isMounted) {
-          setLoadError('Address lookup is unavailable right now. You can still type the address manually.')
+          setLoadError('Google address lookup is unavailable right now. Type the address manually and continue.')
           setIsLoading(false)
         }
       }
@@ -432,7 +437,7 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
   }, [])
 
   useEffect(() => {
-    if (isLoading || loadError || inputValue.trim().length < 3) {
+    if (isLoading || loadError || value.trim().length < 3) {
       setSuggestions([])
       setIsSearching(false)
       return
@@ -452,7 +457,7 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
 
         if (places.AutocompleteSuggestion) {
           const request: Record<string, unknown> = {
-            input: `${inputValue} Jerusalem`,
+            input: `${value} Jerusalem`,
             sessionToken: sessionToken.current,
             includedRegionCodes: ['il'],
             includedPrimaryTypes: ['street_address', 'premise', 'route'],
@@ -486,7 +491,7 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
           const predictions = await new Promise<LegacyPlacePrediction[]>((resolve) => {
             service.getPlacePredictions(
               {
-                input: `${inputValue} Jerusalem`,
+                input: `${value} Jerusalem`,
                 componentRestrictions: { country: 'il' },
                 types: ['address'],
               },
@@ -519,7 +524,7 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
     }, 250)
 
     return () => window.clearTimeout(timer)
-  }, [inputValue, isLoading, loadError])
+  }, [value, isLoading, loadError])
 
   const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
     const nextValue = event.target.value
@@ -579,7 +584,7 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
       }
     } catch (error) {
       console.log('[v0] Google address selection error:', error instanceof Error ? error.message : error)
-      setLoadError('Address lookup is unavailable right now. You can still type the address manually.')
+      setLoadError('Google address lookup is unavailable right now. Type the address manually and continue.')
     }
   }
 
@@ -609,14 +614,14 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
       <div ref={placesServiceContainerRef} className="hidden" />
       <input
         type="text"
-        value={inputValue}
+        value={value}
         onChange={handleInputChange}
         onFocus={() => {
           if (suggestions.length > 0) setIsOpen(true)
         }}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
-        placeholder={isLoading ? 'Loading address lookup...' : placeholder}
+        placeholder={placeholder}
         className={className}
         autoComplete="off"
         role="combobox"
@@ -652,7 +657,7 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
         </ul>
       )}
 
-      {inputValue && isValidated && (
+      {value && isValidated && (
         <div className="mt-1 flex items-center gap-1 text-xs text-green-600">
           <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -660,9 +665,14 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
           <span>Address validated</span>
         </div>
       )}
-      {inputValue && !isValidated && !isLoading && !loadError && (
+      {value && !isValidated && !isLoading && !loadError && (
         <div className="mt-1 text-xs text-stone-500">
-          {isSearching ? 'Searching Google Maps...' : 'Choose the full address from the Google suggestions.'}
+          {isSearching ? 'Searching Google Maps...' : 'Choose a suggestion or keep your manually typed address.'}
+        </div>
+      )}
+      {isLoading && (
+        <div className="mt-1 text-xs text-stone-500">
+          Loading Google address suggestions. You can type manually now.
         </div>
       )}
       {loadError && (
@@ -749,6 +759,7 @@ const steps = [
 
 const minimumPhotoCount = 5
 const hostTermsVersion = '2026-05-18'
+const listingDraftStorageKey = 'jlm-listing-draft-v1'
 const isSupabaseEnvReady = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL &&
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -757,6 +768,7 @@ const isSupabaseEnvReady = Boolean(
 export default function BecomeAHostPage() {
   const [step, setStep] = useState(0)
   const [form, setForm] = useState<FormState>(initialForm)
+  const [draftReady, setDraftReady] = useState(false)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
@@ -771,6 +783,51 @@ export default function BecomeAHostPage() {
   const progress = useMemo(() => {
     return Math.round(((step + 1) / steps.length) * 100)
   }, [step])
+
+  useEffect(() => {
+    try {
+      const savedDraft = window.localStorage.getItem(listingDraftStorageKey)
+      if (!savedDraft) {
+        setDraftReady(true)
+        return
+      }
+
+      const parsedDraft = JSON.parse(savedDraft) as Partial<SavedListingDraft>
+      const { step: savedStep, saved_at: _savedAt, ...draftFields } = parsedDraft
+      setForm((current) => ({
+        ...current,
+        ...draftFields,
+        photos: [],
+        verification_doc: null,
+        id_doc: null,
+      }))
+
+      if (typeof savedStep === 'number') {
+        setStep(Math.min(Math.max(savedStep, 0), steps.length - 1))
+      }
+    } catch (draftError) {
+      console.error('Could not load listing draft:', draftError)
+    } finally {
+      setDraftReady(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!draftReady || success) return
+
+    const timer = window.setTimeout(() => {
+      const { photos: _photos, verification_doc: _verificationDoc, id_doc: _idDoc, ...draftFields } = form
+      const draft: SavedListingDraft = {
+        ...draftFields,
+        step,
+        saved_at: new Date().toISOString(),
+      }
+
+      window.localStorage.setItem(listingDraftStorageKey, JSON.stringify(draft))
+    }, 400)
+
+    return () => window.clearTimeout(timer)
+  }, [draftReady, form, step, success])
 
   useEffect(() => {
     async function loadHost() {
@@ -930,7 +987,7 @@ if (step === 2 && (!form.area || !form.area.trim())) {
     }
 
     if (step === 2 && (!form.exact_address || !form.exact_address.trim())) {
-      setError('Please enter your address before continuing.')
+      setError('Please type the exact address manually or choose it from Google suggestions before continuing.')
       return
     }
 
@@ -1221,6 +1278,7 @@ async function handleSubmit() {
 
     setSuccess(true)
     setLoading(false)
+    window.localStorage.removeItem(listingDraftStorageKey)
     setForm(initialForm)
     setStep(0)
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -1524,7 +1582,11 @@ async function handleSubmit() {
 <Field label="Exact address" required>
                     <AddressAutocomplete
                       value={form.exact_address}
-                      onChange={(val) => updateField('exact_address', val)}
+                      onChange={(val) => {
+                        updateField('exact_address', val)
+                        updateField('address_latitude', null)
+                        updateField('address_longitude', null)
+                      }}
                       onSelect={({ address, latitude, longitude }) => {
                         updateField('exact_address', address)
                         updateField('address_latitude', latitude)
@@ -1538,7 +1600,7 @@ async function handleSubmit() {
 
                 <div className="mt-6 rounded-3xl bg-[#F8F5F2] p-5 text-sm leading-6 text-stone-600">
                   <p className="mb-2">Location details help place the stay correctly on the map.</p>
-                  <p>Address is validated with Google Maps. Public listings show an approximate area rather than the full address.</p>
+                  <p>You can choose an address from Google Maps or type it manually. Public listings show an approximate area rather than the full address.</p>
                 </div>
               </StepShell>
             )}
