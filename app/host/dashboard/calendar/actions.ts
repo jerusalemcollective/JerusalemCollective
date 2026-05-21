@@ -43,6 +43,48 @@ export async function addUnavailableRange(formData: FormData) {
   revalidatePath('/host/dashboard/calendar')
 }
 
+export async function blockDateRange(formData: FormData) {
+  const listingId = String(formData.get('listingId') || '')
+  const startDate = String(formData.get('startDate') || '')
+  const endDate = String(formData.get('endDate') || '')
+
+  if (!listingId || !startDate || !endDate) {
+    throw new Error('Missing required fields.')
+  }
+
+  if (endDate < startDate) {
+    throw new Error('End date must be after start date.')
+  }
+
+  const { supabase, host, hostIds } = await requireHostDashboardAccess()
+  const { data: listing } = await supabase
+    .from('listings')
+    .select('id')
+    .eq('id', listingId)
+    .in('host_id', hostIds)
+    .single()
+
+  if (!listing) {
+    throw new Error('Listing not found.')
+  }
+
+  const { error } = await supabase
+    .from('listing_unavailable_ranges')
+    .insert({
+      listing_id: listingId,
+      host_id: host.id,
+      start_date: startDate,
+      end_date: endDate,
+      source: 'manual',
+    })
+
+  if (error) throw error
+
+  revalidatePath('/host/dashboard/calendar')
+  revalidatePath(`/host/dashboard/listings/${listingId}`)
+  revalidatePath(`/listings/${listingId}`)
+}
+
 export async function removeUnavailableRange(formData: FormData) {
   const rangeId = String(formData.get('rangeId') || '')
 

@@ -178,6 +178,7 @@ export function MessagesInbox({ mode, initialConversationId = null }: MessagesIn
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [guestProfile, setGuestProfile] = useState<GuestProfile | null>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -314,9 +315,51 @@ export function MessagesInbox({ mode, initialConversationId = null }: MessagesIn
 
     const loadMessages = async () => {
       try {
-        const rows = await loadConversationMessages(supabase, selectedConversationId)
+        const selectedConv = conversations.find((conversation) => conversation.id === selectedConversationId) || null
+        const otherParticipantId =
+          selectedConv && user?.id
+            ? selectedConv.participant_1 === user.id
+              ? selectedConv.participant_2
+              : selectedConv.participant_1
+            : null
+        const profilePromise =
+          mode === 'host' && otherParticipantId
+            ? Promise.all([
+                supabase
+                  .from('profiles')
+                  .select('full_name, avatar_url, created_at, about_me, visiting_from, visit_reason')
+                  .eq('id', otherParticipantId)
+                  .maybeSingle(),
+                supabase
+                  .from('bookings')
+                  .select('*', { count: 'exact', head: true })
+                  .eq('user_id', otherParticipantId),
+              ])
+            : Promise.resolve(null)
+        const [rows, guestContext] = await Promise.all([
+          loadConversationMessages(supabase, selectedConversationId),
+          profilePromise,
+        ])
         if (isActive) {
           setMessages(rows)
+          if (mode === 'host' && guestContext) {
+            const [{ data: profileData }, { count: bookingCount }] = guestContext
+            setGuestProfile(
+              profileData
+                ? {
+                    full_name: profileData.full_name ?? null,
+                    avatar_url: profileData.avatar_url ?? null,
+                    created_at: profileData.created_at ?? null,
+                    about_me: profileData.about_me ?? null,
+                    visiting_from: profileData.visiting_from ?? null,
+                    visit_reason: profileData.visit_reason ?? null,
+                    booking_count: bookingCount || 0,
+                  }
+                : null,
+            )
+          } else {
+            setGuestProfile(null)
+          }
         }
       } catch (err) {
         if (isActive) {
@@ -445,7 +488,7 @@ export function MessagesInbox({ mode, initialConversationId = null }: MessagesIn
         void supabase.removeChannel(conversationsChannel)
       }
     }
-  }, [selectedConversationId, user?.id])
+  }, [conversations, mode, selectedConversationId, user?.id])
 
   const selectedConversation = useMemo(
     () => conversations.find((conversation) => conversation.id === selectedConversationId) || null,
@@ -641,6 +684,54 @@ export function MessagesInbox({ mode, initialConversationId = null }: MessagesIn
             )}
           </div>
 
+          {mode === 'host' && guestProfile && (
+            <div className="border-b border-stone-100 bg-[#F8F5F2] px-4 py-4">
+              <p className="mb-3 text-xs font-bold uppercase tracking-widest text-stone-400">
+                Guest
+              </p>
+              <div className="flex items-center gap-3">
+                {guestProfile.avatar_url ? (
+                  <img
+                    src={guestProfile.avatar_url}
+                    alt=""
+                    className="h-12 w-12 shrink-0 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-stone-300 text-base font-bold text-stone-600">
+                    {guestProfile.full_name?.charAt(0)?.toUpperCase() || 'G'}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="truncate font-bold text-stone-950">
+                    {guestProfile.full_name || 'Guest'}
+                  </p>
+                  <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
+                    {guestProfile.visiting_from && (
+                      <span className="text-xs text-stone-500">
+                        From: {guestProfile.visiting_from}
+                      </span>
+                    )}
+                    {guestProfile.visit_reason && (
+                      <span className="text-xs text-stone-500">
+                        {guestProfile.visit_reason}
+                      </span>
+                    )}
+                    <span className="text-xs text-stone-500">
+                      {guestProfile.booking_count === 0
+                        ? 'First stay'
+                        : `${guestProfile.booking_count} previous stay${guestProfile.booking_count === 1 ? '' : 's'}`}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              {guestProfile.about_me && (
+                <p className="mt-3 rounded-2xl bg-white px-3 py-2 text-sm leading-5 text-stone-600">
+                  {guestProfile.about_me}
+                </p>
+              )}
+            </div>
+          )}
+
           <div className="flex-1 space-y-4 overflow-y-auto bg-[#fcfaf8] px-5 py-5">
             {messages.map((message) => {
               const isMine = message.sender_id === user?.id
@@ -663,6 +754,25 @@ export function MessagesInbox({ mode, initialConversationId = null }: MessagesIn
 
           <div className="border-t border-stone-100 p-4">
             {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+            {mode === 'host' && (
+              <div className="border-t border-stone-100 px-4 pb-1 pt-3">
+                <p className="mb-2 text-xs font-bold uppercase tracking-widest text-stone-400">
+                  Quick replies
+                </p>
+                <div className="flex gap-2 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
+                  {HOST_QUICK_REPLIES.map((reply) => (
+                    <button
+                      key={reply.label}
+                      type="button"
+                      onClick={() => setDraft(reply.text)}
+                      className="shrink-0 whitespace-nowrap rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs font-semibold text-stone-700 transition hover:border-[#c76f55] hover:text-[#c76f55]"
+                    >
+                      {reply.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="flex gap-3">
               <textarea
                 value={draft}

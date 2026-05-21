@@ -6,6 +6,7 @@ type HostEmailRow = {
   id: string
   name: string | null
   email: string | null
+  notify_new_enquiry_email?: boolean | null
 }
 
 type ListingEmailRow = {
@@ -131,7 +132,7 @@ export async function sendHostNewEnquiryEmail({
     const [{ data: host }, { data: listing }, { data: guest }] = await Promise.all([
       supabase
         .from('hosts')
-        .select('id, name, email')
+        .select('id, name, email, notify_new_enquiry_email')
         .eq('id', request.host_id)
         .maybeSingle<HostEmailRow>(),
       supabase
@@ -149,6 +150,7 @@ export async function sendHostNewEnquiryEmail({
     ])
 
     if (!host?.email) return
+    if (host.notify_new_enquiry_email === false) return
 
     const listingTitle = listing?.title || 'your stay'
     const dates = `${request.check_in || 'Date not set'} to ${request.check_out || 'date not set'}`

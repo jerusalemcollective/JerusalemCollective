@@ -158,6 +158,7 @@ export default async function HostListingsPage() {
                 return (
                   <ListingRow
                     key={listing.id}
+                    id={listing.id}
                     title={listing.title}
                     area={listing.area}
                     meta={`${listing.bedrooms || '-'} bedrooms · sleeps ${listing.max_guests}`}
@@ -168,10 +169,6 @@ export default async function HostListingsPage() {
                       label: listing.is_published ? 'Live' : 'Hidden',
                       tone: listing.is_published ? 'green' : 'stone',
                     }}
-                    actions={[
-                      { href: `/host/dashboard/listings/${listing.id}`, label: 'Manage' },
-                      { href: `/listings/${listing.id}`, label: 'View public page' },
-                    ]}
                   />
                 )
               })}
@@ -222,6 +219,7 @@ function SectionHeading({ title, detail }: { title: string; detail: string }) {
 }
 
 function ListingRow({
+  id,
   title,
   area,
   meta,
@@ -229,8 +227,8 @@ function ListingRow({
   score,
   suggestions,
   badge,
-  actions,
 }: {
+  id: string
   title: string
   area: string
   meta: string
@@ -238,7 +236,6 @@ function ListingRow({
   score: number
   suggestions: string[]
   badge: { label: string; tone: 'green' | 'stone' }
-  actions: Array<{ href: string; label: string }>
 }) {
   return (
     <article className="grid gap-4 py-4 md:grid-cols-[96px_1fr_auto] md:items-center">
@@ -250,18 +247,37 @@ function ListingRow({
         <div className="mt-4 max-w-xl">
           <ListingQualityScore score={score} label="Listing strength" suggestions={suggestions} />
         </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Link
+            href={`/host/dashboard/listings/${id}`}
+            className="rounded-full border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-300"
+          >
+            Edit listing
+          </Link>
+          <Link
+            href="/host/dashboard/calendar"
+            className="rounded-full border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-300"
+          >
+            Block dates
+          </Link>
+          <Link
+            href={`/listings/${id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-full border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-300"
+          >
+            View live ↗
+          </Link>
+          <Link
+            href="/host/dashboard/messages"
+            className="rounded-full border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-300"
+          >
+            Messages
+          </Link>
+        </div>
       </div>
       <div className="flex flex-wrap items-center gap-2 md:justify-end">
         <StatusBadge label={badge.label} tone={badge.tone} />
-        {actions.map((action) => (
-          <Link
-            key={action.href}
-            href={action.href}
-            className="rounded-full border border-stone-200 px-3 py-1.5 text-sm font-semibold text-stone-700 transition hover:border-stone-300"
-          >
-            {action.label}
-          </Link>
-        ))}
       </div>
     </article>
   )

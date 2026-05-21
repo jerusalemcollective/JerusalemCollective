@@ -18,7 +18,7 @@ export default async function HostListingEditPage({
     supabase
       .from('listings')
       .select(
-        'id, title, area, bedrooms, bathrooms, max_guests, price_ils, price_usd, booking_type, amenities, description, is_published, external_calendar_url, calendar_last_synced_at',
+        'id, title, area, bedrooms, bathrooms, max_guests, price_ils, price_usd, booking_type, amenities, description, house_rules, welcome_message, check_in_instructions, is_published, external_calendar_url, calendar_last_synced_at',
       )
       .eq('id', id)
       .in('host_id', hostIds)
@@ -131,6 +131,55 @@ export default async function HostListingEditPage({
                 className={`${inputClass} resize-y`}
               />
             </EditorSection>
+
+            <section className="rounded-3xl bg-white p-6 shadow-sm">
+              <h2 className="text-lg font-bold text-stone-950">Guest communication</h2>
+              <p className="mt-1 text-sm text-stone-600">
+                These messages are shared with guests at the right moment automatically.
+              </p>
+
+              <label className="mt-5 block text-sm font-semibold text-stone-700">
+                House rules
+                <span className="ml-2 text-xs font-normal text-stone-400">
+                  Shown to guests before they enquire
+                </span>
+                <textarea
+                  name="houseRules"
+                  rows={4}
+                  defaultValue={listing.house_rules || ''}
+                  placeholder="e.g. No smoking. Shabbat-observant property. Please remove shoes at the entrance."
+                  className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 placeholder:text-stone-400"
+                />
+              </label>
+
+              <label className="mt-4 block text-sm font-semibold text-stone-700">
+                Welcome message
+                <span className="ml-2 text-xs font-normal text-stone-400">
+                  Sent when a booking is confirmed
+                </span>
+                <textarea
+                  name="welcomeMessage"
+                  rows={4}
+                  defaultValue={listing.welcome_message || ''}
+                  placeholder="e.g. Welcome to our home. We hope you have a wonderful stay. Please make yourself comfortable."
+                  className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 placeholder:text-stone-400"
+                />
+              </label>
+
+              <label className="mt-4 block text-sm font-semibold text-stone-700">
+                Check-in instructions
+                <span className="ml-2 text-xs font-normal text-stone-400">
+                  Shared once booking is confirmed
+                </span>
+                <textarea
+                  name="checkInInstructions"
+                  rows={5}
+                  defaultValue={listing.check_in_instructions || ''}
+                  placeholder="e.g. Check-in is from 3pm. The key box is to the right of the front door. Code: ****"
+                  className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 placeholder:text-stone-400"
+                />
+              </label>
+            </section>
 
             {!!adminMessages?.length && (
               <EditorSection title="Messages from JLM Collective">

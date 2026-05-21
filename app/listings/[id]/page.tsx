@@ -151,6 +151,7 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
             bathrooms: sampleListing.bathrooms || null,
             amenities: sampleListing.amenities || [],
             description: sampleListing.description || null,
+            house_rules: null,
           }}
           host={null}
           publicHostName={null}

@@ -30,6 +30,7 @@ export type ListingDetailListing = {
   booking_type: string
   amenities: string[] | null
   description: string | null
+  house_rules: string | null
 }
 
 export type ListingDetailPhoto = {
@@ -328,6 +329,15 @@ export function ListingDetailClient({
                 <h2 className="mb-3 text-lg font-bold text-stone-900">About this stay</h2>
                 <p className="whitespace-pre-line text-sm leading-relaxed text-stone-600">{listing.description}</p>
               </div>
+            )}
+
+            {listing.house_rules && (
+              <section className="mb-6 rounded-3xl bg-white p-6 shadow-sm">
+                <h2 className="text-lg font-bold text-stone-950">House rules</h2>
+                <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-stone-700">
+                  {listing.house_rules}
+                </p>
+              </section>
             )}
 
             {listing.amenities && listing.amenities.length > 0 && (

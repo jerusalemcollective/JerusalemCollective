@@ -24,12 +24,15 @@ export async function updateHostListing(formData: FormData) {
   const bookingType = String(formData.get('bookingType') || 'request')
   const amenities = formData.getAll('amenities').map(String)
   const description = String(formData.get('description') || '')
+  const houseRules = String(formData.get('houseRules') || '').trim() || null
+  const welcomeMessage = String(formData.get('welcomeMessage') || '').trim() || null
+  const checkInInstructions = String(formData.get('checkInInstructions') || '').trim() || null
 
   if (!listingId) {
     throw new Error('Missing listing id.')
   }
 
-  const { supabase } = await requireHostDashboardAccess()
+  const { supabase, hostIds } = await requireHostDashboardAccess()
   const { error } = await supabase.rpc('update_current_host_listing', {
     listing_uuid: listingId,
     new_title: title,
@@ -46,6 +49,20 @@ export async function updateHostListing(formData: FormData) {
 
   if (error) {
     throw error
+  }
+
+  const { error: communicationError } = await supabase
+    .from('listings')
+    .update({
+      house_rules: houseRules,
+      welcome_message: welcomeMessage,
+      check_in_instructions: checkInInstructions,
+    })
+    .eq('id', listingId)
+    .in('host_id', hostIds)
+
+  if (communicationError) {
+    throw communicationError
   }
 
   revalidatePath('/host/dashboard')

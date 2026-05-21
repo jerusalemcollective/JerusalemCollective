@@ -15,6 +15,7 @@ type WebhookPayload = {
 
 type HostRow = {
   email?: string | null
+  notify_new_enquiry_email?: boolean | null
 }
 
 type ListingRow = {
@@ -38,7 +39,7 @@ Deno.serve(async (request) => {
     }
 
     const [host, listing, guest] = await Promise.all([
-      fetchSingle<HostRow>('hosts', `id=eq.${record.host_id}&select=email`),
+      fetchSingle<HostRow>('hosts', `id=eq.${record.host_id}&select=email,notify_new_enquiry_email`),
       fetchSingle<ListingRow>('listings', `id=eq.${record.listing_id}&select=title`),
       record.guest_id
         ? fetchSingle<ProfileRow>('profiles', `id=eq.${record.guest_id}&select=full_name`)
@@ -48,6 +49,10 @@ Deno.serve(async (request) => {
     if (!host?.email) {
       console.log('Skipping host enquiry email: host email not found')
       return ok()
+    }
+
+    if (host.notify_new_enquiry_email === false) {
+      return ok({ ok: true, skipped: true })
     }
 
     const listingTitle = listing?.title || 'your stay'
@@ -143,8 +148,8 @@ function escapeHtml(value: string) {
     .replaceAll("'", '&#039;')
 }
 
-function ok() {
-  return new Response(JSON.stringify({ ok: true }), {
+function ok(body: Record<string, unknown> = { ok: true }) {
+  return new Response(JSON.stringify(body), {
     headers: { 'Content-Type': 'application/json' },
   })
 }
