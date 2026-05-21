@@ -16,10 +16,12 @@ interface Listing {
   lat: number
   lng: number
   amenities?: string[]
+  is_featured?: boolean
 }
 
 interface JerusalemMapProps {
   listings: Listing[]
+  onListingSelect?: (listing: Listing) => void
 }
 
 const mapContainerStyle = {
@@ -88,7 +90,7 @@ class MapErrorBoundary extends Component<{ children: ReactNode }, { hasError: bo
   }
 }
 
-function JerusalemMapInner({ listings }: JerusalemMapProps) {
+function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null)
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const hasGoogleMapsKey = Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY)
@@ -106,6 +108,7 @@ function JerusalemMapInner({ listings }: JerusalemMapProps) {
 
   const handleMarkerClick = (listing: Listing) => {
     setSelectedListing(listing)
+    onListingSelect?.(listing)
     map?.panTo({ lat: listing.lat, lng: listing.lng })
     map?.setZoom(14)
   }
@@ -190,13 +193,17 @@ function JerusalemMapInner({ listings }: JerusalemMapProps) {
             >
               <button
                 onClick={() => handleMarkerClick(listing)}
-                className={`rounded-full px-3 py-1 text-sm font-bold shadow-lg ring-1 transition hover:bg-[#c76f55] hover:text-white ${
-                  selectedListing?.id === listing.id
+                title={listing.title}
+                className={`group relative rounded-full px-3 py-1 text-sm font-bold shadow-lg ring-1 transition hover:bg-[#c76f55] hover:text-white ${
+                  selectedListing?.id === listing.id || listing.is_featured
                     ? 'bg-[#c76f55] text-white ring-[#c76f55]'
                     : 'bg-white text-[#252525] ring-stone-200'
                 }`}
               >
-                {listing.price}
+                {formatListingPrice(listing)}
+                <span className="pointer-events-none absolute left-1/2 top-full mt-2 hidden -translate-x-1/2 whitespace-nowrap rounded-lg bg-stone-950 px-2 py-1 text-xs font-semibold text-white shadow-lg group-hover:block">
+                  {listing.title}
+                </span>
               </button>
             </OverlayView>
           ))}
@@ -230,10 +237,10 @@ function JerusalemMapInner({ listings }: JerusalemMapProps) {
   )
 }
 
-export default function JerusalemMap({ listings }: JerusalemMapProps) {
+export default function JerusalemMap({ listings, onListingSelect }: JerusalemMapProps) {
   return (
     <MapErrorBoundary>
-      <JerusalemMapInner listings={listings} />
+      <JerusalemMapInner listings={listings} onListingSelect={onListingSelect} />
     </MapErrorBoundary>
   )
 }

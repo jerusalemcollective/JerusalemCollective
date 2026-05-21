@@ -1,4 +1,4 @@
-export const HOST_TERMS_VERSION = '2026-05-21'
+﻿export const HOST_TERMS_VERSION = '2026-05-21'
 export const HOST_TERMS_LAST_UPDATED = '21 May 2026'
 
 export const HOST_TERMS = [
@@ -27,7 +27,7 @@ export const HOST_TERMS = [
     title: 'Property standards and guest safety',
     body: [
       'You are responsible for ensuring that the stay is clean, safe, properly maintained, and suitable for the use described in the listing.',
-      'You must disclose any important conditions that may affect a guest’s stay, including construction works, access issues, security concerns, building rules, shared spaces, religious-use limitations, or restrictions imposed by a landlord, building, or local authority.',
+      "You must disclose any important conditions that may affect a guest's stay, including construction works, access issues, security concerns, building rules, shared spaces, religious-use limitations, or restrictions imposed by a landlord, building, or local authority.",
     ],
   },
   {

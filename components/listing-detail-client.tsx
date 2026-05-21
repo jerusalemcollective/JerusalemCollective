@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState, type TouchEvent } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { Link2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -35,7 +36,6 @@ export type ListingDetailPhoto = {
   id: string
   photo_url: string
   is_cover: boolean | null
-  label?: string | null
 }
 
 export type ListingDetailHost = {
@@ -107,13 +107,53 @@ export function ListingDetailClient({
   const [showMobileBooking, setShowMobileBooking] = useState(false)
   const [bookingDateRange, setBookingDateRange] = useState<DateRange>({})
   const [guestCount, setGuestCount] = useState(1)
+  const [existingConversationId, setExistingConversationId] = useState<string | null>(null)
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const nights =
+    bookingDateRange.from && bookingDateRange.to
+      ? Math.round(
+          (bookingDateRange.to.getTime() - bookingDateRange.from.getTime()) /
+            (1000 * 60 * 60 * 24),
+        )
+      : 0
+  const totalILS =
+    nights > 0 && listing.price_ils
+      ? nights * listing.price_ils
+      : null
+  const totalUSD =
+    nights > 0 && listing.price_usd
+      ? nights * listing.price_usd
+      : null
 
   useEffect(() => {
     const supabase = createClient()
+    let isActive = true
     void recordListingEngagement(supabase, listing.id, 'view')
 
+    const loadExistingConversation = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!isActive || !user) return
+
+      const { data: existingConv } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('listing_id', listing.id)
+        .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`)
+        .limit(1)
+        .maybeSingle()
+
+      if (isActive) {
+        setExistingConversationId(existingConv?.id || null)
+      }
+    }
+
+    void loadExistingConversation()
+
     return () => {
+      isActive = false
       if (copyTimeoutRef.current) {
         clearTimeout(copyTimeoutRef.current)
       }
@@ -134,6 +174,10 @@ export function ListingDetailClient({
   const averageRating =
     reviews.length > 0
       ? (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1)
+      : null
+  const avgRating =
+    reviews.length >= 2
+      ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
       : null
   const maxGuests = listing.max_guests || 6
   const priceIls = formatPrice(listing.price_ils)
@@ -182,10 +226,13 @@ export function ListingDetailClient({
                     setShowGallery(true)
                   }}
                 >
-                  <img
-                    src={photos[0]?.photo_url}
-                    alt={photos[0]?.label || listing.title}
-                    className="h-full w-full object-cover transition hover:scale-105"
+                  <Image
+                    src={photos[0]?.photo_url || ''}
+                    alt={listing.title}
+                    fill
+                    className="object-cover transition hover:scale-105"
+                    priority
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 60vw, 800px"
                   />
                 </div>
 
@@ -199,10 +246,13 @@ export function ListingDetailClient({
                         setShowGallery(true)
                       }}
                     >
-                      <img
+                      <Image
                         src={photo.photo_url}
-                        alt={photo.label || `${listing.title} photo ${index + 2}`}
-                        className="h-full w-full object-cover transition hover:scale-105"
+                        alt={`${listing.title} photo ${index + 2}`}
+                        fill
+                        className="object-cover transition hover:scale-105"
+                        loading="lazy"
+                        sizes="(max-width: 768px) 100vw, 300px"
                       />
                     </div>
                   ))}
@@ -220,10 +270,13 @@ export function ListingDetailClient({
                         setShowGallery(true)
                       }}
                     >
-                      <img
+                      <Image
                         src={photo.photo_url}
-                        alt={photo.label || `${listing.title} photo ${index + 4}`}
-                        className="h-full w-full object-cover transition hover:scale-105"
+                        alt={`${listing.title} photo ${index + 4}`}
+                        fill
+                        className="object-cover transition hover:scale-105"
+                        loading="lazy"
+                        sizes="(max-width: 768px) 100vw, 300px"
                       />
                     </div>
                   ))}
@@ -284,6 +337,44 @@ export function ListingDetailClient({
               </div>
             )}
 
+            {listing.host_id && (
+              <section className="mb-6 rounded-3xl bg-white p-6 shadow-sm">
+                <h2 className="text-lg font-bold text-stone-950">Enhance your stay</h2>
+                <p className="mt-1 text-sm text-stone-600">
+                  Arranged by JLM Collective and delivered to this property.
+                </p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <Link
+                    href="/services/catering"
+                    className="flex items-center gap-3 rounded-2xl border border-stone-200 bg-[#F8F5F2] px-4 py-4 transition hover:border-[#c76f55] hover:bg-white"
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c76f55" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" />
+                      <path d="M7 2v20" />
+                      <path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7" />
+                    </svg>
+                    <div>
+                      <p className="text-sm font-bold text-stone-950">Catering & meals</p>
+                      <p className="text-xs text-stone-500">Shabbat packages, custom menus</p>
+                    </div>
+                  </Link>
+
+                  <Link
+                    href="/services/cleaning"
+                    className="flex items-center gap-3 rounded-2xl border border-stone-200 bg-[#F8F5F2] px-4 py-4 transition hover:border-[#c76f55] hover:bg-white"
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c76f55" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+                    </svg>
+                    <div>
+                      <p className="text-sm font-bold text-stone-950">Housekeeping</p>
+                      <p className="text-xs text-stone-500">Mid-stay cleaning arranged</p>
+                    </div>
+                  </Link>
+                </div>
+              </section>
+            )}
+
             <AvailabilityCalendar blockedRanges={blockedRanges} />
 
             <div>
@@ -291,24 +382,28 @@ export function ListingDetailClient({
               {reviews.length === 0 ? (
                 <p className="text-sm text-stone-500">No reviews yet.</p>
               ) : (
-                <div className="space-y-3">
-                  {reviews.map((review) => (
-                    <div key={review.id} className="rounded-xl bg-[#F8F5F2] p-4">
-                      <div className="mb-2 flex items-center justify-between">
-                        <p className="text-sm font-semibold text-stone-900">{review.reviewer_name}</p>
-                        <div className="flex items-center gap-0.5">
-                          {[...Array(5)].map((_, index) => (
-                            <StarIcon
-                              key={index}
-                              className={`h-3.5 w-3.5 ${index < review.rating ? 'text-yellow-500' : 'text-stone-300'}`}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                      {review.content && <p className="text-sm text-stone-600">{review.content}</p>}
+                <>
+                  {avgRating !== null && (
+                    <div className="mb-6 flex items-center gap-3">
+                      <StarRating rating={Math.round(avgRating)} />
+                      <span className="text-sm font-bold text-stone-950">{avgRating.toFixed(1)}</span>
+                      <span className="text-sm text-stone-500">
+                        ({reviews.length} review{reviews.length === 1 ? '' : 's'})
+                      </span>
                     </div>
-                  ))}
-                </div>
+                  )}
+                  <div className="space-y-3">
+                    {reviews.map((review) => (
+                      <div key={review.id} className="rounded-xl bg-[#F8F5F2] p-4">
+                        <div className="mb-2 flex items-center justify-between">
+                          <p className="text-sm font-semibold text-stone-900">{review.reviewer_name}</p>
+                          <StarRating rating={review.rating} />
+                        </div>
+                        {review.content && <p className="text-sm text-stone-600">{review.content}</p>}
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -323,6 +418,11 @@ export function ListingDetailClient({
                 guestCount={guestCount}
                 setGuestCount={setGuestCount}
                 maxGuests={maxGuests}
+                nights={nights}
+                totalILS={totalILS}
+                totalUSD={totalUSD}
+                existingConversationId={existingConversationId}
+                onConversationCreated={setExistingConversationId}
               />
               <HostCard host={host} publicHostName={publicHostName} />
             </div>
@@ -408,6 +508,11 @@ export function ListingDetailClient({
                 guestCount={guestCount}
                 setGuestCount={setGuestCount}
                 maxGuests={maxGuests}
+                nights={nights}
+                totalILS={totalILS}
+                totalUSD={totalUSD}
+                existingConversationId={existingConversationId}
+                onConversationCreated={setExistingConversationId}
                 mobile
               />
               <p className="mt-4 text-center text-xs text-stone-500">You won&apos;t be charged yet</p>
@@ -450,6 +555,25 @@ function Pricing({ priceIls, priceUsd }: { priceIls: string | null; priceUsd: st
   )
 }
 
+function StarRating({ rating }: { rating: number }) {
+  return (
+    <div className="flex items-center gap-0.5">
+      {Array.from({ length: 5 }).map((_, index) => (
+        <svg
+          key={index}
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill={index < rating ? '#c76f55' : '#e7e5e4'}
+          stroke="none"
+        >
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+        </svg>
+      ))}
+    </div>
+  )
+}
+
 function BookingControls({
   listing,
   dateRange,
@@ -457,6 +581,11 @@ function BookingControls({
   guestCount,
   setGuestCount,
   maxGuests,
+  nights,
+  totalILS,
+  totalUSD,
+  existingConversationId,
+  onConversationCreated,
   mobile = false,
 }: {
   listing: ListingDetailListing
@@ -465,12 +594,38 @@ function BookingControls({
   guestCount: number
   setGuestCount: (value: number) => void
   maxGuests: number
+  nights: number
+  totalILS: number | null
+  totalUSD: number | null
+  existingConversationId: string | null
+  onConversationCreated: (conversationId: string) => void
   mobile?: boolean
 }) {
   return (
     <>
       <div className={`${mobile ? 'mb-6' : 'mb-4'} space-y-3`}>
         <BookingDateRangePicker dateRange={dateRange} setDateRange={setDateRange} />
+        {nights > 0 && (
+          <div className="mt-3 rounded-2xl border border-stone-200 bg-[#F8F5F2] px-4 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm text-stone-600">
+                {nights} night{nights === 1 ? '' : 's'}
+              </p>
+              <p className="text-sm font-bold text-stone-950">
+                {[
+                  totalILS
+                    ? `₪${totalILS.toLocaleString()}`
+                    : null,
+                  totalUSD
+                    ? `$${totalUSD.toLocaleString()}`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(' / ') || 'Price on request'}
+              </p>
+            </div>
+          </div>
+        )}
         <div className="rounded-2xl border border-stone-200 bg-white p-4">
           <label className="block text-[10px] font-bold uppercase tracking-wide text-stone-500">Guests</label>
           <select
@@ -488,16 +643,29 @@ function BookingControls({
       </div>
 
       <div className={mobile ? 'space-y-3' : ''}>
-        <MessageHostDialog
-          listingId={listing.id}
-          listingTitle={listing.title}
-          hostId={listing.host_id}
-          dateRange={dateRange}
-          guests={guestCount}
-          intent="request"
-          buttonLabel="Request to book"
-          buttonClassName={`${mobile ? 'flex w-full items-center justify-center rounded-xl bg-[#c76f55] py-4' : 'mb-3 flex w-full items-center justify-center rounded-xl bg-[#c76f55] py-3.5'} font-semibold text-white transition hover:bg-[#b55f47]`}
-        />
+        {existingConversationId ? (
+          <Link
+            href={`/account/messages?conversation=${existingConversationId}`}
+            className={`${mobile ? 'flex w-full items-center justify-center rounded-xl bg-[#c76f55] py-4' : 'mb-3 flex w-full items-center justify-center rounded-xl bg-[#c76f55] py-3.5'} gap-2 font-semibold text-white transition hover:bg-[#b55f47]`}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            Continue conversation
+          </Link>
+        ) : (
+          <MessageHostDialog
+            listingId={listing.id}
+            listingTitle={listing.title}
+            hostId={listing.host_id}
+            dateRange={dateRange}
+            guests={guestCount}
+            intent="request"
+            buttonLabel="Request to book"
+            buttonClassName={`${mobile ? 'flex w-full items-center justify-center rounded-xl bg-[#c76f55] py-4' : 'mb-3 flex w-full items-center justify-center rounded-xl bg-[#c76f55] py-3.5'} font-semibold text-white transition hover:bg-[#b55f47]`}
+            onConversationCreated={onConversationCreated}
+          />
+        )}
         {!mobile && <p className="mb-4 text-center text-xs text-stone-500">You won&apos;t be charged yet</p>}
         <div className={`${mobile ? 'space-y-3' : 'space-y-2 border-t border-stone-100 pt-4'}`}>
           <MessageHostDialog
@@ -506,6 +674,7 @@ function BookingControls({
             hostId={listing.host_id}
             dateRange={dateRange}
             guests={guestCount}
+            onConversationCreated={onConversationCreated}
           />
           <button className={`${mobile ? 'py-4 font-semibold' : 'py-3 text-sm font-semibold'} flex w-full items-center justify-center gap-2 rounded-xl border border-stone-200 bg-white text-stone-700 transition hover:border-stone-300 hover:bg-stone-50`}>
             <MoneyIcon className={mobile ? 'h-5 w-5' : 'h-4 w-4'} />
@@ -531,7 +700,7 @@ function HostCard({
       <Link href={`/hosts/${host.id}`} className="flex items-center gap-3 rounded-xl p-2 transition hover:bg-stone-50">
         <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-stone-200">
           {host.profile_photo_url ? (
-            <img src={host.profile_photo_url} alt={publicHostName} className="h-full w-full object-cover" />
+            <Image src={host.profile_photo_url} alt={publicHostName} width={48} height={48} className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#c76f55] to-[#a85a45] text-lg font-bold text-white">
               {publicHostName.charAt(0).toUpperCase()}
@@ -565,9 +734,16 @@ type GalleryOverlayProps = {
 
 function GalleryOverlay({ photos, index, title, onClose, onIndexChange }: GalleryOverlayProps) {
   const total = photos.length
+  const currentPhoto = photos[index] ?? photos[0]
   const touchStartX = useRef<number | null>(null)
-  const prev = useCallback(() => onIndexChange((index - 1 + total) % total), [index, onIndexChange, total])
-  const next = useCallback(() => onIndexChange((index + 1) % total), [index, onIndexChange, total])
+  const prev = useCallback(() => {
+    if (total === 0) return
+    onIndexChange((index - 1 + total) % total)
+  }, [index, onIndexChange, total])
+  const next = useCallback(() => {
+    if (total === 0) return
+    onIndexChange((index + 1) % total)
+  }, [index, onIndexChange, total])
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
@@ -597,6 +773,8 @@ function GalleryOverlay({ photos, index, title, onClose, onIndexChange }: Galler
     else if (delta < -50) next()
     touchStartX.current = null
   }
+
+  if (!currentPhoto) return null
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black">
@@ -634,9 +812,10 @@ function GalleryOverlay({ photos, index, title, onClose, onIndexChange }: Galler
         </button>
 
         <img
-          key={photos[index]?.id}
-          src={photos[index]?.photo_url}
-          alt={photos[index]?.label || `${title} - photo ${index + 1}`}
+          key={currentPhoto.id}
+          src={currentPhoto.photo_url}
+          alt={`${title} - photo ${index + 1}`}
+          loading="lazy"
           className="max-h-full max-w-full object-contain"
         />
 
@@ -664,9 +843,12 @@ function GalleryOverlay({ photos, index, title, onClose, onIndexChange }: Galler
                 : 'opacity-50 hover:opacity-80'
             }`}
           >
-            <img
+            <Image
               src={photo.photo_url}
               alt=""
+              width={96}
+              height={64}
+              loading="lazy"
               className="h-16 w-24 object-cover"
             />
           </button>

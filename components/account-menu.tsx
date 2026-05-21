@@ -58,9 +58,14 @@ export function AccountMenu({ hasStay, isAdmin }: { hasStay: boolean; isAdmin: b
     }
 
     void loadUnreadCount()
+    const handleFocus = () => {
+      void loadUnreadCount()
+    }
+    window.addEventListener('focus', handleFocus)
 
     return () => {
       isActive = false
+      window.removeEventListener('focus', handleFocus)
     }
   }, [])
 

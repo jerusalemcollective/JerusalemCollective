@@ -1,4 +1,5 @@
 import { Suspense, type ReactNode } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { allNeighborhoods } from '@/lib/neighborhoods'
@@ -11,6 +12,8 @@ export const metadata = {
   title: 'Jerusalem Stays | JLM Collective',
   description: 'Find curated short-term stays in Jerusalem.',
 }
+
+export const revalidate = 1800
 
 const neighborhoods = ['All', ...allNeighborhoods]
 
@@ -214,10 +217,13 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
                   <article className="group cursor-pointer">
                     <div className="relative mb-4 aspect-[4/3] overflow-hidden rounded-3xl bg-stone-200 shadow-sm">
                       {stay.cover_photo_url ? (
-                        <img
+                        <Image
                           src={stay.cover_photo_url}
                           alt={stay.title}
-                          className="absolute inset-0 h-full w-full object-cover transition group-hover:scale-105"
+                          fill
+                          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 400px"
+                          loading="lazy"
+                          className="object-cover transition hover:scale-105"
                         />
                       ) : (
                         <div className="absolute inset-0 bg-gradient-to-br from-stone-200 via-stone-100 to-stone-300 transition group-hover:scale-105" />

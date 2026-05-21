@@ -20,6 +20,10 @@ export type MapListing = {
   amenities: string[]
 }
 
+type SelectedMapListing = Omit<MapListing, 'amenities'> & {
+  amenities?: string[]
+}
+
 const JerusalemMap = dynamic(() => import('@/components/jerusalem-map'), {
   ssr: false,
   loading: () => (
@@ -32,6 +36,7 @@ const JerusalemMap = dynamic(() => import('@/components/jerusalem-map'), {
 export function MapPageClient({ listings }: { listings: MapListing[] }) {
   const [minimumBedrooms, setMinimumBedrooms] = useState(0)
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([])
+  const [selectedListing, setSelectedListing] = useState<SelectedMapListing | null>(null)
   const filteredListings = filterListings(listings, {
     minimumBedrooms,
     selectedAmenities,
@@ -48,6 +53,11 @@ export function MapPageClient({ listings }: { listings: MapListing[] }) {
   const clearFilters = () => {
     setMinimumBedrooms(0)
     setSelectedAmenities([])
+    setSelectedListing(null)
+  }
+
+  const handleMapListingSelect = (listing: SelectedMapListing) => {
+    setSelectedListing(listing)
   }
 
   return (
@@ -119,11 +129,36 @@ export function MapPageClient({ listings }: { listings: MapListing[] }) {
             Clear filters
           </button>
         )}
+
+        {selectedListing && (
+          <div className="rounded-2xl border border-stone-200 bg-[#F8F5F2] p-4">
+            <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">{selectedListing.area}</p>
+            <h3 className="mt-1 font-bold text-stone-950">{selectedListing.title}</h3>
+            <p className="mt-1 text-sm text-stone-500">
+              {selectedListing.bedrooms} bedrooms · sleeps {selectedListing.sleeps}
+            </p>
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <p className="font-bold text-stone-950">{formatMapListingPrice(selectedListing)}</p>
+              <Link
+                href={`/listings/${selectedListing.id}`}
+                className="rounded-full bg-[#c76f55] px-4 py-2 text-sm font-bold text-white hover:bg-[#b85f47]"
+              >
+                View listing
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
 
-      <JerusalemMap listings={filteredListings} />
+      <JerusalemMap listings={filteredListings} onListingSelect={handleMapListingSelect} />
     </div>
   )
+}
+
+function formatMapListingPrice(listing: Pick<SelectedMapListing, 'price' | 'price_ils' | 'price_usd'>) {
+  if (listing.price_usd) return `$${Number(listing.price_usd).toLocaleString()}`
+  if (listing.price_ils) return `₪${Number(listing.price_ils).toLocaleString()}`
+  return listing.price || 'Price on request'
 }
 
 function ChevronLeftIcon() {

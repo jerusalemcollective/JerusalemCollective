@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+﻿import { NextResponse } from 'next/server'
 
 type NominatimResult = {
   place_id: number
@@ -9,12 +9,18 @@ type NominatimResult = {
 
 function cleanAddressLabel(label: string) {
   const cleaned = label
-    .replace(/,\s*ישראל/g, ', Israel')
-    .replace(/,\s*إسرائيل/g, ', Israel')
-    .replace(/,\s*ירושלים/g, ', Jerusalem')
-    .replace(/,\s*القدس/g, ', Jerusalem')
-    .replace(/,\s*מחוז ירושלים/g, ', Jerusalem District')
-    .replace(/,\s*منطقة القدس/g, ', Jerusalem District')
+    // Remove Hebrew "Israel" (ישראל)
+    .replace(/,\s*\u05D9\u05E9\u05E8\u05D0\u05DC/g, ', Israel')
+    // Remove Arabic "Israel" (إسرائيل)
+    .replace(/,\s*\u0625\u0633\u0631\u0627\u0626\u064A\u0644/g, ', Israel')
+    // Remove Hebrew "Jerusalem" (ירושלים)
+    .replace(/,\s*\u05D9\u05E8\u05D5\u05E9\u05DC\u05D9\u05DD/g, ', Jerusalem')
+    // Remove Arabic "Jerusalem" (القدس)
+    .replace(/,\s*\u0627\u0644\u0642\u062F\u0633/g, ', Jerusalem')
+    // Remove Hebrew "Jerusalem District" (מחוז ירושלים)
+    .replace(/,\s*\u05DE\u05D7\u05D5\u05D6\s\u05D9\u05E8\u05D5\u05E9\u05DC\u05D9\u05DD/g, ', Jerusalem District')
+    // Remove Arabic "Jerusalem District" (منطقة القدس)
+    .replace(/,\s*\u0645\u0646\u0637\u0642\u0629\s\u0627\u0644\u0642\u062F\u0633/g, ', Jerusalem District')
     .replace(/\s+/g, ' ')
     .trim()
 
@@ -24,8 +30,12 @@ function cleanAddressLabel(label: string) {
     .filter(Boolean)
     .filter((part) => !['Israel', 'Jerusalem District'].includes(part))
 
-  const dedupedParts = parts.filter((part, index) => parts.indexOf(part) === index)
-  const hasJerusalem = dedupedParts.some((part) => part.toLowerCase() === 'jerusalem')
+  const dedupedParts = parts.filter(
+    (part, index) => parts.indexOf(part) === index
+  )
+  const hasJerusalem = dedupedParts.some(
+    (part) => part.toLowerCase() === 'jerusalem'
+  )
   const shortenedParts = dedupedParts.slice(0, hasJerusalem ? 3 : 2)
 
   if (!hasJerusalem) shortenedParts.push('Jerusalem')
@@ -78,3 +88,4 @@ export async function GET(request: Request) {
     return NextResponse.json({ suggestions: [] })
   }
 }
+

@@ -35,6 +35,21 @@ type SupportCaseClientFormProps = {
   initialCases: AccountSupportCase[]
 }
 
+const getSupportCaseErrorMessage = (error: unknown) => {
+  if (typeof error === 'string') return error
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase()
+    if (message.includes('network') || message.includes('fetch')) {
+      return 'Could not connect - please check your internet connection and try again.'
+    }
+    if (message.includes('duplicate') || message.includes('already')) {
+      return 'This support case may already exist. Please check your open cases.'
+    }
+    return error.message
+  }
+  return 'We could not send your case. Please try again or contact us on WhatsApp.'
+}
+
 export function SupportCaseClientForm({
   userId,
   initialBookings,
@@ -87,7 +102,7 @@ export function SupportCaseClientForm({
         .single()
 
       if (error) {
-        setMessage(error.message)
+        setMessage(getSupportCaseErrorMessage(error))
         return
       }
 
@@ -98,6 +113,8 @@ export function SupportCaseClientForm({
       setRequestedAmount('')
       setCurrency('ILS')
       setMessage('Your case has been sent to JLM Collective.')
+    } catch (submitError) {
+      setMessage(getSupportCaseErrorMessage(submitError))
     } finally {
       setIsSubmitting(false)
     }

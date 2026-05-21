@@ -12,8 +12,36 @@ import {
   updateBookingRequestStatus,
 } from '@/lib/messaging'
 
+const HOST_QUICK_REPLIES = [
+  {
+    label: 'Available — tell me more',
+    text: 'Thank you for your enquiry. The property is available for your dates. Could you tell me a little more about your group and the purpose of your visit?',
+  },
+  {
+    label: 'Confirm details',
+    text: 'Thank you for getting in touch. I can confirm the property is available. Please let me know if you have any questions before we proceed.',
+  },
+  {
+    label: 'Not available',
+    text: 'Thank you for your enquiry. Unfortunately the property is not available for those dates. I would be happy to suggest alternative dates if that would help.',
+  },
+  {
+    label: 'Need more info',
+    text: 'Thank you for your message. Before I can confirm availability, could you let me know the purpose of your visit and a little about your group?',
+  },
+  {
+    label: 'Will reply shortly',
+    text: 'Thank you for your enquiry. I have received your message and will be in touch shortly to confirm availability.',
+  },
+  {
+    label: 'Booking confirmed',
+    text: 'I am pleased to confirm your booking. I will be in touch closer to your arrival date with check-in details and any information you need for your stay.',
+  },
+]
+
 type MessagesInboxProps = {
   mode: 'guest' | 'host'
+  initialConversationId?: string | null
 }
 
 type CurrentUser = {
@@ -30,6 +58,16 @@ type ParticipantProfile = {
   id: string
   full_name: string | null
   avatar_url: string | null
+}
+
+type GuestProfile = {
+  full_name: string | null
+  avatar_url: string | null
+  created_at: string | null
+  about_me: string | null
+  visiting_from: string | null
+  visit_reason: string | null
+  booking_count: number
 }
 
 type LatestMessagePreview = {
@@ -131,7 +169,7 @@ function requestStatusLabel(status: string) {
   return labels[status] || status.replaceAll('_', ' ')
 }
 
-export function MessagesInbox({ mode }: MessagesInboxProps) {
+export function MessagesInbox({ mode, initialConversationId = null }: MessagesInboxProps) {
   const [user, setUser] = useState<CurrentUser | null>(null)
   const [conversations, setConversations] = useState<ConversationSummary[]>([])
   const [messages, setMessages] = useState<ConversationMessage[]>([])
@@ -234,13 +272,13 @@ export function MessagesInbox({ mode }: MessagesInboxProps) {
 
         setConversations(hydrated)
 
-        const requestedConversation = searchParams.get('conversation')
-        const initialConversationId =
+        const requestedConversation = initialConversationId || searchParams.get('conversation')
+        const nextConversationId =
           hydrated.find((conversation) => conversation.id === requestedConversation)?.id ||
           hydrated[0]?.id ||
           null
 
-        setSelectedConversationId(initialConversationId)
+        setSelectedConversationId(nextConversationId)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unable to load messages.')
       } finally {
@@ -249,7 +287,20 @@ export function MessagesInbox({ mode }: MessagesInboxProps) {
     }
 
     loadInbox()
-  }, [mode, router, searchParams])
+  }, [initialConversationId, mode, router, searchParams])
+
+  useEffect(() => {
+    if (
+      initialConversationId &&
+      conversations.length > 0 &&
+      !selectedConversationId
+    ) {
+      const match = conversations.find((conversation) => conversation.id === initialConversationId)
+      if (match) {
+        setSelectedConversationId(match.id)
+      }
+    }
+  }, [initialConversationId, conversations, selectedConversationId])
 
   useEffect(() => {
     if (!selectedConversationId) {

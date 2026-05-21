@@ -42,6 +42,8 @@ type SimilarListing = {
   price_usd: number | null
 }
 
+export const revalidate = 3600
+
 function getPublicName(host: HostRecord): string {
   if (host.show_full_name) return host.name
   return host.display_name || host.name.split(' ')[0]
@@ -177,7 +179,7 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
   ] = await Promise.all([
     supabase
       .from('listing_photos')
-      .select('id, photo_url, is_cover, label')
+      .select('id, photo_url, is_cover')
       .eq('listing_id', id)
       .order('sort_order', { ascending: true }),
     listing.host_id

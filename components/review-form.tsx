@@ -18,6 +18,16 @@ type ReviewFormProps = {
   bookings: ReviewableBooking[]
 }
 
+const getReviewErrorMessage = (error: unknown) => {
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase()
+    if (message.includes('duplicate') || message.includes('already exists') || message.includes('already')) {
+      return 'You have already submitted a review for this stay.'
+    }
+  }
+  return 'We could not save your review. Please try again.'
+}
+
 export function ReviewForm({ bookings }: ReviewFormProps) {
   const [selectedBookingId, setSelectedBookingId] = useState(bookings[0]?.id || '')
   const [rating, setRating] = useState(0)
@@ -83,7 +93,7 @@ export function ReviewForm({ bookings }: ReviewFormProps) {
       setSubmitted(true)
       setMessage('Thank you - your review will appear once approved')
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : 'Unable to submit your review.')
+      setError(getReviewErrorMessage(submitError))
     } finally {
       setSubmitting(false)
     }

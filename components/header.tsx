@@ -156,6 +156,11 @@ export function Header() {
     window.location.href = '/'
   }
 
+  const navLinkClass = (href: string) =>
+    `text-stone-600 transition hover:text-[#c76f55] ${
+      pathname === href || pathname.startsWith(`${href}/`) ? 'text-[#c76f55]' : ''
+    }`
+
   return (
     <header className="sticky top-0 z-30 border-b border-stone-200 bg-[#F8F5F2]/85 backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 md:px-6">
@@ -164,11 +169,14 @@ export function Header() {
         </Link>
 
         <nav className="hidden items-center gap-7 text-sm font-semibold lg:flex">
-          <Link href="/explore" className="text-stone-600 transition hover:text-[#c76f55]">
+          <Link href="/explore" className={navLinkClass('/explore')}>
             Explore
           </Link>
-          <Link href="/stays" className="text-stone-600 transition hover:text-[#c76f55]">
+          <Link href="/stays" className={navLinkClass('/stays')}>
             Stays
+          </Link>
+          <Link href="/services" className={navLinkClass('/services')}>
+            Services
           </Link>
         </nav>
 
@@ -358,6 +366,13 @@ export function Header() {
               className="block px-5 py-4 font-medium text-stone-900"
             >
               Stays
+            </Link>
+            <Link
+              href="/services"
+              onClick={() => setMobileOpen(false)}
+              className={`block px-5 py-4 font-medium ${pathname.startsWith('/services') ? 'text-[#c76f55]' : 'text-stone-900'}`}
+            >
+              Services
             </Link>
             <Link
               href={user ? '/become-a-host' : '/login?redirect=/become-a-host'}

@@ -1,4 +1,5 @@
 ﻿import Link from 'next/link'
+import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 
@@ -46,6 +47,8 @@ type ReviewRow = {
 type HostPageProps = {
   params: Promise<{ id: string }>
 }
+
+export const revalidate = 3600
 
 function getPublicName(host: Pick<HostRow, 'name' | 'display_name' | 'show_full_name'>): string {
   if (host.show_full_name) return host.name
@@ -143,7 +146,7 @@ export default async function HostProfilePage({ params }: HostPageProps) {
         <div className="mb-12 flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left">
           <div className="mb-6 h-32 w-32 shrink-0 overflow-hidden rounded-full bg-stone-200 sm:mb-0 sm:mr-8">
             {host.profile_photo_url ? (
-              <img src={host.profile_photo_url} alt={publicName} className="h-full w-full object-cover" />
+              <Image src={host.profile_photo_url} alt={publicName} width={120} height={120} className="h-full w-full rounded-full object-cover" />
             ) : (
               <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#c76f55] to-[#a85a45] text-4xl font-bold text-white">
                 {publicName.charAt(0).toUpperCase()}
@@ -194,7 +197,15 @@ export default async function HostProfilePage({ params }: HostPageProps) {
                 <Link key={listing.id} href={`/listings/${listing.id}`} className="group overflow-hidden rounded-2xl bg-white shadow-sm transition hover:shadow-md">
                   <div className="relative aspect-[4/3] bg-stone-200">
                     {listing.cover_photo_url ? (
-                      <img src={listing.cover_photo_url} alt={listing.title} className="h-full w-full object-cover transition group-hover:scale-105" />
+                      <Image
+                        src={listing.cover_photo_url}
+                        alt={listing.title}
+                        width={600}
+                        height={450}
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 400px"
+                        loading="lazy"
+                        className="h-full w-full object-cover transition group-hover:scale-105"
+                      />
                     ) : (
                       <div className="h-full w-full bg-gradient-to-br from-stone-200 via-stone-100 to-stone-300" />
                     )}

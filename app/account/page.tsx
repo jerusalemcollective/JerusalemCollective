@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { AccountProfileForm } from '@/components/account-profile-form'
 import { AccountMenu } from '@/components/account-menu'
+import { WelcomeBanner } from '@/components/welcome-banner'
 import { createClient } from '@/lib/supabase/server'
 
 type Profile = {
@@ -39,7 +40,7 @@ export default async function AccountPage() {
   // host.id may differ from user.id when the host record has its own PK.
   // We query by both to cover direct ownership and delegated host accounts.
   const hostIds = Array.from(new Set([host?.id, user.id].filter(Boolean))) as string[]
-  const [{ data: ownedApplication }, { data: ownedListing }] = await Promise.all([
+  const [{ data: ownedApplication }, { data: ownedListing }, { count: bookingCount }] = await Promise.all([
     supabase
       .from('host_applications')
       .select('id')
@@ -52,9 +53,14 @@ export default async function AccountPage() {
       .in('host_id', hostIds)
       .limit(1)
       .maybeSingle(),
+    supabase
+      .from('bookings')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id),
   ])
 
   const hasStay = Boolean(ownedApplication || ownedListing)
+  const isNewGuest = (bookingCount || 0) === 0
   const userEmail = user.email || ''
   const typedProfile = profile as Profile | null
 
@@ -68,11 +74,14 @@ export default async function AccountPage() {
 
         <div className="grid gap-5 md:grid-cols-[240px_1fr]">
           <AccountMenu hasStay={hasStay} isAdmin={Boolean(typedProfile?.is_admin)} />
-          <AccountProfileForm
-            user={{ id: user.id, email: userEmail }}
-            profile={typedProfile}
-            hasStay={hasStay}
-          />
+          <div>
+            {isNewGuest && <WelcomeBanner />}
+            <AccountProfileForm
+              user={{ id: user.id, email: userEmail }}
+              profile={typedProfile}
+              hasStay={hasStay}
+            />
+          </div>
         </div>
       </div>
     </div>

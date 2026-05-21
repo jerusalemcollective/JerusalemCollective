@@ -25,15 +25,28 @@ export async function POST(request: Request) {
 
   const { data: bookingRequest } = await supabase
     .from('booking_requests')
-    .select('id, guest_id')
+    .select('id, guest_id, host_notified_at')
     .eq('id', requestId)
-    .maybeSingle<{ id: string; guest_id: string | null }>()
+    .maybeSingle<{
+      id: string
+      guest_id: string | null
+      host_notified_at: string | null
+    }>()
 
   if (!bookingRequest || bookingRequest.guest_id !== user.id) {
     return NextResponse.json({ error: 'Not allowed.' }, { status: 403 })
   }
 
+  if (bookingRequest.host_notified_at) {
+    return NextResponse.json({ ok: true, skipped: true })
+  }
+
   await sendHostNewEnquiryEmail({ supabase, requestId })
+
+  await supabase
+    .from('booking_requests')
+    .update({ host_notified_at: new Date().toISOString() })
+    .eq('id', requestId)
 
   return NextResponse.json({ ok: true })
 }
