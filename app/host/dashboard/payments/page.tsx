@@ -1,17 +1,39 @@
 import { HostDashboardNav } from '@/components/host-dashboard-nav'
+import { PaymentUpdateForm } from '@/components/payment-update-form'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { updateHostPaymentPreferences } from './actions'
 
+type PaymentBooking = {
+  id: string
+  check_in: string
+  check_out: string
+  payment_status: string | null
+  payment_notes: string | null
+  payment_updated_at: string | null
+  listings: { title: string } | null
+  profiles: { full_name: string | null } | null
+}
+
 export default async function HostPaymentsPage() {
   const { supabase, hostIds } = await requireHostDashboardAccess()
-  const { data: profile } = await supabase
-    .from('host_payment_profiles')
-    .select(
-      'accepts_direct_payment, direct_payment_instructions, preferred_currency, stripe_account_id, payout_setup_status, stripe_charges_enabled, stripe_payouts_enabled',
-    )
-    .in('host_id', hostIds)
-    .limit(1)
-    .maybeSingle()
+  const [{ data: profile }, { data: bookingsData }] = await Promise.all([
+    supabase
+      .from('host_payment_profiles')
+      .select(
+        'accepts_direct_payment, direct_payment_instructions, preferred_currency, stripe_account_id, payout_setup_status, stripe_charges_enabled, stripe_payouts_enabled',
+      )
+      .in('host_id', hostIds)
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('bookings')
+      .select(
+        'id, check_in, check_out, payment_status, payment_notes, payment_updated_at, listings(title), profiles!bookings_user_id_fkey(full_name)',
+      )
+      .in('host_id', hostIds)
+      .order('check_in', { ascending: false }),
+  ])
+  const bookings = (bookingsData || []) as PaymentBooking[]
 
   return (
     <main className="min-h-screen bg-[#F8F5F2] px-5 py-10 text-[#252525] md:px-6">
@@ -106,9 +128,80 @@ export default async function HostPaymentsPage() {
             </div>
           </aside>
         </div>
+
+        <section className="mt-8 overflow-hidden rounded-3xl bg-white shadow-sm">
+          <div className="border-b border-stone-100 px-6 py-4">
+            <h2 className="text-lg font-bold text-stone-950">Booking payment tracking</h2>
+            <p className="mt-1 text-sm text-stone-600">
+              Track off-platform payments for your confirmed bookings.
+            </p>
+          </div>
+
+          {bookings.length === 0 ? (
+            <div className="px-6 py-10 text-center text-sm text-stone-500">
+              Confirmed bookings will appear here once guests book your stay.
+            </div>
+          ) : (
+            <div className="divide-y divide-stone-100">
+              {bookings.map((booking) => (
+                <div key={booking.id} className="px-6 py-5">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <p className="font-bold text-stone-950">
+                        {booking.listings?.title || 'Stay'}
+                      </p>
+                      <p className="mt-1 text-sm text-stone-500">
+                        {booking.profiles?.full_name || 'Guest'} · {formatDate(booking.check_in)} to{' '}
+                        {formatDate(booking.check_out)}
+                      </p>
+                    </div>
+                    <PaymentStatusBadge status={booking.payment_status || 'unpaid'} />
+                  </div>
+                  <PaymentUpdateForm
+                    bookingId={booking.id}
+                    currentStatus={booking.payment_status || 'unpaid'}
+                    currentNotes={booking.payment_notes}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </section>
     </main>
   )
+}
+
+function PaymentStatusBadge({ status }: { status: string }) {
+  const styles =
+    status === 'paid_in_full'
+      ? 'bg-green-100 text-green-700'
+      : status === 'deposit_received'
+        ? 'bg-amber-100 text-amber-700'
+        : status === 'refunded'
+          ? 'bg-stone-100 text-stone-700'
+          : 'bg-rose-100 text-rose-700'
+
+  const labels: Record<string, string> = {
+    unpaid: 'Unpaid',
+    deposit_received: 'Deposit received',
+    paid_in_full: 'Paid in full',
+    refunded: 'Refunded',
+  }
+
+  return (
+    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${styles}`}>
+      {labels[status] || status}
+    </span>
+  )
+}
+
+function formatDate(value: string) {
+  return new Date(`${value}T12:00:00`).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
 }
 
 function StatusRow({ label, value }: { label: string; value: boolean }) {

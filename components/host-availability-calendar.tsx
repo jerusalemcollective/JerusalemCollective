@@ -1,7 +1,6 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { format } from 'date-fns'
 import { Calendar } from '@/components/ui/calendar'
 import { formatHebrewShortDate } from '@/lib/hebrew-date'
 
@@ -15,6 +14,19 @@ type HostAvailabilityCalendarProps = {
   addUnavailableRangeAction: (formData: FormData) => void
 }
 
+function formatDateISO(date: Date): string {
+  return date.toISOString().slice(0, 10)
+}
+
+function formatDisplayDate(date: Date): string {
+  return date.toLocaleDateString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
 export function HostAvailabilityCalendar({
   listings,
   addUnavailableRangeAction,
@@ -24,8 +36,8 @@ export function HostAvailabilityCalendar({
 
   const hiddenDates = useMemo(
     () => ({
-      startDate: dateRange.from ? format(dateRange.from, 'yyyy-MM-dd') : '',
-      endDate: dateRange.to ? format(dateRange.to, 'yyyy-MM-dd') : '',
+      startDate: dateRange.from ? formatDateISO(dateRange.from) : '',
+      endDate: dateRange.to ? formatDateISO(dateRange.to) : '',
     }),
     [dateRange],
   )
@@ -71,9 +83,9 @@ export function HostAvailabilityCalendar({
           <div className="mt-4 rounded-2xl bg-[#F8F5F2] p-4">
             <p className="text-xs font-bold uppercase tracking-widest text-stone-400">Selected range</p>
             <p className="mt-2 text-sm font-semibold text-stone-900">
-              {dateRange.from ? format(dateRange.from, 'EEE, d MMM yyyy') : 'Choose a start date'}
+              {dateRange.from ? formatDisplayDate(dateRange.from) : 'Choose a start date'}
               {' - '}
-              {dateRange.to ? format(dateRange.to, 'EEE, d MMM yyyy') : 'choose an end date'}
+              {dateRange.to ? formatDisplayDate(dateRange.to) : 'choose an end date'}
             </p>
             {(dateRange.from || dateRange.to) && (
               <p className="mt-1 text-xs font-medium text-stone-500">

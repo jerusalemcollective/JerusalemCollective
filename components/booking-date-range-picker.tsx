@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { addDays, format } from 'date-fns'
 import { Calendar } from '@/components/ui/calendar'
 import { formatHebrewShortDate } from '@/lib/hebrew-date'
 
@@ -13,6 +12,20 @@ type DateRange = {
 type BookingDateRangePickerProps = {
   dateRange: DateRange
   setDateRange: (range: DateRange) => void
+}
+
+function addDays(date: Date, days: number): Date {
+  const nextDate = new Date(date)
+  nextDate.setDate(nextDate.getDate() + days)
+  return nextDate
+}
+
+function formatCompactDate(date: Date): string {
+  return date.toLocaleDateString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  })
 }
 
 export function BookingDateRangePicker({
@@ -122,7 +135,7 @@ function DateCell({
     <div className={`${noBorder ? '' : 'border-r border-stone-100'} p-4 text-left`}>
       <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">{label}</p>
       <p className="mt-1 text-sm font-bold text-stone-950">
-        {date ? format(date, 'EEE, d MMM') : 'Choose date'}
+        {date ? formatCompactDate(date) : 'Choose date'}
       </p>
       {date && (
         <p className="mt-1 text-[11px] font-medium text-stone-500">
@@ -138,7 +151,7 @@ function SummaryCard({ label, date }: { label: string; date?: Date }) {
     <div className="rounded-xl bg-white px-4 py-3 ring-1 ring-stone-200">
       <p className="text-[9px] font-semibold uppercase tracking-wider text-stone-400">{label}</p>
       <p className="mt-0.5 text-sm font-semibold text-stone-800">
-        {date ? format(date, 'EEE, d MMM') : 'Select'}
+        {date ? formatCompactDate(date) : 'Select'}
       </p>
       {date && (
         <p className="mt-1 text-[11px] font-medium text-stone-500">

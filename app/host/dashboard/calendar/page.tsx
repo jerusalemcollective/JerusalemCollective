@@ -1,5 +1,6 @@
 import { HostDashboardNav } from '@/components/host-dashboard-nav'
 import { HostAvailabilityCalendar } from '@/components/host-availability-calendar'
+import { BlockRangeForm } from '@/components/block-range-form'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { addUnavailableRange, removeUnavailableRange } from './actions'
 
@@ -56,6 +57,10 @@ export default async function HostCalendarPage() {
           </div>
         ) : (
           <>
+            <div className="mb-6 max-w-2xl">
+              <BlockRangeForm listingId={hostListings[0].id} listings={hostListings} />
+            </div>
+
             <HostAvailabilityCalendar
               listings={hostListings}
               addUnavailableRangeAction={addUnavailableRange}

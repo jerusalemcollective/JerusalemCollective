@@ -755,7 +755,7 @@ export function MessagesInbox({ mode, initialConversationId = null }: MessagesIn
           <div className="border-t border-stone-100 p-4">
             {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
             {mode === 'host' && (
-              <div className="border-t border-stone-100 px-4 pb-1 pt-3">
+              <div className="border-t border-stone-100 bg-white px-4 pb-1 pt-3">
                 <p className="mb-2 text-xs font-bold uppercase tracking-widest text-stone-400">
                   Quick replies
                 </p>

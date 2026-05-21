@@ -108,7 +108,7 @@ export default async function HostListingEditPage({
             </EditorSection>
 
             <EditorSection title="Amenities">
-              <AmenitySelector defaultSelectedAmenities={listing.amenities || []} />
+              <AmenitySelector defaultSelectedAmenities={listing.amenities || []} name="amenities" />
             </EditorSection>
 
             <EditorSection title="Description">

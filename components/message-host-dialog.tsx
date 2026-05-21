@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { format } from 'date-fns'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { createListingEnquiry } from '@/lib/messaging'
 import { recordListingEngagement } from '@/lib/listing-engagement'
@@ -19,6 +19,34 @@ type MessageHostDialogProps = {
   intent?: 'message' | 'request'
   buttonLabel?: string
   buttonClassName?: string
+  onConversationCreated?: (conversationId: string) => void
+}
+
+const getErrorMessage = (error: unknown) => {
+  if (typeof error === 'string') return error
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase()
+    if (message.includes('network') || message.includes('fetch')) {
+      return 'Could not connect - please check your internet connection and try again.'
+    }
+    if (message.includes('duplicate') || message.includes('already')) {
+      return 'You have already sent an enquiry for this property. Check your messages.'
+    }
+    return error.message
+  }
+  return 'We could not send your enquiry. Please try again or contact us on WhatsApp.'
+}
+
+function formatDateDisplay(date: Date): string {
+  return date.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+}
+
+function formatDateISO(date: Date): string {
+  return date.toISOString().slice(0, 10)
 }
 
 export function MessageHostDialog({
@@ -30,6 +58,7 @@ export function MessageHostDialog({
   intent = 'message',
   buttonLabel,
   buttonClassName,
+  onConversationCreated,
 }: MessageHostDialogProps) {
   const [open, setOpen] = useState(false)
   const [message, setMessage] = useState(
@@ -39,10 +68,14 @@ export function MessageHostDialog({
   )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [conversationId, setConversationId] = useState<string | null>(null)
+  const [submitted, setSubmitted] = useState(false)
   const router = useRouter()
   const isRequest = intent === 'request'
-  const checkIn = dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : null
-  const checkOut = dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : null
+  const checkIn = dateRange?.from ? formatDateISO(dateRange.from) : null
+  const checkOut = dateRange?.to ? formatDateISO(dateRange.to) : null
+  const checkInDisplay = dateRange?.from ? formatDateDisplay(dateRange.from) : null
+  const checkOutDisplay = dateRange?.to ? formatDateDisplay(dateRange.to) : null
 
   if (!hostId) {
     return (
@@ -81,7 +114,7 @@ export function MessageHostDialog({
         return
       }
 
-      const { conversationId } = await createListingEnquiry(
+      const { requestId, conversationId: createdConversationId } = await createListingEnquiry(
         supabase,
         listingId,
         checkIn,
@@ -90,12 +123,44 @@ export function MessageHostDialog({
         message.trim(),
       )
       await recordListingEngagement(supabase, listingId, isRequest ? 'booking_request' : 'enquiry')
-      router.push(`/account/messages?conversation=${conversationId}`)
+      if (requestId) {
+        await fetch('/api/notify-host-enquiry', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ requestId }),
+        }).catch((notificationError) => {
+          console.error('Unable to send host enquiry notification', notificationError)
+        })
+      }
+
+      const { data: convData } = await supabase
+        .from('conversations')
+        .select('id')
+        .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`)
+        .eq('listing_id', listingId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      const nextConversationId = convData?.id || createdConversationId || null
+      setConversationId(nextConversationId)
+      if (nextConversationId) {
+        onConversationCreated?.(nextConversationId)
+      }
+      setSubmitted(true)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to send your message.')
+      setError(getErrorMessage(err))
     } finally {
       setLoading(false)
     }
+  }
+
+  const closeDialog = () => {
+    setOpen(false)
+    setSubmitted(false)
+    setConversationId(null)
+    setMessage('')
+    setError(null)
   }
 
   return (
@@ -119,70 +184,157 @@ export function MessageHostDialog({
           <button
             type="button"
             aria-label="Close message dialog"
-            onClick={() => setOpen(false)}
+            onClick={closeDialog}
             className="absolute inset-0"
           />
 
           <div className="relative w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
-                  {isRequest ? 'Request to book' : 'Message host'}
-                </p>
-                <h2 className="mt-2 text-2xl font-bold text-stone-950">{listingTitle}</h2>
-                {isRequest && (
-                  <p className="mt-2 text-sm text-stone-600">
-                    {checkIn && checkOut
-                      ? `${checkIn} to ${checkOut} | ${guests} guest${guests === 1 ? '' : 's'}`
-                      : 'Choose your dates before sending the request.'}
+            {submitted ? (
+              <div className="flex flex-col items-center gap-6 px-2 py-4 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-50 ring-8 ring-green-50/50">
+                  <svg
+                    width="28"
+                    height="28"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#16a34a"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M20 6L9 17l-5-5" />
+                  </svg>
+                </div>
+
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-bold text-stone-950">Enquiry sent</h3>
+                  <p className="mx-auto max-w-xs text-sm leading-6 text-stone-600">
+                    Your message has been sent to the host. You will receive an email when they reply.
                   </p>
-                )}
+                </div>
+
+                <div className="w-full space-y-3 rounded-2xl bg-[#F8F5F2] p-4 text-left">
+                  <p className="text-xs font-bold uppercase tracking-widest text-stone-400">
+                    What happens next
+                  </p>
+                  <div className="space-y-2">
+                    {[
+                      {
+                        step: '1',
+                        text: 'The host reviews your enquiry and replies — usually within a few hours.',
+                      },
+                      {
+                        step: '2',
+                        text: 'You can message back and forth to confirm details.',
+                      },
+                      {
+                        step: '3',
+                        text: 'Once you are both happy, the host confirms the booking.',
+                      },
+                    ].map(({ step, text }) => (
+                      <div key={step} className="flex items-start gap-3">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#c76f55] text-[10px] font-bold text-white">
+                          {step}
+                        </span>
+                        <p className="text-sm leading-5 text-stone-600">{text}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="w-full space-y-2">
+                  {conversationId ? (
+                    <Link
+                      href={`/account/messages?conversation=${conversationId}`}
+                      onClick={closeDialog}
+                      className="flex w-full items-center justify-center gap-2 rounded-full bg-[#c76f55] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47]"
+                    >
+                      Open conversation
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                      </svg>
+                    </Link>
+                  ) : (
+                    <Link
+                      href="/account/messages"
+                      onClick={closeDialog}
+                      className="flex w-full items-center justify-center gap-2 rounded-full bg-[#c76f55] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47]"
+                    >
+                      View your messages
+                    </Link>
+                  )}
+                  <button
+                    type="button"
+                    onClick={closeDialog}
+                    className="w-full rounded-full border border-stone-200 px-5 py-3 text-sm font-semibold text-stone-600 transition hover:border-stone-300 hover:text-stone-950"
+                  >
+                    Back to listing
+                  </button>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="rounded-full p-2 text-stone-400 transition hover:bg-stone-100 hover:text-stone-600"
-                aria-label="Close"
-              >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
+            ) : (
+              <>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
+                      {isRequest ? 'Request to book' : 'Message host'}
+                    </p>
+                    <h2 className="mt-2 text-2xl font-bold text-stone-950">{listingTitle}</h2>
+                    {isRequest && (
+                      <p className="mt-2 text-sm text-stone-600">
+                        {checkInDisplay && checkOutDisplay
+                          ? `${checkInDisplay} to ${checkOutDisplay} | ${guests} guest${guests === 1 ? '' : 's'}`
+                          : 'Choose your dates before sending the request.'}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={closeDialog}
+                    className="rounded-full p-2 text-stone-400 transition hover:bg-stone-100 hover:text-stone-600"
+                    aria-label="Close"
+                  >
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
 
-            <label className="mt-6 block">
-              <span className="text-sm font-semibold text-stone-800">Your message</span>
-              <textarea
-                value={message}
-                onChange={(event) => setMessage(event.target.value)}
-                placeholder={
-                  isRequest
-                    ? 'Add anything the host should know about your stay...'
-                    : 'Hi, is this stay available for my dates?'
-                }
-                className="mt-2 min-h-36 w-full resize-none rounded-2xl border border-stone-200 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
-              />
-            </label>
+                <label className="mt-6 block">
+                  <span className="text-sm font-semibold text-stone-800">Your message</span>
+                  <textarea
+                    value={message}
+                    onChange={(event) => setMessage(event.target.value)}
+                    placeholder={
+                      isRequest
+                        ? 'Add anything the host should know about your stay...'
+                        : 'Hi, is this stay available for my dates?'
+                    }
+                    className="mt-2 min-h-36 w-full resize-none rounded-2xl border border-stone-200 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
+                  />
+                </label>
 
-            {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+                {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
 
-            <div className="mt-5 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="rounded-full border border-stone-200 px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:border-stone-300"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSend}
-                disabled={!message.trim() || loading}
-                className="rounded-full bg-[#c76f55] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#b55f47] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {loading ? 'Sending...' : isRequest ? 'Send request' : 'Send message'}
-              </button>
-            </div>
+                <div className="mt-5 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={closeDialog}
+                    className="rounded-full border border-stone-200 px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:border-stone-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSend}
+                    disabled={!message.trim() || loading}
+                    className="rounded-full bg-[#c76f55] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#b55f47] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {loading ? 'Sending...' : isRequest ? 'Send request' : 'Send message'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

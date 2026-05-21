@@ -1,3 +1,5 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
+
 type AuthUser = {
   id: string
   email?: string | null
@@ -9,7 +11,7 @@ type AuthUser = {
 }
 
 // Ensure profile exists in unified profiles table
-export async function ensureProfile(supabase: any, user: AuthUser) {
+export async function ensureProfile(supabase: SupabaseClient, user: AuthUser) {
   const fullName =
     user.user_metadata?.full_name ||
     user.user_metadata?.name ||
@@ -45,7 +47,7 @@ export async function ensureProfile(supabase: any, user: AuthUser) {
 }
 
 // Ensure host profile exists (call this when user becomes a host)
-export async function ensureHostProfile(supabase: any, user: AuthUser) {
+export async function ensureHostProfile(supabase: SupabaseClient, user: AuthUser) {
   const { data, error } = await supabase.rpc('ensure_current_user_host_profile')
 
   if (error) {

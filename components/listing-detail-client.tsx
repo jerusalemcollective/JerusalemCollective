@@ -331,7 +331,7 @@ export function ListingDetailClient({
               </div>
             )}
 
-            {listing.house_rules && (
+            {listing.house_rules?.trim() && (
               <section className="mb-6 rounded-3xl bg-white p-6 shadow-sm">
                 <h2 className="text-lg font-bold text-stone-950">House rules</h2>
                 <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-stone-700">
