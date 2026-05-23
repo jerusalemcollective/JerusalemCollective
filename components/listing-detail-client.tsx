@@ -5,7 +5,6 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Link2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { AvailabilityCalendar } from '@/components/availability-calendar'
 import { BookingDateRangePicker } from '@/components/booking-date-range-picker'
 import { MessageHostDialog } from '@/components/message-host-dialog'
 import { SaveListingButton } from '@/components/save-listing-button'
@@ -219,6 +218,12 @@ export function ListingDetailClient({
   const priceIls = formatPrice(listing.price_ils)
   const priceUsd = formatPrice(listing.price_usd)
   const currentMobilePhoto = photos[mobilePhotoIndex] ?? photos[0]
+  const mobileActionLabel =
+    listing.booking_type === 'instant'
+      ? 'Book now'
+      : listing.booking_type === 'enquiry'
+        ? 'Message host'
+        : 'Request to book'
 
   const goToMobilePhoto = (index: number) => {
     if (photos.length === 0) return
@@ -347,9 +352,9 @@ export function ListingDetailClient({
                 )}
               </div>
 
-              <div className="hidden md:grid md:grid-cols-2 md:gap-2">
+              <div className="hidden md:grid md:h-[420px] md:grid-cols-4 md:grid-rows-2 md:gap-2 lg:h-[520px]">
                 <div
-                  className="relative aspect-[4/3] cursor-pointer overflow-hidden bg-stone-100"
+                  className="relative cursor-pointer overflow-hidden bg-stone-100 md:col-span-2 md:row-span-2"
                   onClick={() => {
                     setGalleryIndex(0)
                     setShowGallery(true)
@@ -367,31 +372,29 @@ export function ListingDetailClient({
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  {[1, 2, 3, 4].map((index) => (
-                    <div
-                      key={index}
-                      className="relative aspect-square cursor-pointer overflow-hidden bg-stone-100"
-                      onClick={() => {
-                        setGalleryIndex(index)
-                        setShowGallery(true)
-                      }}
-                    >
-                      {photos[index] ? (
-                        <Image
-                          src={photos[index].photo_url}
-                          alt={`${listing.title} photo ${index + 1}`}
-                          fill
-                          className="object-cover transition-transform duration-300 hover:scale-[1.02]"
-                          loading="lazy"
-                          sizes="25vw"
-                        />
-                      ) : (
-                        <div className="h-full w-full bg-stone-100" />
-                      )}
-                    </div>
-                  ))}
-                </div>
+                {[1, 2, 3, 4].map((index) => (
+                  <div
+                    key={index}
+                    className="relative cursor-pointer overflow-hidden bg-stone-100"
+                    onClick={() => {
+                      setGalleryIndex(index)
+                      setShowGallery(true)
+                    }}
+                  >
+                    {photos[index] ? (
+                      <Image
+                        src={photos[index].photo_url}
+                        alt={`${listing.title} photo ${index + 1}`}
+                        fill
+                        className="object-cover transition-transform duration-300 hover:scale-[1.02]"
+                        loading="lazy"
+                        sizes="25vw"
+                      />
+                    ) : (
+                      <div className="h-full w-full bg-stone-100" />
+                    )}
+                  </div>
+                ))}
               </div>
 
               {photos.length > 1 && (
@@ -550,11 +553,6 @@ export function ListingDetailClient({
 
             <hr className="border-stone-100" />
             <div className="py-8">
-              <AvailabilityCalendar blockedRanges={blockedRanges} />
-            </div>
-
-            <hr className="border-stone-100" />
-            <div className="py-8">
               <h2 className="mb-3 text-lg font-bold text-stone-900">Reviews ({reviews.length})</h2>
               {reviews.length === 0 ? (
                 <p className="text-sm text-stone-500">No reviews yet.</p>
@@ -641,6 +639,7 @@ export function ListingDetailClient({
                   totalUSD={totalUSD}
                   existingConversationId={existingConversationId}
                   onConversationCreated={setExistingConversationId}
+                  blockedRanges={blockedRanges}
                 />
                 <div className="mt-4 space-y-2.5 border-t border-stone-100 pt-4">
                   <p className="text-xs font-bold uppercase tracking-widest text-stone-400">
@@ -718,9 +717,9 @@ export function ListingDetailClient({
             <button
               type="button"
               onClick={() => setShowMobileBooking(true)}
-              className="flex-1 rounded-full bg-[#c76f55] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47]"
+              className="flex-1 rounded-full bg-stone-950 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-stone-800"
             >
-              Message host
+              {mobileActionLabel}
             </button>
           )}
         </div>
@@ -764,6 +763,7 @@ export function ListingDetailClient({
                 totalUSD={totalUSD}
                 existingConversationId={existingConversationId}
                 onConversationCreated={setExistingConversationId}
+                blockedRanges={blockedRanges}
                 mobile
               />
               <p className="mt-4 text-center text-xs text-stone-500">You won&apos;t be charged yet</p>
@@ -837,6 +837,7 @@ function BookingControls({
   totalUSD,
   existingConversationId,
   onConversationCreated,
+  blockedRanges,
   mobile = false,
 }: {
   listing: ListingDetailListing
@@ -850,12 +851,20 @@ function BookingControls({
   totalUSD: number | null
   existingConversationId: string | null
   onConversationCreated: (conversationId: string) => void
+  blockedRanges: ListingBlockedRange[]
   mobile?: boolean
 }) {
+  const allowsInstantBook = listing.booking_type === 'instant'
+  const isEnquiryOnly = listing.booking_type === 'enquiry'
+
   return (
     <>
       <div className={`${mobile ? 'mb-6' : 'mb-4'} space-y-3`}>
-        <BookingDateRangePicker dateRange={dateRange} setDateRange={setDateRange} />
+        <BookingDateRangePicker
+          dateRange={dateRange}
+          setDateRange={setDateRange}
+          blockedRanges={blockedRanges}
+        />
         {nights > 0 && (
           <div className="mt-3 rounded-2xl border border-stone-200 bg-[#F8F5F2] px-4 py-3">
             <div className="flex items-center justify-between gap-3">
@@ -905,17 +914,36 @@ function BookingControls({
             Continue conversation
           </Link>
         ) : (
-          <MessageHostDialog
-            listingId={listing.id}
-            listingTitle={listing.title}
-            hostId={listing.host_id}
-            dateRange={dateRange}
-            guests={guestCount}
-            intent="request"
-            buttonLabel="Message host"
-            buttonClassName="w-full rounded-full bg-[#c76f55] px-6 py-4 text-base font-bold text-white transition hover:bg-[#b85f47]"
-            onConversationCreated={onConversationCreated}
-          />
+          <div className="space-y-2.5">
+            {allowsInstantBook && (
+              <MessageHostDialog
+                listingId={listing.id}
+                listingTitle={listing.title}
+                hostId={listing.host_id}
+                dateRange={dateRange}
+                guests={guestCount}
+                intent="request"
+                buttonLabel="Book now"
+                buttonClassName="w-full rounded-full bg-stone-950 px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-stone-800"
+                onConversationCreated={onConversationCreated}
+              />
+            )}
+            <MessageHostDialog
+              listingId={listing.id}
+              listingTitle={listing.title}
+              hostId={listing.host_id}
+              dateRange={dateRange}
+              guests={guestCount}
+              intent="request"
+              buttonLabel={isEnquiryOnly ? 'Message host' : 'Request to book'}
+              buttonClassName={
+                allowsInstantBook
+                  ? 'w-full rounded-full border border-stone-200 bg-white px-5 py-3 text-sm font-semibold text-stone-800 transition hover:border-stone-300 hover:bg-stone-50'
+                  : 'w-full rounded-full bg-stone-950 px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-stone-800'
+              }
+              onConversationCreated={onConversationCreated}
+            />
+          </div>
         )}
         {!mobile && <p className="mb-4 text-center text-xs text-stone-500">You won&apos;t be charged yet</p>}
       </div>

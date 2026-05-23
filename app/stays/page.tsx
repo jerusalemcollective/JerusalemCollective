@@ -17,6 +17,7 @@ export const metadata = {
 export const revalidate = 1800
 
 const neighborhoods = ['All', ...allNeighborhoods]
+const defaultFeaturedNeighborhoods = ['Romema', 'Ramat Eshkol', 'Rechavia']
 
 type SearchParams = Record<string, string>
 
@@ -43,6 +44,10 @@ type BlockedListingRow = {
 type ListingPhotoRow = {
   listing_id: string | null
   photo_url: string
+}
+
+type PopularNeighborhoodRow = {
+  neighborhood: string | null
 }
 
 type StaysPageProps = {
@@ -111,15 +116,18 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
   const minPrice = parsePositiveNumber(params.minPrice)
   const maxPrice = parsePositiveNumber(params.maxPrice)
   const amenityLabels = parseAmenityLabels(params.amenities)
-  const listings = await loadListings({
-    selectedArea,
-    checkIn,
-    checkOut,
-    guests,
-    minPrice,
-    maxPrice,
-    amenityLabels,
-  })
+  const [listings, featuredNeighborhoods] = await Promise.all([
+    loadListings({
+      selectedArea,
+      checkIn,
+      checkOut,
+      guests,
+      minPrice,
+      maxPrice,
+      amenityLabels,
+    }),
+    loadFeaturedNeighborhoods(),
+  ])
 
   return (
     <div className="min-h-screen">
@@ -167,6 +175,7 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
           <div className="mb-8">
             <StaysNeighborhoodNav
               neighborhoods={neighborhoods}
+              featuredNeighborhoods={featuredNeighborhoods}
               selectedArea={selectedArea}
               baseQuery={params}
             />
@@ -232,6 +241,36 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
       )}
     </div>
   )
+}
+
+async function loadFeaturedNeighborhoods() {
+  try {
+    const supabase = await createClient()
+    const { count } = await supabase
+      .from('listings')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_published', true)
+
+    if ((count || 0) < 50) {
+      return defaultFeaturedNeighborhoods
+    }
+
+    const { data } = await supabase.rpc('popular_neighborhoods', {
+      result_limit: 3,
+      lookback_days: 30,
+    })
+    const popularNeighborhoods = ((data || []) as PopularNeighborhoodRow[])
+      .map((row) => row.neighborhood)
+      .filter((neighborhood): neighborhood is string => Boolean(neighborhood))
+      .filter((neighborhood) => allNeighborhoods.includes(neighborhood))
+      .slice(0, 3)
+
+    return popularNeighborhoods.length > 0
+      ? popularNeighborhoods
+      : defaultFeaturedNeighborhoods
+  } catch {
+    return defaultFeaturedNeighborhoods
+  }
 }
 
 async function loadListings({

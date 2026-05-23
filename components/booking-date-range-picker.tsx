@@ -12,6 +12,10 @@ type DateRange = {
 type BookingDateRangePickerProps = {
   dateRange: DateRange
   setDateRange: (range: DateRange) => void
+  blockedRanges?: {
+    start_date: string
+    end_date: string
+  }[]
 }
 
 function addDays(date: Date, days: number): Date {
@@ -28,12 +32,25 @@ function formatCompactDate(date: Date): string {
   })
 }
 
+function parseLocalDate(value: string) {
+  const [year, month, day] = value.split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
 export function BookingDateRangePicker({
   dateRange,
   setDateRange,
+  blockedRanges = [],
 }: BookingDateRangePickerProps) {
   const [showCalendar, setShowCalendar] = useState(false)
   const calendarRef = useRef<HTMLDivElement>(null)
+  const disabledDates = [
+    { before: new Date() },
+    ...blockedRanges.map((range) => ({
+      from: parseLocalDate(range.start_date),
+      to: parseLocalDate(range.end_date),
+    })),
+  ]
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -51,7 +68,7 @@ export function BookingDateRangePicker({
       <button
         type="button"
         onClick={() => setShowCalendar((open) => !open)}
-        className="w-full overflow-hidden rounded-2xl border border-stone-200 bg-white transition hover:border-stone-300"
+        className="w-full overflow-hidden rounded-[1.35rem] border border-stone-200 bg-white transition hover:border-stone-300"
       >
         <div className="grid grid-cols-2">
           <DateCell label="Check-in" date={dateRange.from} />
@@ -60,7 +77,7 @@ export function BookingDateRangePicker({
       </button>
 
       {showCalendar && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-3xl border border-stone-200 bg-[#faf8f6] shadow-xl shadow-stone-300/30">
+        <div className="absolute right-0 top-full z-50 mt-3 w-[min(92vw,430px)] overflow-hidden rounded-[1.75rem] border border-stone-200 bg-[#fbfaf8] shadow-2xl shadow-stone-300/30">
           <div className="border-b border-stone-100 px-5 py-4">
             <div className="grid grid-cols-2 gap-3">
               <SummaryCard label="Arrival" date={dateRange.from} />
@@ -68,9 +85,10 @@ export function BookingDateRangePicker({
             </div>
           </div>
 
-          <div className="mx-4 my-4 rounded-2xl bg-white p-4">
+          <div className="mx-4 my-4 rounded-[1.5rem] bg-white p-4 ring-1 ring-stone-100">
             <Calendar
               mode="range"
+              excludeDisabled
               selected={dateRange}
               onSelect={(range) => {
                 if (range?.from && range?.to && range.from.getTime() === range.to.getTime()) {
@@ -85,9 +103,20 @@ export function BookingDateRangePicker({
                 }
               }}
               numberOfMonths={1}
-              disabled={{ before: new Date() }}
+              disabled={disabledDates}
               showOutsideDays={false}
-              className="w-full"
+              className="w-full [--cell-size:2.55rem]"
+              classNames={{
+                root: 'w-full',
+                months: 'flex w-full flex-col',
+                month: 'w-full gap-5',
+                month_caption: 'min-h-12',
+                weekday: 'text-[10px] font-bold uppercase tracking-wider text-stone-400',
+                week: 'mt-2 flex w-full gap-1.5',
+                weekdays: 'flex gap-1.5',
+                day: 'aspect-square flex-1 rounded-2xl',
+                day_button: 'rounded-2xl border border-transparent hover:border-stone-200 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-30',
+              }}
             />
           </div>
 
