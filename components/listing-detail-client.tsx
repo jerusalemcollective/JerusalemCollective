@@ -906,7 +906,7 @@ function BookingControls({
         {existingConversationId ? (
           <Link
             href={`/account/messages?conversation=${existingConversationId}`}
-            className={`${mobile ? 'flex w-full items-center justify-center rounded-full bg-stone-950 py-3' : 'mb-3 flex w-full items-center justify-center rounded-full bg-stone-950 py-3'} gap-2 text-sm font-semibold text-white shadow-sm transition hover:bg-stone-800`}
+            className={`${mobile ? 'flex w-full min-h-11 items-center justify-center rounded-full bg-stone-950 px-5' : 'mb-3 flex w-full min-h-11 items-center justify-center rounded-full bg-stone-950 px-5'} gap-2 text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800`}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -924,7 +924,7 @@ function BookingControls({
                 guests={guestCount}
                 intent="request"
                 buttonLabel="Book now"
-                buttonClassName="w-full rounded-full bg-stone-950 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-stone-800"
+                buttonClassName="flex min-h-11 w-full items-center justify-center rounded-full bg-stone-950 px-5 text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800"
                 onConversationCreated={onConversationCreated}
               />
             )}
@@ -938,10 +938,10 @@ function BookingControls({
               buttonLabel={isEnquiryOnly ? 'Message host' : 'Request to book'}
               buttonClassName={
                 allowsInstantBook
-                  ? 'w-full rounded-full border border-stone-200 bg-white px-5 py-3 text-sm font-semibold text-stone-800 transition hover:border-stone-300 hover:bg-stone-50'
+                  ? 'flex min-h-11 w-full items-center justify-center rounded-full border border-stone-200 bg-white px-5 text-sm font-semibold leading-none text-stone-800 transition hover:border-stone-300 hover:bg-stone-50'
                   : isEnquiryOnly
-                    ? 'w-full rounded-full bg-stone-950 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-stone-800'
-                    : 'w-full rounded-full bg-[#9f513f] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#874535]'
+                    ? 'flex min-h-11 w-full items-center justify-center rounded-full bg-stone-950 px-5 text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800'
+                    : 'flex min-h-11 w-full items-center justify-center rounded-full bg-[#9f513f] px-5 text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-[#874535]'
               }
               onConversationCreated={onConversationCreated}
             />
@@ -953,7 +953,7 @@ function BookingControls({
                 guests={guestCount}
                 intent="message"
                 buttonLabel="Message host"
-                buttonClassName="w-full rounded-full border border-stone-200 bg-white px-5 py-3 text-sm font-semibold text-stone-700 transition hover:border-[#c76f55] hover:text-[#9f513f]"
+                buttonClassName="flex min-h-11 w-full items-center justify-center rounded-full border border-stone-200 bg-white px-5 text-sm font-semibold leading-none text-stone-700 transition hover:border-[#c76f55] hover:text-[#9f513f]"
                 onConversationCreated={onConversationCreated}
               />
             )}
@@ -1075,7 +1075,7 @@ function GalleryOverlay({ photos, index, title, onClose, onIndexChange }: Galler
       </div>
 
       <div
-        className="relative flex flex-1 items-center justify-center px-16 py-8"
+        className="relative flex min-h-0 flex-1 items-center justify-center px-6 py-4 md:px-24 md:py-6"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
@@ -1095,7 +1095,7 @@ function GalleryOverlay({ photos, index, title, onClose, onIndexChange }: Galler
           src={currentPhoto.photo_url}
           alt={`${title} - photo ${index + 1}`}
           loading="lazy"
-          className="max-h-full max-w-full rounded-lg object-contain shadow-2xl"
+          className="block h-auto max-h-[68vh] w-auto max-w-[82vw] rounded-lg object-contain shadow-2xl"
         />
 
         <button
