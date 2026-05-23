@@ -249,7 +249,7 @@ export default async function JLMCollectiveHomePage() {
             {exploreBlocks.map((block) => (
               <div key={block.label} className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
                 <p className="text-xs font-bold uppercase tracking-widest text-stone-500">{block.label}</p>
-                <h3 className="mt-3 text-lg font-bold text-stone-950">{block.title}</h3>
+                <h3 className="font-display mt-3 text-lg font-bold text-stone-950">{block.title}</h3>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {block.items.map((item) => (
                     <Link
@@ -284,7 +284,7 @@ export default async function JLMCollectiveHomePage() {
           <div>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-bold tracking-tight text-stone-900">Featured stays</h2>
+                <h2 className="font-display text-lg font-bold tracking-tight text-stone-900">Featured stays</h2>
                 <p className="text-xs text-stone-500">Browse current listings across Jerusalem</p>
               </div>
               <div className="flex items-center gap-2">
@@ -362,13 +362,13 @@ function HomeListingCard({ listing }: { listing: FeaturedStay }) {
       href={`/listings/${listing.id}?from=stays`}
       className="group block"
     >
-      <div className="relative aspect-square overflow-hidden rounded-2xl bg-stone-100">
+      <div className="relative aspect-square overflow-hidden rounded-2xl bg-stone-100 shadow-sm transition-shadow duration-200 group-hover:shadow-md">
         {listing.coverPhotoUrl ? (
           <Image
             src={listing.coverPhotoUrl}
             alt={listing.title}
             fill
-            className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            className="object-cover"
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             loading="lazy"
           />

@@ -246,7 +246,7 @@ export function ListingDetailClient({
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F5F2]">
+    <div className="min-h-screen bg-[#F8F5F2] pb-24 md:pb-0">
       <header className="border-b border-stone-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <Link href="/" className="text-xl font-bold text-[#c76f55]">
@@ -603,6 +603,30 @@ export function ListingDetailClient({
                   setShowQuickQuestion={setShowQuickQuestion}
                   onConversationCreated={setExistingConversationId}
                 />
+                <div className="mt-5 space-y-2.5 border-t border-stone-100 pt-5">
+                  {[
+                    'Personally reviewed by JLM Collective',
+                    'All hosts are identity verified',
+                    'Support available throughout your stay',
+                  ].map((point) => (
+                    <div key={point} className="flex items-center gap-2.5">
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#c76f55"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="shrink-0"
+                      >
+                        <path d="M20 6L9 17l-5-5" />
+                      </svg>
+                      <p className="text-xs text-stone-600">{point}</p>
+                    </div>
+                  ))}
+                </div>
                 <HostCard host={host} publicHostName={publicHostName} />
               </div>
             </div>
@@ -611,22 +635,36 @@ export function ListingDetailClient({
         </div>
       </main>
 
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-stone-200 bg-white p-4 shadow-lg lg:hidden">
-        <div className="flex items-center justify-between">
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-stone-200 bg-white px-5 py-4 shadow-lg md:hidden">
+        <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-lg font-bold text-stone-900">
-              {priceIls ? `\u20aa${priceIls}` : 'Price on request'}
-              {priceIls && <span className="ml-1 text-sm font-normal text-stone-500">/ night</span>}
+            <p className="text-lg font-bold text-stone-950">
+              {listing.price_usd
+                ? `$${Number(listing.price_usd).toLocaleString()}`
+                : listing.price_ils
+                  ? `\u20aa${Number(listing.price_ils).toLocaleString()}`
+                  : 'Price on request'}
             </p>
-            {priceUsd && <p className="text-xs text-stone-500">~${priceUsd} USD</p>}
+            {(listing.price_usd || listing.price_ils) && (
+              <p className="text-xs text-stone-500">per night</p>
+            )}
           </div>
-          <button
-            type="button"
-            onClick={() => setShowMobileBooking(true)}
-            className="rounded-xl bg-[#c76f55] px-6 py-3 font-semibold text-white transition hover:bg-[#b55f47]"
-          >
-            Request to book
-          </button>
+          {existingConversationId ? (
+            <Link
+              href={`/account/messages?conversation=${existingConversationId}`}
+              className="flex-1 rounded-full bg-[#c76f55] px-5 py-3 text-center text-sm font-bold text-white transition hover:bg-[#b85f47]"
+            >
+              Continue conversation
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowMobileBooking(true)}
+              className="flex-1 rounded-full bg-[#c76f55] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47]"
+            >
+              Enquire
+            </button>
+          )}
         </div>
       </div>
 

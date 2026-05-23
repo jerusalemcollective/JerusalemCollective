@@ -2,9 +2,11 @@ import { Suspense } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { allNeighborhoods } from '@/lib/neighborhoods'
 import { getAmenityLabel } from '@/lib/stay-amenities'
 import { StaysFilterBar } from '@/components/stays-filter-bar'
 import { StaysMapView } from '@/components/stays-map-view'
+import { StaysNeighborhoodNav } from '@/components/stays-neighborhood-nav'
 
 export const metadata = {
   title: 'Jerusalem Stays | JLM Collective',
@@ -12,6 +14,8 @@ export const metadata = {
 }
 
 export const revalidate = 1800
+
+const neighborhoods = ['All', ...allNeighborhoods]
 
 type SearchParams = Record<string, string>
 
@@ -159,16 +163,42 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
             )}
           </div>
 
+          <div className="mb-8">
+            <StaysNeighborhoodNav
+              neighborhoods={neighborhoods}
+              selectedArea={selectedArea}
+              baseQuery={params}
+            />
+          </div>
+
           {listings.length === 0 ? (
-            <div className="rounded-3xl border border-stone-200 bg-white p-8 text-center shadow-sm">
-              <h2 className="text-xl font-bold text-stone-950">No stays match your filters</h2>
-              <p className="mt-2 text-sm text-stone-500">Try another neighbourhood or clear some filters.</p>
-              <Link
-                href="/stays"
-                className="mt-5 inline-flex rounded-full bg-[#c76f55] px-5 py-3 text-sm font-bold text-white hover:bg-[#b85f47]"
-              >
-                Clear filters
-              </Link>
+            <div className="py-16 text-center">
+              <p className="text-lg font-semibold text-stone-950">
+                No stays match your search
+              </p>
+              <p className="mt-2 text-stone-500">
+                Try adjusting your filters or browse all available properties.
+              </p>
+              <div className="mt-6 flex flex-wrap justify-center gap-3">
+                <Link
+                  href="/stays"
+                  className="rounded-full bg-[#c76f55] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#b85f47]"
+                >
+                  Clear all filters
+                </Link>
+                <Link
+                  href="/stays?neighborhood=Rechavia"
+                  className="rounded-full border border-stone-200 px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:border-stone-300"
+                >
+                  Browse Rechavia
+                </Link>
+                <Link
+                  href="/stays?neighborhood=German+Colony"
+                  className="rounded-full border border-stone-200 px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:border-stone-300"
+                >
+                  Browse German Colony
+                </Link>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
@@ -299,13 +329,13 @@ function ListingCard({
       href={`/listings/${listing.id}?from=stays`}
       className="group block"
     >
-      <div className="relative aspect-square overflow-hidden rounded-2xl bg-stone-100">
+      <div className="relative aspect-square overflow-hidden rounded-2xl bg-stone-100 shadow-sm transition-shadow duration-200 group-hover:shadow-md">
         {listing.cover_photo_url ? (
           <Image
             src={listing.cover_photo_url}
             alt={listing.title}
             fill
-            className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            className="object-cover"
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             loading="lazy"
           />
