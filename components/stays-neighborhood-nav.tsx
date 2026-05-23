@@ -30,7 +30,7 @@ export function StaysNeighborhoodNav({
           }}
           className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition ${
             selectedArea === area
-              ? 'bg-[#1A4B5A] text-white'
+              ? 'bg-stone-950 text-white'
               : 'border border-stone-200 bg-white text-stone-700 hover:border-[#c76f55] hover:text-[#c76f55]'
           }`}
         >
