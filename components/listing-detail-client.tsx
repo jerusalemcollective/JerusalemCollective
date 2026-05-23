@@ -352,7 +352,7 @@ export function ListingDetailClient({
                 )}
               </div>
 
-              <div className="hidden md:grid md:h-[420px] md:grid-cols-4 md:grid-rows-2 md:gap-2 lg:h-[520px]">
+              <div className="hidden md:grid md:h-[360px] md:grid-cols-4 md:grid-rows-2 md:gap-2 lg:h-[430px] xl:h-[460px]">
                 <div
                   className="relative cursor-pointer overflow-hidden bg-stone-100 md:col-span-2 md:row-span-2"
                   onClick={() => {
@@ -906,7 +906,7 @@ function BookingControls({
         {existingConversationId ? (
           <Link
             href={`/account/messages?conversation=${existingConversationId}`}
-            className={`${mobile ? 'flex w-full items-center justify-center rounded-xl bg-[#c76f55] py-4' : 'mb-3 flex w-full items-center justify-center rounded-xl bg-[#c76f55] py-3.5'} gap-2 font-semibold text-white transition hover:bg-[#b55f47]`}
+            className={`${mobile ? 'flex w-full items-center justify-center rounded-full bg-stone-950 py-3' : 'mb-3 flex w-full items-center justify-center rounded-full bg-stone-950 py-3'} gap-2 text-sm font-semibold text-white shadow-sm transition hover:bg-stone-800`}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -924,7 +924,7 @@ function BookingControls({
                 guests={guestCount}
                 intent="request"
                 buttonLabel="Book now"
-                buttonClassName="w-full rounded-full bg-stone-950 px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-stone-800"
+                buttonClassName="w-full rounded-full bg-stone-950 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-stone-800"
                 onConversationCreated={onConversationCreated}
               />
             )}
@@ -939,10 +939,24 @@ function BookingControls({
               buttonClassName={
                 allowsInstantBook
                   ? 'w-full rounded-full border border-stone-200 bg-white px-5 py-3 text-sm font-semibold text-stone-800 transition hover:border-stone-300 hover:bg-stone-50'
-                  : 'w-full rounded-full bg-stone-950 px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-stone-800'
+                  : isEnquiryOnly
+                    ? 'w-full rounded-full bg-stone-950 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-stone-800'
+                    : 'w-full rounded-full bg-[#9f513f] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#874535]'
               }
               onConversationCreated={onConversationCreated}
             />
+            {!isEnquiryOnly && (
+              <MessageHostDialog
+                listingId={listing.id}
+                listingTitle={listing.title}
+                hostId={listing.host_id}
+                guests={guestCount}
+                intent="message"
+                buttonLabel="Message host"
+                buttonClassName="w-full rounded-full border border-stone-200 bg-white px-5 py-3 text-sm font-semibold text-stone-700 transition hover:border-[#c76f55] hover:text-[#9f513f]"
+                onConversationCreated={onConversationCreated}
+              />
+            )}
           </div>
         )}
         {!mobile && <p className="mb-4 text-center text-xs text-stone-500">You won&apos;t be charged yet</p>}
