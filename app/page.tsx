@@ -1,9 +1,10 @@
-import Link from 'next/link'
+﻿import Link from 'next/link'
 import Image from 'next/image'
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { sampleListings } from '@/lib/sample-listings'
 import { defaultExploreNeighborhoods } from '@/lib/neighborhoods'
+import { slugifyNeighborhood } from '@/lib/neighborhood-pages'
 import { HomeNeighborhoodSearch, HomeSearchForm } from '@/components/home-search-form'
 import { HomeMapSection } from '@/components/home-map-section'
 
@@ -111,7 +112,7 @@ const defaultFeatured = sampleListings.map((listing) => toFeaturedStay(listing))
 function getExploreHref(blockLabel: string, item: string) {
   const params = new URLSearchParams()
 
-  if (blockLabel === 'Neighbourhoods') params.set('neighborhood', item)
+  if (blockLabel === 'Neighbourhoods') return `/neighbourhoods/${slugifyNeighborhood(item)}`
   if (blockLabel === 'Themes') params.set('feature', item)
   if (blockLabel === 'Stay types') params.set('type', item)
 
@@ -362,7 +363,7 @@ function HomeListingCard({ listing }: { listing: FeaturedStay }) {
       href={`/listings/${listing.id}?from=stays`}
       className="group block"
     >
-      <div className="relative aspect-square overflow-hidden rounded-2xl bg-stone-100 shadow-sm transition-shadow duration-200 group-hover:shadow-md">
+      <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-stone-100 shadow-sm transition-shadow duration-200 group-hover:shadow-md">
         {listing.coverPhotoUrl ? (
           <Image
             src={listing.coverPhotoUrl}
@@ -445,4 +446,5 @@ function ShieldIcon({ className = '' }: { className?: string }) {
     </svg>
   )
 }
+
 

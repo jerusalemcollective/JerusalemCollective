@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -76,6 +76,7 @@ export function MessageHostDialog({
   const [error, setError] = useState<string | null>(null)
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState(false)
+  const [senderName, setSenderName] = useState('')
   const router = useRouter()
   const isRequest = intent === 'request'
   const dialogOpen = controlledOpen ?? internalOpen
@@ -90,6 +91,37 @@ export function MessageHostDialog({
     }
     onOpenChange?.(nextOpen)
   }
+
+  useEffect(() => {
+    if (!dialogOpen) return
+
+    let isActive = true
+
+    const loadSenderName = async () => {
+      const supabase = createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) return
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single()
+
+      if (isActive && profile?.full_name) {
+        setSenderName(profile.full_name)
+      }
+    }
+
+    void loadSenderName()
+
+    return () => {
+      isActive = false
+    }
+  }, [dialogOpen])
 
   if (!hostId) {
     return controlledOpen === undefined ? (
@@ -195,7 +227,7 @@ export function MessageHostDialog({
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
           </svg>
-          {buttonLabel || (isRequest ? 'Request to book' : 'Message host')}
+          {buttonLabel || 'Message host'}
         </button>
       )}
 
@@ -297,10 +329,10 @@ export function MessageHostDialog({
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
-                      {quickQuestion ? 'Quick question' : isRequest ? 'Request to book' : 'Message host'}
+                      {quickQuestion ? 'Quick question' : 'Message host'}
                     </p>
                     <h2 className="mt-2 text-2xl font-bold text-stone-950">
-                      {quickQuestion ? 'Ask a quick question' : listingTitle}
+                      {quickQuestion ? 'Ask a quick question' : 'Message host'}
                     </h2>
                     {isRequest && !quickQuestion && (
                       <p className="mt-2 text-sm text-stone-600">
@@ -322,7 +354,18 @@ export function MessageHostDialog({
                   </button>
                 </div>
 
-                <label className="mt-6 block">
+                <label className="mt-6 block text-sm font-semibold text-stone-700">
+                  Your name
+                  <input
+                    type="text"
+                    value={senderName}
+                    onChange={(event) => setSenderName(event.target.value)}
+                    placeholder="Your name"
+                    className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900"
+                  />
+                </label>
+
+                <label className="mt-4 block">
                   <span className="text-sm font-semibold text-stone-800">
                     {quickQuestion ? 'Your question' : 'Your message'}
                   </span>
@@ -356,7 +399,7 @@ export function MessageHostDialog({
                     disabled={!message.trim() || loading}
                     className="rounded-full bg-[#c76f55] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#b55f47] disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {loading ? 'Sending...' : quickQuestion ? 'Send question' : isRequest ? 'Send request' : 'Send message'}
+                    {loading ? 'Sending...' : quickQuestion ? 'Send question' : 'Send message'}
                   </button>
                 </div>
               </>

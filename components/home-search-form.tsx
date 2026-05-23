@@ -293,7 +293,7 @@ export function HomeSearchForm() {
                 setShowNeighbourhoodSuggestions(true)
                 setShouldLoadPlaces(true)
               }}
-              placeholder="Start typing a neighbourhood"
+              placeholder="Rechavia, German Colony, Old City..."
               className="mt-1 w-full border-0 bg-transparent p-0 text-sm text-stone-900 placeholder:text-stone-500 focus:outline-none focus:ring-0"
             />
           </div>

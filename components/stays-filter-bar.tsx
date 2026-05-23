@@ -2,27 +2,13 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { BookingDateRangePicker } from '@/components/booking-date-range-picker'
 import { STAY_AMENITY_GROUPS, getAmenityLabel, slugifyAmenity } from '@/lib/stay-amenities'
-
-type DateRange = {
-  from?: Date
-  to?: Date
-}
 
 function parseLocalDate(value: string | null) {
   if (!value) return undefined
   const [year, month, day] = value.split('-').map(Number)
   if (!year || !month || !day) return undefined
   return new Date(year, month - 1, day)
-}
-
-function formatDateParam(date?: Date) {
-  if (!date) return ''
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
 }
 
 function formatSummaryDate(value: string | null) {
@@ -37,22 +23,19 @@ export function StaysFilterBar() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [filtersOpen, setFiltersOpen] = useState(false)
-  const [dateRange, setDateRange] = useState<DateRange>({
-    from: parseLocalDate(searchParams.get('checkIn')),
-    to: parseLocalDate(searchParams.get('checkOut')),
-  })
+  const [checkInValue, setCheckInValue] = useState(searchParams.get('checkIn') || '')
+  const [checkOutValue, setCheckOutValue] = useState(searchParams.get('checkOut') || '')
   const [guests, setGuests] = useState(searchParams.get('guests') || '')
   const [minPrice, setMinPrice] = useState(searchParams.get('minPrice') || '')
   const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') || '')
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>(
     searchParams.get('amenities')?.split(',').filter(Boolean) || [],
   )
+  const todayISO = new Date().toISOString().slice(0, 10)
 
   useEffect(() => {
-    setDateRange({
-      from: parseLocalDate(searchParams.get('checkIn')),
-      to: parseLocalDate(searchParams.get('checkOut')),
-    })
+    setCheckInValue(searchParams.get('checkIn') || '')
+    setCheckOutValue(searchParams.get('checkOut') || '')
     setGuests(searchParams.get('guests') || '')
     setMinPrice(searchParams.get('minPrice') || '')
     setMaxPrice(searchParams.get('maxPrice') || '')
@@ -120,11 +103,9 @@ export function StaysFilterBar() {
 
   const handleSearch = () => {
     const next = new URLSearchParams(searchParams.toString())
-    const checkIn = formatDateParam(dateRange.from)
-    const checkOut = formatDateParam(dateRange.to)
 
-    setOrDelete(next, 'checkIn', checkIn)
-    setOrDelete(next, 'checkOut', checkOut)
+    setOrDelete(next, 'checkIn', checkInValue)
+    setOrDelete(next, 'checkOut', checkOutValue)
     setOrDelete(next, 'guests', guests)
     setOrDelete(next, 'minPrice', minPrice)
     setOrDelete(next, 'maxPrice', maxPrice)
@@ -146,7 +127,8 @@ export function StaysFilterBar() {
 
   const handleClear = () => {
     router.push('/stays')
-    setDateRange({})
+    setCheckInValue('')
+    setCheckOutValue('')
     setGuests('')
     setMinPrice('')
     setMaxPrice('')
@@ -202,7 +184,35 @@ export function StaysFilterBar() {
       )}
 
       <div className={`${filtersOpen ? 'mt-4 grid' : 'hidden'} gap-4 lg:grid-cols-[minmax(260px,1.4fr)_0.55fr_0.8fr_1.3fr_auto] lg:items-start`}>
-        <BookingDateRangePicker dateRange={dateRange} setDateRange={setDateRange} />
+        <div className="flex items-center gap-2">
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">
+              Check in
+            </span>
+            <input
+              type="date"
+              value={checkInValue}
+              min={todayISO}
+              onChange={(event) => setCheckInValue(event.target.value)}
+              className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:border-[#c76f55] focus:outline-none"
+            />
+          </label>
+          <span className="mt-5 text-stone-400">
+            →
+          </span>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">
+              Check out
+            </span>
+            <input
+              type="date"
+              value={checkOutValue}
+              min={checkInValue || todayISO}
+              onChange={(event) => setCheckOutValue(event.target.value)}
+              className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:border-[#c76f55] focus:outline-none"
+            />
+          </label>
+        </div>
 
         <label className="block text-sm font-semibold text-stone-700">
           Guests

@@ -10,6 +10,7 @@ import { BookingDateRangePicker } from '@/components/booking-date-range-picker'
 import { MessageHostDialog } from '@/components/message-host-dialog'
 import { SaveListingButton } from '@/components/save-listing-button'
 import { AmenityDisplay } from '@/components/amenity-display'
+import { recordListingView } from '@/components/recently-viewed'
 import { recordListingEngagement } from '@/lib/listing-engagement'
 
 type DateRange = {
@@ -80,6 +81,7 @@ type ListingDetailClientProps = {
   blockedRanges: ListingBlockedRange[]
   similarListings: SimilarListing[]
   fromStays: boolean
+  neighbourhoodDescription: string | null
 }
 
 function formatPrice(value?: number | null) {
@@ -105,6 +107,7 @@ export function ListingDetailClient({
   blockedRanges,
   similarListings,
   fromStays,
+  neighbourhoodDescription,
 }: ListingDetailClientProps) {
   const [copiedLink, setCopiedLink] = useState(false)
   const [showGallery, setShowGallery] = useState(false)
@@ -114,7 +117,6 @@ export function ListingDetailClient({
   const [bookingDateRange, setBookingDateRange] = useState<DateRange>({})
   const [guestCount, setGuestCount] = useState(1)
   const [existingConversationId, setExistingConversationId] = useState<string | null>(null)
-  const [showQuickQuestion, setShowQuickQuestion] = useState(false)
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const mobilePhotoDragStartRef = useRef<number | null>(null)
   const mobilePhotoDidSwipeRef = useRef(false)
@@ -139,6 +141,12 @@ export function ListingDetailClient({
     const supabase = createClient()
     let isActive = true
     void recordListingEngagement(supabase, listing.id, 'view')
+    recordListingView({
+      id: listing.id,
+      title: listing.title,
+      area: listing.area,
+      coverPhotoUrl: photos[0]?.photo_url || null,
+    })
 
     const loadExistingConversation = async () => {
       const {
@@ -246,7 +254,7 @@ export function ListingDetailClient({
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F5F2] pb-24 md:pb-0">
+    <div className="min-h-screen bg-white pb-24 md:pb-0">
       <header className="border-b border-stone-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <Link href="/" className="text-xl font-bold text-[#c76f55]">
@@ -295,7 +303,7 @@ export function ListingDetailClient({
           </div>
         </div>
 
-        <div className="relative mb-8 overflow-hidden rounded-3xl">
+        <div className="relative mb-0 overflow-hidden rounded-3xl md:rounded-none lg:rounded-xl">
           {photos.length > 0 ? (
             <>
               <div className="relative md:hidden">
@@ -439,39 +447,70 @@ export function ListingDetailClient({
             {listing.description && (
               <>
                 <hr className="border-stone-100" />
-                <section>
+                <div className="py-8">
                   <h2 className="mb-3 text-lg font-bold text-stone-900">About this stay</h2>
                   <p className="whitespace-pre-line text-base leading-8 text-stone-700">{listing.description}</p>
-                </section>
+                </div>
               </>
             )}
 
             {listing.house_rules?.trim() && (
               <>
                 <hr className="border-stone-100" />
-                <section>
+                <div className="py-8">
                   <h2 className="text-lg font-bold text-stone-950">House rules</h2>
                   <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-stone-700">
                     {listing.house_rules}
                   </p>
-                </section>
+                </div>
               </>
             )}
 
             {listing.amenities && listing.amenities.length > 0 && (
               <>
                 <hr className="border-stone-100" />
-                <section>
+                <div className="py-8">
                   <h2 className="mb-3 text-lg font-bold text-stone-900">Amenities</h2>
                   <AmenityDisplay amenities={listing.amenities} />
-                </section>
+                </div>
+              </>
+            )}
+
+            {listing.area && (
+              <>
+                <hr className="border-stone-100" />
+                <div className="py-8">
+                  <div className="flex items-center justify-between gap-4">
+                    <h2 className="font-display text-xl font-bold text-stone-950">
+                      About {listing.area}
+                    </h2>
+                    <Link
+                      href={`/neighbourhoods/${listing.area
+                        .toLowerCase()
+                        .replace(/\s+/g, '-')
+                        .replace(/[^a-z0-9-]/g, '')}`}
+                      className="shrink-0 text-sm font-semibold text-[#c76f55] hover:underline"
+                    >
+                      Explore {listing.area} →
+                    </Link>
+                  </div>
+                  {neighbourhoodDescription ? (
+                    <p className="mt-3 text-base leading-8 text-stone-600">
+                      {neighbourhoodDescription}
+                    </p>
+                  ) : (
+                    <p className="mt-3 text-sm text-stone-500">
+                      {listing.area} is one of Jerusalem&apos;s most sought-after neighbourhoods for short-term stays.
+                    </p>
+                  )}
+                </div>
               </>
             )}
 
             {listing.host_id && (
               <>
                 <hr className="border-stone-100" />
-                <section>
+                <div className="py-8">
                   <h2 className="text-lg font-bold text-stone-950">Enhance your stay</h2>
                   <p className="mt-1 text-sm text-stone-600">
                     Arranged by JLM Collective and delivered to this property.
@@ -505,15 +544,17 @@ export function ListingDetailClient({
                       </div>
                     </Link>
                   </div>
-                </section>
+                </div>
               </>
             )}
 
             <hr className="border-stone-100" />
-            <AvailabilityCalendar blockedRanges={blockedRanges} />
+            <div className="py-8">
+              <AvailabilityCalendar blockedRanges={blockedRanges} />
+            </div>
 
             <hr className="border-stone-100" />
-            <div>
+            <div className="py-8">
               <h2 className="mb-3 text-lg font-bold text-stone-900">Reviews ({reviews.length})</h2>
               {reviews.length === 0 ? (
                 <p className="text-sm text-stone-500">No reviews yet.</p>
@@ -546,7 +587,7 @@ export function ListingDetailClient({
             {similarListings.length > 0 && (
               <>
                 <hr className="border-stone-100" />
-                <section>
+                <div className="py-8">
                   <h2 className="mb-4 text-xl font-bold text-stone-950">You might also like</h2>
                   <div className="grid gap-4 md:grid-cols-3">
                     {similarListings.map((similarListing) => (
@@ -568,7 +609,7 @@ export function ListingDetailClient({
                       </Link>
                     ))}
                   </div>
-                </section>
+                </div>
               </>
             )}
           </div>
@@ -599,10 +640,27 @@ export function ListingDetailClient({
                   totalILS={totalILS}
                   totalUSD={totalUSD}
                   existingConversationId={existingConversationId}
-                  showQuickQuestion={showQuickQuestion}
-                  setShowQuickQuestion={setShowQuickQuestion}
                   onConversationCreated={setExistingConversationId}
                 />
+                <div className="mt-4 space-y-2.5 border-t border-stone-100 pt-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-stone-400">
+                    How it works
+                  </p>
+                  {[
+                    'Send your message — free, no commitment',
+                    'Host replies — usually within a few hours',
+                    'Confirm together — agree details before any payment',
+                  ].map((step, index) => (
+                    <div key={step} className="flex items-start gap-2.5">
+                      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-stone-100 text-[10px] font-bold text-stone-600">
+                        {index + 1}
+                      </span>
+                      <p className="text-xs leading-5 text-stone-600">
+                        {step}
+                      </p>
+                    </div>
+                  ))}
+                </div>
                 <div className="mt-5 space-y-2.5 border-t border-stone-100 pt-5">
                   {[
                     'Personally reviewed by JLM Collective',
@@ -662,7 +720,7 @@ export function ListingDetailClient({
               onClick={() => setShowMobileBooking(true)}
               className="flex-1 rounded-full bg-[#c76f55] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47]"
             >
-              Enquire
+              Message host
             </button>
           )}
         </div>
@@ -705,8 +763,6 @@ export function ListingDetailClient({
                 totalILS={totalILS}
                 totalUSD={totalUSD}
                 existingConversationId={existingConversationId}
-                showQuickQuestion={showQuickQuestion}
-                setShowQuickQuestion={setShowQuickQuestion}
                 onConversationCreated={setExistingConversationId}
                 mobile
               />
@@ -780,8 +836,6 @@ function BookingControls({
   totalILS,
   totalUSD,
   existingConversationId,
-  showQuickQuestion,
-  setShowQuickQuestion,
   onConversationCreated,
   mobile = false,
 }: {
@@ -795,8 +849,6 @@ function BookingControls({
   totalILS: number | null
   totalUSD: number | null
   existingConversationId: string | null
-  showQuickQuestion: boolean
-  setShowQuickQuestion: (value: boolean) => void
   onConversationCreated: (conversationId: string) => void
   mobile?: boolean
 }) {
@@ -860,46 +912,12 @@ function BookingControls({
             dateRange={dateRange}
             guests={guestCount}
             intent="request"
-            buttonLabel="Request to book"
-            buttonClassName={`${mobile ? 'flex w-full items-center justify-center rounded-xl bg-[#c76f55] py-4' : 'mb-3 flex w-full items-center justify-center rounded-xl bg-[#c76f55] py-3.5'} font-semibold text-white transition hover:bg-[#b55f47]`}
+            buttonLabel="Message host"
+            buttonClassName="w-full rounded-full bg-[#c76f55] px-6 py-4 text-base font-bold text-white transition hover:bg-[#b85f47]"
             onConversationCreated={onConversationCreated}
           />
-        )}
-        {!existingConversationId && (
-          <>
-            <button
-              type="button"
-              onClick={() => setShowQuickQuestion(true)}
-              className="mt-2 w-full rounded-full border border-stone-200 px-6 py-3 text-sm font-semibold text-stone-700 transition hover:border-[#c76f55] hover:text-[#c76f55]"
-            >
-              Ask a quick question
-            </button>
-            <MessageHostDialog
-              listingId={listing.id}
-              listingTitle={listing.title}
-              hostId={listing.host_id}
-              quickQuestion
-              open={showQuickQuestion}
-              onOpenChange={setShowQuickQuestion}
-              onConversationCreated={onConversationCreated}
-            />
-          </>
         )}
         {!mobile && <p className="mb-4 text-center text-xs text-stone-500">You won&apos;t be charged yet</p>}
-        <div className={`${mobile ? 'space-y-3' : 'space-y-2 border-t border-stone-100 pt-4'}`}>
-          <MessageHostDialog
-            listingId={listing.id}
-            listingTitle={listing.title}
-            hostId={listing.host_id}
-            dateRange={dateRange}
-            guests={guestCount}
-            onConversationCreated={onConversationCreated}
-          />
-          <button className={`${mobile ? 'py-4 font-semibold' : 'py-3 text-sm font-semibold'} flex w-full items-center justify-center gap-2 rounded-xl border border-stone-200 bg-white text-stone-700 transition hover:border-stone-300 hover:bg-stone-50`}>
-            <MoneyIcon className={mobile ? 'h-5 w-5' : 'h-4 w-4'} />
-            Reserve with deposit
-          </button>
-        </div>
       </div>
     </>
   )
@@ -996,8 +1014,8 @@ function GalleryOverlay({ photos, index, title, onClose, onIndexChange }: Galler
   if (!currentPhoto) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black">
-      <div className="flex items-center justify-between px-5 py-4">
+    <div className="fixed inset-0 z-50 flex flex-col bg-[#1a1a1a]">
+      <div className="flex items-center justify-between bg-[#1a1a1a] px-6 py-4">
         <p className="text-sm font-semibold text-white">{title}</p>
         <div className="flex items-center gap-4">
           <span className="text-sm text-white/60">{index + 1} / {total}</span>
@@ -1015,14 +1033,14 @@ function GalleryOverlay({ photos, index, title, onClose, onIndexChange }: Galler
       </div>
 
       <div
-        className="relative flex flex-1 items-center justify-center"
+        className="relative flex flex-1 items-center justify-center px-16 py-8"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
         <button
           type="button"
           onClick={prev}
-          className="absolute left-4 z-10 rounded-full bg-white/10 p-3 text-white transition hover:bg-white/20"
+          className="absolute left-4 z-10 rounded-full p-3 text-white/60 transition hover:bg-white/10 hover:text-white"
           aria-label="Previous photo"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1035,13 +1053,13 @@ function GalleryOverlay({ photos, index, title, onClose, onIndexChange }: Galler
           src={currentPhoto.photo_url}
           alt={`${title} - photo ${index + 1}`}
           loading="lazy"
-          className="max-h-full max-w-full object-contain"
+          className="max-h-full max-w-full rounded-lg object-contain shadow-2xl"
         />
 
         <button
           type="button"
           onClick={next}
-          className="absolute right-4 z-10 rounded-full bg-white/10 p-3 text-white transition hover:bg-white/20"
+          className="absolute right-4 z-10 rounded-full p-3 text-white/60 transition hover:bg-white/10 hover:text-white"
           aria-label="Next photo"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1050,7 +1068,7 @@ function GalleryOverlay({ photos, index, title, onClose, onIndexChange }: Galler
         </button>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto px-5 py-4">
+      <div className="flex gap-2 overflow-x-auto bg-black/40 px-6 py-4">
         {photos.map((photo, thumbIndex) => (
           <button
             type="button"
@@ -1058,8 +1076,8 @@ function GalleryOverlay({ photos, index, title, onClose, onIndexChange }: Galler
             onClick={() => onIndexChange(thumbIndex)}
             className={`shrink-0 overflow-hidden rounded-lg transition ${
               thumbIndex === index
-                ? 'ring-2 ring-white ring-offset-2 ring-offset-black'
-                : 'opacity-50 hover:opacity-80'
+                ? 'opacity-100 ring-2 ring-white'
+                : 'opacity-40 hover:opacity-70'
             }`}
           >
             <Image

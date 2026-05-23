@@ -9,6 +9,7 @@ import {
   type ListingDetailPhoto,
   type ListingDetailReview,
 } from '@/components/listing-detail-client'
+import { neighborhoodDescriptions } from '@/lib/neighborhood-pages'
 
 type HostRecord = {
   name: string
@@ -77,7 +78,7 @@ export async function generateMetadata({
     }
   }
 
-  const title = `${listing.title} | JLM Collective`
+  const title = `${listing.title} in ${listing.area} | JLM Collective`
   const description = listing.description
     ? listing.description.slice(0, 155)
     : `${listing.bedrooms ?? 1}-bedroom stay in ${listing.area}, Jerusalem. Verified by JLM Collective.`
@@ -164,6 +165,7 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
           blockedRanges={[]}
           similarListings={[]}
           fromStays={fromStays}
+          neighbourhoodDescription={null}
         />
       )
     }
@@ -172,6 +174,9 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
   }
 
   const listing = listingData as ListingDetailListing
+  const neighbourhoodDescription = listingData?.area
+    ? neighborhoodDescriptions[listingData.area] || null
+    : null
   const [
     { data: photosData },
     { data: hostData },
@@ -319,6 +324,7 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
         blockedRanges={(blockedRangesData || []) as ListingBlockedRange[]}
         similarListings={similarListings}
         fromStays={fromStays}
+        neighbourhoodDescription={neighbourhoodDescription}
       />
     </>
   )

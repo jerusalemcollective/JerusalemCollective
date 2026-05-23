@@ -7,6 +7,7 @@ import { getAmenityLabel } from '@/lib/stay-amenities'
 import { StaysFilterBar } from '@/components/stays-filter-bar'
 import { StaysMapView } from '@/components/stays-map-view'
 import { StaysNeighborhoodNav } from '@/components/stays-neighborhood-nav'
+import { RecentlyViewed } from '@/components/recently-viewed'
 
 export const metadata = {
   title: 'Jerusalem Stays | JLM Collective',
@@ -201,11 +202,16 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
-              {listings.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
+                {listings.map((listing) => (
+                  <ListingCard key={listing.id} listing={listing} />
+                ))}
+              </div>
+              <Suspense fallback={null}>
+                <RecentlyViewed />
+              </Suspense>
+            </>
           )}
         </div>
       ) : (
@@ -329,7 +335,7 @@ function ListingCard({
       href={`/listings/${listing.id}?from=stays`}
       className="group block"
     >
-      <div className="relative aspect-square overflow-hidden rounded-2xl bg-stone-100 shadow-sm transition-shadow duration-200 group-hover:shadow-md">
+      <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-stone-100 shadow-sm transition-shadow duration-200 group-hover:shadow-md">
         {listing.cover_photo_url ? (
           <Image
             src={listing.cover_photo_url}
