@@ -40,6 +40,35 @@ type ListingPhoto = {
   sort_order: number
 }
 
+type PriceComparison = {
+  listing_id: string
+  comparable_count: number
+  median_price_usd: number | null
+  low_price_usd: number | null
+  high_price_usd: number | null
+  percent_difference_usd: number | null
+  median_price_ils: number | null
+  low_price_ils: number | null
+  high_price_ils: number | null
+  percent_difference_ils: number | null
+  position: 'above_market' | 'below_market' | 'in_line' | 'not_enough_data'
+  recommendation: string
+}
+
+type PerformanceInsight = {
+  listing_id: string
+  views: number
+  saves: number
+  enquiries: number
+  booking_requests: number
+  accepted_requests: number
+  enquiry_rate: number | null
+  request_acceptance_rate: number | null
+  avg_response_hours: number | null
+  demand_signal: 'building_data' | 'low_conversion' | 'strong_demand' | 'slow_response' | 'steady_interest'
+  recommendation: string
+}
+
 export default async function HostListingsPage() {
   const { supabase, hostIds } = await requireHostDashboardAccess()
 
@@ -60,9 +89,9 @@ export default async function HostListingsPage() {
   const hostListings = (listings || []) as HostListing[]
   const applicationIds = hostApplications.map((application) => application.id)
   const listingIds = hostListings.map((listing) => listing.id)
-  const { data: photos } =
+  const [{ data: photos }, comparisonRows, performanceRows] = await Promise.all([
     applicationIds.length || listingIds.length
-      ? await supabase
+      ? supabase
           .from('listing_photos')
           .select('application_id, listing_id, photo_url, is_cover, sort_order')
           .or(
@@ -75,8 +104,46 @@ export default async function HostListingsPage() {
           )
           .order('is_cover', { ascending: false })
           .order('sort_order', { ascending: true })
-      : { data: [] }
+      : Promise.resolve({ data: [] }),
+    listingIds.length
+      ? Promise.all(
+          listingIds.map(async (listingId) => {
+            const { data } = await supabase
+              .rpc('get_listing_price_comparison', {
+                target_listing_id: listingId,
+              })
+              .maybeSingle<PriceComparison>()
+
+            return data
+          }),
+        )
+      : Promise.resolve([]),
+    listingIds.length
+      ? Promise.all(
+          listingIds.map(async (listingId) => {
+            const { data } = await supabase
+              .rpc('get_listing_performance_insights', {
+                target_listing_id: listingId,
+                lookback_days: 30,
+              })
+              .maybeSingle<PerformanceInsight>()
+
+            return data
+          }),
+        )
+      : Promise.resolve([]),
+  ])
   const listingPhotos = (photos || []) as ListingPhoto[]
+  const comparisonByListing = new Map(
+    comparisonRows
+      .filter((comparison): comparison is PriceComparison => Boolean(comparison))
+      .map((comparison) => [comparison.listing_id, comparison]),
+  )
+  const performanceByListing = new Map(
+    performanceRows
+      .filter((performance): performance is PerformanceInsight => Boolean(performance))
+      .map((performance) => [performance.listing_id, performance]),
+  )
   const pendingApplications = hostApplications.filter(
     (application) => application.status !== 'approved',
   )
@@ -165,6 +232,8 @@ export default async function HostListingsPage() {
                     image={coverByListing.get(listing.id)}
                     score={calculateListingScore(scoreInput)}
                     suggestions={listingStrengthSuggestions(listing, photoCount)}
+                    comparison={comparisonByListing.get(listing.id) || null}
+                    performance={performanceByListing.get(listing.id) || null}
                     badge={{
                       label: listing.is_published ? 'Live' : 'Hidden',
                       tone: listing.is_published ? 'green' : 'stone',
@@ -226,6 +295,8 @@ function ListingRow({
   image,
   score,
   suggestions,
+  comparison,
+  performance,
   badge,
 }: {
   id: string
@@ -235,6 +306,8 @@ function ListingRow({
   image?: string
   score: number
   suggestions: string[]
+  comparison: PriceComparison | null
+  performance: PerformanceInsight | null
   badge: { label: string; tone: 'green' | 'stone' }
 }) {
   return (
@@ -247,6 +320,8 @@ function ListingRow({
         <div className="mt-4 max-w-xl">
           <ListingQualityScore score={score} label="Listing strength" suggestions={suggestions} />
         </div>
+        <PriceInsight comparison={comparison} />
+        <PerformanceInsightCard performance={performance} />
         <div className="mt-3 flex flex-wrap gap-2">
           <Link
             href={`/host/dashboard/listings/${id}`}
@@ -280,6 +355,133 @@ function ListingRow({
         <StatusBadge label={badge.label} tone={badge.tone} />
       </div>
     </article>
+  )
+}
+
+function PerformanceInsightCard({ performance }: { performance: PerformanceInsight | null }) {
+  if (!performance) return null
+
+  const tone =
+    performance.demand_signal === 'strong_demand'
+      ? 'bg-green-100 text-green-800'
+      : performance.demand_signal === 'low_conversion'
+        ? 'bg-amber-100 text-amber-800'
+        : performance.demand_signal === 'slow_response'
+          ? 'bg-rose-100 text-rose-800'
+          : performance.demand_signal === 'steady_interest'
+            ? 'bg-blue-100 text-blue-800'
+            : 'bg-stone-100 text-stone-600'
+
+  const signalLabel: Record<PerformanceInsight['demand_signal'], string> = {
+    building_data: 'Building data',
+    low_conversion: 'Needs attention',
+    strong_demand: 'Strong demand',
+    slow_response: 'Reply faster',
+    steady_interest: 'Steady interest',
+  }
+
+  return (
+    <div className="mt-4 max-w-xl rounded-2xl bg-white p-4 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-widest text-stone-400">
+            Demand, last 30 days
+          </p>
+          <p className="mt-1 text-sm font-semibold text-stone-950">
+            {performance.views} views · {performance.enquiries + performance.booking_requests} enquiries
+          </p>
+        </div>
+        <span className={`rounded-full px-3 py-1 text-xs font-bold ${tone}`}>
+          {signalLabel[performance.demand_signal]}
+        </span>
+      </div>
+      <div className="mt-3 grid gap-3 text-xs text-stone-600 sm:grid-cols-3">
+        <InsightMetric
+          label="Enquiry rate"
+          value={
+            performance.enquiry_rate !== null
+              ? `${performance.enquiry_rate}%`
+              : 'Not enough views'
+          }
+        />
+        <InsightMetric
+          label="Accepted"
+          value={`${performance.accepted_requests}/${performance.booking_requests}`}
+        />
+        <InsightMetric
+          label="Avg reply"
+          value={
+            performance.avg_response_hours !== null
+              ? `${performance.avg_response_hours}h`
+              : 'No replies yet'
+          }
+        />
+      </div>
+      <p className="mt-3 text-xs leading-5 text-stone-500">
+        {performance.recommendation}
+      </p>
+    </div>
+  )
+}
+
+function InsightMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl bg-[#F8F5F2] px-3 py-2">
+      <p className="font-bold uppercase tracking-widest text-stone-400">{label}</p>
+      <p className="mt-1 font-semibold text-stone-900">{value}</p>
+    </div>
+  )
+}
+
+function PriceInsight({ comparison }: { comparison: PriceComparison | null }) {
+  if (!comparison) return null
+
+  const useUsd = comparison.median_price_usd !== null || comparison.percent_difference_usd !== null
+  const median = useUsd ? comparison.median_price_usd : comparison.median_price_ils
+  const low = useUsd ? comparison.low_price_usd : comparison.low_price_ils
+  const high = useUsd ? comparison.high_price_usd : comparison.high_price_ils
+  const difference = useUsd ? comparison.percent_difference_usd : comparison.percent_difference_ils
+  const currency = useUsd ? '$' : '₪'
+
+  const tone =
+    comparison.position === 'above_market'
+      ? 'bg-amber-100 text-amber-800'
+      : comparison.position === 'below_market'
+        ? 'bg-blue-100 text-blue-800'
+        : comparison.position === 'in_line'
+          ? 'bg-green-100 text-green-800'
+          : 'bg-stone-100 text-stone-600'
+
+  const label =
+    comparison.position === 'above_market'
+      ? `${Math.abs(Math.round(difference || 0))}% above similar stays`
+      : comparison.position === 'below_market'
+        ? `${Math.abs(Math.round(difference || 0))}% below similar stays`
+        : comparison.position === 'in_line'
+          ? 'In line with similar stays'
+          : 'Building comparison set'
+
+  return (
+    <div className="mt-4 max-w-xl rounded-2xl bg-white p-4 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-widest text-stone-400">
+            Price position
+          </p>
+          <p className="mt-1 text-sm font-semibold text-stone-950">
+            {comparison.comparable_count >= 3 && median
+              ? `Similar ${currency}${Math.round(low || median).toLocaleString()}–${currency}${Math.round(high || median).toLocaleString()} / night`
+              : 'Not enough similar listings yet'}
+          </p>
+        </div>
+        <span className={`rounded-full px-3 py-1 text-xs font-bold ${tone}`}>
+          {label}
+        </span>
+      </div>
+      <p className="mt-2 text-xs leading-5 text-stone-500">
+        {comparison.recommendation}
+      </p>
+    </div>
   )
 }
 
