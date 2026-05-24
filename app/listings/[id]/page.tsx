@@ -245,6 +245,8 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
             amenities: sampleListing.amenities || [],
             description: sampleListing.description || null,
             house_rules: null,
+            latitude: sampleListing.latitude || null,
+            longitude: sampleListing.longitude || null,
             shabbat_elevator: false,
             physical_key_entry: false,
             shabbat_clock: false,

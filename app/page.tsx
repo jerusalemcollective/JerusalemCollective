@@ -104,7 +104,7 @@ function toFeaturedStay(listing: ListingRow & { cover_photo_url?: string | null 
     price_ils: listing.price_ils,
     price_usd: listing.price_usd,
     is_featured: listing.is_featured ?? null,
-    coverPhotoUrl: listing.cover_photo_url || null,
+    coverPhotoUrl: listing.cover_photo_url || '/placeholder.jpg',
   }
 }
 
@@ -310,7 +310,7 @@ export default async function JLMCollectiveHomePage() {
             </div>
           </div>
 
-          <HomeMapSection />
+          <HomeMapSection listings={featuredStays.slice(0, 4)} />
         </section>
 
         <section id="saved" className="mx-auto max-w-7xl px-6 pb-4">

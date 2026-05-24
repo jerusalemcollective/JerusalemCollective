@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { BookingDateRangePicker } from '@/components/booking-date-range-picker'
 import { GalleryOverlay } from '@/components/gallery-overlay'
 import { MessageHostDialog } from '@/components/message-host-dialog'
+import { ListingNeighbourhoodMap } from '@/components/listing-neighbourhood-map'
 import { SaveListingButton } from '@/components/save-listing-button'
 import { AmenityDisplay } from '@/components/amenity-display'
 import { recordListingView } from '@/components/recently-viewed'
@@ -33,6 +34,8 @@ export type ListingDetailListing = {
   amenities: string[] | null
   description: string | null
   house_rules: string | null
+  latitude: number | null
+  longitude: number | null
   shabbat_elevator: boolean
   physical_key_entry: boolean
   shabbat_clock: boolean
@@ -248,7 +251,7 @@ export function ListingDetailClient({
     listing.booking_type === 'instant'
       ? [
           'Choose your dates and guests',
-          'Pay a 10% deposit securely',
+          'Book instantly with a 10% deposit',
           'Your dates are confirmed automatically',
         ]
       : listing.booking_type === 'request'
@@ -672,6 +675,28 @@ export function ListingDetailClient({
               </>
             )}
 
+            {listing.latitude !== null && listing.longitude !== null && (
+              <>
+                <hr className="border-stone-100" />
+                <div className="py-8">
+                  <h2 className="font-display text-xl font-bold text-stone-950">
+                    Location
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-stone-600">
+                    A closer look at the stay's immediate neighbourhood.
+                  </p>
+                  <div className="mt-4 overflow-hidden rounded-3xl border border-stone-200 bg-[#F8F5F2] shadow-sm">
+                    <ListingNeighbourhoodMap
+                      title={listing.title}
+                      area={listing.area}
+                      latitude={listing.latitude}
+                      longitude={listing.longitude}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
             {listing.host_id && (
               <>
                 <hr className="border-stone-100" />
@@ -919,7 +944,13 @@ export function ListingDetailClient({
             </div>
             <div className="px-6 pb-8">
               <div className="mb-6 flex items-center justify-between">
-                <h3 className="text-xl font-bold text-stone-900">Book this stay</h3>
+                <h3 className="text-xl font-bold text-stone-900">
+                  {listing.booking_type === 'instant'
+                    ? 'Book this stay'
+                    : listing.booking_type === 'request'
+                      ? 'Request to book'
+                      : 'Message host'}
+                </h3>
                 <button
                   type="button"
                   onClick={() => setShowMobileBooking(false)}
@@ -946,8 +977,14 @@ export function ListingDetailClient({
                 blockedRanges={blockedRanges}
                 mobile
               />
-              {listing.booking_type !== 'instant' && (
-                <p className="mt-4 text-center text-xs text-stone-500">No payment until host confirms.</p>
+              {listing.booking_type === 'instant' ? (
+                <p className="mt-4 text-center text-xs text-stone-500">
+                  10% deposit only after you confirm checkout.
+                </p>
+              ) : (
+                <p className="mt-4 text-center text-xs text-stone-500">
+                  No payment until the host confirms.
+                </p>
               )}
             </div>
           </div>
@@ -1100,7 +1137,7 @@ function BookNowButton({
       )}
       {!paymentError && (
         <p className="mt-2 text-center text-xs text-stone-500">
-          {disabled ? 'Choose dates to continue' : '10% deposit today'}
+          {disabled ? 'Choose dates to continue' : '10% deposit due at checkout'}
         </p>
       )}
     </div>
@@ -1219,7 +1256,7 @@ function BookingControls({
                 disabled={!hasDates}
                 disabledReason={dateRequiredMessage}
                 showIcon={false}
-                buttonClassName="flex min-h-11 w-full items-center justify-center rounded-full bg-[#c76f55] px-5 py-0 text-center text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-[#b85f47] disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-500 disabled:shadow-none"
+                buttonClassName="flex min-h-11 w-full items-center justify-center rounded-full bg-stone-950 px-5 py-0 text-center text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-500 disabled:shadow-none"
                 onConversationCreated={onConversationCreated}
               />
             )}
@@ -1257,7 +1294,7 @@ function BookingControls({
           </div>
         )}
         {!mobile && !allowsInstantBook && (
-          <p className="mb-4 text-center text-xs text-stone-500">No payment until host confirms.</p>
+          <p className="mb-4 text-center text-xs text-stone-500">No payment until the host confirms.</p>
         )}
       </div>
     </>

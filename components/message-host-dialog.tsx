@@ -83,6 +83,21 @@ export function MessageHostDialog({
   const checkOut = dateRange?.to ? formatDateISO(dateRange.to) : null
   const checkInDisplay = dateRange?.from ? formatDateDisplay(dateRange.from) : null
   const checkOutDisplay = dateRange?.to ? formatDateDisplay(dateRange.to) : null
+  const dialogTitle = quickQuestion
+    ? 'Ask a quick question'
+    : isRequest
+      ? 'Request to book'
+      : 'Message host'
+  const eyebrow = quickQuestion
+    ? 'Quick question'
+    : isRequest
+      ? 'Booking request'
+      : 'Message host'
+  const successTitle = isRequest && !quickQuestion ? 'Request sent' : 'Message sent'
+  const successDescription =
+    isRequest && !quickQuestion
+      ? 'Your booking request has been sent to the host. No payment is due unless the host confirms.'
+      : 'Your message has been sent to the host. You will receive an email when they reply.'
 
   const setDialogOpen = (nextOpen: boolean) => {
     if (controlledOpen === undefined) {
@@ -286,9 +301,9 @@ export function MessageHostDialog({
                 </div>
 
                 <div className="space-y-2">
-                  <h3 className="text-2xl font-bold text-stone-950">Enquiry sent</h3>
+                  <h3 className="text-2xl font-bold text-stone-950">{successTitle}</h3>
                   <p className="mx-auto max-w-xs text-sm leading-6 text-stone-600">
-                    Your message has been sent to the host. You will receive an email when they reply.
+                    {successDescription}
                   </p>
                 </div>
 
@@ -300,15 +315,24 @@ export function MessageHostDialog({
                     {[
                       {
                         step: '1',
-                        text: 'The host reviews your enquiry and replies — usually within a few hours.',
+                        text:
+                          isRequest && !quickQuestion
+                            ? 'The host reviews your dates and confirms whether the stay is available.'
+                            : 'The host reviews your message and replies — usually within a few hours.',
                       },
                       {
                         step: '2',
-                        text: 'You can message back and forth to confirm details.',
+                        text:
+                          isRequest && !quickQuestion
+                            ? 'You can message back and forth to confirm any details.'
+                            : 'You can message back and forth to confirm details.',
                       },
                       {
                         step: '3',
-                        text: 'Once you are both happy, the host confirms the booking.',
+                        text:
+                          isRequest && !quickQuestion
+                            ? 'Once the host accepts, your dates are blocked on the calendar.'
+                            : 'Once you are both happy, the host can confirm the booking.',
                       },
                     ].map(({ step, text }) => (
                       <div key={step} className="flex items-start gap-3">
@@ -356,10 +380,10 @@ export function MessageHostDialog({
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
-                      {quickQuestion ? 'Quick question' : 'Message host'}
+                      {eyebrow}
                     </p>
                     <h2 className="mt-2 text-2xl font-bold text-stone-950">
-                      {quickQuestion ? 'Ask a quick question' : 'Message host'}
+                      {dialogTitle}
                     </h2>
                     {isRequest && !quickQuestion && (
                       <p className="mt-2 text-sm text-stone-600">
@@ -426,7 +450,13 @@ export function MessageHostDialog({
                     disabled={!message.trim() || loading}
                     className="rounded-full bg-[#c76f55] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#b55f47] disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {loading ? 'Sending...' : quickQuestion ? 'Send question' : 'Send message'}
+                    {loading
+                      ? 'Sending...'
+                      : quickQuestion
+                        ? 'Send question'
+                        : isRequest
+                          ? 'Send request'
+                          : 'Send message'}
                   </button>
                 </div>
               </>

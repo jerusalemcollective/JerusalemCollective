@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useCallback, Component, ReactNode } from 'react'
+import React, { useState, useCallback, useEffect, useMemo, Component, ReactNode } from 'react'
 import { GoogleMap, useJsApiLoader, OverlayView, type Libraries } from '@react-google-maps/api'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -34,10 +34,15 @@ const mapContainerStyle = {
 
 const center = { lat: 31.7683, lng: 35.2137 }
 const googleMapsLibraries: Libraries = ['places']
+const DEFAULT_MAP_ZOOM = 13.8
+const SELECTED_LISTING_ZOOM = 16
 
 const mapOptions: google.maps.MapOptions = {
   disableDefaultUI: false,
   clickableIcons: false,
+  minZoom: 12,
+  maxZoom: 19,
+  gestureHandling: 'greedy',
   styles: [
     { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
     { featureType: 'transit', stylers: [{ visibility: 'off' }] },
@@ -92,6 +97,12 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null)
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const hasGoogleMapsKey = Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY)
+  const visibleListings = useMemo(
+    () => listings.filter(
+      (listing) => Number.isFinite(listing.lat) && Number.isFinite(listing.lng),
+    ),
+    [listings],
+  )
 
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
@@ -104,11 +115,38 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
     setMap(map)
   }, [])
 
+  useEffect(() => {
+    if (!map || visibleListings.length === 0) return
+
+    if (visibleListings.length === 1) {
+      const [listing] = visibleListings
+      map.setCenter({ lat: listing.lat, lng: listing.lng })
+      map.setZoom(SELECTED_LISTING_ZOOM)
+      return
+    }
+
+    const bounds = new google.maps.LatLngBounds()
+    visibleListings.forEach((listing) => {
+      bounds.extend({ lat: listing.lat, lng: listing.lng })
+    })
+    map.fitBounds(bounds, 72)
+
+    window.setTimeout(() => {
+      const currentZoom = map.getZoom()
+      if (currentZoom && currentZoom < DEFAULT_MAP_ZOOM) {
+        map.setZoom(DEFAULT_MAP_ZOOM)
+      }
+      if (currentZoom && currentZoom > SELECTED_LISTING_ZOOM) {
+        map.setZoom(SELECTED_LISTING_ZOOM)
+      }
+    }, 120)
+  }, [map, visibleListings])
+
   const handleMarkerClick = (listing: Listing) => {
     setSelectedListing(listing)
     onListingSelect?.(listing)
     map?.panTo({ lat: listing.lat, lng: listing.lng })
-    map?.setZoom(14)
+    map?.setZoom(SELECTED_LISTING_ZOOM)
   }
 
   if (!hasGoogleMapsKey || loadError) {
@@ -192,11 +230,11 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
         <GoogleMap
           mapContainerStyle={mapContainerStyle}
           center={center}
-          zoom={12.2}
+          zoom={DEFAULT_MAP_ZOOM}
           options={mapOptions}
           onLoad={onLoad}
         >
-          {listings.map((listing) => (
+          {visibleListings.map((listing) => (
             <OverlayView
               key={listing.id}
               position={{ lat: listing.lat, lng: listing.lng }}

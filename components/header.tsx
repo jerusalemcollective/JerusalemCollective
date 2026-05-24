@@ -175,11 +175,11 @@ export function Header() {
           <Link href="/explore" className={navLinkClass('/explore')}>
             Explore
           </Link>
-          <Link href="/services" className={navLinkClass('/services')}>
-            Services
-          </Link>
           <Link href="/how-it-works" className={navLinkClass('/how-it-works')}>
             How it works
+          </Link>
+          <Link href="/services" className={navLinkClass('/services')}>
+            Services
           </Link>
         </nav>
 
@@ -371,18 +371,18 @@ export function Header() {
               Explore
             </Link>
             <Link
-              href="/services"
-              onClick={() => setMobileOpen(false)}
-              className={`block px-5 py-4 font-medium ${pathname.startsWith('/services') ? 'text-[#c76f55]' : 'text-stone-900'}`}
-            >
-              Services
-            </Link>
-            <Link
               href="/how-it-works"
               onClick={() => setMobileOpen(false)}
               className={`block px-5 py-4 font-medium ${pathname === '/how-it-works' ? 'text-[#c76f55]' : 'text-stone-900'}`}
             >
               How it works
+            </Link>
+            <Link
+              href="/services"
+              onClick={() => setMobileOpen(false)}
+              className={`block px-5 py-4 font-medium ${pathname.startsWith('/services') ? 'text-[#c76f55]' : 'text-stone-900'}`}
+            >
+              Services
             </Link>
             <Link
               href={user ? '/become-a-host' : '/login?redirect=/become-a-host'}

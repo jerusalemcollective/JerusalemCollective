@@ -1,37 +1,90 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 
-export function HomeMapSection() {
+type HomeMapListing = {
+  id: string
+  title: string
+  area: string
+  price_ils: number | null
+  price_usd: number | null
+  coverPhotoUrl: string | null
+}
+
+const pinPositions = [
+  'left-[12%] top-[18%]',
+  'right-[12%] top-[30%]',
+  'left-[18%] bottom-[22%]',
+  'right-[18%] bottom-[14%]',
+]
+
+function formatMapPrice(listing: HomeMapListing) {
+  if (listing.price_usd) return `$${Number(listing.price_usd).toLocaleString()}`
+  if (listing.price_ils) return `\u20aa${Number(listing.price_ils).toLocaleString()}`
+  return 'View stay'
+}
+
+export function HomeMapSection({ listings }: { listings: HomeMapListing[] }) {
+  const previewListings = listings.length > 0 ? listings : []
+  const heroListing = previewListings[0] || null
+
   return (
     <aside id="map" className="sticky top-24 hidden h-[380px] overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm lg:block">
-      <div className="relative h-full bg-[#E9DFD2]">
-        {/* Illustrative price pins until this homepage preview is connected to live listing prices. */}
-        <div
-          className="absolute inset-0 opacity-60"
-          style={{
-            backgroundImage: 'radial-gradient(#cdbfad 1px, transparent 1px)',
-            backgroundSize: '18px 18px',
-          }}
-        />
-        <div className="absolute left-4 top-4 rounded-xl bg-white px-3 py-2 shadow-md">
-          <div className="text-xs font-bold">Map view</div>
-          <div className="text-[10px] text-stone-500">Browse by area</div>
+      <div className="relative h-full bg-[#fbf8f5]">
+        {heroListing?.coverPhotoUrl && (
+          <Image
+            src={heroListing.coverPhotoUrl}
+            alt=""
+            fill
+            className="object-cover opacity-25 blur-sm"
+            sizes="380px"
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-[#fbf8f5]/88 to-[#fff4ef]/86" />
+        <div className="absolute left-4 top-4 rounded-xl bg-white px-3 py-2 shadow-md ring-1 ring-stone-100">
+          <div className="text-xs font-bold text-stone-950">Map preview</div>
+          <div className="text-[10px] text-stone-500">Browse stays by area</div>
         </div>
         <Link href="/map" className="absolute right-4 top-4 rounded-full bg-white px-3 py-1.5 text-[10px] font-bold text-stone-800 shadow-md transition hover:bg-stone-50">
           Full screen
         </Link>
-        <Link href="/map" className="absolute left-[38%] top-[26%] rounded-lg bg-[#c76f55] px-2 py-1 text-xs font-bold text-white shadow-lg transition hover:-translate-y-0.5">&#8362;14.9k</Link>
-        <Link href="/map" className="absolute left-[56%] top-[42%] rounded-lg bg-[#c76f55] px-2 py-1 text-xs font-bold text-white shadow-lg transition hover:-translate-y-0.5">&#8362;18.5k</Link>
-        <Link href="/map" className="absolute left-[24%] top-[58%] rounded-lg bg-white px-2 py-1 text-xs font-bold text-stone-800 shadow-lg transition hover:-translate-y-0.5">&#8362;12.9k</Link>
-        <Link href="/map" className="absolute left-[48%] top-[70%] rounded-lg bg-white px-2 py-1 text-xs font-bold text-stone-800 shadow-lg transition hover:-translate-y-0.5">&#8362;15.9k</Link>
-        <div className="absolute bottom-4 left-4 right-4 rounded-xl bg-white/95 p-3 shadow-lg">
+
+        {previewListings.map((listing, index) => (
+          <Link
+            key={listing.id}
+            href={`/listings/${listing.id}?from=home-map`}
+            className={`absolute ${pinPositions[index] || pinPositions[0]} overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-stone-200 transition hover:-translate-y-0.5 hover:shadow-2xl`}
+          >
+            <div className="relative h-16 w-28">
+              {listing.coverPhotoUrl && (
+                <Image
+                  src={listing.coverPhotoUrl}
+                  alt={listing.title}
+                  fill
+                  className="object-cover"
+                  sizes="112px"
+                />
+              )}
+            </div>
+            <div className="px-2 py-1.5">
+              <p className="line-clamp-1 text-[10px] font-bold text-stone-950">
+                {listing.area}
+              </p>
+              <p className="text-[10px] font-semibold text-[#c76f55]">
+                {formatMapPrice(listing)}
+              </p>
+            </div>
+          </Link>
+        ))}
+
+        <div className="absolute bottom-4 left-4 right-4 rounded-xl bg-white/95 p-3 shadow-lg ring-1 ring-stone-100">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <MapPinIcon className="h-4 w-4 text-[#c76f55]" />
               <div>
                 <div className="text-xs font-bold">Open full map</div>
-                <div className="text-[10px] text-stone-500">View prices and areas</div>
+                <div className="text-[10px] text-stone-500">See photos, prices and areas</div>
               </div>
             </div>
             <Link href="/map" className="rounded-full bg-[#252525] px-3 py-1.5 text-[10px] font-semibold text-white transition hover:bg-[#111111]">
