@@ -217,6 +217,13 @@ function CalendarDayButton({
 }: React.ComponentProps<typeof DayButton>) {
   const defaultClassNames = getDefaultClassNames()
   const holiday = getJewishHoliday(day.date)
+  const shortHoliday = holiday
+    ? holiday
+        .replace(' Hashanah', '')
+        .replace(' Kippur', '')
+        .replace('hanah', '')
+        .trim()
+    : null
 
   const ref = React.useRef<HTMLButtonElement>(null)
   React.useEffect(() => {
@@ -253,9 +260,9 @@ function CalendarDayButton({
       <span className="text-[9px] font-medium leading-none text-current opacity-60">
         {formatHebrewDay(day.date)}
       </span>
-      {holiday && (
+      {shortHoliday && (
         <span className="block max-w-full truncate text-[8px] font-semibold leading-none text-[#c76f55]">
-          {holiday}
+          {shortHoliday}
         </span>
       )}
     </Button>

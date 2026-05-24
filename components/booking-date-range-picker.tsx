@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Calendar } from '@/components/ui/calendar'
-import { formatHebrewShortDate } from '@/lib/hebrew-date'
+import { formatHebrewShortDate, getJewishHoliday } from '@/lib/hebrew-date'
 
 type DateRange = {
   from?: Date
@@ -104,6 +104,9 @@ export function BookingDateRangePicker({
               }}
               numberOfMonths={1}
               disabled={disabledDates}
+              modifiers={{
+                jewishHoliday: (date) => Boolean(getJewishHoliday(date)),
+              }}
               showOutsideDays={false}
               className="w-full [--cell-size:2.75rem]"
               classNames={{
