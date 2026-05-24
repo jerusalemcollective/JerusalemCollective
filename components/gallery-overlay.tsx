@@ -81,7 +81,7 @@ export function GalleryOverlay({ photos, index, title, onClose, onIndexChange }:
       </div>
 
       <div
-        className="relative flex min-h-0 flex-1 items-center justify-center bg-[#F8F5F2] px-6 py-6 md:px-24 md:py-8"
+        className="relative flex min-h-0 flex-1 items-center justify-center bg-[#F8F5F2] px-5 py-8 md:px-28 md:py-10"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
@@ -101,7 +101,7 @@ export function GalleryOverlay({ photos, index, title, onClose, onIndexChange }:
           src={currentPhoto.photo_url}
           alt={`${title} - photo ${index + 1}`}
           loading="lazy"
-          className="block h-auto max-h-[68vh] w-auto max-w-[82vw] rounded-xl object-contain shadow-xl"
+          className="block h-auto max-h-[58vh] w-auto max-w-[78vw] rounded-2xl object-contain shadow-xl md:max-h-[62vh] md:max-w-[70vw]"
         />
 
         <button

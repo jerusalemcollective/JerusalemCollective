@@ -231,10 +231,6 @@ export function ListingDetailClient({
     }
   }
 
-  const averageRating =
-    reviews.length > 0
-      ? (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1)
-      : null
   const avgRating =
     reviews.length >= 2
       ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
@@ -242,13 +238,30 @@ export function ListingDetailClient({
   const maxGuests = listing.max_guests || 6
   const priceIls = formatPrice(listing.price_ils)
   const priceUsd = formatPrice(listing.price_usd)
-  const currentMobilePhoto = photos[mobilePhotoIndex] ?? photos[0]
   const mobileActionLabel =
     listing.booking_type === 'instant'
       ? 'Book now'
       : listing.booking_type === 'enquiry'
         ? 'Message host'
         : 'Request to book'
+  const howItWorksSteps =
+    listing.booking_type === 'instant'
+      ? [
+          'Choose your dates and guests',
+          'Pay a 10% deposit securely',
+          'Your dates are confirmed automatically',
+        ]
+      : listing.booking_type === 'request'
+        ? [
+            'Choose your dates and request to book',
+            'Host reviews and confirms availability',
+            'You agree details before any payment',
+          ]
+        : [
+            'Send your message — free, no commitment',
+            'Host replies — usually within a few hours',
+            'Confirm together — agree details before any payment',
+          ]
 
   const goToMobilePhoto = (index: number) => {
     if (photos.length === 0) return
@@ -377,7 +390,7 @@ export function ListingDetailClient({
                 )}
               </div>
 
-              <div className="hidden md:grid md:h-[360px] md:grid-cols-4 md:grid-rows-2 md:gap-2 lg:h-[430px] xl:h-[460px]">
+              <div className="hidden md:grid md:h-[320px] md:grid-cols-4 md:grid-rows-2 md:gap-2 lg:h-[380px] xl:h-[400px]">
                 <div
                   className="relative cursor-pointer overflow-hidden bg-stone-100 md:col-span-2 md:row-span-2"
                   onClick={() => {
@@ -390,7 +403,7 @@ export function ListingDetailClient({
                       src={photos[0].photo_url}
                       alt={listing.title}
                       fill
-                      className="object-cover transition-transform duration-300 hover:scale-[1.02]"
+                      className="object-cover transition-opacity duration-300 hover:opacity-95"
                       priority
                       sizes="50vw"
                     />
@@ -411,7 +424,7 @@ export function ListingDetailClient({
                         src={photos[index].photo_url}
                         alt={`${listing.title} photo ${index + 1}`}
                         fill
-                        className="object-cover transition-transform duration-300 hover:scale-[1.02]"
+                        className="object-cover transition-opacity duration-300 hover:opacity-95"
                         loading="lazy"
                         sizes="25vw"
                       />
@@ -758,7 +771,7 @@ export function ListingDetailClient({
 
           <div className="hidden lg:block">
             <div className="lg:sticky lg:top-8">
-              <div className="rounded-3xl border border-stone-200 bg-white p-6 shadow-lg">
+              <div className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-xl shadow-stone-200/60">
                 <div className="mb-5 flex items-baseline gap-1.5">
                   <span className="text-2xl font-bold text-stone-950">
                     {listing.price_usd
@@ -789,11 +802,7 @@ export function ListingDetailClient({
                   <p className="text-xs font-bold uppercase tracking-widest text-stone-400">
                     How it works
                   </p>
-                  {[
-                    'Send your message — free, no commitment',
-                    'Host replies — usually within a few hours',
-                    'Confirm together — agree details before any payment',
-                  ].map((step, index) => (
+                  {howItWorksSteps.map((step, index) => (
                     <div key={step} className="flex items-start gap-2.5">
                       <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-stone-100 text-[10px] font-bold text-stone-600">
                         {index + 1}
@@ -853,7 +862,7 @@ export function ListingDetailClient({
           {existingConversationId ? (
             <Link
               href={`/account/messages?conversation=${existingConversationId}`}
-            className="flex min-h-12 flex-1 items-center justify-center rounded-full bg-[#c76f55] px-5 py-0 text-center text-sm font-bold leading-[1] text-white transition hover:bg-[#b85f47]"
+              className="flex min-h-11 flex-1 items-center justify-center rounded-full bg-stone-950 px-5 py-0 text-center text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800"
             >
               Continue conversation
             </Link>
@@ -862,7 +871,7 @@ export function ListingDetailClient({
               <button
                 type="button"
                 onClick={() => setShowMobileBooking(true)}
-                className="flex min-h-12 flex-1 items-center justify-center rounded-full bg-stone-950 px-4 py-0 text-center text-sm font-semibold leading-[1] text-white shadow-sm transition hover:bg-stone-800"
+                className="flex min-h-11 flex-1 items-center justify-center rounded-full bg-stone-950 px-4 py-0 text-center text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800"
               >
                 {mobileActionLabel}
               </button>
@@ -870,7 +879,7 @@ export function ListingDetailClient({
                 <button
                   type="button"
                   onClick={() => setShowMobileMessageHost(true)}
-                  className="flex min-h-12 flex-1 items-center justify-center rounded-full border border-stone-200 bg-white px-4 py-0 text-center text-sm font-semibold leading-[1] text-stone-700 transition hover:border-[#c76f55] hover:text-[#9f513f]"
+                  className="flex min-h-11 flex-1 items-center justify-center rounded-full border border-stone-200 bg-white px-4 py-0 text-center text-sm font-semibold leading-none text-stone-700 transition hover:border-[#c76f55] hover:text-[#9f513f]"
                 >
                   Message host
                 </button>
@@ -1077,7 +1086,7 @@ function BookNowButton({
         type="button"
         disabled={disabled || isStartingPayment}
         onClick={handleBookNow}
-        className="flex min-h-12 w-full items-center justify-center rounded-full bg-stone-950 px-5 py-0 text-center text-sm font-semibold leading-[1] text-white shadow-sm transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-500 disabled:shadow-none"
+        className="flex min-h-11 w-full items-center justify-center rounded-full bg-stone-950 px-5 py-0 text-center text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-500 disabled:shadow-none"
       >
         {isStartingPayment ? 'Opening checkout...' : 'Book now'}
       </button>
@@ -1086,7 +1095,7 @@ function BookNowButton({
       )}
       {!paymentError && (
         <p className="mt-2 text-center text-xs text-stone-500">
-          10% deposit is taken today
+          {disabled ? 'Choose dates to continue' : '10% deposit today'}
         </p>
       )}
     </div>
@@ -1176,7 +1185,7 @@ function BookingControls({
         {existingConversationId ? (
           <Link
             href={`/account/messages?conversation=${existingConversationId}`}
-            className={`${mobile ? 'flex min-h-12 w-full items-center justify-center rounded-full bg-stone-950 px-5 py-0' : 'mb-3 flex min-h-12 w-full items-center justify-center rounded-full bg-stone-950 px-5 py-0'} gap-2 text-center text-sm font-semibold leading-[1] text-white shadow-sm transition hover:bg-stone-800`}
+            className={`${mobile ? 'flex min-h-11 w-full items-center justify-center rounded-full bg-stone-950 px-5 py-0' : 'mb-3 flex min-h-11 w-full items-center justify-center rounded-full bg-stone-950 px-5 py-0'} gap-2 text-center text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800`}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -1205,7 +1214,7 @@ function BookingControls({
                 disabled={!hasDates}
                 disabledReason={dateRequiredMessage}
                 showIcon={false}
-                buttonClassName="flex min-h-12 w-full items-center justify-center rounded-full bg-[#9f513f] px-5 py-0 text-center text-sm font-semibold leading-[1] text-white shadow-sm transition hover:bg-[#874535] disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-500 disabled:shadow-none"
+                buttonClassName="flex min-h-11 w-full items-center justify-center rounded-full bg-[#c76f55] px-5 py-0 text-center text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-[#b85f47] disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-500 disabled:shadow-none"
                 onConversationCreated={onConversationCreated}
               />
             )}
@@ -1218,7 +1227,7 @@ function BookingControls({
                 intent="message"
                 buttonLabel="Message host"
                 showIcon={false}
-                buttonClassName="flex min-h-12 w-full items-center justify-center rounded-full border border-stone-200 bg-white px-5 py-0 text-center text-sm font-semibold leading-[1] text-stone-700 transition hover:border-[#c76f55] hover:text-[#9f513f]"
+                buttonClassName="flex min-h-11 w-full items-center justify-center rounded-full border border-stone-200 bg-white px-5 py-0 text-center text-sm font-semibold leading-none text-stone-700 transition hover:border-[#c76f55] hover:text-[#9f513f]"
                 onConversationCreated={onConversationCreated}
               />
             )}
@@ -1231,9 +1240,14 @@ function BookingControls({
                 intent="message"
                 buttonLabel="Message host"
                 showIcon={false}
-                buttonClassName="flex min-h-12 w-full items-center justify-center rounded-full bg-stone-950 px-5 py-0 text-center text-sm font-semibold leading-[1] text-white shadow-sm transition hover:bg-stone-800"
+                buttonClassName="flex min-h-11 w-full items-center justify-center rounded-full bg-stone-950 px-5 py-0 text-center text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800"
                 onConversationCreated={onConversationCreated}
               />
+            )}
+            {!hasDates && !isEnquiryOnly && (
+              <p className="text-center text-xs text-stone-500">
+                Choose dates to request this stay.
+              </p>
             )}
           </div>
         )}

@@ -68,7 +68,7 @@ export function BookingDateRangePicker({
       <button
         type="button"
         onClick={() => setShowCalendar((open) => !open)}
-        className="w-full overflow-hidden rounded-[1.35rem] border border-stone-200 bg-white transition hover:border-stone-300"
+        className="w-full overflow-hidden rounded-[1.35rem] border border-stone-200 bg-white shadow-sm transition hover:border-stone-300 hover:shadow-md"
       >
         <div className="grid grid-cols-2">
           <DateCell label="Check-in" date={dateRange.from} />
@@ -77,15 +77,15 @@ export function BookingDateRangePicker({
       </button>
 
       {showCalendar && (
-        <div className="absolute right-0 top-full z-50 mt-3 w-[min(92vw,430px)] overflow-hidden rounded-[1.75rem] border border-stone-200 bg-[#fbfaf8] shadow-2xl shadow-stone-300/30">
-          <div className="border-b border-stone-100 px-5 py-4">
+        <div className="absolute right-0 top-full z-50 mt-3 w-[min(92vw,460px)] overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-2xl shadow-stone-300/30">
+          <div className="border-b border-stone-100 bg-[#fbfaf8] px-5 py-4">
             <div className="grid grid-cols-2 gap-3">
               <SummaryCard label="Arrival" date={dateRange.from} />
               <SummaryCard label="Departure" date={dateRange.to} />
             </div>
           </div>
 
-          <div className="mx-4 my-4 rounded-[1.5rem] bg-white p-4 ring-1 ring-stone-100">
+          <div className="mx-4 my-4 rounded-[1.5rem] bg-white p-5 ring-1 ring-stone-100">
             <Calendar
               mode="range"
               excludeDisabled
@@ -105,22 +105,22 @@ export function BookingDateRangePicker({
               numberOfMonths={1}
               disabled={disabledDates}
               showOutsideDays={false}
-              className="w-full [--cell-size:2.55rem]"
+              className="w-full [--cell-size:2.75rem]"
               classNames={{
                 root: 'w-full',
                 months: 'flex w-full flex-col',
                 month: 'w-full gap-5',
                 month_caption: 'min-h-12',
                 weekday: 'text-[10px] font-bold uppercase tracking-wider text-stone-400',
-                week: 'mt-2 flex w-full gap-1.5',
-                weekdays: 'flex gap-1.5',
+                week: 'mt-2 flex w-full gap-2',
+                weekdays: 'flex gap-2',
                 day: 'aspect-square flex-1 rounded-2xl',
-                day_button: 'rounded-2xl border border-transparent hover:border-stone-200 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-30',
+                day_button: 'rounded-2xl border border-transparent text-sm hover:border-stone-200 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-30',
               }}
             />
           </div>
 
-          <div className="flex items-center justify-between border-t border-stone-100 px-5 py-4">
+          <div className="flex items-center justify-between border-t border-stone-100 bg-[#fbfaf8] px-5 py-4">
             <div className="flex items-center gap-2">
               <QuickRangeButton
                 label="1 week"
@@ -161,7 +161,7 @@ function DateCell({
   noBorder?: boolean
 }) {
   return (
-    <div className={`${noBorder ? '' : 'border-r border-stone-100'} p-4 text-left`}>
+    <div className={`${noBorder ? '' : 'border-r border-stone-100'} p-4 text-left md:p-5`}>
       <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">{label}</p>
       <p className="mt-1 text-sm font-bold text-stone-950">
         {date ? formatCompactDate(date) : 'Choose date'}
