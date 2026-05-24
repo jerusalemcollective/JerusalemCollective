@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter, Cormorant_Garamond } from 'next/font/google'
+import { Inter, Playfair_Display } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Header } from '@/components/header'
 import { Footer } from '@/components/footer'
@@ -12,7 +12,7 @@ const inter = Inter({
   display: 'swap',
 })
 
-const cormorant = Cormorant_Garamond({
+const display = Playfair_Display({
   subsets: ['latin'],
   weight: ['400', '600', '700'],
   variable: '--font-display',
@@ -59,7 +59,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${cormorant.variable} font-sans antialiased bg-[#F8F5F2] text-[#252525]`}>
+      <body className={`${inter.variable} ${display.variable} font-sans antialiased bg-[#F8F5F2] text-[#252525]`}>
         <Header />
         <SessionTimeout />
         <main>{children}</main>

@@ -178,6 +178,9 @@ export function Header() {
           <Link href="/services" className={navLinkClass('/services')}>
             Services
           </Link>
+          <Link href="/how-it-works" className={navLinkClass('/how-it-works')}>
+            How it works
+          </Link>
         </nav>
 
         <div className="flex items-center gap-1.5 sm:gap-2">
@@ -373,6 +376,13 @@ export function Header() {
               className={`block px-5 py-4 font-medium ${pathname.startsWith('/services') ? 'text-[#c76f55]' : 'text-stone-900'}`}
             >
               Services
+            </Link>
+            <Link
+              href="/how-it-works"
+              onClick={() => setMobileOpen(false)}
+              className={`block px-5 py-4 font-medium ${pathname === '/how-it-works' ? 'text-[#c76f55]' : 'text-stone-900'}`}
+            >
+              How it works
             </Link>
             <Link
               href={user ? '/become-a-host' : '/login?redirect=/become-a-host'}

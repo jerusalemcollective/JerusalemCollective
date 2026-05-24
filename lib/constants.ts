@@ -117,7 +117,7 @@ export const SHUL_COORDINATES: ShulCoordinates[] = [
     lng: 35.2169,
     neighbourhoods: [
       'Rechavia',
-      'Sharei Chessed',
+      'Shaarei Chesed',
     ],
   },
   {
@@ -126,7 +126,7 @@ export const SHUL_COORDINATES: ShulCoordinates[] = [
     lng: 35.2115,
     neighbourhoods: [
       'Rechavia',
-      'Sharei Chessed',
+      'Shaarei Chesed',
     ],
   },
 ]

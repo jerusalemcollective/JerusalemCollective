@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { allNeighborhoods } from '@/lib/neighborhoods'
+import { slugifyNeighborhood } from '@/lib/neighborhood-pages'
 import { getAmenityLabel } from '@/lib/stay-amenities'
 import { formatDualCurrencyPrice } from '@/lib/utils/currency'
 import { StaysFilterBar } from '@/components/stays-filter-bar'
@@ -437,9 +438,13 @@ function ListingCard({
       </div>
 
       <div className="mt-3 space-y-0.5">
-        <p className="text-[11px] font-bold uppercase tracking-widest text-[#c76f55]">
+        <Link
+          href={`/neighbourhoods/${slugifyNeighborhood(listing.area)}`}
+          className="text-[11px] font-bold uppercase tracking-widest text-[#c76f55] hover:underline"
+          onClick={(event) => event.stopPropagation()}
+        >
           {listing.area}
-        </p>
+        </Link>
         <p className="line-clamp-1 font-semibold leading-snug text-stone-950">
           {listing.title}
         </p>
