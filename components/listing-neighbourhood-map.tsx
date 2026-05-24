@@ -62,18 +62,18 @@ function StaticNeighbourhoodMap({
         </svg>
       </div>
       <div className="absolute inset-0 bg-gradient-to-br from-white/18 via-transparent to-[#fff4ef]/32" />
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-full pb-3">
-        <div className="rounded-2xl bg-white px-4 py-3 shadow-xl ring-1 ring-stone-200">
-          <p className="max-w-[220px] truncate text-sm font-bold text-stone-950">
-            {title}
-          </p>
-          <p className="mt-0.5 text-xs font-semibold text-[#c76f55]">
-            {area}
-          </p>
-        </div>
-        <div className="mx-auto h-4 w-4 rotate-45 bg-white shadow-lg ring-1 ring-stone-200" />
+      <div className="absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#c76f55]/15 ring-2 ring-[#c76f55]/40" />
+      <div className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#c76f55] shadow-lg ring-4 ring-white" />
+      <div className="absolute left-1/2 top-[calc(50%+4.5rem)] -translate-x-1/2 rounded-2xl bg-white px-4 py-3 text-center shadow-xl ring-1 ring-stone-200">
+        <p className="max-w-[220px] truncate text-sm font-bold text-stone-950">
+          Approximate location
+        </p>
+        <p className="mt-0.5 text-xs font-semibold text-[#c76f55]">
+          {area}
+        </p>
       </div>
       <div className="absolute left-4 top-4 rounded-xl bg-white px-3 py-2 shadow-md ring-1 ring-stone-100">
+        <span className="sr-only">{title}</span>
         <p className="text-xs font-bold text-stone-950">{area}</p>
         <p className="text-[10px] text-stone-500">Neighbourhood map</p>
       </div>
@@ -126,28 +126,21 @@ export function ListingNeighbourhoodMap({
       <GoogleMap
         mapContainerStyle={mapContainerStyle}
         center={center}
-        zoom={16}
+        zoom={15}
         options={mapOptions}
       >
         <OverlayView
           position={center}
           mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
         >
-          <div className="-translate-x-1/2 -translate-y-full pb-3">
-            <div className="rounded-2xl bg-white px-4 py-3 shadow-xl ring-1 ring-stone-200">
-              <p className="max-w-[180px] truncate text-sm font-bold text-stone-950">
-                {title}
-              </p>
-              <p className="mt-0.5 text-xs font-semibold text-[#c76f55]">
-                {area}
-              </p>
-            </div>
-            <div className="mx-auto h-4 w-4 rotate-45 bg-white shadow-lg ring-1 ring-stone-200" />
+          <div className="-translate-x-1/2 -translate-y-1/2">
+            <div className="h-28 w-28 rounded-full bg-[#c76f55]/15 ring-2 ring-[#c76f55]/40" />
+            <div className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#c76f55] shadow-lg ring-4 ring-white" />
           </div>
         </OverlayView>
       </GoogleMap>
       <div className="pointer-events-none absolute bottom-4 left-4 rounded-full bg-white/95 px-3 py-1.5 text-xs font-bold text-stone-700 shadow-sm ring-1 ring-stone-200">
-        Zoomed to {area}
+        Approximate location in {area}
       </div>
     </div>
   )

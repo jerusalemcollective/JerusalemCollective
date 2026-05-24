@@ -66,30 +66,14 @@ export function HomeMapSection({ listings }: { listings: HomeMapListing[] }) {
           <Link
             key={listing.id}
             href={`/listings/${listing.id}?from=home-map`}
-            className={`absolute ${pinPositions[index] || pinPositions[0]} overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-stone-200 transition hover:-translate-y-0.5 hover:shadow-2xl`}
+            className={`absolute ${pinPositions[index] || pinPositions[0]} rounded-full bg-white px-3 py-2 shadow-xl ring-1 ring-stone-200 transition hover:-translate-y-0.5 hover:shadow-2xl`}
           >
-            <div className="relative h-16 w-28">
-              {listing.coverPhotoUrl ? (
-                <img
-                  src={listing.coverPhotoUrl}
-                  alt={listing.title}
-                  loading="lazy"
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center bg-[#fff4ef]">
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-[#c76f55]">JLM</p>
-                </div>
-              )}
-            </div>
-            <div className="px-2 py-1.5">
-              <p className="line-clamp-1 text-[10px] font-bold text-stone-950">
-                {listing.area}
-              </p>
-              <p className="text-[10px] font-semibold text-[#c76f55]">
-                {formatMapPrice(listing)}
-              </p>
-            </div>
+            <p className="line-clamp-1 text-[10px] font-bold text-stone-950">
+              {listing.area}
+            </p>
+            <p className="text-[10px] font-semibold text-[#c76f55]">
+              {formatMapPrice(listing)}
+            </p>
           </Link>
         ))}
 

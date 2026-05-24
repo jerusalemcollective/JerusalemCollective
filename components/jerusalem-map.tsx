@@ -96,6 +96,8 @@ class MapErrorBoundary extends Component<{ children: ReactNode }, { hasError: bo
 function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null)
   const [map, setMap] = useState<google.maps.Map | null>(null)
+  const [mapAreaListings, setMapAreaListings] = useState<Listing[] | null>(null)
+  const [showSearchArea, setShowSearchArea] = useState(false)
   const hasGoogleMapsKey = Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY)
   const showSidebar = !onListingSelect
   const visibleListings = useMemo(
@@ -104,6 +106,7 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
     ),
     [listings],
   )
+  const displayListings = mapAreaListings || visibleListings
 
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
@@ -115,6 +118,11 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
   const onLoad = useCallback((map: google.maps.Map) => {
     setMap(map)
   }, [])
+
+  useEffect(() => {
+    setMapAreaListings(null)
+    setShowSearchArea(false)
+  }, [visibleListings])
 
   useEffect(() => {
     if (!map || visibleListings.length === 0) return
@@ -148,6 +156,31 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
     onListingSelect?.(listing)
     map?.panTo({ lat: listing.lat, lng: listing.lng })
     map?.setZoom(SELECTED_LISTING_ZOOM)
+  }
+
+  const handleMapMoved = () => {
+    if (map) setShowSearchArea(true)
+  }
+
+  const handleZoom = (direction: 'in' | 'out') => {
+    if (!map) return
+
+    const currentZoom = map.getZoom() || DEFAULT_MAP_ZOOM
+    map.setZoom(direction === 'in' ? currentZoom + 1 : currentZoom - 1)
+    setShowSearchArea(true)
+  }
+
+  const handleSearchThisArea = () => {
+    const bounds = map?.getBounds()
+    if (!bounds) return
+
+    const nextListings = visibleListings.filter((listing) =>
+      bounds.contains({ lat: listing.lat, lng: listing.lng }),
+    )
+
+    setMapAreaListings(nextListings)
+    setSelectedListing(null)
+    setShowSearchArea(false)
   }
 
   if (!hasGoogleMapsKey || loadError) {
@@ -190,11 +223,11 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
         </div>
 
         <div className="space-y-4">
-          {listings.length === 0 ? (
+          {displayListings.length === 0 ? (
             <div className="rounded-2xl border border-stone-200 bg-[#F8F5F2] p-5 text-sm text-stone-500">
-              No listings available yet.
+              No listings in this map area.
             </div>
-          ) : listings.map((listing) => (
+          ) : displayListings.map((listing) => (
             <button
               key={listing.id}
               onClick={() => handleMarkerClick(listing)}
@@ -236,8 +269,10 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
           zoom={DEFAULT_MAP_ZOOM}
           options={mapOptions}
           onLoad={onLoad}
+          onDragEnd={handleMapMoved}
+          onZoomChanged={handleMapMoved}
         >
-          {visibleListings.map((listing) => (
+          {displayListings.map((listing) => (
             <OverlayView
               key={listing.id}
               position={{ lat: listing.lat, lng: listing.lng }}
@@ -261,6 +296,48 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
           ))}
         </GoogleMap>
       </div>
+
+      <div className={`absolute bottom-5 right-5 z-20 flex flex-col overflow-hidden rounded-full bg-white shadow-xl ring-1 ring-stone-200 ${showSidebar ? 'lg:right-5' : ''}`}>
+        <button
+          type="button"
+          onClick={() => handleZoom('in')}
+          className="flex h-11 w-11 items-center justify-center border-b border-stone-100 text-xl font-bold text-stone-800 transition hover:bg-stone-50"
+          aria-label="Zoom in"
+        >
+          +
+        </button>
+        <button
+          type="button"
+          onClick={() => handleZoom('out')}
+          className="flex h-11 w-11 items-center justify-center text-xl font-bold text-stone-800 transition hover:bg-stone-50"
+          aria-label="Zoom out"
+        >
+          -
+        </button>
+      </div>
+
+      {showSearchArea && (
+        <button
+          type="button"
+          onClick={handleSearchThisArea}
+          className={`absolute left-1/2 top-5 z-20 -translate-x-1/2 rounded-full bg-[#252525] px-5 py-2.5 text-sm font-bold text-white shadow-xl transition hover:bg-[#111111] ${showSidebar ? 'lg:translate-x-[150px]' : ''}`}
+        >
+          Search this map area
+        </button>
+      )}
+
+      {mapAreaListings && (
+        <button
+          type="button"
+          onClick={() => {
+            setMapAreaListings(null)
+            setShowSearchArea(false)
+          }}
+          className={`absolute left-1/2 top-20 z-20 -translate-x-1/2 rounded-full bg-white px-4 py-2 text-xs font-bold text-stone-700 shadow-lg ring-1 ring-stone-200 transition hover:bg-stone-50 ${showSidebar ? 'lg:translate-x-[150px]' : ''}`}
+        >
+          Showing {displayListings.length} in this area · reset
+        </button>
+      )}
 
       {/* Selected listing popup */}
       {selectedListing && showSidebar && (
