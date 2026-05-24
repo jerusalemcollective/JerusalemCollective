@@ -46,6 +46,7 @@ const blockedListingRowSchema = z.object({
 const listingPhotoRowSchema = z.object({
   listing_id: z.string().nullable(),
   photo_url: z.string(),
+  is_cover: z.boolean().nullable().optional(),
 })
 
 const popularNeighborhoodRowSchema = z.object({
@@ -224,6 +225,9 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
             sleeps: listing.max_guests,
             lat: listing.latitude,
             lng: listing.longitude,
+            amenities: listing.amenities,
+            cover_photo_url: listing.cover_photo_url || null,
+            is_featured: Boolean(listing.is_featured),
           }))}
         />
       )}
@@ -334,14 +338,18 @@ async function loadListings({
   const { data: photosData } = listingIds.length
     ? await supabase
         .from('listing_photos')
-        .select('listing_id, photo_url')
-        .eq('is_cover', true)
+        .select('listing_id, photo_url, is_cover')
         .in('listing_id', listingIds)
+        .order('is_cover', { ascending: false })
+        .order('sort_order', { ascending: true })
     : { data: [] }
-  const photoMap = new Map(
-    z.array(listingPhotoRowSchema).parse(photosData ?? [])
-      .flatMap((photo) => (photo.listing_id ? [[photo.listing_id, photo.photo_url]] : [])),
-  )
+  const photoMap = new Map<string, string>()
+
+  for (const photo of z.array(listingPhotoRowSchema).parse(photosData ?? [])) {
+    if (photo.listing_id && !photoMap.has(photo.listing_id)) {
+      photoMap.set(photo.listing_id, photo.photo_url)
+    }
+  }
 
   return listingRows.map((listing) => ({
     ...listing,

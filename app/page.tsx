@@ -26,6 +26,7 @@ type ListingRow = {
 type ListingPhotoRow = {
   listing_id: string | null
   photo_url: string
+  is_cover?: boolean | null
 }
 
 type FeaturedStay = {
@@ -139,13 +140,14 @@ async function getHomepageData() {
   const { data: photoData } = featuredIds.length
     ? await supabase
         .from('listing_photos')
-        .select('listing_id, photo_url')
-        .eq('is_cover', true)
+        .select('listing_id, photo_url, is_cover')
         .in('listing_id', featuredIds)
+        .order('is_cover', { ascending: false })
+        .order('sort_order', { ascending: true })
     : { data: [] }
   const coverPhotoByListingId = new Map<string, string>()
   ;((photoData || []) as ListingPhotoRow[]).forEach((photo) => {
-    if (photo.listing_id) {
+    if (photo.listing_id && !coverPhotoByListingId.has(photo.listing_id)) {
       coverPhotoByListingId.set(photo.listing_id, photo.photo_url)
     }
   })

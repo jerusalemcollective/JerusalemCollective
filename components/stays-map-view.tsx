@@ -13,6 +13,9 @@ type StaysMapListing = {
   sleeps: number
   lat: number
   lng: number
+  amenities?: string[]
+  cover_photo_url: string | null
+  is_featured?: boolean
 }
 
 const JerusalemMap = dynamic(() => import('@/components/jerusalem-map'), {
