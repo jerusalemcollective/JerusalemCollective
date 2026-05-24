@@ -766,7 +766,9 @@ export function ListingDetailClient({
                 blockedRanges={blockedRanges}
                 mobile
               />
-              <p className="mt-4 text-center text-xs text-stone-500">You won&apos;t be charged yet</p>
+              {listing.booking_type !== 'instant' && (
+                <p className="mt-4 text-center text-xs text-stone-500">You won&apos;t be charged yet</p>
+              )}
             </div>
           </div>
         </div>
@@ -825,6 +827,83 @@ function StarRating({ rating }: { rating: number }) {
   )
 }
 
+function BookNowButton({
+  listing,
+  dateRange,
+  guests,
+  disabled,
+}: {
+  listing: ListingDetailListing
+  dateRange: DateRange
+  guests: number
+  disabled: boolean
+}) {
+  const [isStartingPayment, setIsStartingPayment] = useState(false)
+  const [paymentError, setPaymentError] = useState<string | null>(null)
+
+  const handleBookNow = async () => {
+    if (!dateRange.from || !dateRange.to) {
+      setPaymentError('Choose check-in and check-out dates first.')
+      return
+    }
+
+    setIsStartingPayment(true)
+    setPaymentError(null)
+
+    try {
+      const response = await fetch('/api/book-now', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          listingId: listing.id,
+          checkIn: dateRange.from.toISOString().slice(0, 10),
+          checkOut: dateRange.to.toISOString().slice(0, 10),
+          guests,
+        }),
+      })
+      const result = (await response.json().catch(() => ({}))) as {
+        checkoutUrl?: string
+        error?: string
+      }
+
+      if (!response.ok || !result.checkoutUrl) {
+        throw new Error(result.error || 'Could not start checkout.')
+      }
+
+      window.location.href = result.checkoutUrl
+    } catch (error) {
+      setPaymentError(
+        error instanceof Error
+          ? error.message
+          : 'Could not start checkout.',
+      )
+    } finally {
+      setIsStartingPayment(false)
+    }
+  }
+
+  return (
+    <div>
+      <button
+        type="button"
+        disabled={disabled || isStartingPayment}
+        onClick={handleBookNow}
+        className="flex min-h-11 w-full items-center justify-center rounded-full bg-stone-950 px-5 text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-500 disabled:shadow-none"
+      >
+        {isStartingPayment ? 'Opening checkout...' : 'Book now'}
+      </button>
+      {paymentError && (
+        <p className="mt-2 text-center text-xs text-rose-600">{paymentError}</p>
+      )}
+      {!paymentError && (
+        <p className="mt-2 text-center text-xs text-stone-500">
+          10% deposit is taken today
+        </p>
+      )}
+    </div>
+  )
+}
+
 function BookingControls({
   listing,
   dateRange,
@@ -856,6 +935,8 @@ function BookingControls({
 }) {
   const allowsInstantBook = listing.booking_type === 'instant'
   const isEnquiryOnly = listing.booking_type === 'enquiry'
+  const hasDates = Boolean(dateRange.from && dateRange.to)
+  const dateRequiredMessage = 'Choose dates first.'
 
   return (
     <>
@@ -916,6 +997,14 @@ function BookingControls({
         ) : (
           <div className="space-y-2.5">
             {allowsInstantBook && (
+              <BookNowButton
+                listing={listing}
+                dateRange={dateRange}
+                guests={guestCount}
+                disabled={!hasDates}
+              />
+            )}
+            {!allowsInstantBook && !isEnquiryOnly && (
               <MessageHostDialog
                 listingId={listing.id}
                 listingTitle={listing.title}
@@ -923,29 +1012,14 @@ function BookingControls({
                 dateRange={dateRange}
                 guests={guestCount}
                 intent="request"
-                buttonLabel="Book now"
-                buttonClassName="flex min-h-11 w-full items-center justify-center rounded-full bg-stone-950 px-5 text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800"
+                buttonLabel="Request to book"
+                disabled={!hasDates}
+                disabledReason={dateRequiredMessage}
+                buttonClassName="flex min-h-11 w-full items-center justify-center rounded-full bg-[#9f513f] px-5 text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-[#874535] disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-500 disabled:shadow-none"
                 onConversationCreated={onConversationCreated}
               />
             )}
-            <MessageHostDialog
-              listingId={listing.id}
-              listingTitle={listing.title}
-              hostId={listing.host_id}
-              dateRange={dateRange}
-              guests={guestCount}
-              intent="request"
-              buttonLabel={isEnquiryOnly ? 'Message host' : 'Request to book'}
-              buttonClassName={
-                allowsInstantBook
-                  ? 'flex min-h-11 w-full items-center justify-center rounded-full border border-stone-200 bg-white px-5 text-sm font-semibold leading-none text-stone-800 transition hover:border-stone-300 hover:bg-stone-50'
-                  : isEnquiryOnly
-                    ? 'flex min-h-11 w-full items-center justify-center rounded-full bg-stone-950 px-5 text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800'
-                    : 'flex min-h-11 w-full items-center justify-center rounded-full bg-[#9f513f] px-5 text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-[#874535]'
-              }
-              onConversationCreated={onConversationCreated}
-            />
-            {!isEnquiryOnly && (
+            {(allowsInstantBook || !isEnquiryOnly) && (
               <MessageHostDialog
                 listingId={listing.id}
                 listingTitle={listing.title}
@@ -957,9 +1031,23 @@ function BookingControls({
                 onConversationCreated={onConversationCreated}
               />
             )}
+            {isEnquiryOnly && (
+              <MessageHostDialog
+                listingId={listing.id}
+                listingTitle={listing.title}
+                hostId={listing.host_id}
+                guests={guestCount}
+                intent="message"
+                buttonLabel="Message host"
+                buttonClassName="flex min-h-11 w-full items-center justify-center rounded-full bg-stone-950 px-5 text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800"
+                onConversationCreated={onConversationCreated}
+              />
+            )}
           </div>
         )}
-        {!mobile && <p className="mb-4 text-center text-xs text-stone-500">You won&apos;t be charged yet</p>}
+        {!mobile && !allowsInstantBook && (
+          <p className="mb-4 text-center text-xs text-stone-500">You won&apos;t be charged yet</p>
+        )}
       </div>
     </>
   )

@@ -4,7 +4,11 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { createListingEnquiry } from '@/lib/messaging'
+import {
+  createListingEnquiry,
+  getOrCreateConversation,
+  sendConversationMessage,
+} from '@/lib/messaging'
 import { recordListingEngagement } from '@/lib/listing-engagement'
 
 type MessageHostDialogProps = {
@@ -19,6 +23,8 @@ type MessageHostDialogProps = {
   intent?: 'message' | 'request'
   buttonLabel?: string
   buttonClassName?: string
+  disabled?: boolean
+  disabledReason?: string
   quickQuestion?: boolean
   open?: boolean
   onOpenChange?: (open: boolean) => void
@@ -61,6 +67,8 @@ export function MessageHostDialog({
   intent = 'message',
   buttonLabel,
   buttonClassName,
+  disabled = false,
+  disabledReason,
   quickQuestion = false,
   open: controlledOpen,
   onOpenChange,
@@ -160,15 +168,37 @@ export function MessageHostDialog({
         return
       }
 
-      const { requestId, conversationId: createdConversationId } = await createListingEnquiry(
-        supabase,
-        listingId,
-        checkIn,
-        checkOut,
-        guests,
-        message.trim(),
-      )
-      await recordListingEngagement(supabase, listingId, isRequest ? 'booking_request' : 'enquiry')
+      let requestId: string | null = null
+      let createdConversationId: string | null = null
+
+      if (isRequest && !quickQuestion) {
+        const enquiry = await createListingEnquiry(
+          supabase,
+          listingId,
+          checkIn,
+          checkOut,
+          guests,
+          message.trim(),
+        )
+        requestId = enquiry.requestId
+        createdConversationId = enquiry.conversationId
+        await recordListingEngagement(supabase, listingId, 'booking_request')
+      } else {
+        createdConversationId = await getOrCreateConversation(
+          supabase,
+          user.id,
+          hostId,
+          listingId,
+        )
+        await sendConversationMessage(
+          supabase,
+          createdConversationId,
+          user.id,
+          message.trim(),
+        )
+        await recordListingEngagement(supabase, listingId, 'enquiry')
+      }
+
       if (requestId) {
         await fetch('/api/notify-host-enquiry', {
           method: 'POST',
@@ -218,7 +248,11 @@ export function MessageHostDialog({
       {controlledOpen === undefined && (
         <button
           type="button"
-          onClick={() => setDialogOpen(true)}
+          disabled={disabled}
+          title={disabledReason}
+          onClick={() => {
+            if (!disabled) setDialogOpen(true)
+          }}
           className={
             buttonClassName ||
             'flex w-full items-center justify-center gap-2 rounded-xl border border-stone-200 bg-white py-3 text-sm font-semibold text-stone-700 transition hover:border-stone-300 hover:bg-stone-50'
