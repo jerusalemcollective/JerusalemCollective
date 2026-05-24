@@ -18,7 +18,7 @@ export default async function AdminAuditPage() {
     .order('created_at', { ascending: false })
     .limit(200)
 
-  const logs: AuditLogRow[] = (data || []).map((log) => ({
+  const logs: AuditLogRow[] = (data || []).map((log: AuditLogRow) => ({
     id: log.id,
     action: log.action,
     target_type: log.target_type,

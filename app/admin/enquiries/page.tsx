@@ -31,6 +31,12 @@ type EnquiryRow = {
   } | null
 }
 
+type EnquiryQueryRow = Omit<EnquiryRow, 'listings' | 'guest' | 'hosts'> & {
+  listings?: EnquiryRow['listings'] | NonNullable<EnquiryRow['listings']>[] | null
+  guest?: EnquiryRow['guest'] | NonNullable<EnquiryRow['guest']>[] | null
+  hosts?: EnquiryRow['hosts'] | NonNullable<EnquiryRow['hosts']>[] | null
+}
+
 function buildAdminUrl(
   basePath: string,
   currentParams: Record<string, string | undefined>,
@@ -81,7 +87,7 @@ export default async function AdminEnquiriesPage({
     countQuery,
   ])
 
-  const enquiries: EnquiryRow[] = (data || []).map((enquiry) => ({
+  const enquiries: EnquiryRow[] = (data || []).map((enquiry: EnquiryQueryRow) => ({
     ...enquiry,
     guests: enquiry.guests || 1,
     listings: Array.isArray(enquiry.listings)

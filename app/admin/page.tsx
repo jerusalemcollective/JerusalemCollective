@@ -72,7 +72,7 @@ export default async function AdminOverviewPage() {
       .order('created_at', { ascending: false })
       .limit(5),
   ])
-  const typedRecentApplications: RecentApplication[] = (recentApplications || []).map((application) => ({
+  const typedRecentApplications: RecentApplication[] = (recentApplications || []).map((application: RecentApplication) => ({
     id: application.id,
     host_name: application.host_name,
     apartment_title: application.apartment_title,
@@ -81,7 +81,7 @@ export default async function AdminOverviewPage() {
     created_at: application.created_at,
     rejected_at: application.rejected_at,
   }))
-  const typedRecentEnquiries: RecentEnquiry[] = (recentEnquiries || []).map((request) => ({
+  const typedRecentEnquiries: RecentEnquiry[] = (recentEnquiries || []).map((request: RecentEnquiry) => ({
     id: request.id,
     listing_id: request.listing_id,
     guest_id: request.guest_id,
@@ -105,12 +105,12 @@ export default async function AdminOverviewPage() {
       ? supabase.from('profiles').select('id, full_name').in('id', recentGuestIds)
       : Promise.resolve({ data: [] }),
   ])
-  const typedEnquiryListings: EnquiryListing[] = (enquiryListings || []).map((listing) => ({
+  const typedEnquiryListings: EnquiryListing[] = (enquiryListings || []).map((listing: EnquiryListing) => ({
     id: listing.id,
     title: listing.title,
     area: listing.area,
   }))
-  const typedEnquiryGuests: EnquiryGuest[] = (enquiryGuests || []).map((guest) => ({
+  const typedEnquiryGuests: EnquiryGuest[] = (enquiryGuests || []).map((guest: EnquiryGuest) => ({
     id: guest.id,
     full_name: guest.full_name,
   }))

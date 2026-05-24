@@ -39,7 +39,7 @@ export default async function AdminAnalyticsPage() {
     supabase.rpc('listing_popularity_summary', { result_limit: 8, lookback_days: 30 }),
   ])
 
-  const popularListings: PopularListing[] = (popularity || []).map((listing) => ({
+  const popularListings: PopularListing[] = (popularity || []).map((listing: PopularListing) => ({
     listing_id: listing.listing_id,
     views: Number(listing.views || 0),
     saves: Number(listing.saves || 0),
@@ -51,12 +51,12 @@ export default async function AdminAnalyticsPage() {
     ? await supabase.from('listings').select('id, title, area').in('id', listingIds)
     : { data: [] }
 
-  const typedTitleRows: ListingTitle[] = (titleRows || []).map((listing) => ({
+  const typedTitleRows: ListingTitle[] = (titleRows || []).map((listing: ListingTitle) => ({
     id: listing.id,
     title: listing.title,
     area: listing.area,
   }))
-  const popularNeighborhoods: PopularNeighborhood[] = (neighborhoods || []).map((item) => ({
+  const popularNeighborhoods: PopularNeighborhood[] = (neighborhoods || []).map((item: PopularNeighborhood) => ({
     neighborhood: item.neighborhood,
     search_count: Number(item.search_count || 0),
   }))

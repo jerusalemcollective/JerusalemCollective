@@ -36,7 +36,7 @@ export default async function AdminHostsPage({
   }
 
   const hosts: PersonRow[] = (data || [])
-    .map((person) => ({
+    .map((person: PersonRow) => ({
       user_id: person.user_id,
       email: person.email,
       full_name: person.full_name,

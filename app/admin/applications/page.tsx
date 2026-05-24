@@ -67,7 +67,7 @@ export default async function AdminApplicationsPage({
     countQuery,
   ])
 
-  const applications: ApplicationRow[] = (data || []).map((application) => ({
+  const applications: ApplicationRow[] = (data || []).map((application: ApplicationRow) => ({
     id: application.id,
     host_name: application.host_name,
     apartment_title: application.apartment_title,

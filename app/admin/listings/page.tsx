@@ -39,6 +39,10 @@ type ListingShulDistanceRow = {
   listing_id: string | null
 }
 
+type ListingQueryRow = Omit<ListingRow, 'hosts'> & {
+  hosts?: ListingRow['hosts'] | NonNullable<ListingRow['hosts']>[] | null
+}
+
 function buildAdminUrl(
   basePath: string,
   currentParams: Record<string, string | undefined>,
@@ -95,7 +99,7 @@ export default async function AdminListingsPage({
     countQuery,
   ])
 
-  const listings: ListingRow[] = (data || []).map((listing) => ({
+  const listings: ListingRow[] = (data || []).map((listing: ListingQueryRow) => ({
     ...listing,
     hosts: Array.isArray(listing.hosts)
       ? listing.hosts[0] || null
@@ -116,10 +120,10 @@ export default async function AdminListingsPage({
           .in('listing_id', listingIds)
       : Promise.resolve({ data: [] }),
   ])
-  const photoRows: ListingPhotoRow[] = (photos || []).map((photo) => ({
+  const photoRows: ListingPhotoRow[] = (photos || []).map((photo: ListingPhotoRow) => ({
     listing_id: photo.listing_id,
   }))
-  const shulDistanceRows: ListingShulDistanceRow[] = (shulDistances || []).map((distance) => ({
+  const shulDistanceRows: ListingShulDistanceRow[] = (shulDistances || []).map((distance: ListingShulDistanceRow) => ({
     listing_id: distance.listing_id,
   }))
   const photoCounts = countPhotosByListing(photoRows)

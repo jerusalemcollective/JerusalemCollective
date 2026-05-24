@@ -83,12 +83,12 @@ export default async function ExplorePage() {
     ])
 
     popularNeighborhoods = mergeNeighborhoods(
-      (popularRows || []).map((row) => ({
+      (popularRows || []).map((row: PopularNeighborhood) => ({
         neighborhood: row.neighborhood,
         search_count: row.search_count,
       })),
     )
-    featuredStays = (featuredRows || []).map((listing) => ({
+    featuredStays = (featuredRows || []).map((listing: Listing) => ({
       id: listing.id,
       title: listing.title,
       area: listing.area,

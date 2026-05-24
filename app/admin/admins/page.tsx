@@ -27,7 +27,7 @@ export default async function AdminUsersPage({
     throw error
   }
 
-  const admins: AdminUser[] = (data || []).map((admin) => ({
+  const admins: AdminUser[] = (data || []).map((admin: AdminUser) => ({
     user_id: admin.user_id,
     email: admin.email,
     full_name: admin.full_name,

@@ -19,6 +19,10 @@ type ReviewRow = {
   } | null
 }
 
+type ReviewQueryRow = Omit<ReviewRow, 'listings'> & {
+  listings?: ReviewRow['listings'] | NonNullable<ReviewRow['listings']>[] | null
+}
+
 function buildAdminUrl(
   basePath: string,
   currentParams: Record<string, string | undefined>,
@@ -66,7 +70,7 @@ export default async function AdminReviewsPage({
     countQuery,
   ])
 
-  const reviews: ReviewRow[] = (data || []).map((review) => ({
+  const reviews: ReviewRow[] = (data || []).map((review: ReviewQueryRow) => ({
     ...review,
     listings: Array.isArray(review.listings)
       ? review.listings[0] || null

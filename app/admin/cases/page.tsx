@@ -6,6 +6,13 @@ import { Pagination, normalizePaginationSearchParams, type PaginationSearchParam
 
 const PAGE_SIZE = 25
 
+type SupportCaseRow = Omit<SupportCase, 'bookings' | 'listings' | 'guest' | 'host'> & {
+  bookings?: SupportCase['bookings'] | NonNullable<SupportCase['bookings']>[] | null
+  listings?: SupportCase['listings'] | NonNullable<SupportCase['listings']>[] | null
+  guest?: SupportCase['guest'] | NonNullable<SupportCase['guest']>[] | null
+  host?: SupportCase['host'] | NonNullable<SupportCase['host']>[] | null
+}
+
 function buildAdminUrl(
   basePath: string,
   currentParams: Record<string, string | undefined>,
@@ -66,7 +73,7 @@ export default async function AdminCasesPage({
     countQuery,
   ])
 
-  const cases: SupportCase[] = (data || []).map((supportCase) => ({
+  const cases: SupportCase[] = (data || []).map((supportCase: SupportCaseRow) => ({
     ...supportCase,
     approved_refund_amount: supportCase.approved_refund_amount || 0,
     bookings: Array.isArray(supportCase.bookings)
