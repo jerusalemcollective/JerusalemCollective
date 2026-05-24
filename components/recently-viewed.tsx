@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 
 type RecentListing = {
@@ -53,10 +54,13 @@ export function RecentlyViewed() {
           <Link key={listing.id} href={`/listings/${listing.id}`} className="group block">
             <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-stone-100">
               {listing.coverPhotoUrl && (
-                <img
+                <Image
                   src={listing.coverPhotoUrl}
                   alt={listing.title}
-                  className="h-full w-full object-cover transition group-hover:scale-[1.02]"
+                  fill
+                  className="object-cover transition group-hover:scale-[1.02]"
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 17vw"
+                  loading="lazy"
                 />
               )}
             </div>

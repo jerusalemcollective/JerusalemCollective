@@ -169,11 +169,11 @@ export function Header() {
         </Link>
 
         <nav className="hidden items-center gap-7 text-sm font-semibold lg:flex">
-          <Link href="/explore" className={navLinkClass('/explore')}>
-            Explore
-          </Link>
           <Link href="/stays" className={navLinkClass('/stays')}>
             Stays
+          </Link>
+          <Link href="/explore" className={navLinkClass('/explore')}>
+            Explore
           </Link>
           <Link href="/services" className={navLinkClass('/services')}>
             Services
@@ -354,18 +354,18 @@ export function Header() {
         <div className="border-t border-stone-200 bg-white md:hidden">
           <nav className="divide-y divide-stone-100">
             <Link
-              href="/explore"
-              onClick={() => setMobileOpen(false)}
-              className="block px-5 py-4 font-medium text-stone-900"
-            >
-              Explore
-            </Link>
-            <Link
               href="/stays"
               onClick={() => setMobileOpen(false)}
-              className="block px-5 py-4 font-medium text-stone-900"
+              className={`block px-5 py-4 font-medium ${pathname.startsWith('/stays') ? 'text-[#c76f55]' : 'text-stone-900'}`}
             >
               Stays
+            </Link>
+            <Link
+              href="/explore"
+              onClick={() => setMobileOpen(false)}
+              className={`block px-5 py-4 font-medium ${pathname.startsWith('/explore') ? 'text-[#c76f55]' : 'text-stone-900'}`}
+            >
+              Explore
             </Link>
             <Link
               href="/services"
