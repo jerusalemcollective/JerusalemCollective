@@ -2,18 +2,9 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  const canonicalDomainRedirect = redirectApexDomain(request)
-  if (canonicalDomainRedirect) {
-    return canonicalDomainRedirect
-  }
-
   const response = NextResponse.next({
     request,
   })
-
-  if (!isProtectedPath(request.nextUrl.pathname)) {
-    return response
-  }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -41,22 +32,6 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   return protectRoute(request, response, Boolean(user))
-}
-
-function redirectApexDomain(request: NextRequest) {
-  const host = request.headers.get('host')?.toLowerCase()
-
-  if (host !== 'jlmcollective.co') return null
-
-  const url = request.nextUrl.clone()
-  url.protocol = 'https:'
-  url.hostname = 'www.jlmcollective.co'
-
-  return NextResponse.redirect(url, 308)
-}
-
-function isProtectedPath(pathname: string) {
-  return pathname === '/become-a-host' || pathname.startsWith('/host/dashboard')
 }
 
 function protectRoute(
@@ -89,6 +64,7 @@ function protectRoute(
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)',
+    '/become-a-host',
+    '/host/dashboard/:path*',
   ],
 }
