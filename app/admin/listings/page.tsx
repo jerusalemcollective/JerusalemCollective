@@ -95,7 +95,12 @@ export default async function AdminListingsPage({
     countQuery,
   ])
 
-  const listings = (data || []) as ListingRow[]
+  const listings: ListingRow[] = (data || []).map((listing) => ({
+    ...listing,
+    hosts: Array.isArray(listing.hosts)
+      ? listing.hosts[0] || null
+      : listing.hosts,
+  }))
   const listingIds = listings.map((listing) => listing.id)
   const [{ data: photos }, { data: shulDistances }] = await Promise.all([
     listingIds.length
@@ -111,8 +116,14 @@ export default async function AdminListingsPage({
           .in('listing_id', listingIds)
       : Promise.resolve({ data: [] }),
   ])
-  const photoCounts = countPhotosByListing((photos || []) as ListingPhotoRow[])
-  const shulDistanceCounts = countShulDistancesByListing((shulDistances || []) as ListingShulDistanceRow[])
+  const photoRows: ListingPhotoRow[] = (photos || []).map((photo) => ({
+    listing_id: photo.listing_id,
+  }))
+  const shulDistanceRows: ListingShulDistanceRow[] = (shulDistances || []).map((distance) => ({
+    listing_id: distance.listing_id,
+  }))
+  const photoCounts = countPhotosByListing(photoRows)
+  const shulDistanceCounts = countShulDistancesByListing(shulDistanceRows)
   const total = count || 0
 
   return (

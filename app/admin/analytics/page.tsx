@@ -39,14 +39,28 @@ export default async function AdminAnalyticsPage() {
     supabase.rpc('listing_popularity_summary', { result_limit: 8, lookback_days: 30 }),
   ])
 
-  const popularListings = (popularity || []) as PopularListing[]
+  const popularListings: PopularListing[] = (popularity || []).map((listing) => ({
+    listing_id: listing.listing_id,
+    views: Number(listing.views || 0),
+    saves: Number(listing.saves || 0),
+    enquiries: Number(listing.enquiries || 0),
+    booking_requests: Number(listing.booking_requests || 0),
+  }))
   const listingIds = popularListings.map((listing) => listing.listing_id)
-  const { data: titleRows } =
-    listingIds.length > 0
-      ? await supabase.from('listings').select('id, title, area').in('id', listingIds)
-      : { data: [] as ListingTitle[] }
+  const { data: titleRows } = listingIds.length > 0
+    ? await supabase.from('listings').select('id, title, area').in('id', listingIds)
+    : { data: [] }
 
-  const titlesById = new Map((titleRows || []).map((listing) => [listing.id, listing]))
+  const typedTitleRows: ListingTitle[] = (titleRows || []).map((listing) => ({
+    id: listing.id,
+    title: listing.title,
+    area: listing.area,
+  }))
+  const popularNeighborhoods: PopularNeighborhood[] = (neighborhoods || []).map((item) => ({
+    neighborhood: item.neighborhood,
+    search_count: Number(item.search_count || 0),
+  }))
+  const titlesById = new Map(typedTitleRows.map((listing) => [listing.id, listing]))
 
   return (
     <div>
@@ -71,7 +85,7 @@ export default async function AdminAnalyticsPage() {
             <p className="mt-1 text-sm text-stone-500">Last 30 days</p>
           </div>
           <div className="divide-y divide-stone-100">
-            {((neighborhoods || []) as PopularNeighborhood[]).map((item, index) => (
+            {popularNeighborhoods.map((item, index) => (
               <div key={item.neighborhood} className="flex items-center justify-between gap-4 px-6 py-4">
                 <div className="flex items-center gap-3">
                   <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F8F5F2] text-sm font-bold text-stone-700">

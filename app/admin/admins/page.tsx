@@ -27,7 +27,14 @@ export default async function AdminUsersPage({
     throw error
   }
 
-  const admins = (data || []) as AdminUser[]
+  const admins: AdminUser[] = (data || []).map((admin) => ({
+    user_id: admin.user_id,
+    email: admin.email,
+    full_name: admin.full_name,
+    admin_role: admin.admin_role,
+    created_at: admin.created_at,
+    last_sign_in_at: admin.last_sign_in_at,
+  }))
   const paged = admins.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
   const total = admins.length
 

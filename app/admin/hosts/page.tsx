@@ -35,7 +35,21 @@ export default async function AdminHostsPage({
     throw error
   }
 
-  const hosts = ((data || []) as PersonRow[]).filter((person) => person.host_id)
+  const hosts: PersonRow[] = (data || [])
+    .map((person) => ({
+      user_id: person.user_id,
+      email: person.email,
+      full_name: person.full_name,
+      host_id: person.host_id,
+      host_name: person.host_name,
+      host_type: person.host_type,
+      host_is_verified: person.host_is_verified,
+      listing_count: Number(person.listing_count || 0),
+      application_count: Number(person.application_count || 0),
+      created_at: person.created_at,
+      last_sign_in_at: person.last_sign_in_at,
+    }))
+    .filter((person) => person.host_id)
   const paged = hosts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
   const total = hosts.length
 

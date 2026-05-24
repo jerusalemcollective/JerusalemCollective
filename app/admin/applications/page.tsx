@@ -67,7 +67,15 @@ export default async function AdminApplicationsPage({
     countQuery,
   ])
 
-  const applications = (data || []) as ApplicationRow[]
+  const applications: ApplicationRow[] = (data || []).map((application) => ({
+    id: application.id,
+    host_name: application.host_name,
+    apartment_title: application.apartment_title,
+    area: application.area,
+    status: application.status,
+    created_at: application.created_at,
+    rejected_at: application.rejected_at,
+  }))
   const total = count || 0
 
   return (

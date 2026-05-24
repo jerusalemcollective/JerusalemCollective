@@ -66,7 +66,12 @@ export default async function AdminReviewsPage({
     countQuery,
   ])
 
-  const reviews = (data || []) as ReviewRow[]
+  const reviews: ReviewRow[] = (data || []).map((review) => ({
+    ...review,
+    listings: Array.isArray(review.listings)
+      ? review.listings[0] || null
+      : review.listings,
+  }))
   const total = count || 0
 
   return (

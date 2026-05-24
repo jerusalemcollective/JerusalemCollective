@@ -81,7 +81,19 @@ export default async function AdminEnquiriesPage({
     countQuery,
   ])
 
-  const enquiries = (data || []) as EnquiryRow[]
+  const enquiries: EnquiryRow[] = (data || []).map((enquiry) => ({
+    ...enquiry,
+    guests: enquiry.guests || 1,
+    listings: Array.isArray(enquiry.listings)
+      ? enquiry.listings[0] || null
+      : enquiry.listings,
+    hosts: Array.isArray(enquiry.hosts)
+      ? enquiry.hosts[0] || null
+      : enquiry.hosts,
+    guest: Array.isArray(enquiry.guest)
+      ? enquiry.guest[0] || null
+      : enquiry.guest,
+  }))
   const total = count || 0
   const newCount = enquiries.filter((enquiry) => enquiry.status === 'new').length
   const activeCount = enquiries.filter((enquiry) => ['new', 'host_replied'].includes(enquiry.status)).length

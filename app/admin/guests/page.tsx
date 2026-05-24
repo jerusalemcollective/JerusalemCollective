@@ -31,7 +31,21 @@ export default async function AdminGuestsPage({
     throw error
   }
 
-  const guests = ((data || []) as PersonRow[]).filter((person) => !person.is_host)
+  const guests: PersonRow[] = (data || [])
+    .map((person) => ({
+      user_id: person.user_id,
+      email: person.email,
+      full_name: person.full_name,
+      phone: person.phone,
+      is_host: Boolean(person.is_host),
+      is_admin: Boolean(person.is_admin),
+      admin_role: person.admin_role,
+      booking_count: Number(person.booking_count || 0),
+      saved_count: Number(person.saved_count || 0),
+      created_at: person.created_at,
+      last_sign_in_at: person.last_sign_in_at,
+    }))
+    .filter((person) => !person.is_host)
   const paged = guests.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
   const total = guests.length
 
