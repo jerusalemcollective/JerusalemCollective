@@ -49,7 +49,7 @@ export default async function AdminHostsPage({
       created_at: person.created_at,
       last_sign_in_at: person.last_sign_in_at,
     }))
-    .filter((person) => person.host_id)
+    .filter((person: PersonRow) => person.host_id)
   const paged = hosts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
   const total = hosts.length
 

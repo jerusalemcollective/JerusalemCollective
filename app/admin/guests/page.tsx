@@ -45,7 +45,7 @@ export default async function AdminGuestsPage({
       created_at: person.created_at,
       last_sign_in_at: person.last_sign_in_at,
     }))
-    .filter((person) => !person.is_host)
+    .filter((person: PersonRow) => !person.is_host)
   const paged = guests.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
   const total = guests.length
 

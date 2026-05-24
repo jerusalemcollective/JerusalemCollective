@@ -223,7 +223,7 @@ export default async function ExplorePage() {
 function mergeNeighborhoods(rows: PopularNeighborhood[]) {
   const live = rows.map((row) => row.neighborhood).filter(Boolean)
   return [...live, ...defaultExploreNeighborhoods, ...defaultPopularNeighborhoods]
-    .filter((item, index, items) => items.indexOf(item) === index)
+    .filter((item: string, index: number, items: string[]) => items.indexOf(item) === index)
     .slice(0, 6)
 }
 

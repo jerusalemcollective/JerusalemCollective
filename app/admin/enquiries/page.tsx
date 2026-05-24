@@ -101,8 +101,8 @@ export default async function AdminEnquiriesPage({
       : enquiry.guest,
   }))
   const total = count || 0
-  const newCount = enquiries.filter((enquiry) => enquiry.status === 'new').length
-  const activeCount = enquiries.filter((enquiry) => ['new', 'host_replied'].includes(enquiry.status)).length
+  const newCount = enquiries.filter((enquiry: EnquiryRow) => enquiry.status === 'new').length
+  const activeCount = enquiries.filter((enquiry: EnquiryRow) => ['new', 'host_replied'].includes(enquiry.status)).length
 
   return (
     <div>
