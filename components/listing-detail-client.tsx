@@ -103,6 +103,7 @@ type ListingDetailClientProps = {
     shul_name: string
     walking_minutes: number
   }>
+  avgResponseHours: number | null
 }
 
 export function ListingDetailClient({
@@ -117,6 +118,7 @@ export function ListingDetailClient({
   neighbourhoodDescription,
   walkingMinutes,
   shulDistances,
+  avgResponseHours,
 }: ListingDetailClientProps) {
   const [copiedLink, setCopiedLink] = useState(false)
   const [showGallery, setShowGallery] = useState(false)
@@ -131,6 +133,13 @@ export function ListingDetailClient({
   const mobilePhotoDragStartRef = useRef<number | null>(null)
   const mobilePhotoDidSwipeRef = useRef(false)
   const shareUrl = typeof window !== 'undefined' ? window.location.href : ''
+  function formatResponseTime(hours: number): string {
+    if (hours < 1) return 'Usually responds within an hour'
+    if (hours < 3) return 'Usually responds within a few hours'
+    if (hours < 24) return 'Usually responds same day'
+    return 'Usually responds within 1-2 days'
+  }
+
   const nights =
     bookingDateRange.from && bookingDateRange.to
       ? Math.round(
@@ -828,6 +837,11 @@ export function ListingDetailClient({
                   onConversationCreated={setExistingConversationId}
                   blockedRanges={blockedRanges}
                 />
+                {avgResponseHours !== null && (
+                  <p className="mt-3 text-center text-xs text-stone-500">
+                    {formatResponseTime(avgResponseHours)}
+                  </p>
+                )}
                 <div className="mt-4 space-y-2.5 border-t border-stone-100 pt-4">
                   <p className="text-xs font-bold uppercase tracking-widest text-stone-400">
                     How it works

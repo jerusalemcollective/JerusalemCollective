@@ -37,6 +37,11 @@ type ShulDistance = {
   walking_minutes: number
 }
 
+type ResponseTimeRow = {
+  created_at: string
+  first_response_at: string
+}
+
 const KOTEL_LAT = 31.7767
 const KOTEL_LNG = 35.2345
 
@@ -110,6 +115,11 @@ const similarListingSchema = z.object({
 const shulDistanceSchema = z.object({
   shul_name: z.string(),
   walking_minutes: z.number(),
+})
+
+const responseTimeSchema = z.object({
+  created_at: z.string(),
+  first_response_at: z.string(),
 })
 
 export const revalidate = 3600
@@ -274,6 +284,7 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
           neighbourhoodDescription={null}
           walkingMinutes={null}
           shulDistances={[]}
+          avgResponseHours={null}
         />
       )
     }
@@ -300,6 +311,7 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
     { data: reviewsData },
     { data: blockedRangesData },
     { data: shulDistancesData },
+    { data: responseData },
   ] = await Promise.all([
     supabase
       .from('listing_photos')
@@ -328,6 +340,15 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
       .select('shul_name, walking_minutes')
       .eq('listing_id', id)
       .order('walking_minutes', { ascending: true }),
+    listing.host_id
+      ? supabase
+          .from('booking_requests')
+          .select('created_at, first_response_at')
+          .eq('host_id', listing.host_id)
+          .not('first_response_at', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(20)
+      : Promise.resolve({ data: null }),
   ])
 
   const { data: similarRaw } = await supabase
@@ -366,6 +387,16 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
   const photos: ListingDetailPhoto[] = z.array(listingPhotoSchema).parse(photosData ?? [])
   const reviews: ListingDetailReview[] = z.array(listingReviewSchema).parse(reviewsData ?? [])
   const shulDistances: ShulDistance[] = z.array(shulDistanceSchema).parse(shulDistancesData ?? [])
+  const responseRows: ResponseTimeRow[] = z.array(responseTimeSchema).parse(responseData ?? [])
+  const avgResponseHours =
+    responseRows.length > 0
+      ? responseRows.reduce((sum, row) => {
+          const created = new Date(row.created_at).getTime()
+          const responded = new Date(row.first_response_at).getTime()
+
+          return sum + (responded - created) / (1000 * 60 * 60)
+        }, 0) / responseRows.length
+      : null
   const avgRating =
     reviews.length > 0
       ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
@@ -450,6 +481,7 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
         neighbourhoodDescription={neighbourhoodDescription}
         walkingMinutes={walkingMinutes}
         shulDistances={shulDistances}
+        avgResponseHours={avgResponseHours}
       />
     </>
   )

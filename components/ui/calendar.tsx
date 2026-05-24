@@ -253,6 +253,11 @@ function CalendarDayButton({
       <span className="text-[9px] font-medium leading-none text-current opacity-60">
         {formatHebrewDay(day.date)}
       </span>
+      {holiday && (
+        <span className="block max-w-full truncate text-[8px] font-semibold leading-none text-[#c76f55]">
+          {holiday}
+        </span>
+      )}
     </Button>
   )
 }
