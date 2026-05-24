@@ -3,6 +3,7 @@
 import React, { useState, useCallback, Component, ReactNode } from 'react'
 import { GoogleMap, useJsApiLoader, OverlayView, type Libraries } from '@react-google-maps/api'
 import Link from 'next/link'
+import Image from 'next/image'
 import { formatListingPrice } from '@/lib/utils/currency'
 
 interface Listing {
@@ -52,6 +53,17 @@ function MapFallback() {
         <Link href="/stays" className="mt-5 inline-flex rounded-full bg-[#c76f55] px-5 py-3 text-sm font-bold text-white hover:bg-[#b85f47]">
           Browse stays
         </Link>
+      </div>
+    </div>
+  )
+}
+
+function PhotoPlaceholder() {
+  return (
+    <div className="flex h-full w-full items-center justify-center bg-[#F8F5F2]">
+      <div className="text-center">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#c76f55]">JLM Collective</p>
+        <p className="mt-1 text-xs text-stone-400">Photo coming soon</p>
       </div>
     </div>
   )
@@ -122,9 +134,9 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
   }
 
   return (
-    <div className="relative h-[calc(100vh-90px)] w-full overflow-hidden bg-[#F8F5F2]">
+    <div className="relative h-[calc(100vh-82px)] w-full overflow-hidden bg-[#F8F5F2]">
       {/* Sidebar */}
-      <div className="absolute left-0 top-0 z-10 hidden h-full w-[360px] overflow-y-auto border-r border-stone-200 bg-white p-4 shadow-xl lg:block">
+      <div className="absolute left-0 top-0 z-10 hidden h-full w-[320px] overflow-y-auto border-r border-stone-200 bg-white p-4 shadow-xl lg:block">
         <div className="mb-5">
           <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Search by map</p>
           <h1 className="mt-2 text-2xl font-bold text-stone-950">Jerusalem stays</h1>
@@ -152,15 +164,18 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
                   : 'border-stone-200 bg-white hover:border-[#c76f55]'
               }`}
             >
-              <div className="mb-3 aspect-[4/3] overflow-hidden rounded-xl bg-stone-200">
+              <div className="relative mb-3 aspect-[4/3] overflow-hidden rounded-xl bg-[#F8F5F2]">
                 {listing.cover_photo_url ? (
-                  <img
+                  <Image
                     src={listing.cover_photo_url}
                     alt={listing.title}
-                    className="h-full w-full object-cover"
+                    fill
+                    className="object-cover"
+                    sizes="320px"
+                    loading="lazy"
                   />
                 ) : (
-                  <div className="h-full w-full bg-gradient-to-br from-stone-100 via-stone-200 to-stone-300" />
+                  <PhotoPlaceholder />
                 )}
               </div>
               <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">{listing.area}</p>
@@ -173,7 +188,7 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
       </div>
 
       {/* Map */}
-      <div className="h-full w-full lg:pl-[360px]">
+      <div className="h-full w-full lg:pl-[320px]">
         <GoogleMap
           mapContainerStyle={mapContainerStyle}
           center={center}
@@ -208,7 +223,7 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
 
       {/* Selected listing popup */}
       {selectedListing && (
-        <div className="absolute bottom-5 left-5 right-5 z-20 rounded-3xl bg-white p-4 shadow-2xl ring-1 ring-stone-200 lg:left-[385px] lg:right-auto lg:w-[340px]">
+        <div className="absolute bottom-5 left-5 right-5 z-20 rounded-3xl bg-white p-4 shadow-2xl ring-1 ring-stone-200 lg:left-[345px] lg:right-auto lg:w-[330px]">
           <button
             onClick={() => setSelectedListing(null)}
             className="absolute right-3 top-3 rounded-full p-1 hover:bg-stone-100"
@@ -217,15 +232,18 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
               <path d="M15 5L5 15M5 5l10 10" />
             </svg>
           </button>
-          <div className="mb-3 aspect-[4/3] overflow-hidden rounded-2xl bg-stone-200">
+          <div className="relative mb-3 aspect-[4/3] overflow-hidden rounded-2xl bg-[#F8F5F2]">
             {selectedListing.cover_photo_url ? (
-              <img
+              <Image
                 src={selectedListing.cover_photo_url}
                 alt={selectedListing.title}
-                className="h-full w-full object-cover"
+                fill
+                className="object-cover"
+                sizes="330px"
+                loading="lazy"
               />
             ) : (
-              <div className="h-full w-full bg-gradient-to-br from-stone-100 via-stone-200 to-stone-300" />
+              <PhotoPlaceholder />
             )}
           </div>
           <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">{selectedListing.area}</p>

@@ -15,7 +15,7 @@ export const sampleListings = [
     amenities: ['WiFi', 'Air conditioning', 'Kosher kitchen', 'Family friendly'],
     description:
       'A bright family apartment close to local shuls, groceries, and easy transport around Jerusalem.',
-    cover_photo_url: '/placeholder.jpg',
+    cover_photo_url: null,
   },
   {
     id: 'sample-jerusalem-estates-bright-stay',
@@ -33,7 +33,7 @@ export const sampleListings = [
     amenities: ['WiFi', 'Elevator', 'Parking', 'Shabbat-friendly'],
     description:
       'A calm, polished stay with practical amenities for longer family visits.',
-    cover_photo_url: '/placeholder.jpg',
+    cover_photo_url: null,
   },
   {
     id: 'sample-romema-spacious-apartment',
@@ -51,7 +51,7 @@ export const sampleListings = [
     amenities: ['WiFi', 'Washer', 'Dryer', 'Near synagogues'],
     description:
       'A spacious apartment suited to guests who want room to gather and easy neighbourhood access.',
-    cover_photo_url: '/placeholder.jpg',
+    cover_photo_url: null,
   },
 ]
 

@@ -20,8 +20,11 @@ type ListingRow = {
   bathrooms: number | null
   amenities: string[] | null
   description: string | null
+  house_rules: string | null
   price_usd: number | null
   price_ils: number | null
+  walking_minutes_to_kotel: number | null
+  american_comfort: boolean | null
   created_at: string
   hosts?: {
     name: string
@@ -29,6 +32,10 @@ type ListingRow = {
 }
 
 type ListingPhotoRow = {
+  listing_id: string | null
+}
+
+type ListingShulDistanceRow = {
   listing_id: string | null
 }
 
@@ -63,7 +70,7 @@ export default async function AdminListingsPage({
   const page = Math.max(1, Number(currentSearchParams.page) || 1)
   let listingsQuery = supabase
     .from('listings')
-    .select('id, title, area, host_id, is_published, is_featured, bedrooms, bathrooms, amenities, description, price_usd, price_ils, created_at, hosts(name)')
+    .select('id, title, area, host_id, is_published, is_featured, bedrooms, bathrooms, amenities, description, house_rules, price_usd, price_ils, walking_minutes_to_kotel, american_comfort, created_at, hosts(name)')
     .order('created_at', { ascending: false })
   let countQuery = supabase.from('listings').select('*', { count: 'exact', head: true })
 
@@ -90,13 +97,22 @@ export default async function AdminListingsPage({
 
   const listings = (data || []) as ListingRow[]
   const listingIds = listings.map((listing) => listing.id)
-  const { data: photos } = listingIds.length
-    ? await supabase
-        .from('listing_photos')
-        .select('listing_id')
-        .in('listing_id', listingIds)
-    : { data: [] }
+  const [{ data: photos }, { data: shulDistances }] = await Promise.all([
+    listingIds.length
+      ? supabase
+          .from('listing_photos')
+          .select('listing_id')
+          .in('listing_id', listingIds)
+      : Promise.resolve({ data: [] }),
+    listingIds.length
+      ? supabase
+          .from('listing_shul_distances')
+          .select('listing_id')
+          .in('listing_id', listingIds)
+      : Promise.resolve({ data: [] }),
+  ])
   const photoCounts = countPhotosByListing((photos || []) as ListingPhotoRow[])
+  const shulDistanceCounts = countShulDistancesByListing((shulDistances || []) as ListingShulDistanceRow[])
   const total = count || 0
 
   return (
@@ -183,6 +199,11 @@ export default async function AdminListingsPage({
                     price_usd: listing.price_usd,
                     price_ils: listing.price_ils,
                   })}
+                  suggestions={listingQaSuggestions(
+                    listing,
+                    photoCounts.get(listing.id) || 0,
+                    shulDistanceCounts.get(listing.id) || 0,
+                  )}
                 />
                 <BooleanBadge value={listing.is_published} yes="Live" no="Hidden" />
                 <BooleanBadge value={listing.is_featured} yes="Featured" no="Standard" />
@@ -235,5 +256,34 @@ function countPhotosByListing(photos: ListingPhotoRow[]) {
   })
 
   return counts
+}
+
+function countShulDistancesByListing(distances: ListingShulDistanceRow[]) {
+  const counts = new Map<string, number>()
+
+  distances.forEach((distance) => {
+    if (!distance.listing_id) return
+    counts.set(distance.listing_id, (counts.get(distance.listing_id) || 0) + 1)
+  })
+
+  return counts
+}
+
+function listingQaSuggestions(
+  listing: ListingRow,
+  photoCount: number,
+  shulDistanceCount: number,
+) {
+  const suggestions: string[] = []
+
+  if (photoCount < 5) suggestions.push('Add at least five photos before publishing.')
+  if (!listing.price_usd && !listing.price_ils) suggestions.push('Add a clear nightly price.')
+  if (!listing.house_rules?.trim()) suggestions.push('Add house rules for guests.')
+  if (!listing.walking_minutes_to_kotel && shulDistanceCount === 0) {
+    suggestions.push('Add shul or Old City walking distance.')
+  }
+  if (!listing.american_comfort) suggestions.push('Confirm American comfort details.')
+
+  return suggestions.slice(0, 4)
 }
 

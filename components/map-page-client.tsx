@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { filterListings } from '@/lib/marketplace-rules'
@@ -74,7 +75,7 @@ export function MapPageClient({ listings }: { listings: MapListing[] }) {
         </Link>
       </div>
 
-      <div className="absolute left-4 right-4 top-16 z-20 flex max-h-[calc(100vh-5rem)] flex-col gap-3 overflow-y-auto rounded-3xl border border-stone-200 bg-white/95 p-3 shadow-lg backdrop-blur md:left-auto md:right-4 md:w-[360px]">
+      <div className="absolute left-4 right-4 top-16 z-20 flex max-h-[calc(100vh-7rem)] flex-col gap-3 overflow-y-auto rounded-3xl border border-stone-200 bg-white/95 p-3 shadow-lg backdrop-blur md:left-auto md:right-4 md:w-[320px]">
         <div className="flex flex-wrap items-center gap-2">
           <label className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700">
             <span className="font-semibold">Bedrooms</span>
@@ -103,7 +104,7 @@ export function MapPageClient({ listings }: { listings: MapListing[] }) {
               </span>
               <span className="text-xs text-stone-400 transition group-open:rotate-180">v</span>
             </summary>
-            <div className="max-h-[42vh] overflow-y-auto border-t border-stone-100 p-3">
+            <div className="max-h-[28vh] overflow-y-auto border-t border-stone-100 p-3">
               <div className="grid gap-3">
                 {STAY_AMENITY_GROUPS.map((group) => (
                   <section key={group.title}>
@@ -149,15 +150,25 @@ export function MapPageClient({ listings }: { listings: MapListing[] }) {
 
         {selectedListing && (
           <div className="overflow-hidden rounded-2xl border border-stone-200 bg-[#F8F5F2]">
-            {selectedListing.cover_photo_url && (
-              <div className="aspect-[4/3] bg-stone-200">
-                <img
+            <div className="relative aspect-[4/3] bg-[#F8F5F2]">
+              {selectedListing.cover_photo_url ? (
+                <Image
                   src={selectedListing.cover_photo_url}
                   alt={selectedListing.title}
-                  className="h-full w-full object-cover"
+                  fill
+                  className="object-cover"
+                  sizes="320px"
+                  loading="lazy"
                 />
-              </div>
-            )}
+              ) : (
+                <div className="flex h-full w-full items-center justify-center">
+                  <div className="text-center">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#c76f55]">JLM Collective</p>
+                    <p className="mt-1 text-xs text-stone-400">Photo coming soon</p>
+                  </div>
+                </div>
+              )}
+            </div>
             <div className="p-4">
               <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">{selectedListing.area}</p>
               <h3 className="mt-1 font-bold text-stone-950">{selectedListing.title}</h3>

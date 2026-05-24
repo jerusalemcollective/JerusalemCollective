@@ -427,19 +427,11 @@ function ListingCard({
             loading="lazy"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-stone-100">
-            <svg
-              width="28"
-              height="28"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#d6d3d1"
-              strokeWidth="1.5"
-            >
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <circle cx="8.5" cy="8.5" r="1.5" />
-              <path d="m21 15-5-5L5 21" />
-            </svg>
+          <div className="flex h-full w-full items-center justify-center bg-[#F8F5F2]">
+            <div className="text-center">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#c76f55]">JLM Collective</p>
+              <p className="mt-1 text-xs text-stone-400">Photo coming soon</p>
+            </div>
           </div>
         )}
       </div>

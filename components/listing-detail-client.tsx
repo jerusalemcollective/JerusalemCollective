@@ -455,7 +455,12 @@ export function ListingDetailClient({
               )}
             </>
           ) : (
-            <div className="aspect-[4/3] rounded-3xl bg-gradient-to-br from-stone-200 via-stone-100 to-stone-300" />
+            <div className="flex aspect-[4/3] items-center justify-center rounded-3xl bg-[#F8F5F2] ring-1 ring-stone-100">
+              <div className="text-center">
+                <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">JLM Collective</p>
+                <p className="mt-2 text-sm text-stone-500">Photos coming soon</p>
+              </div>
+            </div>
           )}
         </div>
 
@@ -942,7 +947,7 @@ export function ListingDetailClient({
                 mobile
               />
               {listing.booking_type !== 'instant' && (
-                <p className="mt-4 text-center text-xs text-stone-500">You won&apos;t be charged yet</p>
+                <p className="mt-4 text-center text-xs text-stone-500">No payment until host confirms.</p>
               )}
             </div>
           </div>
@@ -1252,7 +1257,7 @@ function BookingControls({
           </div>
         )}
         {!mobile && !allowsInstantBook && (
-          <p className="mb-4 text-center text-xs text-stone-500">You won&apos;t be charged yet</p>
+          <p className="mb-4 text-center text-xs text-stone-500">No payment until host confirms.</p>
         )}
       </div>
     </>

@@ -21,7 +21,7 @@ type StaysMapListing = {
 const JerusalemMap = dynamic(() => import('@/components/jerusalem-map'), {
   ssr: false,
   loading: () => (
-    <div className="flex h-full items-center justify-center bg-[#EDE7DF]">
+    <div className="flex h-full items-center justify-center bg-[#F8F5F2]">
       <div className="h-8 w-8 animate-spin rounded-full border-4 border-stone-200 border-t-[#c76f55]" />
     </div>
   ),
