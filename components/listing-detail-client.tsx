@@ -12,7 +12,7 @@ import { SaveListingButton } from '@/components/save-listing-button'
 import { AmenityDisplay } from '@/components/amenity-display'
 import { recordListingView } from '@/components/recently-viewed'
 import { recordListingEngagement } from '@/lib/listing-engagement'
-import { formatDualCurrencyPrice } from '@/lib/utils/currency'
+import { formatListingPrice, formatPrice } from '@/lib/utils/currency'
 
 type DateRange = {
   from?: Date
@@ -33,6 +33,18 @@ export type ListingDetailListing = {
   amenities: string[] | null
   description: string | null
   house_rules: string | null
+  shabbat_elevator: boolean
+  physical_key_entry: boolean
+  shabbat_clock: boolean
+  kosher_kitchen_level: string | null
+  walking_minutes_to_kotel: number | null
+  near_synagogue: boolean
+  sukkah_balcony: boolean
+  american_comfort: boolean
+  central_ac: boolean
+  american_washer_dryer: boolean
+  american_mattress: boolean
+  powerful_water_heater: boolean
 }
 
 export type ListingDetailPhoto = {
@@ -83,14 +95,11 @@ type ListingDetailClientProps = {
   similarListings: SimilarListing[]
   fromStays: boolean
   neighbourhoodDescription: string | null
-}
-
-function formatPrice(value?: number | null) {
-  return value ? value.toLocaleString() : null
-}
-
-function formatListingPrice(listing: Pick<SimilarListing, 'price_ils' | 'price_usd'>) {
-  return formatDualCurrencyPrice(listing)
+  walkingMinutes: number | null
+  shulDistances: Array<{
+    shul_name: string
+    walking_minutes: number
+  }>
 }
 
 export function ListingDetailClient({
@@ -103,6 +112,8 @@ export function ListingDetailClient({
   similarListings,
   fromStays,
   neighbourhoodDescription,
+  walkingMinutes,
+  shulDistances,
 }: ListingDetailClientProps) {
   const [copiedLink, setCopiedLink] = useState(false)
   const [showGallery, setShowGallery] = useState(false)
@@ -132,6 +143,23 @@ export function ListingDetailClient({
     nights > 0 && listing.price_usd
       ? nights * listing.price_usd
       : null
+  const hasJewishFeatures =
+    Boolean(
+      listing.kosher_kitchen_level &&
+      listing.kosher_kitchen_level !== 'not_kosher',
+    ) ||
+    listing.shabbat_elevator ||
+    listing.physical_key_entry ||
+    listing.shabbat_clock ||
+    listing.sukkah_balcony ||
+    listing.near_synagogue ||
+    Boolean(listing.walking_minutes_to_kotel)
+  const comfortFeatures = [
+    listing.central_ac ? 'Central air conditioning' : null,
+    listing.american_washer_dryer ? 'American washer and dryer' : null,
+    listing.american_mattress ? 'American-style mattresses' : null,
+    listing.powerful_water_heater ? 'Powerful water heater' : null,
+  ].filter((item): item is string => Boolean(item))
 
   useEffect(() => {
     const supabase = createClient()
@@ -442,6 +470,50 @@ export function ListingDetailClient({
                   <span>Sleeps {listing.max_guests}</span>
                 )}
               </div>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {walkingMinutes !== null && (
+                  <div className="flex items-center gap-1.5">
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#c76f55"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="12" cy="5" r="1" />
+                      <path d="m9 20 3-6 3 6" />
+                      <path d="m6 8 6 2 3-3" />
+                    </svg>
+                    <span className="text-sm text-stone-600">
+                      {walkingMinutes <= 5
+                        ? `${walkingMinutes} min walk to the Kotel`
+                        : walkingMinutes <= 20
+                          ? `${walkingMinutes} min walk to the Old City`
+                          : `${walkingMinutes} min walk to the Old City gates`}
+                    </span>
+                  </div>
+                )}
+                {listing.american_comfort && (
+                  <div className="inline-flex items-center gap-1.5 rounded-full border border-[#c76f55]/30 bg-[#fff4ef] px-3 py-1">
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#c76f55"
+                      strokeWidth="2.5"
+                    >
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                    <span className="text-xs font-bold text-[#c76f55]">
+                      American comfort verified
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
 
             {listing.description && (
@@ -472,6 +544,81 @@ export function ListingDetailClient({
                 <div className="py-8">
                   <h2 className="mb-3 text-lg font-bold text-stone-900">Amenities</h2>
                   <AmenityDisplay amenities={listing.amenities} />
+                </div>
+              </>
+            )}
+
+            {(hasJewishFeatures || comfortFeatures.length > 0 || shulDistances.length > 0) && (
+              <>
+                <hr className="border-stone-100" />
+                <div className="py-8">
+                  <h2 className="font-display text-xl font-bold text-stone-950">
+                    Jewish lifestyle
+                  </h2>
+                  <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    {listing.kosher_kitchen_level &&
+                      listing.kosher_kitchen_level !== 'not_kosher' && (
+                        <FeaturePill
+                          label={kosherLabel(listing.kosher_kitchen_level)}
+                          icon="kosher"
+                        />
+                      )}
+                    {listing.shabbat_elevator && (
+                      <FeaturePill label="Shabbat elevator" icon="elevator" />
+                    )}
+                    {listing.physical_key_entry && (
+                      <FeaturePill label="Physical key entry" icon="key" />
+                    )}
+                    {listing.shabbat_clock && (
+                      <FeaturePill label="Shabbat clock" icon="clock" />
+                    )}
+                    {listing.sukkah_balcony && (
+                      <FeaturePill label="Sukkah balcony" icon="sukkah" />
+                    )}
+                    {listing.near_synagogue && (
+                      <FeaturePill label="Near synagogue" icon="synagogue" />
+                    )}
+                    {listing.walking_minutes_to_kotel && (
+                      <FeaturePill
+                        label={`${listing.walking_minutes_to_kotel} min walk to Kotel`}
+                        icon="kotel"
+                      />
+                    )}
+                    {comfortFeatures.map((feature) => (
+                      <FeaturePill key={feature} label={feature} icon="comfort" />
+                    ))}
+                  </div>
+                  {shulDistances.length > 0 && (
+                    <div className="mt-3 space-y-1.5">
+                      <p className="text-xs font-bold uppercase tracking-widest text-stone-400">
+                        Walking distance to shuls
+                      </p>
+                      {shulDistances.map((shul) => (
+                        <div
+                          key={shul.shul_name}
+                          className="flex items-center gap-2"
+                        >
+                          <svg
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#c76f55"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <circle cx="12" cy="5" r="1" />
+                            <path d="m9 20 3-6 3 6" />
+                            <path d="m6 8 6 2 3-3" />
+                          </svg>
+                          <span className="text-sm text-stone-600">
+                            {shul.walking_minutes} min walk to {shul.shul_name}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </>
             )}
@@ -842,6 +989,29 @@ function StarRating({ rating }: { rating: number }) {
           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
         </svg>
       ))}
+    </div>
+  )
+}
+
+function kosherLabel(level: string): string {
+  const labels: Record<string, string> = {
+    kosher_friendly: 'Kosher-friendly kitchen',
+    kosher: 'Kosher kitchen',
+    glatt_kosher: 'Glatt kosher kitchen',
+    chalav_yisrael: 'Chalav Yisrael kitchen',
+  }
+  return labels[level] || 'Kosher kitchen'
+}
+
+function FeaturePill({
+  label,
+}: {
+  label: string
+  icon: string
+}) {
+  return (
+    <div className="flex items-center gap-2 rounded-2xl border border-stone-200 bg-white px-3 py-2.5">
+      <p className="text-sm font-medium text-stone-800">{label}</p>
     </div>
   )
 }

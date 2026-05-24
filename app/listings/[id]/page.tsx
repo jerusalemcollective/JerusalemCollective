@@ -32,6 +32,14 @@ type SimilarListing = {
   price_usd: number | null
 }
 
+type ShulDistance = {
+  shul_name: string
+  walking_minutes: number
+}
+
+const KOTEL_LAT = 31.7767
+const KOTEL_LNG = 35.2345
+
 const listingDetailListingSchema = z.object({
   id: z.string(),
   host_id: z.string().nullable(),
@@ -48,6 +56,18 @@ const listingDetailListingSchema = z.object({
   house_rules: z.string().nullable(),
   latitude: z.number().nullable(),
   longitude: z.number().nullable(),
+  shabbat_elevator: z.boolean().nullish().transform((value) => Boolean(value)),
+  physical_key_entry: z.boolean().nullish().transform((value) => Boolean(value)),
+  shabbat_clock: z.boolean().nullish().transform((value) => Boolean(value)),
+  kosher_kitchen_level: z.string().nullable().optional().transform((value) => value ?? null),
+  walking_minutes_to_kotel: z.number().nullable().optional().transform((value) => value ?? null),
+  near_synagogue: z.boolean().nullish().transform((value) => Boolean(value)),
+  sukkah_balcony: z.boolean().nullish().transform((value) => Boolean(value)),
+  american_comfort: z.boolean().nullish().transform((value) => Boolean(value)),
+  central_ac: z.boolean().nullish().transform((value) => Boolean(value)),
+  american_washer_dryer: z.boolean().nullish().transform((value) => Boolean(value)),
+  american_mattress: z.boolean().nullish().transform((value) => Boolean(value)),
+  powerful_water_heater: z.boolean().nullish().transform((value) => Boolean(value)),
 })
 
 const hostRowSchema = z.object({
@@ -87,11 +107,39 @@ const similarListingSchema = z.object({
   price_usd: z.number().nullable(),
 })
 
+const shulDistanceSchema = z.object({
+  shul_name: z.string(),
+  walking_minutes: z.number(),
+})
+
 export const revalidate = 3600
 
 function getPublicName(host: HostRecord): string {
   if (host.show_full_name) return host.name
   return host.display_name || host.name.split(' ')[0]
+}
+
+function estimateWalkingMinutes(
+  lat: number,
+  lng: number,
+): number {
+  const R = 6371000
+  const dLat = ((KOTEL_LAT - lat) * Math.PI) / 180
+  const dLng = ((KOTEL_LNG - lng) * Math.PI) / 180
+  const a =
+    Math.sin(dLat / 2) *
+      Math.sin(dLat / 2) +
+    Math.cos((lat * Math.PI) / 180) *
+      Math.cos((KOTEL_LAT * Math.PI) / 180) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2)
+  const c =
+    2 * Math.atan2(
+      Math.sqrt(a),
+      Math.sqrt(1 - a),
+    )
+  const distanceMetres = R * c
+  return Math.round((distanceMetres / 80) * 1.3)
 }
 
 export async function generateMetadata({
@@ -197,6 +245,18 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
             amenities: sampleListing.amenities || [],
             description: sampleListing.description || null,
             house_rules: null,
+            shabbat_elevator: false,
+            physical_key_entry: false,
+            shabbat_clock: false,
+            kosher_kitchen_level: null,
+            walking_minutes_to_kotel: null,
+            near_synagogue: false,
+            sukkah_balcony: false,
+            american_comfort: false,
+            central_ac: false,
+            american_washer_dryer: false,
+            american_mattress: false,
+            powerful_water_heater: false,
           }}
           host={null}
           publicHostName={null}
@@ -210,6 +270,8 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
           similarListings={[]}
           fromStays={fromStays}
           neighbourhoodDescription={null}
+          walkingMinutes={null}
+          shulDistances={[]}
         />
       )
     }
@@ -219,6 +281,14 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
 
   const structuredListing = listingDetailListingSchema.parse(listingData)
   const listing: ListingDetailListing = structuredListing
+  const walkingMinutes =
+    listing.walking_minutes_to_kotel ||
+    (structuredListing.latitude && structuredListing.longitude
+      ? estimateWalkingMinutes(
+          structuredListing.latitude,
+          structuredListing.longitude,
+        )
+      : null)
   const neighbourhoodDescription = listingData?.area
     ? neighborhoodDescriptions[listingData.area] || null
     : null
@@ -227,6 +297,7 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
     { data: hostData },
     { data: reviewsData },
     { data: blockedRangesData },
+    { data: shulDistancesData },
   ] = await Promise.all([
     supabase
       .from('listing_photos')
@@ -250,6 +321,11 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
       .from('listing_unavailable_ranges')
       .select('start_date, end_date')
       .eq('listing_id', id),
+    supabase
+      .from('listing_shul_distances')
+      .select('shul_name, walking_minutes')
+      .eq('listing_id', id)
+      .order('walking_minutes', { ascending: true }),
   ])
 
   const { data: similarRaw } = await supabase
@@ -287,6 +363,7 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
 
   const photos: ListingDetailPhoto[] = z.array(listingPhotoSchema).parse(photosData ?? [])
   const reviews: ListingDetailReview[] = z.array(listingReviewSchema).parse(reviewsData ?? [])
+  const shulDistances: ShulDistance[] = z.array(shulDistanceSchema).parse(shulDistancesData ?? [])
   const avgRating =
     reviews.length > 0
       ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
@@ -369,6 +446,8 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
         similarListings={similarListings}
         fromStays={fromStays}
         neighbourhoodDescription={neighbourhoodDescription}
+        walkingMinutes={walkingMinutes}
+        shulDistances={shulDistances}
       />
     </>
   )

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type Dispatch, type RefObject
 import { allNeighborhoods } from '@/lib/neighborhoods'
 import { Calendar } from '@/components/ui/calendar'
 import { formatHebrewShortDate } from '@/lib/hebrew-date'
+import { formatDateISO } from '@/lib/utils/date'
 
 type DateRange = {
   from?: Date
@@ -44,10 +45,6 @@ function addDays(date: Date, days: number): Date {
   const nextDate = new Date(date)
   nextDate.setDate(nextDate.getDate() + days)
   return nextDate
-}
-
-function formatDateISO(date: Date): string {
-  return date.toISOString().slice(0, 10)
 }
 
 function formatShortDate(date: Date): string {

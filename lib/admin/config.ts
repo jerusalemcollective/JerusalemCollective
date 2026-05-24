@@ -1,8 +1,8 @@
-export const ADMIN_ROLES = ['owner', 'operations', 'support', 'content', 'analyst', 'none'] as const
-
-export type AdminRole = typeof ADMIN_ROLES[number]
+import { ADMIN_ROLES, type AdminRole } from '@/lib/constants'
 
 const ADMIN_ROLE_SET: ReadonlySet<string> = new Set(ADMIN_ROLES)
+
+export { ADMIN_ROLES, type AdminRole }
 
 export function isAdminRole(value: string): value is AdminRole {
   return ADMIN_ROLE_SET.has(value)

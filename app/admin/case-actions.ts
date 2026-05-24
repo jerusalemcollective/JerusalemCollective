@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { requireAdminPermission } from '@/lib/admin'
 import { logAdminAction } from '@/lib/audit'
+import { SUPPORT_CASE_STATUSES } from '@/lib/constants'
 
 export type SupportCaseState = {
   status: 'idle' | 'success' | 'error'
@@ -20,7 +21,7 @@ export async function updateSupportCase(
 
   if (
     !caseId ||
-    !['open', 'under_review', 'waiting_on_guest', 'waiting_on_host', 'resolved', 'closed'].includes(status)
+    !(SUPPORT_CASE_STATUSES as readonly string[]).includes(status)
   ) {
     return {
       status: 'error',
@@ -36,7 +37,7 @@ export async function updateSupportCase(
         status,
         resolution_notes: resolutionNotes || null,
         approved_refund_amount: Number.isFinite(approvedRefundAmount) ? approvedRefundAmount : 0,
-        resolved_at: ['resolved', 'closed'].includes(status) ? new Date().toISOString() : null,
+        resolved_at: status === 'resolved' || status === 'closed' ? new Date().toISOString() : null,
       })
       .eq('id', caseId)
 

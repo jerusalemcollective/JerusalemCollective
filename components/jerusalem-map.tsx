@@ -3,7 +3,7 @@
 import React, { useState, useCallback, Component, ReactNode } from 'react'
 import { GoogleMap, useJsApiLoader, OverlayView, type Libraries } from '@react-google-maps/api'
 import Link from 'next/link'
-import { formatDualCurrencyPrice } from '@/lib/utils/currency'
+import { formatListingPrice } from '@/lib/utils/currency'
 
 interface Listing {
   id: string
@@ -33,10 +33,6 @@ const mapContainerStyle = {
 
 const center = { lat: 31.7683, lng: 35.2137 }
 const googleMapsLibraries: Libraries = ['places']
-
-function formatListingPrice(listing: Pick<Listing, 'price' | 'price_ils' | 'price_usd'>) {
-  return formatDualCurrencyPrice(listing, listing.price || 'Price on request')
-}
 
 const mapOptions: google.maps.MapOptions = {
   disableDefaultUI: false,

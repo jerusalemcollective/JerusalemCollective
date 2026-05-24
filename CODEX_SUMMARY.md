@@ -43,9 +43,12 @@ JLM Collective is a Jerusalem short-term stay marketplace built with Next.js App
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
+GOOGLE_MAPS_API_KEY=your_google_maps_api_key
 OPENAI_API_KEY=your_openai_api_key
 RESEND_API_KEY=your_resend_api_key
 ```
+
+- `GOOGLE_MAPS_API_KEY` is used server-side for address autocomplete support and shul walking distance calculations via the Google Routes API. Ensure Routes API is enabled for the existing Google Maps key.
 
 ## Important Notes
 

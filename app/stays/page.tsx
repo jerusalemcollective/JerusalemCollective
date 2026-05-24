@@ -114,6 +114,12 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
       minPrice,
       maxPrice,
       amenityLabels,
+      kosherKitchen: Boolean(params.kosherKitchen),
+      shabbatElevator: Boolean(params.shabbatElevator),
+      physicalKey: Boolean(params.physicalKey),
+      sukkahBalcony: Boolean(params.sukkahBalcony),
+      nearSynagogue: Boolean(params.nearSynagogue),
+      maxWalkToKotel: params.maxWalkToKotel,
     }),
     loadFeaturedNeighborhoods(),
   ])
@@ -273,6 +279,12 @@ async function loadListings({
   minPrice,
   maxPrice,
   amenityLabels,
+  kosherKitchen,
+  shabbatElevator,
+  physicalKey,
+  sukkahBalcony,
+  nearSynagogue,
+  maxWalkToKotel,
 }: {
   selectedArea: string
   checkIn?: string
@@ -281,6 +293,12 @@ async function loadListings({
   minPrice: number | null
   maxPrice: number | null
   amenityLabels: string[]
+  kosherKitchen: boolean
+  shabbatElevator: boolean
+  physicalKey: boolean
+  sukkahBalcony: boolean
+  nearSynagogue: boolean
+  maxWalkToKotel?: string
 }) {
   const supabase = await createClient()
   let blockedListingIds: string[] = []
@@ -327,6 +345,35 @@ async function loadListings({
   amenityLabels.forEach((amenity) => {
     listingsQuery = listingsQuery.contains('amenities', [amenity])
   })
+
+  if (kosherKitchen) {
+    listingsQuery = listingsQuery
+      .not('kosher_kitchen_level', 'is', null)
+      .neq('kosher_kitchen_level', 'not_kosher')
+  }
+
+  if (shabbatElevator) {
+    listingsQuery = listingsQuery.eq('shabbat_elevator', true)
+  }
+
+  if (physicalKey) {
+    listingsQuery = listingsQuery.eq('physical_key_entry', true)
+  }
+
+  if (sukkahBalcony) {
+    listingsQuery = listingsQuery.eq('sukkah_balcony', true)
+  }
+
+  if (nearSynagogue) {
+    listingsQuery = listingsQuery.eq('near_synagogue', true)
+  }
+
+  if (maxWalkToKotel) {
+    const minutes = Number(maxWalkToKotel)
+    if (Number.isFinite(minutes)) {
+      listingsQuery = listingsQuery.lte('walking_minutes_to_kotel', minutes)
+    }
+  }
 
   if (blockedListingIds.length > 0) {
     listingsQuery = listingsQuery.not('id', 'in', `(${blockedListingIds.join(',')})`)

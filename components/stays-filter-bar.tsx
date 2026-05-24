@@ -28,6 +28,12 @@ export function StaysFilterBar() {
   const [guests, setGuests] = useState(searchParams.get('guests') || '')
   const [minPrice, setMinPrice] = useState(searchParams.get('minPrice') || '')
   const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') || '')
+  const [kosherKitchen, setKosherKitchen] = useState(searchParams.get('kosherKitchen') === '1')
+  const [shabbatElevator, setShabbatElevator] = useState(searchParams.get('shabbatElevator') === '1')
+  const [physicalKey, setPhysicalKey] = useState(searchParams.get('physicalKey') === '1')
+  const [sukkahBalcony, setSukkahBalcony] = useState(searchParams.get('sukkahBalcony') === '1')
+  const [nearSynagogue, setNearSynagogue] = useState(searchParams.get('nearSynagogue') === '1')
+  const [maxWalkToKotel, setMaxWalkToKotel] = useState(searchParams.get('maxWalkToKotel') || '')
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>(
     searchParams.get('amenities')?.split(',').filter(Boolean) || [],
   )
@@ -39,6 +45,12 @@ export function StaysFilterBar() {
     setGuests(searchParams.get('guests') || '')
     setMinPrice(searchParams.get('minPrice') || '')
     setMaxPrice(searchParams.get('maxPrice') || '')
+    setKosherKitchen(searchParams.get('kosherKitchen') === '1')
+    setShabbatElevator(searchParams.get('shabbatElevator') === '1')
+    setPhysicalKey(searchParams.get('physicalKey') === '1')
+    setSukkahBalcony(searchParams.get('sukkahBalcony') === '1')
+    setNearSynagogue(searchParams.get('nearSynagogue') === '1')
+    setMaxWalkToKotel(searchParams.get('maxWalkToKotel') || '')
     setSelectedAmenities(searchParams.get('amenities')?.split(',').filter(Boolean) || [])
     setFiltersOpen(false)
   }, [searchParams])
@@ -53,7 +65,13 @@ export function StaysFilterBar() {
           searchParams.get('guests') ||
           searchParams.get('minPrice') ||
           searchParams.get('maxPrice') ||
-          searchParams.get('amenities'),
+          searchParams.get('amenities') ||
+          searchParams.get('kosherKitchen') ||
+          searchParams.get('shabbatElevator') ||
+          searchParams.get('physicalKey') ||
+          searchParams.get('sukkahBalcony') ||
+          searchParams.get('nearSynagogue') ||
+          searchParams.get('maxWalkToKotel'),
       ),
     [searchParams],
   )
@@ -67,13 +85,21 @@ export function StaysFilterBar() {
     const activeMinPrice = searchParams.get('minPrice')
     const activeMaxPrice = searchParams.get('maxPrice')
     const activeAmenities = searchParams.get('amenities')?.split(',').filter(Boolean) || []
+    const activeJewishFilters = [
+      searchParams.get('kosherKitchen') ? 'Kosher kitchen' : null,
+      searchParams.get('shabbatElevator') ? 'Shabbat elevator' : null,
+      searchParams.get('physicalKey') ? 'Physical key' : null,
+      searchParams.get('sukkahBalcony') ? 'Sukkah balcony' : null,
+      searchParams.get('nearSynagogue') ? 'Near synagogue' : null,
+      searchParams.get('maxWalkToKotel') ? `Within ${searchParams.get('maxWalkToKotel')} min to Kotel` : null,
+    ].filter((item): item is string => Boolean(item))
 
     if (activeArea && activeArea !== 'All') items.push(activeArea)
-    if (checkIn && checkOut) items.push(`${checkIn}–${checkOut}`)
+    if (checkIn && checkOut) items.push(`${checkIn}-${checkOut}`)
     else if (checkIn) items.push(`From ${checkIn}`)
     else if (checkOut) items.push(`Until ${checkOut}`)
     if (activeGuests) items.push(`${activeGuests} guest${activeGuests === '1' ? '' : 's'}`)
-    if (activeMinPrice && activeMaxPrice) items.push(`$${activeMinPrice}–$${activeMaxPrice}`)
+    if (activeMinPrice && activeMaxPrice) items.push(`$${activeMinPrice}-$${activeMaxPrice}`)
     else if (activeMinPrice) items.push(`From $${activeMinPrice}`)
     else if (activeMaxPrice) items.push(`Up to $${activeMaxPrice}`)
 
@@ -87,6 +113,10 @@ export function StaysFilterBar() {
           ? `${amenityLabels.join(', ')} +${remainingCount} more`
           : amenityLabels.join(', '),
       )
+    }
+
+    if (activeJewishFilters.length > 0) {
+      items.push(activeJewishFilters.slice(0, 2).join(', '))
     }
 
     return items
@@ -110,6 +140,12 @@ export function StaysFilterBar() {
     setOrDelete(next, 'minPrice', minPrice)
     setOrDelete(next, 'maxPrice', maxPrice)
     setOrDelete(next, 'amenities', selectedAmenities.join(','))
+    setOrDelete(next, 'kosherKitchen', kosherKitchen ? '1' : '')
+    setOrDelete(next, 'shabbatElevator', shabbatElevator ? '1' : '')
+    setOrDelete(next, 'physicalKey', physicalKey ? '1' : '')
+    setOrDelete(next, 'sukkahBalcony', sukkahBalcony ? '1' : '')
+    setOrDelete(next, 'nearSynagogue', nearSynagogue ? '1' : '')
+    setOrDelete(next, 'maxWalkToKotel', maxWalkToKotel)
 
     const neighborhood = next.get('neighborhood') || next.get('area')
     if (neighborhood && neighborhood !== 'All') {
@@ -132,6 +168,12 @@ export function StaysFilterBar() {
     setGuests('')
     setMinPrice('')
     setMaxPrice('')
+    setKosherKitchen(false)
+    setShabbatElevator(false)
+    setPhysicalKey(false)
+    setSukkahBalcony(false)
+    setNearSynagogue(false)
+    setMaxWalkToKotel('')
     setSelectedAmenities([])
     setFiltersOpen(false)
   }
@@ -183,7 +225,7 @@ export function StaysFilterBar() {
         </div>
       )}
 
-      <div className={`${filtersOpen ? 'mt-4 grid' : 'hidden'} gap-4 lg:grid-cols-[minmax(260px,1.4fr)_0.55fr_0.8fr_1.3fr_auto] lg:items-start`}>
+      <div className={`${filtersOpen ? 'mt-4 grid' : 'hidden'} gap-4 lg:grid-cols-[minmax(260px,1.4fr)_0.55fr_0.8fr_1.2fr_1fr_auto] lg:items-start`}>
         <div className="flex items-center gap-2">
           <label className="flex flex-col gap-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">
@@ -197,9 +239,7 @@ export function StaysFilterBar() {
               className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:border-[#c76f55] focus:outline-none"
             />
           </label>
-          <span className="mt-5 text-stone-400">
-            →
-          </span>
+          <span className="mt-5 text-stone-400">→</span>
           <label className="flex flex-col gap-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">
               Check out
@@ -291,6 +331,30 @@ export function StaysFilterBar() {
           </div>
         </fieldset>
 
+        <fieldset>
+          <legend className="text-sm font-semibold text-stone-700">Jewish lifestyle</legend>
+          <div className="mt-2 max-h-56 space-y-3 overflow-y-auto rounded-2xl border border-stone-200 bg-white p-3">
+            <div className="flex flex-wrap gap-2">
+              <FilterToggle checked={kosherKitchen} label="Kosher kitchen" onChange={setKosherKitchen} />
+              <FilterToggle checked={shabbatElevator} label="Shabbat elevator" onChange={setShabbatElevator} />
+              <FilterToggle checked={physicalKey} label="Physical key entry" onChange={setPhysicalKey} />
+              <FilterToggle checked={sukkahBalcony} label="Sukkah balcony" onChange={setSukkahBalcony} />
+              <FilterToggle checked={nearSynagogue} label="Near synagogue" onChange={setNearSynagogue} />
+            </div>
+            <label className="block text-xs font-semibold text-stone-600">
+              Walking distance to Kotel
+              <input
+                type="number"
+                min={1}
+                value={maxWalkToKotel}
+                onChange={(event) => setMaxWalkToKotel(event.target.value)}
+                className="mt-2 w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:border-[#c76f55] focus:outline-none"
+                placeholder="Within X minutes"
+              />
+            </label>
+          </div>
+        </fieldset>
+
         <div className="flex gap-2 lg:flex-col lg:pt-7">
           <button
             type="button"
@@ -319,6 +383,32 @@ export function StaysFilterBar() {
         </button>
       )}
     </div>
+  )
+}
+
+function FilterToggle({
+  checked,
+  label,
+  onChange,
+}: {
+  checked: boolean
+  label: string
+  onChange: (checked: boolean) => void
+}) {
+  return (
+    <label
+      className={`flex cursor-pointer items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+        checked ? 'bg-[#c76f55] text-white' : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+      }`}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        className="sr-only"
+      />
+      {label}
+    </label>
   )
 }
 

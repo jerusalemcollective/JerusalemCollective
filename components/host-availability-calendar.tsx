@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { Calendar } from '@/components/ui/calendar'
 import { formatHebrewShortDate } from '@/lib/hebrew-date'
+import { formatDateISO } from '@/lib/utils/date'
 
 type ListingOption = {
   id: string
@@ -12,10 +13,6 @@ type ListingOption = {
 type HostAvailabilityCalendarProps = {
   listings: ListingOption[]
   addUnavailableRangeAction: (formData: FormData) => void
-}
-
-function formatDateISO(date: Date): string {
-  return date.toISOString().slice(0, 10)
 }
 
 function formatDisplayDate(date: Date): string {

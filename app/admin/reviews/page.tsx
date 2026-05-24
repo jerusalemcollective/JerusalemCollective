@@ -107,7 +107,7 @@ export default async function AdminReviewsPage({
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
                   <p className="text-sm font-semibold text-stone-500">
-                    {review.listings?.title || 'Listing'} Â· {review.reviewer_name}
+                    {review.listings?.title || 'Listing'} · {review.reviewer_name}
                   </p>
                   <h3 className="mt-2 text-xl font-bold text-stone-950">
                     {review.title || `${review.rating}/5 review`}

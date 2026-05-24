@@ -18,7 +18,7 @@ export default async function HostListingEditPage({
     supabase
       .from('listings')
       .select(
-        'id, title, area, bedrooms, bathrooms, max_guests, price_ils, price_usd, booking_type, amenities, description, house_rules, welcome_message, check_in_instructions, is_published, external_calendar_url, calendar_last_synced_at',
+        'id, title, area, bedrooms, bathrooms, max_guests, price_ils, price_usd, booking_type, amenities, description, house_rules, welcome_message, check_in_instructions, is_published, external_calendar_url, calendar_last_synced_at, shabbat_elevator, physical_key_entry, shabbat_clock, kosher_kitchen_level, walking_minutes_to_kotel, near_synagogue, sukkah_balcony, american_comfort, central_ac, american_washer_dryer, american_mattress, powerful_water_heater',
       )
       .eq('id', id)
       .in('host_id', hostIds)
@@ -109,6 +109,67 @@ export default async function HostListingEditPage({
 
             <EditorSection title="Amenities">
               <AmenitySelector defaultSelectedAmenities={listing.amenities || []} name="amenities" />
+            </EditorSection>
+
+            <EditorSection title="Jewish lifestyle features">
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="Kosher kitchen level">
+                  <select name="kosherKitchenLevel" defaultValue={listing.kosher_kitchen_level || ''} className={inputClass}>
+                    <option value="">Select level</option>
+                    <option value="not_kosher">Not kosher</option>
+                    <option value="kosher_friendly">Kosher-friendly</option>
+                    <option value="kosher">Kosher</option>
+                    <option value="glatt_kosher">Glatt kosher</option>
+                    <option value="chalav_yisrael">Chalav Yisrael / Mehadrin</option>
+                  </select>
+                </Field>
+                <Field label="Approximate walking time to the Kotel (minutes)">
+                  <input
+                    name="walkingMinutesToKotel"
+                    type="number"
+                    min="0"
+                    defaultValue={listing.walking_minutes_to_kotel ?? ''}
+                    className={inputClass}
+                  />
+                </Field>
+              </div>
+              <div className="mt-5 grid gap-3 md:grid-cols-2">
+                <CheckboxField name="shabbatElevator" defaultChecked={Boolean(listing.shabbat_elevator)}>
+                  Building has a Shabbat elevator
+                </CheckboxField>
+                <CheckboxField name="physicalKeyEntry" defaultChecked={Boolean(listing.physical_key_entry)}>
+                  Property uses a physical key (no digital keypad or smartlock)
+                </CheckboxField>
+                <CheckboxField name="shabbatClock" defaultChecked={Boolean(listing.shabbat_clock)}>
+                  Apartment has a Shabbat clock or timer for lights
+                </CheckboxField>
+                <CheckboxField name="sukkahBalcony" defaultChecked={Boolean(listing.sukkah_balcony)}>
+                  Has a balcony suitable for a sukkah
+                </CheckboxField>
+                <CheckboxField name="nearSynagogue" defaultChecked={Boolean(listing.near_synagogue)}>
+                  Within 5 minutes walk of a synagogue
+                </CheckboxField>
+              </div>
+            </EditorSection>
+
+            <EditorSection title="American comfort">
+              <p className="text-sm text-stone-600">
+                North American guests often specifically look for these features. Check all that apply.
+              </p>
+              <div className="mt-4 space-y-2">
+                <CheckboxField name="centralAc" defaultChecked={Boolean(listing.central_ac)}>
+                  Central air conditioning (not wall units)
+                </CheckboxField>
+                <CheckboxField name="americanWasherDryer" defaultChecked={Boolean(listing.american_washer_dryer)}>
+                  Full-size American washer and dryer (not a combo unit)
+                </CheckboxField>
+                <CheckboxField name="americanMattress" defaultChecked={Boolean(listing.american_mattress)}>
+                  American-style mattresses (thick, quality spring or memory foam)
+                </CheckboxField>
+                <CheckboxField name="powerfulWaterHeater" defaultChecked={Boolean(listing.powerful_water_heater)}>
+                  Large boiler / powerful water heater (not a small dud shemesh only)
+                </CheckboxField>
+              </div>
             </EditorSection>
 
             <EditorSection title="Description">
@@ -270,6 +331,28 @@ function Field({
     <label className="block">
       <span className="text-sm font-semibold text-stone-800">{label}</span>
       {children}
+    </label>
+  )
+}
+
+function CheckboxField({
+  name,
+  defaultChecked,
+  children,
+}: {
+  name: string
+  defaultChecked: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <label className="flex cursor-pointer items-start gap-3">
+      <input
+        type="checkbox"
+        name={name}
+        defaultChecked={defaultChecked}
+        className="mt-0.5 rounded border-stone-300"
+      />
+      <span className="text-sm text-stone-700">{children}</span>
     </label>
   )
 }

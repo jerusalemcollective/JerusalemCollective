@@ -3,6 +3,10 @@
 import { revalidatePath } from 'next/cache'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { syncExternalCalendar } from '@/lib/calendar-sync'
+import {
+  calculateShulDistances,
+  saveShulDistances,
+} from '@/lib/shul-distances'
 
 type ExternalCalendarState = {
   status: string
@@ -27,6 +31,18 @@ export async function updateHostListing(formData: FormData) {
   const houseRules = String(formData.get('houseRules') || '').trim() || null
   const welcomeMessage = String(formData.get('welcomeMessage') || '').trim() || null
   const checkInInstructions = String(formData.get('checkInInstructions') || '').trim() || null
+  const kosherKitchenLevel = String(formData.get('kosherKitchenLevel') || '').trim() || null
+  const walkingMinutesValue = String(formData.get('walkingMinutesToKotel') || '')
+  const walkingMinutesToKotel = walkingMinutesValue ? Number(walkingMinutesValue) : null
+  const shabbatElevator = formData.get('shabbatElevator') === 'on'
+  const physicalKeyEntry = formData.get('physicalKeyEntry') === 'on'
+  const shabbatClock = formData.get('shabbatClock') === 'on'
+  const sukkahBalcony = formData.get('sukkahBalcony') === 'on'
+  const nearSynagogue = formData.get('nearSynagogue') === 'on'
+  const centralAc = formData.get('centralAc') === 'on'
+  const americanWasherDryer = formData.get('americanWasherDryer') === 'on'
+  const americanMattress = formData.get('americanMattress') === 'on'
+  const powerfulWaterHeater = formData.get('powerfulWaterHeater') === 'on'
 
   if (!listingId) {
     throw new Error('Missing listing id.')
@@ -57,12 +73,60 @@ export async function updateHostListing(formData: FormData) {
       house_rules: houseRules,
       welcome_message: welcomeMessage,
       check_in_instructions: checkInInstructions,
+      kosher_kitchen_level: kosherKitchenLevel,
+      walking_minutes_to_kotel: walkingMinutesToKotel,
+      shabbat_elevator: shabbatElevator,
+      physical_key_entry: physicalKeyEntry,
+      shabbat_clock: shabbatClock,
+      sukkah_balcony: sukkahBalcony,
+      near_synagogue: nearSynagogue,
+      central_ac: centralAc,
+      american_washer_dryer: americanWasherDryer,
+      american_mattress: americanMattress,
+      powerful_water_heater: powerfulWaterHeater,
+      american_comfort:
+        centralAc &&
+        americanWasherDryer &&
+        americanMattress &&
+        powerfulWaterHeater,
     })
     .eq('id', listingId)
     .in('host_id', hostIds)
 
   if (communicationError) {
     throw communicationError
+  }
+
+  const { data: listingForDistances } = await supabase
+    .from('listings')
+    .select('id, latitude, longitude, area')
+    .eq('id', listingId)
+    .in('host_id', hostIds)
+    .maybeSingle()
+
+  if (
+    listingForDistances?.latitude &&
+    listingForDistances.longitude &&
+    listingForDistances.area
+  ) {
+    try {
+      const distances = await calculateShulDistances(
+        listingId,
+        listingForDistances.latitude,
+        listingForDistances.longitude,
+        listingForDistances.area,
+      )
+      await saveShulDistances(
+        supabase,
+        listingId,
+        distances,
+      )
+    } catch (error) {
+      console.error(
+        'Shul distance calculation failed — listing update still saved:',
+        error,
+      )
+    }
   }
 
   revalidatePath('/host/dashboard')

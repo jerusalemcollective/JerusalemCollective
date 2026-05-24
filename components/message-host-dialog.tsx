@@ -10,6 +10,7 @@ import {
   sendConversationMessage,
 } from '@/lib/messaging'
 import { recordListingEngagement } from '@/lib/listing-engagement'
+import { formatDateDisplay, formatDateISO } from '@/lib/utils/date'
 
 type MessageHostDialogProps = {
   listingId: string
@@ -45,18 +46,6 @@ const getErrorMessage = (error: unknown) => {
     return error.message
   }
   return 'We could not send your enquiry. Please try again or contact us on WhatsApp.'
-}
-
-function formatDateDisplay(date: Date): string {
-  return date.toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
-}
-
-function formatDateISO(date: Date): string {
-  return date.toISOString().slice(0, 10)
 }
 
 export function MessageHostDialog({

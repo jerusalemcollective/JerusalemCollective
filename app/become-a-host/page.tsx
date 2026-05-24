@@ -48,6 +48,17 @@ type FormState = {
   price_ils: string
   price_usd: string
   amenities: string[]
+  kosher_kitchen_level: string
+  shabbat_elevator: boolean
+  physical_key_entry: boolean
+  shabbat_clock: boolean
+  sukkah_balcony: boolean
+  near_synagogue: boolean
+  walking_minutes_to_kotel: string
+  central_ac: boolean
+  american_washer_dryer: boolean
+  american_mattress: boolean
+  powerful_water_heater: boolean
   description: string
   photo_link: string
   photos: PhotoUpload[]
@@ -711,6 +722,17 @@ apartment_title: '',
   price_usd: '',
 
 amenities: [],
+  kosher_kitchen_level: '',
+  shabbat_elevator: false,
+  physical_key_entry: false,
+  shabbat_clock: false,
+  sukkah_balcony: false,
+  near_synagogue: false,
+  walking_minutes_to_kotel: '',
+  central_ac: false,
+  american_washer_dryer: false,
+  american_mattress: false,
+  powerful_water_heater: false,
 
 description: '',
   photo_link: '',
@@ -1254,6 +1276,22 @@ async function handleSubmit() {
       price_usd: Number(form.price_usd) || null,
 
       amenities: form.amenities,
+      kosher_kitchen_level: form.kosher_kitchen_level || null,
+      shabbat_elevator: form.shabbat_elevator,
+      physical_key_entry: form.physical_key_entry,
+      shabbat_clock: form.shabbat_clock,
+      sukkah_balcony: form.sukkah_balcony,
+      near_synagogue: form.near_synagogue,
+      walking_minutes_to_kotel: Number(form.walking_minutes_to_kotel) || null,
+      central_ac: form.central_ac,
+      american_washer_dryer: form.american_washer_dryer,
+      american_mattress: form.american_mattress,
+      powerful_water_heater: form.powerful_water_heater,
+      american_comfort:
+        form.central_ac &&
+        form.american_washer_dryer &&
+        form.american_mattress &&
+        form.powerful_water_heater,
 
       description: form.description || null,
       photo_link: form.photo_link || null,
@@ -1865,6 +1903,94 @@ async function handleSubmit() {
                 description="Select the features guests commonly look for when choosing a short-term stay."
               >
                 <AmenitySelector selectedAmenities={form.amenities} onToggle={toggleAmenity} />
+                <div className="mt-8 border-t border-stone-100 pt-8">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-stone-500">
+                    Jewish lifestyle features
+                  </h3>
+                  <div className="mt-4 grid gap-5 md:grid-cols-2">
+                    <Field label="Kosher kitchen level">
+                      <select
+                        value={form.kosher_kitchen_level}
+                        onChange={(e) => updateField('kosher_kitchen_level', e.target.value)}
+                        className={inputClass}
+                      >
+                        <option value="">Select level</option>
+                        <option value="not_kosher">Not kosher</option>
+                        <option value="kosher_friendly">Kosher-friendly</option>
+                        <option value="kosher">Kosher</option>
+                        <option value="glatt_kosher">Glatt kosher</option>
+                        <option value="chalav_yisrael">Chalav Yisrael / Mehadrin</option>
+                      </select>
+                    </Field>
+                    <Field label="Approximate walking time to the Kotel (minutes)">
+                      <input
+                        type="number"
+                        min="0"
+                        value={form.walking_minutes_to_kotel}
+                        onChange={(e) => updateField('walking_minutes_to_kotel', e.target.value)}
+                        className={inputClass}
+                        placeholder="Optional"
+                      />
+                    </Field>
+                  </div>
+                  <div className="mt-5 grid gap-3 md:grid-cols-2">
+                    <LifestyleCheckbox
+                      checked={form.shabbat_elevator}
+                      label="Building has a Shabbat elevator"
+                      onChange={(checked) => updateField('shabbat_elevator', checked)}
+                    />
+                    <LifestyleCheckbox
+                      checked={form.physical_key_entry}
+                      label="Property uses a physical key (no digital keypad or smartlock)"
+                      onChange={(checked) => updateField('physical_key_entry', checked)}
+                    />
+                    <LifestyleCheckbox
+                      checked={form.shabbat_clock}
+                      label="Apartment has a Shabbat clock or timer for lights"
+                      onChange={(checked) => updateField('shabbat_clock', checked)}
+                    />
+                    <LifestyleCheckbox
+                      checked={form.sukkah_balcony}
+                      label="Has a balcony suitable for a sukkah"
+                      onChange={(checked) => updateField('sukkah_balcony', checked)}
+                    />
+                    <LifestyleCheckbox
+                      checked={form.near_synagogue}
+                      label="Within 5 minutes walk of a synagogue"
+                      onChange={(checked) => updateField('near_synagogue', checked)}
+                    />
+                  </div>
+                </div>
+                <div className="mt-8 border-t border-stone-100 pt-8">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-stone-500">
+                    American comfort
+                  </h3>
+                  <p className="mt-1 text-xs text-stone-500">
+                    North American guests often specifically look for these features. Check all that apply.
+                  </p>
+                  <div className="mt-3 space-y-2">
+                    <LifestyleCheckbox
+                      checked={form.central_ac}
+                      label="Central air conditioning (not wall units)"
+                      onChange={(checked) => updateField('central_ac', checked)}
+                    />
+                    <LifestyleCheckbox
+                      checked={form.american_washer_dryer}
+                      label="Full-size American washer and dryer (not a combo unit)"
+                      onChange={(checked) => updateField('american_washer_dryer', checked)}
+                    />
+                    <LifestyleCheckbox
+                      checked={form.american_mattress}
+                      label="American-style mattresses (thick, quality spring or memory foam)"
+                      onChange={(checked) => updateField('american_mattress', checked)}
+                    />
+                    <LifestyleCheckbox
+                      checked={form.powerful_water_heater}
+                      label="Large boiler / powerful water heater (not a small dud shemesh only)"
+                      onChange={(checked) => updateField('powerful_water_heater', checked)}
+                    />
+                  </div>
+                </div>
               </StepShell>
             )}
 
@@ -2500,6 +2626,28 @@ function Field({
         {label} {required && <span className="text-[#c76f55]">*</span>}
       </span>
       {children}
+    </label>
+  )
+}
+
+function LifestyleCheckbox({
+  checked,
+  label,
+  onChange,
+}: {
+  checked: boolean
+  label: string
+  onChange: (checked: boolean) => void
+}) {
+  return (
+    <label className="flex cursor-pointer items-start gap-3">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        className="mt-0.5 rounded border-stone-300"
+      />
+      <span className="text-sm text-stone-700">{label}</span>
     </label>
   )
 }
