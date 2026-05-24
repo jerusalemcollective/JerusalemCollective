@@ -1,4 +1,4 @@
-import { requireAdminPermission } from '@/lib/admin'
+﻿import { requireAdminPermission } from '@/lib/admin'
 import { Pagination, normalizePaginationSearchParams, type PaginationSearchParams } from '@/components/pagination'
 
 const PAGE_SIZE = 25
@@ -20,10 +20,10 @@ type PersonRow = {
 export default async function AdminGuestsPage({
   searchParams,
 }: {
-  searchParams: Promise<PaginationSearchParams>
+  searchParams?: Promise<PaginationSearchParams>
 }) {
   const { supabase } = await requireAdminPermission('guests')
-  const currentSearchParams = normalizePaginationSearchParams(await searchParams)
+  const currentSearchParams = normalizePaginationSearchParams(searchParams ? await searchParams : {})
   const page = Math.max(1, Number(currentSearchParams.page) || 1)
   const { data, error } = await supabase.rpc('list_platform_people')
 
@@ -93,3 +93,4 @@ function Badge({ label, muted = false }: { label: string; muted?: boolean }) {
     </span>
   )
 }
+

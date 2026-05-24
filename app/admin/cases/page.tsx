@@ -1,68 +1,69 @@
-import Link from 'next/link'
+﻿import Link from 'next/link'
 import { requireAdminPermission } from '@/lib/admin'
-import { SupportCaseForm } from './support-case-form'
+import { CasesList, type SupportCase } from './cases-list'
 import { summarizeSupportCases } from '@/lib/marketplace-rules'
-import { StatusBadge } from '@/components/status-badge'
 import { Pagination, normalizePaginationSearchParams, type PaginationSearchParams } from '@/components/pagination'
 
 const PAGE_SIZE = 25
 
-type SupportCase = {
-  id: string
-  case_type: string
-  status: string
-  reason: string
-  requested_amount: number | null
-  approved_refund_amount: number
-  currency: string | null
-  resolution_notes: string | null
-  created_at: string
-  resolved_at: string | null
-  bookings?: {
-    id: string
-  } | null
-  listings?: {
-    id: string
-    title: string
-  } | null
-  guest?: {
-    full_name: string | null
-  } | null
-  host?: {
-    name: string
-  } | null
+function buildAdminUrl(
+  basePath: string,
+  currentParams: Record<string, string | undefined>,
+  updates: Record<string, string>,
+): string {
+  const params = new URLSearchParams()
+  Object.entries({
+    ...currentParams,
+    ...updates,
+    page: '1',
+  }).forEach(([key, value]) => {
+    if (value && value !== 'all') {
+      params.set(key, value)
+    }
+  })
+  const query = params.toString()
+  return query ? `${basePath}?${query}` : basePath
 }
 
 export default async function AdminCasesPage({
   searchParams,
 }: {
-  searchParams: Promise<PaginationSearchParams>
+  searchParams?: Promise<PaginationSearchParams>
 }) {
   const { supabase } = await requireAdminPermission('cases')
-  const currentSearchParams = normalizePaginationSearchParams(await searchParams)
+  const currentSearchParams = normalizePaginationSearchParams(searchParams ? await searchParams : {})
+  const statusFilter = currentSearchParams.status || 'all'
   const page = Math.max(1, Number(currentSearchParams.page) || 1)
+  let casesQuery = supabase
+    .from('support_cases')
+    .select(`
+      id,
+      case_type,
+      status,
+      reason,
+      requested_amount,
+      approved_refund_amount,
+      currency,
+      resolution_notes,
+      created_at,
+      resolved_at,
+      bookings(id),
+      listings(id, title),
+      guest:profiles!support_cases_guest_id_fkey(full_name),
+      host:hosts!support_cases_host_id_fkey(name)
+    `)
+    .order('created_at', { ascending: false })
+
+  let countQuery = supabase.from('support_cases').select('*', { count: 'exact', head: true })
+
+  if (statusFilter !== 'all') {
+    casesQuery = casesQuery.eq('status', statusFilter)
+    countQuery = countQuery.eq('status', statusFilter)
+  }
+
   const [{ data }, { count }] = await Promise.all([
-    supabase
-      .from('support_cases')
-      .select(`
-        id,
-        case_type,
-        status,
-        reason,
-        requested_amount,
-        approved_refund_amount,
-        currency,
-        resolution_notes,
-        created_at,
-        resolved_at,
-        bookings(id),
-        listings(id, title),
-        guest:profiles!support_cases_guest_id_fkey(full_name),
-        host:hosts!support_cases_host_id_fkey(name)
-      `)
-      .order('created_at', { ascending: false })
-      .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1),
-    supabase.from('support_cases').select('*', { count: 'exact', head: true }),
+    casesQuery.range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1),
+    countQuery,
   ])
 
   const cases = (data || []) as SupportCase[]
@@ -85,50 +86,30 @@ export default async function AdminCasesPage({
         <SummaryCard label="Waiting on host" value={summary.waitingOnHost} />
       </div>
 
-      <div className="mt-8 space-y-4">
-        {cases.map((supportCase) => (
-          <article key={supportCase.id} className="rounded-3xl bg-white p-6 shadow-sm">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <StatusBadge status={supportCase.status} scheme="support" />
-                  <TypeBadge type={supportCase.case_type} />
-                </div>
-                <h3 className="mt-4 text-xl font-bold text-stone-950">{supportCase.reason}</h3>
-                <div className="mt-3 space-y-1 text-sm text-stone-600">
-                  <p>
-                    Listing:{' '}
-                    {supportCase.listings ? (
-                      <Link href={`/listings/${supportCase.listings.id}`} className="font-semibold text-stone-900 hover:underline">
-                        {supportCase.listings.title}
-                      </Link>
-                    ) : (
-                      'Not linked'
-                    )}
-                  </p>
-                  <p>Guest: {supportCase.guest?.full_name || 'Guest'}</p>
-                  <p>Host: {supportCase.host?.name || 'Host'}</p>
-                  <p>Opened: {new Date(supportCase.created_at).toLocaleDateString('en-GB')}</p>
-                  <p>
-                    Requested refund:{' '}
-                    {supportCase.requested_amount
-                      ? `${supportCase.currency || ''} ${supportCase.requested_amount.toLocaleString()}`
-                      : 'None requested'}
-                  </p>
-                </div>
-              </div>
-
-              <SupportCaseForm supportCase={supportCase} />
-            </div>
-          </article>
+      <div className="mb-6 mt-8 flex flex-wrap gap-2">
+        {[
+          { label: 'All', value: 'all' },
+          { label: 'Open', value: 'open' },
+          { label: 'Under review', value: 'under_review' },
+          { label: 'Waiting on guest', value: 'waiting_on_guest' },
+          { label: 'Waiting on host', value: 'waiting_on_host' },
+          { label: 'Resolved', value: 'resolved' },
+          { label: 'Closed', value: 'closed' },
+        ].map((option) => (
+          <Link
+            key={option.value}
+            href={buildAdminUrl('/admin/cases', currentSearchParams, { status: option.value })}
+            className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+              statusFilter === option.value
+                ? 'bg-stone-950 text-white'
+                : 'border border-stone-200 bg-white text-stone-700 hover:border-stone-300'
+            }`}
+          >
+            {option.label}
+          </Link>
         ))}
-
-        {cases.length === 0 && (
-          <div className="rounded-3xl bg-white p-10 text-center text-stone-500 shadow-sm">
-            No dispute or refund cases yet.
-          </div>
-        )}
       </div>
+      <CasesList cases={cases} />
       <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} basePath="/admin/cases" searchParams={currentSearchParams} />
     </div>
   )
@@ -143,10 +124,3 @@ function SummaryCard({ label, value }: { label: string; value: number }) {
   )
 }
 
-function TypeBadge({ type }: { type: string }) {
-  return (
-    <span className="inline-flex rounded-full bg-[#fff4ef] px-3 py-1 text-xs font-bold capitalize text-[#c76f55]">
-      {type.replaceAll('_', ' ')}
-    </span>
-  )
-}

@@ -1,4 +1,4 @@
-import Link from 'next/link'
+﻿import Link from 'next/link'
 import { requireAdminPermission } from '@/lib/admin'
 import { StatusBadge } from '@/components/status-badge'
 import { Pagination, normalizePaginationSearchParams, type PaginationSearchParams } from '@/components/pagination'
@@ -16,28 +16,55 @@ type ApplicationRow = {
   rejected_at: string | null
 }
 
+function buildAdminUrl(
+  basePath: string,
+  currentParams: Record<string, string | undefined>,
+  updates: Record<string, string>,
+): string {
+  const params = new URLSearchParams()
+  Object.entries({
+    ...currentParams,
+    ...updates,
+    page: '1',
+  }).forEach(([key, value]) => {
+    if (value && value !== 'all') {
+      params.set(key, value)
+    }
+  })
+  const query = params.toString()
+  return query ? `${basePath}?${query}` : basePath
+}
+
 export default async function AdminApplicationsPage({
   searchParams,
 }: {
-  searchParams: Promise<PaginationSearchParams>
+  searchParams?: Promise<PaginationSearchParams>
 }) {
   const { supabase } = await requireAdminPermission('applications')
-  const currentSearchParams = normalizePaginationSearchParams(await searchParams)
+  const currentSearchParams = normalizePaginationSearchParams(searchParams ? await searchParams : {})
+  const statusFilter = currentSearchParams.status || 'all'
   const page = Math.max(1, Number(currentSearchParams.page) || 1)
   const rejectedVisibilityCutoff = new Date(
     Date.now() - REJECTED_APPLICATION_VISIBLE_HOURS * 60 * 60 * 1000,
   ).toISOString()
+  let applicationsQuery = supabase
+    .from('host_applications')
+    .select('id, host_name, apartment_title, area, status, created_at, rejected_at')
+    .or(`status.neq.rejected,rejected_at.gte.${rejectedVisibilityCutoff}`)
+    .order('created_at', { ascending: false })
+  let countQuery = supabase
+    .from('host_applications')
+    .select('*', { count: 'exact', head: true })
+    .or(`status.neq.rejected,rejected_at.gte.${rejectedVisibilityCutoff}`)
+
+  if (statusFilter !== 'all') {
+    applicationsQuery = applicationsQuery.eq('status', statusFilter)
+    countQuery = countQuery.eq('status', statusFilter)
+  }
+
   const [{ data }, { count }] = await Promise.all([
-    supabase
-      .from('host_applications')
-      .select('id, host_name, apartment_title, area, status, created_at, rejected_at')
-      .or(`status.neq.rejected,rejected_at.gte.${rejectedVisibilityCutoff}`)
-      .order('created_at', { ascending: false })
-      .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1),
-    supabase
-      .from('host_applications')
-      .select('*', { count: 'exact', head: true })
-      .or(`status.neq.rejected,rejected_at.gte.${rejectedVisibilityCutoff}`),
+    applicationsQuery.range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1),
+    countQuery,
   ])
 
   const applications = (data || []) as ApplicationRow[]
@@ -51,6 +78,29 @@ export default async function AdminApplicationsPage({
         <p className="mt-1 text-sm text-stone-500">
           Rejected applications remain here for 25 hours so they can be edited or unrejected, then leave this queue.
         </p>
+      </div>
+
+      <div className="mb-6 flex flex-wrap gap-2">
+        {[
+          { label: 'All', value: 'all' },
+          { label: 'New', value: 'new' },
+          { label: 'In review', value: 'in_review' },
+          { label: 'Changes requested', value: 'changes_requested' },
+          { label: 'Approved', value: 'approved' },
+          { label: 'Rejected', value: 'rejected' },
+        ].map((option) => (
+          <Link
+            key={option.value}
+            href={buildAdminUrl('/admin/applications', currentSearchParams, { status: option.value })}
+            className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+              statusFilter === option.value
+                ? 'bg-stone-950 text-white'
+                : 'border border-stone-200 bg-white text-stone-700 hover:border-stone-300'
+            }`}
+          >
+            {option.label}
+          </Link>
+        ))}
       </div>
 
       <div className="overflow-hidden rounded-3xl bg-white shadow-sm">
@@ -91,3 +141,4 @@ export default async function AdminApplicationsPage({
     </div>
   )
 }
+

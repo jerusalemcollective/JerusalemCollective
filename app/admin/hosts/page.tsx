@@ -1,4 +1,4 @@
-import Link from 'next/link'
+﻿import Link from 'next/link'
 import { requireAdminPermission } from '@/lib/admin'
 import { updateHostVerification } from '@/app/admin/host-actions'
 import { ConfirmSubmitButton } from '@/components/confirm-submit-button'
@@ -24,10 +24,10 @@ type PersonRow = {
 export default async function AdminHostsPage({
   searchParams,
 }: {
-  searchParams: Promise<PaginationSearchParams>
+  searchParams?: Promise<PaginationSearchParams>
 }) {
   const { supabase } = await requireAdminPermission('hosts')
-  const currentSearchParams = normalizePaginationSearchParams(await searchParams)
+  const currentSearchParams = normalizePaginationSearchParams(searchParams ? await searchParams : {})
   const page = Math.max(1, Number(currentSearchParams.page) || 1)
   const { data, error } = await supabase.rpc('list_platform_people')
 
@@ -95,3 +95,4 @@ export default async function AdminHostsPage({
     </div>
   )
 }
+

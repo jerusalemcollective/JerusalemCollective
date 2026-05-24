@@ -1,3 +1,4 @@
+﻿import Link from 'next/link'
 import { requireAdminPermission } from '@/lib/admin'
 import { StatusBadge } from '@/components/status-badge'
 import { Pagination, normalizePaginationSearchParams, type PaginationSearchParams } from '@/components/pagination'
@@ -30,27 +31,54 @@ type EnquiryRow = {
   } | null
 }
 
+function buildAdminUrl(
+  basePath: string,
+  currentParams: Record<string, string | undefined>,
+  updates: Record<string, string>,
+): string {
+  const params = new URLSearchParams()
+  Object.entries({
+    ...currentParams,
+    ...updates,
+    page: '1',
+  }).forEach(([key, value]) => {
+    if (value && value !== 'all') {
+      params.set(key, value)
+    }
+  })
+  const query = params.toString()
+  return query ? `${basePath}?${query}` : basePath
+}
+
 export default async function AdminEnquiriesPage({
   searchParams,
 }: {
-  searchParams: Promise<PaginationSearchParams>
+  searchParams?: Promise<PaginationSearchParams>
 }) {
   const { supabase } = await requireAdminPermission('messages')
-  const currentSearchParams = normalizePaginationSearchParams(await searchParams)
+  const currentSearchParams = normalizePaginationSearchParams(searchParams ? await searchParams : {})
+  const statusFilter = currentSearchParams.status || 'all'
   const page = Math.max(1, Number(currentSearchParams.page) || 1)
+  let enquiriesQuery = supabase
+    .from('booking_requests')
+    .select(`
+      id, listing_id, host_id, guest_id, status, check_in, check_out,
+      guests, message, conversation_id, created_at,
+      listings(title, area),
+      hosts(name, email),
+      guest:profiles!booking_requests_guest_id_fkey(full_name, phone)
+    `)
+    .order('created_at', { ascending: false })
+  let countQuery = supabase.from('booking_requests').select('*', { count: 'exact', head: true })
+
+  if (statusFilter !== 'all') {
+    enquiriesQuery = enquiriesQuery.eq('status', statusFilter)
+    countQuery = countQuery.eq('status', statusFilter)
+  }
+
   const [{ data }, { count }] = await Promise.all([
-    supabase
-      .from('booking_requests')
-      .select(`
-        id, listing_id, host_id, guest_id, status, check_in, check_out,
-        guests, message, conversation_id, created_at,
-        listings(title, area),
-        hosts(name, email),
-        guest:profiles!booking_requests_guest_id_fkey(full_name, phone)
-      `)
-      .order('created_at', { ascending: false })
-      .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1),
-    supabase.from('booking_requests').select('*', { count: 'exact', head: true }),
+    enquiriesQuery.range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1),
+    countQuery,
   ])
 
   const enquiries = (data || []) as EnquiryRow[]
@@ -71,6 +99,29 @@ export default async function AdminEnquiriesPage({
         <Metric label="Total" value={total} />
         <Metric label="New" value={newCount} />
         <Metric label="Active" value={activeCount} />
+      </div>
+
+      <div className="mb-6 flex flex-wrap gap-2 pt-5">
+        {[
+          { label: 'All', value: 'all' },
+          { label: 'New', value: 'new' },
+          { label: 'Host replied', value: 'host_replied' },
+          { label: 'Accepted', value: 'accepted' },
+          { label: 'Declined', value: 'declined' },
+          { label: 'Closed', value: 'closed' },
+        ].map((option) => (
+          <Link
+            key={option.value}
+            href={buildAdminUrl('/admin/enquiries', currentSearchParams, { status: option.value })}
+            className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+              statusFilter === option.value
+                ? 'bg-stone-950 text-white'
+                : 'border border-stone-200 bg-white text-stone-700 hover:border-stone-300'
+            }`}
+          >
+            {option.label}
+          </Link>
+        ))}
       </div>
 
       <div className="divide-y divide-stone-200 border-y border-stone-200">
@@ -145,3 +196,4 @@ function formatDate(value: string | null) {
     year: 'numeric',
   })
 }
+

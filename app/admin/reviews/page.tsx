@@ -1,3 +1,4 @@
+﻿import Link from 'next/link'
 import { requireAdminPermission } from '@/lib/admin'
 import { updateReviewApproval } from '@/app/admin/review-actions'
 import { BooleanBadge } from '@/components/boolean-badge'
@@ -18,21 +19,51 @@ type ReviewRow = {
   } | null
 }
 
+function buildAdminUrl(
+  basePath: string,
+  currentParams: Record<string, string | undefined>,
+  updates: Record<string, string>,
+): string {
+  const params = new URLSearchParams()
+  Object.entries({
+    ...currentParams,
+    ...updates,
+    page: '1',
+  }).forEach(([key, value]) => {
+    if (value && value !== 'all') {
+      params.set(key, value)
+    }
+  })
+  const query = params.toString()
+  return query ? `${basePath}?${query}` : basePath
+}
+
 export default async function AdminReviewsPage({
   searchParams,
 }: {
-  searchParams: Promise<PaginationSearchParams>
+  searchParams?: Promise<PaginationSearchParams>
 }) {
   const { supabase } = await requireAdminPermission('reviews')
-  const currentSearchParams = normalizePaginationSearchParams(await searchParams)
+  const currentSearchParams = normalizePaginationSearchParams(searchParams ? await searchParams : {})
+  const approvedFilter = currentSearchParams.approved || 'all'
   const page = Math.max(1, Number(currentSearchParams.page) || 1)
+  let reviewsQuery = supabase
+    .from('reviews')
+    .select('id, reviewer_name, rating, title, content, is_approved, created_at, listings(title)')
+    .order('created_at', { ascending: false })
+  let countQuery = supabase.from('reviews').select('*', { count: 'exact', head: true })
+
+  if (approvedFilter === 'approved') {
+    reviewsQuery = reviewsQuery.eq('is_approved', true)
+    countQuery = countQuery.eq('is_approved', true)
+  } else if (approvedFilter === 'hidden') {
+    reviewsQuery = reviewsQuery.eq('is_approved', false)
+    countQuery = countQuery.eq('is_approved', false)
+  }
+
   const [{ data }, { count }] = await Promise.all([
-    supabase
-      .from('reviews')
-      .select('id, reviewer_name, rating, title, content, is_approved, created_at, listings(title)')
-      .order('created_at', { ascending: false })
-      .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1),
-    supabase.from('reviews').select('*', { count: 'exact', head: true }),
+    reviewsQuery.range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1),
+    countQuery,
   ])
 
   const reviews = (data || []) as ReviewRow[]
@@ -43,6 +74,26 @@ export default async function AdminReviewsPage({
       <div className="mb-8">
         <h2 className="text-3xl font-bold tracking-tight text-stone-950">Reviews</h2>
         <p className="mt-2 text-stone-600">Approve or hide guest reviews before they appear publicly.</p>
+      </div>
+
+      <div className="mb-6 flex flex-wrap gap-2">
+        {[
+          { label: 'All', value: 'all' },
+          { label: 'Approved', value: 'approved' },
+          { label: 'Hidden', value: 'hidden' },
+        ].map((option) => (
+          <Link
+            key={option.value}
+            href={buildAdminUrl('/admin/reviews', currentSearchParams, { approved: option.value })}
+            className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+              approvedFilter === option.value
+                ? 'bg-stone-950 text-white'
+                : 'border border-stone-200 bg-white text-stone-700 hover:border-stone-300'
+            }`}
+          >
+            {option.label}
+          </Link>
+        ))}
       </div>
 
       <div className="space-y-4">
@@ -56,7 +107,7 @@ export default async function AdminReviewsPage({
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
                   <p className="text-sm font-semibold text-stone-500">
-                    {review.listings?.title || 'Listing'} · {review.reviewer_name}
+                    {review.listings?.title || 'Listing'} Â· {review.reviewer_name}
                   </p>
                   <h3 className="mt-2 text-xl font-bold text-stone-950">
                     {review.title || `${review.rating}/5 review`}
@@ -85,3 +136,4 @@ export default async function AdminReviewsPage({
     </div>
   )
 }
+

@@ -1,4 +1,4 @@
-import Link from 'next/link'
+﻿import Link from 'next/link'
 import { requireAdminPermission } from '@/lib/admin'
 import { updateListingVisibility } from '@/app/admin/listing-actions'
 import { ConfirmSubmitButton } from '@/components/confirm-submit-button'
@@ -32,21 +32,60 @@ type ListingPhotoRow = {
   listing_id: string | null
 }
 
+function buildAdminUrl(
+  basePath: string,
+  currentParams: Record<string, string | undefined>,
+  updates: Record<string, string>,
+): string {
+  const params = new URLSearchParams()
+  Object.entries({
+    ...currentParams,
+    ...updates,
+    page: '1',
+  }).forEach(([key, value]) => {
+    if (value && value !== 'all') {
+      params.set(key, value)
+    }
+  })
+  const query = params.toString()
+  return query ? `${basePath}?${query}` : basePath
+}
+
 export default async function AdminListingsPage({
   searchParams,
 }: {
-  searchParams: Promise<PaginationSearchParams>
+  searchParams?: Promise<PaginationSearchParams>
 }) {
   const { supabase } = await requireAdminPermission('listings')
-  const currentSearchParams = normalizePaginationSearchParams(await searchParams)
+  const currentSearchParams = normalizePaginationSearchParams(searchParams ? await searchParams : {})
+  const publishedFilter = currentSearchParams.published || 'all'
+  const featuredFilter = currentSearchParams.featured || 'all'
   const page = Math.max(1, Number(currentSearchParams.page) || 1)
+  let listingsQuery = supabase
+    .from('listings')
+    .select('id, title, area, host_id, is_published, is_featured, bedrooms, bathrooms, amenities, description, price_usd, price_ils, created_at, hosts(name)')
+    .order('created_at', { ascending: false })
+  let countQuery = supabase.from('listings').select('*', { count: 'exact', head: true })
+
+  if (publishedFilter === 'live') {
+    listingsQuery = listingsQuery.eq('is_published', true)
+    countQuery = countQuery.eq('is_published', true)
+  } else if (publishedFilter === 'hidden') {
+    listingsQuery = listingsQuery.eq('is_published', false)
+    countQuery = countQuery.eq('is_published', false)
+  }
+
+  if (featuredFilter === 'featured') {
+    listingsQuery = listingsQuery.eq('is_featured', true)
+    countQuery = countQuery.eq('is_featured', true)
+  } else if (featuredFilter === 'standard') {
+    listingsQuery = listingsQuery.eq('is_featured', false)
+    countQuery = countQuery.eq('is_featured', false)
+  }
+
   const [{ data }, { count }] = await Promise.all([
-    supabase
-      .from('listings')
-      .select('id, title, area, host_id, is_published, is_featured, bedrooms, bathrooms, amenities, description, price_usd, price_ils, created_at, hosts(name)')
-      .order('created_at', { ascending: false })
-      .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1),
-    supabase.from('listings').select('*', { count: 'exact', head: true }),
+    listingsQuery.range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1),
+    countQuery,
   ])
 
   const listings = (data || []) as ListingRow[]
@@ -65,6 +104,47 @@ export default async function AdminListingsPage({
       <div className="mb-8">
         <h2 className="text-3xl font-bold tracking-tight text-stone-950">Listings</h2>
         <p className="mt-2 text-stone-600">Control what is live and what gets featured.</p>
+      </div>
+
+      <div className="mb-6 space-y-3">
+        <div className="flex flex-wrap gap-2">
+          {[
+            { label: 'All published states', value: 'all' },
+            { label: 'Live', value: 'live' },
+            { label: 'Hidden', value: 'hidden' },
+          ].map((option) => (
+            <Link
+              key={option.value}
+              href={buildAdminUrl('/admin/listings', currentSearchParams, { published: option.value })}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                publishedFilter === option.value
+                  ? 'bg-stone-950 text-white'
+                  : 'border border-stone-200 bg-white text-stone-700 hover:border-stone-300'
+              }`}
+            >
+              {option.label}
+            </Link>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { label: 'All feature states', value: 'all' },
+            { label: 'Featured', value: 'featured' },
+            { label: 'Standard', value: 'standard' },
+          ].map((option) => (
+            <Link
+              key={option.value}
+              href={buildAdminUrl('/admin/listings', currentSearchParams, { featured: option.value })}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                featuredFilter === option.value
+                  ? 'bg-stone-950 text-white'
+                  : 'border border-stone-200 bg-white text-stone-700 hover:border-stone-300'
+              }`}
+            >
+              {option.label}
+            </Link>
+          ))}
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-3xl bg-white shadow-sm">
@@ -156,3 +236,4 @@ function countPhotosByListing(photos: ListingPhotoRow[]) {
 
   return counts
 }
+
