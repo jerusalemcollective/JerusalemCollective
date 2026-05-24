@@ -113,6 +113,7 @@ export function ListingDetailClient({
   const [galleryIndex, setGalleryIndex] = useState(0)
   const [mobilePhotoIndex, setMobilePhotoIndex] = useState(0)
   const [showMobileBooking, setShowMobileBooking] = useState(false)
+  const [showMobileMessageHost, setShowMobileMessageHost] = useState(false)
   const [bookingDateRange, setBookingDateRange] = useState<DateRange>({})
   const [guestCount, setGuestCount] = useState(1)
   const [existingConversationId, setExistingConversationId] = useState<string | null>(null)
@@ -709,21 +710,43 @@ export function ListingDetailClient({
           {existingConversationId ? (
             <Link
               href={`/account/messages?conversation=${existingConversationId}`}
-              className="flex-1 rounded-full bg-[#c76f55] px-5 py-3 text-center text-sm font-bold text-white transition hover:bg-[#b85f47]"
+            className="flex min-h-12 flex-1 items-center justify-center rounded-full bg-[#c76f55] px-5 py-0 text-center text-sm font-bold leading-[1] text-white transition hover:bg-[#b85f47]"
             >
               Continue conversation
             </Link>
           ) : (
-            <button
-              type="button"
-              onClick={() => setShowMobileBooking(true)}
-              className="flex-1 rounded-full bg-stone-950 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-stone-800"
-            >
-              {mobileActionLabel}
-            </button>
+            <div className="flex flex-1 items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowMobileBooking(true)}
+                className="flex min-h-12 flex-1 items-center justify-center rounded-full bg-stone-950 px-4 py-0 text-center text-sm font-semibold leading-[1] text-white shadow-sm transition hover:bg-stone-800"
+              >
+                {mobileActionLabel}
+              </button>
+              {listing.booking_type !== 'enquiry' && (
+                <button
+                  type="button"
+                  onClick={() => setShowMobileMessageHost(true)}
+                  className="flex min-h-12 flex-1 items-center justify-center rounded-full border border-stone-200 bg-white px-4 py-0 text-center text-sm font-semibold leading-[1] text-stone-700 transition hover:border-[#c76f55] hover:text-[#9f513f]"
+                >
+                  Message host
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>
+
+      <MessageHostDialog
+        listingId={listing.id}
+        listingTitle={listing.title}
+        hostId={listing.host_id}
+        guests={guestCount}
+        intent="message"
+        open={showMobileMessageHost}
+        onOpenChange={setShowMobileMessageHost}
+        onConversationCreated={setExistingConversationId}
+      />
 
       {showMobileBooking && (
         <div className="fixed inset-0 z-50 lg:hidden">
@@ -888,7 +911,7 @@ function BookNowButton({
         type="button"
         disabled={disabled || isStartingPayment}
         onClick={handleBookNow}
-        className="flex min-h-11 w-full items-center justify-center rounded-full bg-stone-950 px-5 text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-500 disabled:shadow-none"
+        className="flex min-h-12 w-full items-center justify-center rounded-full bg-stone-950 px-5 py-0 text-center text-sm font-semibold leading-[1] text-white shadow-sm transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-500 disabled:shadow-none"
       >
         {isStartingPayment ? 'Opening checkout...' : 'Book now'}
       </button>
@@ -987,7 +1010,7 @@ function BookingControls({
         {existingConversationId ? (
           <Link
             href={`/account/messages?conversation=${existingConversationId}`}
-            className={`${mobile ? 'flex w-full min-h-11 items-center justify-center rounded-full bg-stone-950 px-5' : 'mb-3 flex w-full min-h-11 items-center justify-center rounded-full bg-stone-950 px-5'} gap-2 text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800`}
+            className={`${mobile ? 'flex min-h-12 w-full items-center justify-center rounded-full bg-stone-950 px-5 py-0' : 'mb-3 flex min-h-12 w-full items-center justify-center rounded-full bg-stone-950 px-5 py-0'} gap-2 text-center text-sm font-semibold leading-[1] text-white shadow-sm transition hover:bg-stone-800`}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -1015,7 +1038,8 @@ function BookingControls({
                 buttonLabel="Request to book"
                 disabled={!hasDates}
                 disabledReason={dateRequiredMessage}
-                buttonClassName="flex min-h-11 w-full items-center justify-center rounded-full bg-[#9f513f] px-5 text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-[#874535] disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-500 disabled:shadow-none"
+                showIcon={false}
+                buttonClassName="flex min-h-12 w-full items-center justify-center rounded-full bg-[#9f513f] px-5 py-0 text-center text-sm font-semibold leading-[1] text-white shadow-sm transition hover:bg-[#874535] disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-500 disabled:shadow-none"
                 onConversationCreated={onConversationCreated}
               />
             )}
@@ -1027,7 +1051,8 @@ function BookingControls({
                 guests={guestCount}
                 intent="message"
                 buttonLabel="Message host"
-                buttonClassName="flex min-h-11 w-full items-center justify-center rounded-full border border-stone-200 bg-white px-5 text-sm font-semibold leading-none text-stone-700 transition hover:border-[#c76f55] hover:text-[#9f513f]"
+                showIcon={false}
+                buttonClassName="flex min-h-12 w-full items-center justify-center rounded-full border border-stone-200 bg-white px-5 py-0 text-center text-sm font-semibold leading-[1] text-stone-700 transition hover:border-[#c76f55] hover:text-[#9f513f]"
                 onConversationCreated={onConversationCreated}
               />
             )}
@@ -1039,7 +1064,8 @@ function BookingControls({
                 guests={guestCount}
                 intent="message"
                 buttonLabel="Message host"
-                buttonClassName="flex min-h-11 w-full items-center justify-center rounded-full bg-stone-950 px-5 text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800"
+                showIcon={false}
+                buttonClassName="flex min-h-12 w-full items-center justify-center rounded-full bg-stone-950 px-5 py-0 text-center text-sm font-semibold leading-[1] text-white shadow-sm transition hover:bg-stone-800"
                 onConversationCreated={onConversationCreated}
               />
             )}
