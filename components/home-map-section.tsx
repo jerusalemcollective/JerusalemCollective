@@ -51,12 +51,19 @@ export function HomeMapSection({ listings }: { listings: HomeMapListing[] }) {
             <path d="M245 92 L337 82 L368 130 L319 169 L251 151 Z" fill="#e7e3d9" opacity="0.88" />
             <circle cx="206" cy="190" r="66" fill="none" stroke="#d0cfc6" strokeWidth="2" strokeDasharray="6 8" opacity="0.7" />
             <circle cx="206" cy="190" r="120" fill="none" stroke="#d0cfc6" strokeWidth="2" strokeDasharray="5 10" opacity="0.45" />
+            <text x="64" y="123" fill="#918d83" fontSize="10" fontWeight="700" transform="rotate(-5 64 123)">King George St</text>
+            <text x="182" y="92" fill="#918d83" fontSize="10" fontWeight="700" transform="rotate(-8 182 92)">Ben Yehuda</text>
+            <text x="55" y="275" fill="#918d83" fontSize="10" fontWeight="700" transform="rotate(-8 55 275)">Emek Refaim</text>
+            <text x="278" y="218" fill="#918d83" fontSize="10" fontWeight="700" transform="rotate(-4 278 218)">Jaffa Road</text>
+            <text x="285" y="146" fill="#7f8978" fontSize="11" fontWeight="800">Rechavia</text>
+            <text x="44" y="213" fill="#7f8978" fontSize="11" fontWeight="800">German Colony</text>
+            <text x="300" y="306" fill="#7f8978" fontSize="11" fontWeight="800">Baka</text>
           </svg>
         </div>
         <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-[#fff4ef]/35" />
         <div className="absolute left-4 top-4 rounded-xl bg-white px-3 py-2 shadow-md ring-1 ring-stone-100">
-          <div className="text-xs font-bold text-stone-950">Map preview</div>
-          <div className="text-[10px] text-stone-500">Browse stays by area</div>
+          <div className="text-xs font-bold text-stone-950">Jerusalem stays</div>
+          <div className="text-[10px] text-stone-500">Browse by neighbourhood</div>
         </div>
         <Link href="/map" className="absolute right-4 top-4 rounded-full bg-white px-3 py-1.5 text-[10px] font-bold text-stone-800 shadow-md transition hover:bg-stone-50">
           Full screen

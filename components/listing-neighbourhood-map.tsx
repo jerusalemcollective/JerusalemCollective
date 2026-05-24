@@ -62,9 +62,9 @@ function StaticNeighbourhoodMap({
         </svg>
       </div>
       <div className="absolute inset-0 bg-gradient-to-br from-white/18 via-transparent to-[#fff4ef]/32" />
-      <div className="absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#c76f55]/15 ring-2 ring-[#c76f55]/40" />
+      <div className="absolute left-1/2 top-1/2 h-14 w-14 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#c76f55]/15 ring-2 ring-[#c76f55]/40" />
       <div className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#c76f55] shadow-lg ring-4 ring-white" />
-      <div className="absolute left-1/2 top-[calc(50%+4.5rem)] -translate-x-1/2 rounded-2xl bg-white px-4 py-3 text-center shadow-xl ring-1 ring-stone-200">
+      <div className="absolute left-1/2 top-[calc(50%+2.75rem)] -translate-x-1/2 rounded-2xl bg-white px-4 py-3 text-center shadow-xl ring-1 ring-stone-200">
         <p className="max-w-[220px] truncate text-sm font-bold text-stone-950">
           Approximate location
         </p>
@@ -134,7 +134,7 @@ export function ListingNeighbourhoodMap({
           mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
         >
           <div className="-translate-x-1/2 -translate-y-1/2">
-            <div className="h-28 w-28 rounded-full bg-[#c76f55]/15 ring-2 ring-[#c76f55]/40" />
+            <div className="h-14 w-14 rounded-full bg-[#c76f55]/15 ring-2 ring-[#c76f55]/40" />
             <div className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#c76f55] shadow-lg ring-4 ring-white" />
           </div>
         </OverlayView>
