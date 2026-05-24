@@ -1,25 +1,32 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { CalendarDays } from 'lucide-react'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { Breadcrumb } from '@/components/breadcrumb'
 import { StatusBadge } from '@/components/status-badge'
+import { formatDateDisplay, formatWaitTime, shouldShowSimilarStaysLink } from '@/lib/utils/date'
 
-type EnquiryRow = {
-  id: string
-  status: string
-  check_in: string | null
-  check_out: string | null
-  guests: number
-  message: string | null
-  created_at: string | null
-  conversation_id: string | null
-  listings?: {
-    id: string
-    title: string
-    area: string | null
-  } | null
-}
+const enquiryRowSchema = z.object({
+  id: z.string(),
+  status: z.string(),
+  check_in: z.string().nullable(),
+  check_out: z.string().nullable(),
+  guests: z.number(),
+  message: z.string().nullable(),
+  created_at: z.string().nullable(),
+  conversation_id: z.string().nullable(),
+  listings: z
+    .object({
+      id: z.string(),
+      title: z.string(),
+      area: z.string().nullable(),
+    })
+    .nullable()
+    .optional(),
+})
+
+type EnquiryRow = z.infer<typeof enquiryRowSchema>
 
 export const metadata = {
   title: 'My enquiries',
@@ -42,7 +49,7 @@ export default async function EnquiriesPage() {
     .eq('guest_id', user.id)
     .order('created_at', { ascending: false })
 
-  const enquiries: EnquiryRow[] = data || []
+  const enquiries: EnquiryRow[] = z.array(enquiryRowSchema).parse(data ?? [])
 
   return (
     <div className="min-h-screen">
@@ -79,7 +86,7 @@ export default async function EnquiriesPage() {
                     <p className="font-bold text-stone-950">{enquiry.listings?.title || 'Stay enquiry'}</p>
                     <p className="mt-1 text-sm text-stone-600">{enquiry.listings?.area || 'Jerusalem'}</p>
                     <p className="mt-2 text-sm font-medium text-stone-700">
-                      {formatDate(enquiry.check_in)} to {formatDate(enquiry.check_out)}
+                      {formatDateDisplay(enquiry.check_in)} to {formatDateDisplay(enquiry.check_out)}
                     </p>
                     <p className="mt-1 text-sm text-stone-600">
                       {enquiry.guests} guest{enquiry.guests === 1 ? '' : 's'}
@@ -126,28 +133,4 @@ function EmptyState() {
       </Link>
     </div>
   )
-}
-
-function formatDate(value?: string | null) {
-  if (!value) return 'TBC'
-  return new Date(`${value}T12:00:00`).toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  })
-}
-
-function formatWaitTime(createdAt: string | null, status: string): string | null {
-  if (status !== 'new' || !createdAt) return null
-  const hours = Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60))
-  if (hours < 1) return 'Sent just now'
-  if (hours < 24) return `Sent ${hours} hour${hours === 1 ? '' : 's'} ago — awaiting reply`
-  const days = Math.floor(hours / 24)
-  return `Sent ${days} day${days === 1 ? '' : 's'} ago — awaiting reply`
-}
-
-function shouldShowSimilarStaysLink(createdAt: string | null, status: string): boolean {
-  if (status !== 'new' || !createdAt) return false
-  const hours = Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60))
-  return hours >= 48
 }

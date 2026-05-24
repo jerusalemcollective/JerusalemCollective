@@ -1,12 +1,38 @@
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { Breadcrumb } from '@/components/breadcrumb'
-import {
-  SupportCaseClientForm,
-  type AccountSupportCase,
-  type SupportBooking,
-} from '@/components/support-case-client-form'
+import { SupportCaseClientForm } from '@/components/support-case-client-form'
+
+const supportBookingSchema = z.object({
+  id: z.string(),
+  listing_id: z.string().nullable().transform((value) => value ?? ''),
+  host_id: z.string().nullable(),
+  check_in: z.string().nullable().transform((value) => value ?? ''),
+  check_out: z.string().nullable().transform((value) => value ?? ''),
+  listings: z
+    .object({
+      title: z.string(),
+    })
+    .nullable(),
+})
+
+const accountSupportCaseSchema = z.object({
+  id: z.string(),
+  case_type: z.string(),
+  status: z.string(),
+  reason: z.string().nullable().transform((value) => value ?? ''),
+  requested_amount: z.number().nullable(),
+  approved_refund_amount: z.number().nullable().transform((value) => value ?? 0),
+  currency: z.string().nullable(),
+  created_at: z.string().nullable().transform((value) => value ?? ''),
+  listings: z
+    .object({
+      title: z.string(),
+    })
+    .nullable(),
+})
 
 export default async function AccountSupportPage() {
   const supabase = await createClient()
@@ -46,8 +72,8 @@ export default async function AccountSupportPage() {
         <Suspense fallback={<SupportFormSkeleton />}>
           <SupportCaseClientForm
             userId={user.id}
-            initialBookings={(bookingRows || []) as SupportBooking[]}
-            initialCases={(caseRows || []) as AccountSupportCase[]}
+            initialBookings={z.array(supportBookingSchema).parse(bookingRows ?? [])}
+            initialCases={z.array(accountSupportCaseSchema).parse(caseRows ?? [])}
           />
         </Suspense>
       </section>

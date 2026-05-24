@@ -12,6 +12,7 @@ import { SaveListingButton } from '@/components/save-listing-button'
 import { AmenityDisplay } from '@/components/amenity-display'
 import { recordListingView } from '@/components/recently-viewed'
 import { recordListingEngagement } from '@/lib/listing-engagement'
+import { formatDualCurrencyPrice } from '@/lib/utils/currency'
 
 type DateRange = {
   from?: Date
@@ -89,13 +90,7 @@ function formatPrice(value?: number | null) {
 }
 
 function formatListingPrice(listing: Pick<SimilarListing, 'price_ils' | 'price_usd'>) {
-  const ils = formatPrice(listing.price_ils)
-  const usd = formatPrice(listing.price_usd)
-
-  if (ils && usd) return `\u20aa${ils} / $${usd}`
-  if (ils) return `\u20aa${ils}`
-  if (usd) return `$${usd}`
-  return 'Price on request'
+  return formatDualCurrencyPrice(listing)
 }
 
 export function ListingDetailClient({

@@ -1,19 +1,24 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { CalendarDays } from 'lucide-react'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { Breadcrumb } from '@/components/breadcrumb'
+import { formatDateDisplay } from '@/lib/utils/date'
 
-type BookingRow = {
-  id: string
-  check_in: string | null
-  check_out: string | null
-  listings?: {
-    id: string
-    title: string
-    area: string | null
-  } | null
-}
+const bookingRowSchema = z.object({
+  id: z.string(),
+  check_in: z.string().nullable(),
+  check_out: z.string().nullable(),
+  listings: z
+    .object({
+      id: z.string(),
+      title: z.string(),
+      area: z.string().nullable(),
+    })
+    .nullable()
+    .optional(),
+})
 
 export default async function BookingsPage() {
   const supabase = await createClient()
@@ -31,7 +36,7 @@ export default async function BookingsPage() {
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
-  const bookings = (data || []) as BookingRow[]
+  const bookings = z.array(bookingRowSchema).parse(data ?? [])
 
   return (
     <div className="min-h-screen">
@@ -56,7 +61,7 @@ export default async function BookingsPage() {
                   <p className="font-bold text-stone-950">{booking.listings?.title || 'Stay'}</p>
                   <p className="mt-1 text-sm text-stone-600">{booking.listings?.area || 'Jerusalem'}</p>
                   <p className="mt-2 text-sm font-medium text-stone-700">
-                    {formatDate(booking.check_in)} to {formatDate(booking.check_out)}
+                    {formatDateDisplay(booking.check_in)} to {formatDateDisplay(booking.check_out)}
                   </p>
                 </Link>
                 <div className="flex flex-col items-start gap-2 md:items-end">
@@ -95,13 +100,4 @@ function EmptyState() {
       </Link>
     </div>
   )
-}
-
-function formatDate(value?: string | null) {
-  if (!value) return 'TBC'
-  return new Date(`${value}T12:00:00`).toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  })
 }

@@ -1,36 +1,33 @@
 ﻿import { createClient } from '@/lib/supabase/server'
+import { z } from 'zod'
 import { sampleListings } from '@/lib/sample-listings'
 import { MapPageClient, type MapListing } from '@/components/map-page-client'
+import { formatDualCurrencyPrice } from '@/lib/utils/currency'
 
-type ListingRow = {
-  id: string
-  title: string
-  area: string
-  price_ils: number | null
-  price_usd: number | null
-  bedrooms: number
-  max_guests: number
-  latitude: number | null
-  longitude: number | null
-  amenities: string[] | null
-}
+const listingRowSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  area: z.string(),
+  price_ils: z.number().nullable(),
+  price_usd: z.number().nullable(),
+  bedrooms: z.number().nullable().transform((value) => value ?? 0),
+  max_guests: z.number().nullable().transform((value) => value ?? 0),
+  latitude: z.number().nullable(),
+  longitude: z.number().nullable(),
+  amenities: z.array(z.string()).nullable(),
+})
 
-type ListingPhotoRow = {
-  listing_id: string
-  photo_url: string
-  is_cover: boolean | null
-}
+const listingPhotoRowSchema = z.object({
+  listing_id: z.string(),
+  photo_url: z.string(),
+  is_cover: z.boolean().nullable(),
+})
+
+type ListingRow = z.infer<typeof listingRowSchema>
 
 export const metadata = {
   title: 'Jerusalem Map | JLM Collective',
   description: 'Browse curated Jerusalem stays on the map.',
-}
-
-function formatPrice(listing: Pick<ListingRow, 'price_ils' | 'price_usd'>) {
-  const prices = []
-  if (listing.price_ils) prices.push(`₪${listing.price_ils.toLocaleString()}`)
-  if (listing.price_usd) prices.push(`$${listing.price_usd.toLocaleString()}`)
-  return prices.length ? prices.join(' / ') : 'Price on request'
 }
 
 function toMapListing(listing: ListingRow, coverPhotoUrl: string | null): MapListing {
@@ -38,7 +35,7 @@ function toMapListing(listing: ListingRow, coverPhotoUrl: string | null): MapLis
     id: listing.id,
     title: listing.title,
     area: listing.area,
-    price: formatPrice(listing),
+    price: formatDualCurrencyPrice(listing),
     price_ils: listing.price_ils,
     price_usd: listing.price_usd,
     bedrooms: listing.bedrooms,
@@ -58,7 +55,7 @@ export default async function MapPage() {
     .eq('is_published', true)
     .order('is_featured', { ascending: false })
 
-  const listingRows = data?.length ? (data as ListingRow[]) : (sampleListings as ListingRow[])
+  const listingRows = z.array(listingRowSchema).parse(data?.length ? data : sampleListings)
   const listingIds = listingRows.map((listing) => listing.id)
   const { data: photoData } =
     listingIds.length > 0
@@ -70,7 +67,7 @@ export default async function MapPage() {
       : { data: [] }
   const coverPhotoByListing = new Map<string, string>()
 
-  for (const photo of (photoData || []) as ListingPhotoRow[]) {
+  for (const photo of z.array(listingPhotoRowSchema).parse(photoData ?? [])) {
     if (!coverPhotoByListing.has(photo.listing_id)) {
       coverPhotoByListing.set(photo.listing_id, photo.photo_url)
     }

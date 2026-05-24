@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { requireAdminPermission } from '@/lib/admin'
 import { logAdminAction } from '@/lib/audit'
+import { isAdminRole } from '@/lib/admin/config'
 
 export type AdminGrantState = {
   status: 'idle' | 'success' | 'error'
@@ -23,7 +24,7 @@ export async function grantAdminByEmail(
     }
   }
 
-  if (!['owner', 'operations', 'support', 'content', 'analyst', 'none'].includes(role)) {
+  if (!isAdminRole(role)) {
     return {
       status: 'error',
       message: 'Please choose a valid admin role.',

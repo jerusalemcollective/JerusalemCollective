@@ -1,9 +1,11 @@
 import { Suspense } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { allNeighborhoods } from '@/lib/neighborhoods'
 import { getAmenityLabel } from '@/lib/stay-amenities'
+import { formatDualCurrencyPrice } from '@/lib/utils/currency'
 import { StaysFilterBar } from '@/components/stays-filter-bar'
 import { StaysMapView } from '@/components/stays-map-view'
 import { StaysNeighborhoodNav } from '@/components/stays-neighborhood-nav'
@@ -21,53 +23,39 @@ const defaultFeaturedNeighborhoods = ['Romema', 'Ramat Eshkol', 'Rechavia']
 
 type SearchParams = Record<string, string>
 
-type Listing = {
-  id: string
-  title: string
-  area: string
-  bedrooms: number
-  max_guests: number
-  price_ils: number | null
-  price_usd: number | null
-  booking_type: string
-  is_featured: boolean | null
-  latitude: number
-  longitude: number
-  amenities: string[]
-  cover_photo_url?: string | null
-}
+const listingSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  area: z.string(),
+  bedrooms: z.number().nullable().transform((value) => value ?? 0),
+  max_guests: z.number().nullable().transform((value) => value ?? 0),
+  price_ils: z.number().nullable(),
+  price_usd: z.number().nullable(),
+  booking_type: z.string(),
+  is_featured: z.boolean().nullable(),
+  latitude: z.number().nullable().transform((value) => value ?? 31.7683),
+  longitude: z.number().nullable().transform((value) => value ?? 35.2137),
+  amenities: z.array(z.string()).nullable().transform((value) => value ?? []),
+  cover_photo_url: z.string().nullable().optional(),
+})
 
-type BlockedListingRow = {
-  listing_id: string | null
-}
+const blockedListingRowSchema = z.object({
+  listing_id: z.string().nullable(),
+})
 
-type ListingPhotoRow = {
-  listing_id: string | null
-  photo_url: string
-}
+const listingPhotoRowSchema = z.object({
+  listing_id: z.string().nullable(),
+  photo_url: z.string(),
+})
 
-type PopularNeighborhoodRow = {
-  neighborhood: string | null
-}
+const popularNeighborhoodRowSchema = z.object({
+  neighborhood: z.string().nullable(),
+})
+
+type Listing = z.infer<typeof listingSchema>
 
 type StaysPageProps = {
   searchParams: Promise<SearchParams>
-}
-
-function formatPrice(listing: Pick<Listing, 'price_ils' | 'price_usd'>) {
-  const prices = []
-
-  if (listing.price_ils) {
-    prices.push(`\u20aa${Number(listing.price_ils).toLocaleString()}`)
-  }
-
-  if (listing.price_usd) {
-    prices.push(`$${Number(listing.price_usd).toLocaleString()}`)
-  }
-
-  if (prices.length > 0) return prices.join(' / ')
-
-  return 'Price on request'
 }
 
 function parsePositiveNumber(value?: string) {
@@ -231,7 +219,7 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
             area: listing.area,
             price_ils: listing.price_ils,
             price_usd: listing.price_usd,
-            price: formatPrice(listing),
+            price: formatDualCurrencyPrice(listing),
             bedrooms: listing.bedrooms,
             sleeps: listing.max_guests,
             lat: listing.latitude,
@@ -259,7 +247,7 @@ async function loadFeaturedNeighborhoods() {
       result_limit: 3,
       lookback_days: 30,
     })
-    const popularNeighborhoods = ((data || []) as PopularNeighborhoodRow[])
+    const popularNeighborhoods = z.array(popularNeighborhoodRowSchema).parse(data ?? [])
       .map((row) => row.neighborhood)
       .filter((neighborhood): neighborhood is string => Boolean(neighborhood))
       .filter((neighborhood) => allNeighborhoods.includes(neighborhood))
@@ -302,7 +290,7 @@ async function loadListings({
 
     blockedListingIds = Array.from(
       new Set(
-        ((blockedRanges || []) as BlockedListingRow[])
+        z.array(blockedListingRowSchema).parse(blockedRanges ?? [])
           .map((range) => range.listing_id)
           .filter((id): id is string => Boolean(id)),
       ),
@@ -341,7 +329,7 @@ async function loadListings({
   }
 
   const { data: listingsData } = await listingsQuery
-  const listingRows = (listingsData || []) as Listing[]
+  const listingRows = z.array(listingSchema).parse(listingsData ?? [])
   const listingIds = listingRows.map((listing) => listing.id)
   const { data: photosData } = listingIds.length
     ? await supabase
@@ -351,9 +339,8 @@ async function loadListings({
         .in('listing_id', listingIds)
     : { data: [] }
   const photoMap = new Map(
-    ((photosData || []) as ListingPhotoRow[])
-      .filter((photo) => photo.listing_id)
-      .map((photo) => [photo.listing_id as string, photo.photo_url]),
+    z.array(listingPhotoRowSchema).parse(photosData ?? [])
+      .flatMap((photo) => (photo.listing_id ? [[photo.listing_id, photo.photo_url]] : [])),
   )
 
   return listingRows.map((listing) => ({
@@ -418,7 +405,7 @@ function ListingCard({
             .join(' \u00b7 ')}
         </p>
         <p className="pt-1 text-sm font-semibold text-stone-950">
-          {formatPrice(listing)}
+          {formatDualCurrencyPrice(listing)}
           {(listing.price_ils || listing.price_usd) && (
             <span className="font-normal text-stone-500"> / night</span>
           )}

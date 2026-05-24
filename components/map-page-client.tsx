@@ -5,6 +5,7 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { filterListings } from '@/lib/marketplace-rules'
 import { STAY_AMENITY_GROUPS } from '@/lib/stay-amenities'
+import { formatPreferredNightlyPrice } from '@/lib/utils/currency'
 
 export type MapListing = {
   id: string
@@ -183,9 +184,7 @@ export function MapPageClient({ listings }: { listings: MapListing[] }) {
 }
 
 function formatMapListingPrice(listing: Pick<SelectedMapListing, 'price' | 'price_ils' | 'price_usd'>) {
-  if (listing.price_usd) return `$${Number(listing.price_usd).toLocaleString()}`
-  if (listing.price_ils) return `₪${Number(listing.price_ils).toLocaleString()}`
-  return listing.price || 'Price on request'
+  return formatPreferredNightlyPrice(listing, listing.price || 'Price on request')
 }
 
 function ChevronLeftIcon() {

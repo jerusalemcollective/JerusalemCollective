@@ -1,21 +1,24 @@
 import { redirect } from 'next/navigation'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { Breadcrumb } from '@/components/breadcrumb'
 import { ReviewForm, type ReviewableBooking } from '@/components/review-form'
 
-type CompletedBookingRow = {
-  id: string
-  listing_id: string
-  check_in: string
-  check_out: string
-  listings: {
-    title: string
-  } | null
-}
+const completedBookingSchema = z.object({
+  id: z.string(),
+  listing_id: z.string(),
+  check_in: z.string(),
+  check_out: z.string(),
+  listings: z
+    .object({
+      title: z.string(),
+    })
+    .nullable(),
+})
 
-type ExistingReviewRow = {
-  booking_id: string | null
-}
+const existingReviewSchema = z.object({
+  booking_id: z.string().nullable(),
+})
 
 export const metadata = {
   title: 'My reviews',
@@ -40,7 +43,7 @@ export default async function ReviewsPage() {
     .lt('check_out', today)
     .order('check_out', { ascending: false })
 
-  const completedBookings = (bookingRows || []) as CompletedBookingRow[]
+  const completedBookings = z.array(completedBookingSchema).parse(bookingRows ?? [])
   const bookingIds = completedBookings.map((booking) => booking.id)
   const { data: reviewRows } = bookingIds.length
     ? await supabase
@@ -51,7 +54,7 @@ export default async function ReviewsPage() {
     : { data: [] }
 
   const reviewedBookingIds = new Set(
-    ((reviewRows || []) as ExistingReviewRow[])
+    z.array(existingReviewSchema).parse(reviewRows ?? [])
       .map((review) => review.booking_id)
       .filter((bookingId): bookingId is string => Boolean(bookingId)),
   )

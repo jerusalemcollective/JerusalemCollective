@@ -1,23 +1,27 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Heart } from 'lucide-react'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { Breadcrumb } from '@/components/breadcrumb'
+import { formatDualCurrencyPrice } from '@/lib/utils/currency'
 
-type SavedListing = {
-  id: string
-  title: string
-  area: string
-  bedrooms: number | null
-  max_guests: number | null
-  price_ils: number | null
-  price_usd: number | null
-}
+const savedListingSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  area: z.string(),
+  bedrooms: z.number().nullable(),
+  max_guests: z.number().nullable(),
+  price_ils: z.number().nullable(),
+  price_usd: z.number().nullable(),
+})
 
-type SavedRow = {
-  listing_id: string
-  listings: SavedListing | null
-}
+const savedRowSchema = z.object({
+  listing_id: z.string(),
+  listings: savedListingSchema.nullable(),
+})
+
+type SavedListing = z.infer<typeof savedListingSchema>
 
 export default async function SavedPage() {
   const supabase = await createClient()
@@ -34,9 +38,9 @@ export default async function SavedPage() {
     .select('listing_id, listings(id, title, area, bedrooms, max_guests, price_ils, price_usd)')
     .eq('user_id', user.id)
 
-  const savedListings = ((data || []) as SavedRow[])
+  const savedListings = z.array(savedRowSchema).parse(data ?? [])
     .map((row) => row.listings)
-    .filter(Boolean) as SavedListing[]
+    .filter((listing): listing is SavedListing => Boolean(listing))
 
   return (
     <div className="min-h-screen">
@@ -66,7 +70,7 @@ export default async function SavedPage() {
                   {listing.bedrooms ?? '-'} bedrooms | sleeps {listing.max_guests ?? '-'}
                 </p>
                 <p className="mt-3 text-sm font-semibold text-stone-900">
-                  {formatPrice(listing)}
+                  {formatDualCurrencyPrice(listing)}
                 </p>
               </Link>
             ))}
@@ -93,20 +97,4 @@ function EmptyState() {
       </Link>
     </div>
   )
-}
-
-function formatPrice(listing: SavedListing) {
-  const prices = []
-
-  if (listing.price_ils) {
-    prices.push(`\u20aa${Number(listing.price_ils).toLocaleString()}`)
-  }
-
-  if (listing.price_usd) {
-    prices.push(`$${Number(listing.price_usd).toLocaleString()}`)
-  }
-
-  if (prices.length > 0) return prices.join(' / ')
-
-  return 'Price on request'
 }

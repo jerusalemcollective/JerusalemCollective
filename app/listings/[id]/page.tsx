@@ -1,9 +1,9 @@
 ﻿import { notFound } from 'next/navigation'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { getSampleListing } from '@/lib/sample-listings'
 import {
   ListingDetailClient,
-  type ListingBlockedRange,
   type ListingDetailHost,
   type ListingDetailListing,
   type ListingDetailPhoto,
@@ -17,20 +17,9 @@ type HostRecord = {
   show_full_name: boolean
 }
 
-type HostRow = HostRecord & {
-  id: string
-  is_verified: boolean | null
-  profile_photo_url: string | null
-}
-
 type ListingPageProps = {
   params: Promise<{ id: string }>
   searchParams?: Promise<Record<string, string | string[] | undefined>>
-}
-
-type ListingStructuredDataListing = ListingDetailListing & {
-  latitude: number | null
-  longitude: number | null
 }
 
 type SimilarListing = {
@@ -42,6 +31,61 @@ type SimilarListing = {
   price_ils: number | null
   price_usd: number | null
 }
+
+const listingDetailListingSchema = z.object({
+  id: z.string(),
+  host_id: z.string().nullable(),
+  title: z.string(),
+  area: z.string(),
+  bedrooms: z.number().nullable(),
+  bathrooms: z.number().nullable(),
+  max_guests: z.number().nullable(),
+  price_ils: z.number().nullable(),
+  price_usd: z.number().nullable(),
+  booking_type: z.string(),
+  amenities: z.array(z.string()).nullable(),
+  description: z.string().nullable(),
+  house_rules: z.string().nullable(),
+  latitude: z.number().nullable(),
+  longitude: z.number().nullable(),
+})
+
+const hostRowSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  display_name: z.string().nullable(),
+  show_full_name: z.boolean(),
+  is_verified: z.boolean().nullable(),
+  profile_photo_url: z.string().nullable(),
+})
+
+const listingPhotoSchema = z.object({
+  id: z.string(),
+  photo_url: z.string(),
+  is_cover: z.boolean().nullable(),
+})
+
+const listingReviewSchema = z.object({
+  id: z.string(),
+  reviewer_name: z.string(),
+  rating: z.number(),
+  content: z.string().nullable(),
+})
+
+const blockedRangeSchema = z.object({
+  start_date: z.string(),
+  end_date: z.string(),
+})
+
+const similarListingSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  area: z.string(),
+  bedrooms: z.number().nullable(),
+  max_guests: z.number().nullable(),
+  price_ils: z.number().nullable(),
+  price_usd: z.number().nullable(),
+})
 
 export const revalidate = 3600
 
@@ -173,7 +217,8 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
     notFound()
   }
 
-  const listing = listingData as ListingDetailListing
+  const structuredListing = listingDetailListingSchema.parse(listingData)
+  const listing: ListingDetailListing = structuredListing
   const neighbourhoodDescription = listingData?.area
     ? neighborhoodDescriptions[listingData.area] || null
     : null
@@ -215,7 +260,7 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
     .neq('id', id)
     .limit(3)
 
-  const similarListings = [...((similarRaw || []) as SimilarListing[])]
+  const similarListings: SimilarListing[] = [...z.array(similarListingSchema).parse(similarRaw ?? [])]
 
   if (similarListings.length < 3) {
     const excludeIds = [id, ...similarListings.map((similarListing) => similarListing.id)]
@@ -227,10 +272,10 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
       .order('is_featured', { ascending: false })
       .limit(3 - similarListings.length)
 
-    similarListings.push(...((additionalSimilarRaw || []) as SimilarListing[]))
+    similarListings.push(...z.array(similarListingSchema).parse(additionalSimilarRaw ?? []))
   }
 
-  const hostRecord = hostData as HostRow | null
+  const hostRecord = hostData ? hostRowSchema.parse(hostData) : null
   const publicHostName = hostRecord ? getPublicName(hostRecord) : null
   const host: ListingDetailHost | null = hostRecord
     ? {
@@ -240,9 +285,8 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
       }
     : null
 
-  const photos = (photosData || []) as ListingDetailPhoto[]
-  const reviews = (reviewsData || []) as ListingDetailReview[]
-  const structuredListing = listingData as ListingStructuredDataListing
+  const photos: ListingDetailPhoto[] = z.array(listingPhotoSchema).parse(photosData ?? [])
+  const reviews: ListingDetailReview[] = z.array(listingReviewSchema).parse(reviewsData ?? [])
   const avgRating =
     reviews.length > 0
       ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
@@ -321,7 +365,7 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
         publicHostName={publicHostName}
         photos={photos}
         reviews={reviews}
-        blockedRanges={(blockedRangesData || []) as ListingBlockedRange[]}
+        blockedRanges={z.array(blockedRangeSchema).parse(blockedRangesData ?? [])}
         similarListings={similarListings}
         fromStays={fromStays}
         neighbourhoodDescription={neighbourhoodDescription}
