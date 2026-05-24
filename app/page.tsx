@@ -1,5 +1,4 @@
 ﻿import Link from 'next/link'
-import Image from 'next/image'
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { sampleListings } from '@/lib/sample-listings'
@@ -381,19 +380,18 @@ export default async function JLMCollectiveHomePage() {
 
 function HomeListingCard({ listing }: { listing: FeaturedStay }) {
   return (
-    <Link
-      href={`/listings/${listing.id}?from=stays`}
-      className="group block"
-    >
-      <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-stone-100 shadow-sm transition-shadow duration-200 group-hover:shadow-md">
+    <div className="group block">
+      <Link
+        href={`/listings/${listing.id}?from=stays`}
+        className="block"
+      >
+        <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-stone-100 shadow-sm transition-shadow duration-200 group-hover:shadow-md">
         {listing.coverPhotoUrl ? (
-          <Image
+          <img
             src={listing.coverPhotoUrl}
             alt={listing.title}
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             loading="lazy"
+            className="h-full w-full object-cover"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-[#F8F5F2]">
@@ -403,7 +401,8 @@ function HomeListingCard({ listing }: { listing: FeaturedStay }) {
             </div>
           </div>
         )}
-      </div>
+        </div>
+      </Link>
 
       <div className="mt-3 space-y-0.5">
         <Link
@@ -413,9 +412,12 @@ function HomeListingCard({ listing }: { listing: FeaturedStay }) {
         >
           {listing.area}
         </Link>
-        <p className="line-clamp-1 font-semibold leading-snug text-stone-950">
+        <Link
+          href={`/listings/${listing.id}?from=stays`}
+          className="line-clamp-1 font-semibold leading-snug text-stone-950"
+        >
           {listing.title}
-        </p>
+        </Link>
         <p className="text-sm text-stone-500">
           {[
             listing.bedrooms ? `${listing.bedrooms} bed` : null,
@@ -431,7 +433,7 @@ function HomeListingCard({ listing }: { listing: FeaturedStay }) {
           )}
         </p>
       </div>
-    </Link>
+    </div>
   )
 }
 

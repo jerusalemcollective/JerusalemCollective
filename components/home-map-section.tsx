@@ -1,6 +1,5 @@
 'use client'
 
-import Image from 'next/image'
 import Link from 'next/link'
 
 type HomeMapListing = {
@@ -33,12 +32,10 @@ export function HomeMapSection({ listings }: { listings: HomeMapListing[] }) {
     <aside id="map" className="sticky top-24 hidden h-[380px] overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm lg:block">
       <div className="relative h-full bg-[#fbf8f5]">
         {heroListing?.coverPhotoUrl && (
-          <Image
+          <img
             src={heroListing.coverPhotoUrl}
             alt=""
-            fill
-            className="object-cover opacity-60"
-            sizes="380px"
+            className="h-full w-full object-cover opacity-60"
           />
         )}
         <div className="absolute inset-0 bg-gradient-to-br from-white/82 via-[#fbf8f5]/58 to-[#fff4ef]/54" />
@@ -58,12 +55,11 @@ export function HomeMapSection({ listings }: { listings: HomeMapListing[] }) {
           >
             <div className="relative h-16 w-28">
               {listing.coverPhotoUrl ? (
-                <Image
+                <img
                   src={listing.coverPhotoUrl}
                   alt={listing.title}
-                  fill
-                  className="object-cover"
-                  sizes="112px"
+                  loading="lazy"
+                  className="h-full w-full object-cover"
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center bg-[#fff4ef]">
