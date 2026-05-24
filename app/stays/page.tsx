@@ -127,7 +127,7 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
 
   return (
     <div className="min-h-screen">
-      <div className="border-b border-stone-200 bg-[#F8F5F2]">
+      <div className="sticky top-[73px] z-20 border-b border-stone-200 bg-[#F8F5F2]/95 backdrop-blur">
         <div className="mx-auto grid max-w-7xl gap-3 px-4 py-4 sm:px-6 lg:grid-cols-[1fr_auto] lg:items-start">
           <Suspense fallback={<div className="h-14 rounded-3xl bg-white shadow-sm" />}>
             <StaysFilterBar />
@@ -151,6 +151,15 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
               Map
             </Link>
           </div>
+
+          <div className="lg:col-span-2">
+            <StaysNeighborhoodNav
+              neighborhoods={neighborhoods}
+              featuredNeighborhoods={featuredNeighborhoods}
+              selectedArea={selectedArea}
+              baseQuery={params}
+            />
+          </div>
         </div>
       </div>
 
@@ -166,15 +175,6 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
                 Showing results related to {activeFeature}
               </p>
             )}
-          </div>
-
-          <div className="mb-8">
-            <StaysNeighborhoodNav
-              neighborhoods={neighborhoods}
-              featuredNeighborhoods={featuredNeighborhoods}
-              selectedArea={selectedArea}
-              baseQuery={params}
-            />
           </div>
 
           {listings.length === 0 ? (

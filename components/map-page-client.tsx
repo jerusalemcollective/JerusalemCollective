@@ -75,7 +75,7 @@ export function MapPageClient({ listings }: { listings: MapListing[] }) {
         </Link>
       </div>
 
-      <div className="absolute left-4 right-4 top-16 z-20 flex max-h-[calc(100vh-7rem)] flex-col gap-3 overflow-y-auto rounded-3xl border border-stone-200 bg-white/95 p-3 shadow-lg backdrop-blur md:left-auto md:right-4 md:w-[320px]">
+      <div className="absolute left-4 right-4 top-16 z-20 flex max-h-[calc(100vh-8rem)] flex-col gap-3 overflow-y-auto rounded-3xl border border-stone-200 bg-white/95 p-3 shadow-lg backdrop-blur md:left-auto md:right-4 md:w-[300px]">
         <div className="flex flex-wrap items-center gap-2">
           <label className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700">
             <span className="font-semibold">Bedrooms</span>

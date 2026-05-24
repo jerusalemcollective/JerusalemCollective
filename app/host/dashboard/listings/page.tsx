@@ -29,6 +29,7 @@ type HostListing = {
   description: string | null
   price_usd: number | null
   price_ils: number | null
+  american_comfort: boolean | null
   created_at: string
 }
 
@@ -80,7 +81,7 @@ export default async function HostListingsPage() {
       .order('created_at', { ascending: false }),
     supabase
       .from('listings')
-      .select('id, title, area, is_published, is_featured, bedrooms, bathrooms, max_guests, amenities, description, price_usd, price_ils, created_at')
+      .select('id, title, area, is_published, is_featured, bedrooms, bathrooms, max_guests, amenities, description, price_usd, price_ils, american_comfort, created_at')
       .in('host_id', hostIds)
       .order('created_at', { ascending: false }),
   ])
@@ -233,6 +234,8 @@ export default async function HostListingsPage() {
                     score={calculateListingScore(scoreInput)}
                     suggestions={listingStrengthSuggestions(listing, photoCount)}
                     comparison={comparisonByListing.get(listing.id) || null}
+                    bedrooms={listing.bedrooms}
+                    americanComfort={Boolean(listing.american_comfort)}
                     performance={performanceByListing.get(listing.id) || null}
                     badge={{
                       label: listing.is_published ? 'Live' : 'Hidden',
@@ -296,6 +299,8 @@ function ListingRow({
   score,
   suggestions,
   comparison,
+  bedrooms,
+  americanComfort,
   performance,
   badge,
 }: {
@@ -307,6 +312,8 @@ function ListingRow({
   score: number
   suggestions: string[]
   comparison: PriceComparison | null
+  bedrooms: number | null
+  americanComfort: boolean
   performance: PerformanceInsight | null
   badge: { label: string; tone: 'green' | 'stone' }
 }) {
@@ -320,7 +327,12 @@ function ListingRow({
         <div className="mt-4 max-w-xl">
           <ListingQualityScore score={score} label="Listing strength" suggestions={suggestions} />
         </div>
-        <PriceInsight comparison={comparison} />
+        <PriceInsight
+          comparison={comparison}
+          area={area}
+          bedrooms={bedrooms}
+          americanComfort={americanComfort}
+        />
         <PerformanceInsightCard performance={performance} />
         <div className="mt-3 flex flex-wrap gap-2">
           <Link
@@ -433,7 +445,17 @@ function InsightMetric({ label, value }: { label: string; value: string }) {
   )
 }
 
-function PriceInsight({ comparison }: { comparison: PriceComparison | null }) {
+function PriceInsight({
+  comparison,
+  area,
+  bedrooms,
+  americanComfort,
+}: {
+  comparison: PriceComparison | null
+  area: string
+  bedrooms: number | null
+  americanComfort: boolean
+}) {
   if (!comparison) return null
 
   const useUsd = comparison.median_price_usd !== null || comparison.percent_difference_usd !== null
@@ -442,6 +464,10 @@ function PriceInsight({ comparison }: { comparison: PriceComparison | null }) {
   const high = useUsd ? comparison.high_price_usd : comparison.high_price_ils
   const difference = useUsd ? comparison.percent_difference_usd : comparison.percent_difference_ils
   const currency = useUsd ? '$' : '₪'
+  const absoluteDifference = Math.abs(Math.round(difference || 0))
+  const bedroomLabel = bedrooms
+    ? `${bedrooms}-bedroom`
+    : 'similar'
 
   const tone =
     comparison.price_position === 'above_market'
@@ -454,12 +480,22 @@ function PriceInsight({ comparison }: { comparison: PriceComparison | null }) {
 
   const label =
     comparison.price_position === 'above_market'
-      ? `${Math.abs(Math.round(difference || 0))}% above similar stays`
+      ? `${absoluteDifference}% higher`
       : comparison.price_position === 'below_market'
-        ? `${Math.abs(Math.round(difference || 0))}% below similar stays`
+        ? `${absoluteDifference}% lower`
         : comparison.price_position === 'in_line'
-          ? 'In line with similar stays'
+          ? 'In line'
           : 'Building comparison set'
+  const intelligence =
+    comparison.price_position === 'above_market'
+      ? `You are ${absoluteDifference}% higher than similar ${bedroomLabel} homes in ${area}.`
+      : comparison.price_position === 'below_market'
+        ? americanComfort
+          ? 'You are priced below comparable homes with American comfort.'
+          : `You are ${absoluteDifference}% below similar ${bedroomLabel} homes in ${area}.`
+        : comparison.price_position === 'in_line'
+          ? `You are priced in line with similar ${bedroomLabel} homes in ${area}.`
+          : comparison.recommendation
 
   return (
     <div className="mt-4 max-w-xl rounded-2xl bg-white p-4 shadow-sm">
@@ -478,7 +514,10 @@ function PriceInsight({ comparison }: { comparison: PriceComparison | null }) {
           {label}
         </span>
       </div>
-      <p className="mt-2 text-xs leading-5 text-stone-500">
+      <p className="mt-2 text-sm font-semibold leading-6 text-stone-800">
+        {intelligence}
+      </p>
+      <p className="mt-1 text-xs leading-5 text-stone-500">
         {comparison.recommendation}
       </p>
     </div>

@@ -37,11 +37,11 @@ export function HomeMapSection({ listings }: { listings: HomeMapListing[] }) {
             src={heroListing.coverPhotoUrl}
             alt=""
             fill
-            className="object-cover opacity-25 blur-sm"
+            className="object-cover opacity-60"
             sizes="380px"
           />
         )}
-        <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-[#fbf8f5]/88 to-[#fff4ef]/86" />
+        <div className="absolute inset-0 bg-gradient-to-br from-white/82 via-[#fbf8f5]/58 to-[#fff4ef]/54" />
         <div className="absolute left-4 top-4 rounded-xl bg-white px-3 py-2 shadow-md ring-1 ring-stone-100">
           <div className="text-xs font-bold text-stone-950">Map preview</div>
           <div className="text-[10px] text-stone-500">Browse stays by area</div>
@@ -57,7 +57,7 @@ export function HomeMapSection({ listings }: { listings: HomeMapListing[] }) {
             className={`absolute ${pinPositions[index] || pinPositions[0]} overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-stone-200 transition hover:-translate-y-0.5 hover:shadow-2xl`}
           >
             <div className="relative h-16 w-28">
-              {listing.coverPhotoUrl && (
+              {listing.coverPhotoUrl ? (
                 <Image
                   src={listing.coverPhotoUrl}
                   alt={listing.title}
@@ -65,6 +65,10 @@ export function HomeMapSection({ listings }: { listings: HomeMapListing[] }) {
                   className="object-cover"
                   sizes="112px"
                 />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-[#fff4ef]">
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-[#c76f55]">JLM</p>
+                </div>
               )}
             </div>
             <div className="px-2 py-1.5">

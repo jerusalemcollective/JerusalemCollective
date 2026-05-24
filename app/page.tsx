@@ -27,6 +27,7 @@ type ListingPhotoRow = {
   listing_id: string | null
   photo_url: string
   is_cover?: boolean | null
+  sort_order?: number | null
 }
 
 type FeaturedStay = {
@@ -104,7 +105,7 @@ function toFeaturedStay(listing: ListingRow & { cover_photo_url?: string | null 
     price_ils: listing.price_ils,
     price_usd: listing.price_usd,
     is_featured: listing.is_featured ?? null,
-    coverPhotoUrl: listing.cover_photo_url || '/placeholder.jpg',
+    coverPhotoUrl: listing.cover_photo_url || null,
   }
 }
 
@@ -135,12 +136,22 @@ async function getHomepageData() {
     }),
   ])
 
-  const featuredRows = (listingsData || []) as ListingRow[]
+  let featuredRows = (listingsData || []) as ListingRow[]
+  if (featuredRows.length === 0) {
+    const { data: fallbackListingsData } = await supabase
+      .from('listings')
+      .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, amenities, latitude, longitude, is_featured')
+      .eq('is_published', true)
+      .order('created_at', { ascending: false })
+      .limit(6)
+
+    featuredRows = (fallbackListingsData || []) as ListingRow[]
+  }
   const featuredIds = featuredRows.map((listing) => listing.id)
   const { data: photoData } = featuredIds.length
     ? await supabase
         .from('listing_photos')
-        .select('listing_id, photo_url, is_cover')
+        .select('listing_id, photo_url, is_cover, sort_order')
         .in('listing_id', featuredIds)
         .order('is_cover', { ascending: false })
         .order('sort_order', { ascending: true })

@@ -40,7 +40,7 @@ export function StaysNeighborhoodNav({
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span className="mr-1 text-xs font-bold uppercase tracking-widest text-stone-400">
-        Area
+        Suggested areas
       </span>
       <AreaLink
         area="All"
@@ -64,7 +64,7 @@ export function StaysNeighborhoodNav({
           onClick={() => setIsOpen((open) => !open)}
           className="rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-[#c76f55] hover:text-[#c76f55]"
         >
-          More areas
+          Areas
         </button>
 
         {isOpen && (

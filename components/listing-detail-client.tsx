@@ -393,7 +393,7 @@ export function ListingDetailClient({
                 )}
               </div>
 
-              <div className="hidden md:grid md:h-[320px] md:grid-cols-4 md:grid-rows-2 md:gap-2 lg:h-[380px] xl:h-[400px]">
+              <div className="hidden md:grid md:h-[300px] md:grid-cols-4 md:grid-rows-2 md:gap-2 lg:h-[340px] xl:h-[360px]">
                 <div
                   className="relative cursor-pointer overflow-hidden bg-stone-100 md:col-span-2 md:row-span-2"
                   onClick={() => {

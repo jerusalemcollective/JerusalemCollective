@@ -97,6 +97,7 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null)
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const hasGoogleMapsKey = Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY)
+  const showSidebar = !onListingSelect
   const visibleListings = useMemo(
     () => listings.filter(
       (listing) => Number.isFinite(listing.lat) && Number.isFinite(listing.lng),
@@ -172,9 +173,10 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
   }
 
   return (
-    <div className="relative h-[calc(100vh-82px)] w-full overflow-hidden bg-[#F8F5F2]">
+    <div className="relative h-[calc(100vh-120px)] min-h-[560px] w-full overflow-hidden bg-[#F8F5F2]">
       {/* Sidebar */}
-      <div className="absolute left-0 top-0 z-10 hidden h-full w-[320px] overflow-y-auto border-r border-stone-200 bg-white p-4 shadow-xl lg:block">
+      {showSidebar && (
+      <div className="absolute left-0 top-0 z-10 hidden h-full w-[300px] overflow-y-auto border-r border-stone-200 bg-white p-4 shadow-xl lg:block">
         <div className="mb-5">
           <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Search by map</p>
           <h1 className="mt-2 text-2xl font-bold text-stone-950">Jerusalem stays</h1>
@@ -224,9 +226,10 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
           ))}
         </div>
       </div>
+      )}
 
       {/* Map */}
-      <div className="h-full w-full lg:pl-[320px]">
+      <div className={`h-full w-full ${showSidebar ? 'lg:pl-[300px]' : ''}`}>
         <GoogleMap
           mapContainerStyle={mapContainerStyle}
           center={center}
@@ -260,8 +263,8 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
       </div>
 
       {/* Selected listing popup */}
-      {selectedListing && (
-        <div className="absolute bottom-5 left-5 right-5 z-20 rounded-3xl bg-white p-4 shadow-2xl ring-1 ring-stone-200 lg:left-[345px] lg:right-auto lg:w-[330px]">
+      {selectedListing && showSidebar && (
+        <div className="absolute bottom-5 left-5 right-5 z-20 rounded-3xl bg-white p-4 shadow-2xl ring-1 ring-stone-200 lg:left-[325px] lg:right-auto lg:w-[330px]">
           <button
             onClick={() => setSelectedListing(null)}
             className="absolute right-3 top-3 rounded-full p-1 hover:bg-stone-100"
