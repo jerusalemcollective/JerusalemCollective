@@ -51,7 +51,7 @@ type PriceComparison = {
   low_price_ils: number | null
   high_price_ils: number | null
   percent_difference_ils: number | null
-  position: 'above_market' | 'below_market' | 'in_line' | 'not_enough_data'
+  price_position: 'above_market' | 'below_market' | 'in_line' | 'not_enough_data'
   recommendation: string
 }
 
@@ -444,20 +444,20 @@ function PriceInsight({ comparison }: { comparison: PriceComparison | null }) {
   const currency = useUsd ? '$' : '₪'
 
   const tone =
-    comparison.position === 'above_market'
+    comparison.price_position === 'above_market'
       ? 'bg-amber-100 text-amber-800'
-      : comparison.position === 'below_market'
+      : comparison.price_position === 'below_market'
         ? 'bg-blue-100 text-blue-800'
-        : comparison.position === 'in_line'
+        : comparison.price_position === 'in_line'
           ? 'bg-green-100 text-green-800'
           : 'bg-stone-100 text-stone-600'
 
   const label =
-    comparison.position === 'above_market'
+    comparison.price_position === 'above_market'
       ? `${Math.abs(Math.round(difference || 0))}% above similar stays`
-      : comparison.position === 'below_market'
+      : comparison.price_position === 'below_market'
         ? `${Math.abs(Math.round(difference || 0))}% below similar stays`
-        : comparison.position === 'in_line'
+        : comparison.price_position === 'in_line'
           ? 'In line with similar stays'
           : 'Building comparison set'
 

@@ -12,7 +12,7 @@ returns table (
   low_price_ils numeric,
   high_price_ils numeric,
   percent_difference_ils numeric,
-  position text,
+  price_position text,
   recommendation text
 )
 language plpgsql
@@ -32,7 +32,7 @@ declare
   usd_difference numeric;
   ils_difference numeric;
   preferred_difference numeric;
-  price_position text := 'not_enough_data';
+  computed_price_position text := 'not_enough_data';
   price_recommendation text := 'Not enough similar listings yet for a reliable comparison.';
 begin
   if current_user_id is null then
@@ -117,13 +117,13 @@ begin
 
   if comparison_count >= 3 and preferred_difference is not null then
     if preferred_difference >= 12 then
-      price_position := 'above_market';
+      computed_price_position := 'above_market';
       price_recommendation := 'Your rate is positioned above similar stays in this neighbourhood. This can work if your photos, amenities, and guest experience clearly justify the premium.';
     elsif preferred_difference <= -12 then
-      price_position := 'below_market';
+      computed_price_position := 'below_market';
       price_recommendation := 'Your rate is positioned below similar stays. If enquiries are healthy, you may be able to test a modest increase.';
     else
-      price_position := 'in_line';
+      computed_price_position := 'in_line';
       price_recommendation := 'Your rate is broadly in line with similar stays in this neighbourhood.';
     end if;
   end if;
@@ -140,7 +140,7 @@ begin
     ils_low,
     ils_high,
     ils_difference,
-    price_position,
+    computed_price_position,
     price_recommendation;
 end;
 $$;
