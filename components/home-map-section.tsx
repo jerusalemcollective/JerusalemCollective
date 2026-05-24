@@ -26,19 +26,34 @@ function formatMapPrice(listing: HomeMapListing) {
 
 export function HomeMapSection({ listings }: { listings: HomeMapListing[] }) {
   const previewListings = listings.length > 0 ? listings : []
-  const heroListing = previewListings[0] || null
 
   return (
     <aside id="map" className="sticky top-24 hidden h-[380px] overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm lg:block">
-      <div className="relative h-full bg-[#fbf8f5]">
-        {heroListing?.coverPhotoUrl && (
-          <img
-            src={heroListing.coverPhotoUrl}
-            alt=""
-            className="h-full w-full object-cover opacity-60"
-          />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-br from-white/82 via-[#fbf8f5]/58 to-[#fff4ef]/54" />
+      <div className="relative h-full overflow-hidden bg-[#eef0ea]">
+        <div className="absolute inset-0">
+          <svg
+            viewBox="0 0 420 380"
+            className="h-full w-full"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+          >
+            <rect width="420" height="380" fill="#eef0ea" />
+            <path d="M-10 84 C86 62 130 88 211 71 C292 55 345 34 430 52" stroke="#ffffff" strokeWidth="22" fill="none" opacity="0.95" />
+            <path d="M30 -10 C74 67 70 137 112 210 C151 278 208 320 218 398" stroke="#ffffff" strokeWidth="18" fill="none" opacity="0.88" />
+            <path d="M-12 254 C64 235 112 250 181 232 C256 213 311 185 432 194" stroke="#ffffff" strokeWidth="20" fill="none" opacity="0.9" />
+            <path d="M278 -10 C253 71 282 132 258 203 C236 268 240 325 270 392" stroke="#ffffff" strokeWidth="14" fill="none" opacity="0.9" />
+            <path d="M-4 130 C54 128 105 143 166 132 C236 119 284 105 424 118" stroke="#d8d7ce" strokeWidth="4" fill="none" opacity="0.85" />
+            <path d="M76 0 C106 75 104 130 143 204 C177 269 225 309 239 380" stroke="#d8d7ce" strokeWidth="4" fill="none" opacity="0.8" />
+            <path d="M0 282 C78 265 132 278 205 255 C273 234 332 218 420 224" stroke="#d8d7ce" strokeWidth="4" fill="none" opacity="0.82" />
+            <path d="M318 0 C293 63 316 125 293 189 C270 252 278 313 315 380" stroke="#d8d7ce" strokeWidth="3.5" fill="none" opacity="0.8" />
+            <path d="M20 168 L94 145 L139 181 L102 238 L34 226 Z" fill="#dde7d6" opacity="0.9" />
+            <path d="M292 246 L389 234 L420 282 L390 354 L308 332 Z" fill="#dde7d6" opacity="0.82" />
+            <path d="M245 92 L337 82 L368 130 L319 169 L251 151 Z" fill="#e7e3d9" opacity="0.88" />
+            <circle cx="206" cy="190" r="66" fill="none" stroke="#d0cfc6" strokeWidth="2" strokeDasharray="6 8" opacity="0.7" />
+            <circle cx="206" cy="190" r="120" fill="none" stroke="#d0cfc6" strokeWidth="2" strokeDasharray="5 10" opacity="0.45" />
+          </svg>
+        </div>
+        <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-[#fff4ef]/35" />
         <div className="absolute left-4 top-4 rounded-xl bg-white px-3 py-2 shadow-md ring-1 ring-stone-100">
           <div className="text-xs font-bold text-stone-950">Map preview</div>
           <div className="text-[10px] text-stone-500">Browse stays by area</div>

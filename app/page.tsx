@@ -382,7 +382,7 @@ export default async function JLMCollectiveHomePage() {
 
 function HomeListingCard({ listing }: { listing: FeaturedStay }) {
   return (
-    <div className="group block">
+    <div className="group">
       <Link
         href={`/listings/${listing.id}?from=stays`}
         className="block"
@@ -409,30 +409,32 @@ function HomeListingCard({ listing }: { listing: FeaturedStay }) {
       <div className="mt-3 space-y-0.5">
         <Link
           href={`/neighbourhoods/${slugifyNeighborhood(listing.area)}`}
-          className="text-[11px] font-bold uppercase tracking-widest text-[#c76f55] hover:underline"
+          className="block text-[11px] font-bold uppercase tracking-widest text-[#c76f55] hover:underline"
         >
           {listing.area}
         </Link>
         <Link
           href={`/listings/${listing.id}?from=stays`}
-          className="line-clamp-1 font-semibold leading-snug text-stone-950"
+          className="block space-y-0.5"
         >
-          {listing.title}
+          <p className="line-clamp-1 font-semibold leading-snug text-stone-950">
+            {listing.title}
+          </p>
+          <p className="text-sm text-stone-500">
+            {[
+              listing.bedrooms ? `${listing.bedrooms} bed` : null,
+              listing.max_guests ? `sleeps ${listing.max_guests}` : null,
+            ]
+              .filter(Boolean)
+              .join(' \u00b7 ')}
+          </p>
+          <p className="pt-1 text-sm font-semibold text-stone-950">
+            {formatFeaturedPrice(listing)}
+            {(listing.price_ils || listing.price_usd) && (
+              <span className="font-normal text-stone-500"> / night</span>
+            )}
+          </p>
         </Link>
-        <p className="text-sm text-stone-500">
-          {[
-            listing.bedrooms ? `${listing.bedrooms} bed` : null,
-            listing.max_guests ? `sleeps ${listing.max_guests}` : null,
-          ]
-            .filter(Boolean)
-            .join(' \u00b7 ')}
-        </p>
-        <p className="pt-1 text-sm font-semibold text-stone-950">
-          {formatFeaturedPrice(listing)}
-          {(listing.price_ils || listing.price_usd) && (
-            <span className="font-normal text-stone-500"> / night</span>
-          )}
-        </p>
       </div>
     </div>
   )

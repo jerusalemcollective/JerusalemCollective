@@ -27,6 +27,65 @@ const mapOptions: google.maps.MapOptions = {
   ],
 }
 
+function StaticNeighbourhoodMap({
+  title,
+  area,
+  status,
+}: {
+  title: string
+  area: string
+  status?: string
+}) {
+  return (
+    <div className="relative h-[320px] w-full overflow-hidden bg-[#eef0ea] md:h-[380px]">
+      <div className="absolute inset-0">
+        <svg
+          viewBox="0 0 760 380"
+          className="h-full w-full"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          <rect width="760" height="380" fill="#eef0ea" />
+          <path d="M-20 76 C134 42 224 86 342 62 C480 34 602 42 792 22" stroke="#ffffff" strokeWidth="28" fill="none" opacity="0.95" />
+          <path d="M72 -20 C130 88 126 156 192 252 C240 322 306 340 340 410" stroke="#ffffff" strokeWidth="22" fill="none" opacity="0.92" />
+          <path d="M-28 256 C96 226 188 258 316 222 C430 190 544 204 792 174" stroke="#ffffff" strokeWidth="24" fill="none" opacity="0.9" />
+          <path d="M526 -24 C486 72 536 142 498 234 C462 320 480 360 536 414" stroke="#ffffff" strokeWidth="18" fill="none" opacity="0.9" />
+          <path d="M0 126 C102 124 178 144 278 128 C390 110 478 108 760 104" stroke="#d8d7ce" strokeWidth="5" fill="none" opacity="0.85" />
+          <path d="M118 0 C164 94 158 154 220 246 C274 326 342 338 384 380" stroke="#d8d7ce" strokeWidth="5" fill="none" opacity="0.82" />
+          <path d="M0 290 C132 264 226 288 350 248 C472 210 596 226 760 202" stroke="#d8d7ce" strokeWidth="5" fill="none" opacity="0.82" />
+          <path d="M582 0 C544 74 590 142 552 226 C516 306 544 348 610 380" stroke="#d8d7ce" strokeWidth="4" fill="none" opacity="0.8" />
+          <path d="M42 166 L158 138 L224 184 L170 252 L54 236 Z" fill="#dde7d6" opacity="0.95" />
+          <path d="M486 260 L662 236 L760 286 L688 374 L512 340 Z" fill="#dde7d6" opacity="0.85" />
+          <path d="M432 82 L608 70 L674 138 L578 184 L450 154 Z" fill="#e7e3d9" opacity="0.9" />
+          <circle cx="380" cy="190" r="72" fill="none" stroke="#d0cfc6" strokeWidth="2" strokeDasharray="6 8" opacity="0.75" />
+          <circle cx="380" cy="190" r="132" fill="none" stroke="#d0cfc6" strokeWidth="2" strokeDasharray="5 10" opacity="0.5" />
+        </svg>
+      </div>
+      <div className="absolute inset-0 bg-gradient-to-br from-white/18 via-transparent to-[#fff4ef]/32" />
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-full pb-3">
+        <div className="rounded-2xl bg-white px-4 py-3 shadow-xl ring-1 ring-stone-200">
+          <p className="max-w-[220px] truncate text-sm font-bold text-stone-950">
+            {title}
+          </p>
+          <p className="mt-0.5 text-xs font-semibold text-[#c76f55]">
+            {area}
+          </p>
+        </div>
+        <div className="mx-auto h-4 w-4 rotate-45 bg-white shadow-lg ring-1 ring-stone-200" />
+      </div>
+      <div className="absolute left-4 top-4 rounded-xl bg-white px-3 py-2 shadow-md ring-1 ring-stone-100">
+        <p className="text-xs font-bold text-stone-950">{area}</p>
+        <p className="text-[10px] text-stone-500">Neighbourhood map</p>
+      </div>
+      {status && (
+        <div className="absolute bottom-4 left-4 right-4 rounded-xl bg-white/95 px-3 py-2 text-xs text-stone-600 shadow-md ring-1 ring-stone-100">
+          {status}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function ListingNeighbourhoodMap({
   title,
   area,
@@ -44,22 +103,21 @@ export function ListingNeighbourhoodMap({
 
   if (!hasGoogleMapsKey || loadError) {
     return (
-      <div className="flex h-[320px] items-center justify-center bg-[#F8F5F2] px-6 text-center">
-        <div>
-          <p className="text-sm font-bold text-stone-950">{area}</p>
-          <p className="mt-1 text-sm text-stone-500">
-            Map will appear once Google Maps is configured.
-          </p>
-        </div>
-      </div>
+      <StaticNeighbourhoodMap
+        title={title}
+        area={area}
+        status="Live Google map will appear once the Maps key is configured for this domain."
+      />
     )
   }
 
   if (!isLoaded) {
     return (
-      <div className="flex h-[320px] items-center justify-center bg-[#F8F5F2]">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-stone-200 border-t-[#c76f55]" />
-      </div>
+      <StaticNeighbourhoodMap
+        title={title}
+        area={area}
+        status="Loading live map..."
+      />
     )
   }
 
