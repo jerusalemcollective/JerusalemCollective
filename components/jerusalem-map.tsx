@@ -16,6 +16,7 @@ interface Listing {
   lat: number
   lng: number
   amenities?: string[]
+  cover_photo_url: string | null
   is_featured?: boolean
 }
 
@@ -138,7 +139,7 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
   return (
     <div className="relative h-[calc(100vh-90px)] w-full overflow-hidden bg-[#F8F5F2]">
       {/* Sidebar */}
-      <div className="absolute left-0 top-0 z-10 hidden h-full w-[420px] overflow-y-auto border-r border-stone-200 bg-white p-5 shadow-xl lg:block">
+      <div className="absolute left-0 top-0 z-10 hidden h-full w-[360px] overflow-y-auto border-r border-stone-200 bg-white p-4 shadow-xl lg:block">
         <div className="mb-5">
           <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Search by map</p>
           <h1 className="mt-2 text-2xl font-bold text-stone-950">Jerusalem stays</h1>
@@ -166,7 +167,17 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
                   : 'border-stone-200 bg-white hover:border-[#c76f55]'
               }`}
             >
-              <div className="mb-3 aspect-[4/3] rounded-xl bg-stone-200" />
+              <div className="mb-3 aspect-[4/3] overflow-hidden rounded-xl bg-stone-200">
+                {listing.cover_photo_url ? (
+                  <img
+                    src={listing.cover_photo_url}
+                    alt={listing.title}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="h-full w-full bg-gradient-to-br from-stone-100 via-stone-200 to-stone-300" />
+                )}
+              </div>
               <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">{listing.area}</p>
               <h3 className="mt-1 font-bold text-stone-950">{listing.title}</h3>
               <p className="mt-1 text-sm text-stone-500">{listing.bedrooms} bedrooms · sleeps {listing.sleeps}</p>
@@ -177,7 +188,7 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
       </div>
 
       {/* Map */}
-      <div className="h-full w-full lg:pl-[420px]">
+      <div className="h-full w-full lg:pl-[360px]">
         <GoogleMap
           mapContainerStyle={mapContainerStyle}
           center={center}
@@ -212,7 +223,7 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
 
       {/* Selected listing popup */}
       {selectedListing && (
-        <div className="absolute bottom-5 left-5 right-5 z-20 rounded-3xl bg-white p-4 shadow-2xl ring-1 ring-stone-200 lg:left-[445px] lg:right-auto lg:w-[360px]">
+        <div className="absolute bottom-5 left-5 right-5 z-20 rounded-3xl bg-white p-4 shadow-2xl ring-1 ring-stone-200 lg:left-[385px] lg:right-auto lg:w-[340px]">
           <button
             onClick={() => setSelectedListing(null)}
             className="absolute right-3 top-3 rounded-full p-1 hover:bg-stone-100"
@@ -221,7 +232,17 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
               <path d="M15 5L5 15M5 5l10 10" />
             </svg>
           </button>
-          <div className="mb-3 aspect-[4/3] rounded-2xl bg-stone-200" />
+          <div className="mb-3 aspect-[4/3] overflow-hidden rounded-2xl bg-stone-200">
+            {selectedListing.cover_photo_url ? (
+              <img
+                src={selectedListing.cover_photo_url}
+                alt={selectedListing.title}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="h-full w-full bg-gradient-to-br from-stone-100 via-stone-200 to-stone-300" />
+            )}
+          </div>
           <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">{selectedListing.area}</p>
           <h3 className="mt-1 text-lg font-bold text-stone-950">{selectedListing.title}</h3>
           <p className="mt-1 text-sm text-stone-500">{selectedListing.bedrooms} bedrooms · sleeps {selectedListing.sleeps}</p>

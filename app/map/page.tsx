@@ -15,6 +15,12 @@ type ListingRow = {
   amenities: string[] | null
 }
 
+type ListingPhotoRow = {
+  listing_id: string
+  photo_url: string
+  is_cover: boolean | null
+}
+
 export const metadata = {
   title: 'Jerusalem Map | JLM Collective',
   description: 'Browse curated Jerusalem stays on the map.',
@@ -27,7 +33,7 @@ function formatPrice(listing: Pick<ListingRow, 'price_ils' | 'price_usd'>) {
   return prices.length ? prices.join(' / ') : 'Price on request'
 }
 
-function toMapListing(listing: ListingRow): MapListing {
+function toMapListing(listing: ListingRow, coverPhotoUrl: string | null): MapListing {
   return {
     id: listing.id,
     title: listing.title,
@@ -40,6 +46,7 @@ function toMapListing(listing: ListingRow): MapListing {
     lat: listing.latitude || 31.7683,
     lng: listing.longitude || 35.2137,
     amenities: listing.amenities || [],
+    cover_photo_url: coverPhotoUrl,
   }
 }
 
@@ -52,7 +59,25 @@ export default async function MapPage() {
     .order('is_featured', { ascending: false })
 
   const listingRows = data?.length ? (data as ListingRow[]) : (sampleListings as ListingRow[])
-  const listings = listingRows.map(toMapListing)
+  const listingIds = listingRows.map((listing) => listing.id)
+  const { data: photoData } =
+    listingIds.length > 0
+      ? await supabase
+          .from('listing_photos')
+          .select('listing_id, photo_url, is_cover')
+          .in('listing_id', listingIds)
+          .order('is_cover', { ascending: false })
+      : { data: [] }
+  const coverPhotoByListing = new Map<string, string>()
+
+  for (const photo of (photoData || []) as ListingPhotoRow[]) {
+    if (!coverPhotoByListing.has(photo.listing_id)) {
+      coverPhotoByListing.set(photo.listing_id, photo.photo_url)
+    }
+  }
+  const listings = listingRows.map((listing) =>
+    toMapListing(listing, coverPhotoByListing.get(listing.id) || null),
+  )
 
   return <MapPageClient listings={listings} />
 }

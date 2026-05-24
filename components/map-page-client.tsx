@@ -18,6 +18,7 @@ export type MapListing = {
   lat: number
   lng: number
   amenities: string[]
+  cover_photo_url: string | null
 }
 
 type SelectedMapListing = Omit<MapListing, 'amenities'> & {
@@ -72,7 +73,7 @@ export function MapPageClient({ listings }: { listings: MapListing[] }) {
         </Link>
       </div>
 
-      <div className="absolute left-4 right-4 top-16 z-20 flex max-h-[calc(100vh-5rem)] flex-col gap-2 overflow-y-auto rounded-3xl border border-stone-200 bg-white/95 p-3 shadow-lg backdrop-blur md:left-auto md:right-4 md:w-[420px]">
+      <div className="absolute left-4 right-4 top-16 z-20 flex max-h-[calc(100vh-5rem)] flex-col gap-3 overflow-y-auto rounded-3xl border border-stone-200 bg-white/95 p-3 shadow-lg backdrop-blur md:left-auto md:right-4 md:w-[360px]">
         <div className="flex flex-wrap items-center gap-2">
           <label className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700">
             <span className="font-semibold">Bedrooms</span>
@@ -89,35 +90,50 @@ export function MapPageClient({ listings }: { listings: MapListing[] }) {
             </select>
           </label>
 
-          <div className="grid w-full gap-2 pt-1">
-            {STAY_AMENITY_GROUPS.map((group) => (
-              <section key={group.title} className="rounded-2xl bg-[#F8F5F2] p-2">
-                <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-widest text-stone-400">
-                  {group.title}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {group.amenities.map((amenity) => {
-                    const active = selectedAmenities.includes(amenity)
+          <details className="group w-full rounded-2xl border border-stone-200 bg-white">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-stone-800">
+              <span>
+                Amenities
+                {selectedAmenities.length > 0 && (
+                  <span className="ml-2 rounded-full bg-[#fff4ef] px-2 py-0.5 text-xs font-bold text-[#c76f55]">
+                    {selectedAmenities.length}
+                  </span>
+                )}
+              </span>
+              <span className="text-xs text-stone-400 transition group-open:rotate-180">v</span>
+            </summary>
+            <div className="max-h-[42vh] overflow-y-auto border-t border-stone-100 p-3">
+              <div className="grid gap-3">
+                {STAY_AMENITY_GROUPS.map((group) => (
+                  <section key={group.title}>
+                    <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-widest text-stone-400">
+                      {group.title}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {group.amenities.map((amenity) => {
+                        const active = selectedAmenities.includes(amenity)
 
-                    return (
-                      <button
-                        key={amenity}
-                        type="button"
-                        onClick={() => toggleAmenity(amenity)}
-                        className={`rounded-full px-3 py-2 text-xs font-semibold transition ${
-                          active
-                            ? 'bg-[#c76f55] text-white'
-                            : 'border border-stone-200 bg-white text-stone-700 hover:border-[#c76f55] hover:text-[#c76f55]'
-                        }`}
-                      >
-                        {amenity}
-                      </button>
-                    )
-                  })}
-                </div>
-              </section>
-            ))}
-          </div>
+                        return (
+                          <button
+                            key={amenity}
+                            type="button"
+                            onClick={() => toggleAmenity(amenity)}
+                            className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                              active
+                                ? 'bg-[#c76f55] text-white'
+                                : 'border border-stone-200 bg-white text-stone-700 hover:border-[#c76f55] hover:text-[#c76f55]'
+                            }`}
+                          >
+                            {amenity}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            </div>
+          </details>
         </div>
 
         {(minimumBedrooms > 0 || selectedAmenities.length > 0) && (
@@ -131,20 +147,31 @@ export function MapPageClient({ listings }: { listings: MapListing[] }) {
         )}
 
         {selectedListing && (
-          <div className="rounded-2xl border border-stone-200 bg-[#F8F5F2] p-4">
-            <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">{selectedListing.area}</p>
-            <h3 className="mt-1 font-bold text-stone-950">{selectedListing.title}</h3>
-            <p className="mt-1 text-sm text-stone-500">
-              {selectedListing.bedrooms} bedrooms · sleeps {selectedListing.sleeps}
-            </p>
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <p className="font-bold text-stone-950">{formatMapListingPrice(selectedListing)}</p>
-              <Link
-                href={`/listings/${selectedListing.id}`}
-                className="rounded-full bg-[#c76f55] px-4 py-2 text-sm font-bold text-white hover:bg-[#b85f47]"
-              >
-                View listing
-              </Link>
+          <div className="overflow-hidden rounded-2xl border border-stone-200 bg-[#F8F5F2]">
+            {selectedListing.cover_photo_url && (
+              <div className="aspect-[4/3] bg-stone-200">
+                <img
+                  src={selectedListing.cover_photo_url}
+                  alt={selectedListing.title}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            )}
+            <div className="p-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">{selectedListing.area}</p>
+              <h3 className="mt-1 font-bold text-stone-950">{selectedListing.title}</h3>
+              <p className="mt-1 text-sm text-stone-500">
+                {selectedListing.bedrooms} bedrooms · sleeps {selectedListing.sleeps}
+              </p>
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <p className="font-bold text-stone-950">{formatMapListingPrice(selectedListing)}</p>
+                <Link
+                  href={`/listings/${selectedListing.id}`}
+                  className="rounded-full bg-[#c76f55] px-4 py-2 text-sm font-bold text-white hover:bg-[#b85f47]"
+                >
+                  View listing
+                </Link>
+              </div>
             </div>
           </div>
         )}
