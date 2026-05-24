@@ -7,6 +7,8 @@ import { slugifyNeighborhood } from '@/lib/neighborhood-pages'
 import { HomeNeighborhoodSearch, HomeSearchForm } from '@/components/home-search-form'
 import { HomeMapSection } from '@/components/home-map-section'
 
+export const dynamic = 'force-dynamic'
+
 type ListingRow = {
   id: string
   title: string
@@ -408,7 +410,6 @@ function HomeListingCard({ listing }: { listing: FeaturedStay }) {
         <Link
           href={`/neighbourhoods/${slugifyNeighborhood(listing.area)}`}
           className="text-[11px] font-bold uppercase tracking-widest text-[#c76f55] hover:underline"
-          onClick={(event) => event.stopPropagation()}
         >
           {listing.area}
         </Link>

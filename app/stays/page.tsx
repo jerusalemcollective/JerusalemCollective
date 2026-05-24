@@ -413,41 +413,45 @@ function ListingCard({
   }
 }) {
   return (
-    <Link
-      href={`/listings/${listing.id}?from=stays`}
-      className="group block"
-    >
-      <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-stone-100 shadow-sm transition-shadow duration-200 group-hover:shadow-md">
-        {listing.cover_photo_url ? (
-          <Image
-            src={listing.cover_photo_url}
-            alt={listing.title}
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            loading="lazy"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-[#F8F5F2]">
-            <div className="text-center">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-[#c76f55]">JLM Collective</p>
-              <p className="mt-1 text-xs text-stone-400">Photo coming soon</p>
+    <div className="group block">
+      <Link
+        href={`/listings/${listing.id}?from=stays`}
+        className="block"
+      >
+        <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-stone-100 shadow-sm transition-shadow duration-200 group-hover:shadow-md">
+          {listing.cover_photo_url ? (
+            <Image
+              src={listing.cover_photo_url}
+              alt={listing.title}
+              fill
+              className="object-cover"
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              loading="lazy"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-[#F8F5F2]">
+              <div className="text-center">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#c76f55]">JLM Collective</p>
+                <p className="mt-1 text-xs text-stone-400">Photo coming soon</p>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      </Link>
 
       <div className="mt-3 space-y-0.5">
         <Link
           href={`/neighbourhoods/${slugifyNeighborhood(listing.area)}`}
           className="text-[11px] font-bold uppercase tracking-widest text-[#c76f55] hover:underline"
-          onClick={(event) => event.stopPropagation()}
         >
           {listing.area}
         </Link>
-        <p className="line-clamp-1 font-semibold leading-snug text-stone-950">
+        <Link
+          href={`/listings/${listing.id}?from=stays`}
+          className="block line-clamp-1 font-semibold leading-snug text-stone-950"
+        >
           {listing.title}
-        </p>
+        </Link>
         <p className="text-sm text-stone-500">
           {[
             listing.bedrooms ? `${listing.bedrooms} bed` : null,
@@ -463,6 +467,6 @@ function ListingCard({
           )}
         </p>
       </div>
-    </Link>
+    </div>
   )
 }
