@@ -122,64 +122,73 @@ function getExploreHref(blockLabel: string, item: string) {
 }
 
 async function getHomepageData() {
-  const supabase = await createClient()
-  const [{ data: listingsData }, { data: neighborhoodsData }] = await Promise.all([
-    supabase
-      .from('listings')
-      .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, amenities, latitude, longitude, is_featured')
-      .eq('is_published', true)
-      .eq('is_featured', true)
-      .limit(6),
-    supabase.rpc('popular_neighborhoods', {
-      result_limit: 6,
-      lookback_days: 30,
-    }),
-  ])
+  try {
+    const supabase = await createClient()
+    const [{ data: listingsData }, { data: neighborhoodsData }] = await Promise.all([
+      supabase
+        .from('listings')
+        .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, amenities, latitude, longitude, is_featured')
+        .eq('is_published', true)
+        .eq('is_featured', true)
+        .limit(6),
+      supabase.rpc('popular_neighborhoods', {
+        result_limit: 6,
+        lookback_days: 30,
+      }),
+    ])
 
-  let featuredRows = (listingsData || []) as ListingRow[]
-  if (featuredRows.length === 0) {
-    const { data: fallbackListingsData } = await supabase
-      .from('listings')
-      .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, amenities, latitude, longitude, is_featured')
-      .eq('is_published', true)
-      .order('created_at', { ascending: false })
-      .limit(6)
+    let featuredRows = (listingsData || []) as ListingRow[]
+    if (featuredRows.length === 0) {
+      const { data: fallbackListingsData } = await supabase
+        .from('listings')
+        .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, amenities, latitude, longitude, is_featured')
+        .eq('is_published', true)
+        .order('created_at', { ascending: false })
+        .limit(6)
 
-    featuredRows = (fallbackListingsData || []) as ListingRow[]
-  }
-  const featuredIds = featuredRows.map((listing) => listing.id)
-  const { data: photoData } = featuredIds.length
-    ? await supabase
-        .from('listing_photos')
-        .select('listing_id, photo_url, is_cover, sort_order')
-        .in('listing_id', featuredIds)
-        .order('is_cover', { ascending: false })
-        .order('sort_order', { ascending: true })
-    : { data: [] }
-  const coverPhotoByListingId = new Map<string, string>()
-  ;((photoData || []) as ListingPhotoRow[]).forEach((photo) => {
-    if (photo.listing_id && !coverPhotoByListingId.has(photo.listing_id)) {
-      coverPhotoByListingId.set(photo.listing_id, photo.photo_url)
+      featuredRows = (fallbackListingsData || []) as ListingRow[]
     }
-  })
+    const featuredIds = featuredRows.map((listing) => listing.id)
+    const { data: photoData } = featuredIds.length
+      ? await supabase
+          .from('listing_photos')
+          .select('listing_id, photo_url, is_cover, sort_order')
+          .in('listing_id', featuredIds)
+          .order('is_cover', { ascending: false })
+          .order('sort_order', { ascending: true })
+      : { data: [] }
+    const coverPhotoByListingId = new Map<string, string>()
+    ;((photoData || []) as ListingPhotoRow[]).forEach((photo) => {
+      if (photo.listing_id && !coverPhotoByListingId.has(photo.listing_id)) {
+        coverPhotoByListingId.set(photo.listing_id, photo.photo_url)
+      }
+    })
 
-  const featuredStays = featuredRows.length
-    ? featuredRows.map((listing) =>
-        toFeaturedStay({
-          ...listing,
-          cover_photo_url: coverPhotoByListingId.get(listing.id) || null,
-        }),
-      )
-    : defaultFeatured
-  const liveNeighborhoods = ((neighborhoodsData || []) as PopularNeighborhoodRow[])
-    .map((row) => row.neighborhood)
-    .filter((item): item is string => Boolean(item))
-  const popularNeighborhoods = [
-    ...liveNeighborhoods,
-    ...defaultExploreNeighborhoods,
-  ].filter((item, index, items) => items.indexOf(item) === index).slice(0, 6)
+    const featuredStays = featuredRows.length
+      ? featuredRows.map((listing) =>
+          toFeaturedStay({
+            ...listing,
+            cover_photo_url: coverPhotoByListingId.get(listing.id) || null,
+          }),
+        )
+      : defaultFeatured
+    const liveNeighborhoods = ((neighborhoodsData || []) as PopularNeighborhoodRow[])
+      .map((row) => row.neighborhood)
+      .filter((item): item is string => Boolean(item))
+    const popularNeighborhoods = [
+      ...liveNeighborhoods,
+      ...defaultExploreNeighborhoods,
+    ].filter((item, index, items) => items.indexOf(item) === index).slice(0, 6)
 
-  return { featuredStays, popularNeighborhoods }
+    return { featuredStays, popularNeighborhoods }
+  } catch (error) {
+    console.error('Failed to load homepage data', error)
+
+    return {
+      featuredStays: defaultFeatured,
+      popularNeighborhoods: defaultExploreNeighborhoods.slice(0, 6),
+    }
+  }
 }
 
 export default async function JLMCollectiveHomePage() {
