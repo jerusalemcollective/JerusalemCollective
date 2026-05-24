@@ -72,8 +72,25 @@ export default async function AdminOverviewPage() {
       .order('created_at', { ascending: false })
       .limit(5),
   ])
-  const typedRecentApplications = (recentApplications || []) as RecentApplication[]
-  const typedRecentEnquiries = (recentEnquiries || []) as RecentEnquiry[]
+  const typedRecentApplications: RecentApplication[] = (recentApplications || []).map((application) => ({
+    id: application.id,
+    host_name: application.host_name,
+    apartment_title: application.apartment_title,
+    area: application.area,
+    status: application.status,
+    created_at: application.created_at,
+    rejected_at: application.rejected_at,
+  }))
+  const typedRecentEnquiries: RecentEnquiry[] = (recentEnquiries || []).map((request) => ({
+    id: request.id,
+    listing_id: request.listing_id,
+    guest_id: request.guest_id,
+    status: request.status,
+    check_in: request.check_in,
+    check_out: request.check_out,
+    guests: request.guests || 1,
+    created_at: request.created_at,
+  }))
   const recentListingIds = typedRecentEnquiries
     .map((request) => request.listing_id)
     .filter((listingId): listingId is string => Boolean(listingId))
@@ -88,11 +105,20 @@ export default async function AdminOverviewPage() {
       ? supabase.from('profiles').select('id, full_name').in('id', recentGuestIds)
       : Promise.resolve({ data: [] }),
   ])
+  const typedEnquiryListings: EnquiryListing[] = (enquiryListings || []).map((listing) => ({
+    id: listing.id,
+    title: listing.title,
+    area: listing.area,
+  }))
+  const typedEnquiryGuests: EnquiryGuest[] = (enquiryGuests || []).map((guest) => ({
+    id: guest.id,
+    full_name: guest.full_name,
+  }))
   const enquiryListingMap = new Map(
-    ((enquiryListings || []) as EnquiryListing[]).map((listing) => [listing.id, listing]),
+    typedEnquiryListings.map((listing) => [listing.id, listing]),
   )
   const enquiryGuestMap = new Map(
-    ((enquiryGuests || []) as EnquiryGuest[]).map((guest) => [guest.id, guest]),
+    typedEnquiryGuests.map((guest) => [guest.id, guest]),
   )
 
   return (
@@ -183,10 +209,14 @@ export default async function AdminOverviewPage() {
             {typedRecentEnquiries.map((request) => (
               <Link key={request.id} href="/admin/enquiries" className="block py-4 transition hover:text-[#c76f55]">
                 <p className="font-semibold text-stone-950">
-                  {enquiryListingMap.get(request.listing_id)?.title || 'Stay enquiry'}
+                  {(request.listing_id
+                    ? enquiryListingMap.get(request.listing_id)?.title
+                    : null) || 'Stay enquiry'}
                 </p>
                 <p className="mt-1 text-sm text-stone-600">
-                  {enquiryGuestMap.get(request.guest_id)?.full_name || 'Guest'} | {request.guests || 1} guest{request.guests === 1 ? '' : 's'}
+                  {(request.guest_id
+                    ? enquiryGuestMap.get(request.guest_id)?.full_name
+                    : null) || 'Guest'} | {request.guests || 1} guest{request.guests === 1 ? '' : 's'}
                 </p>
               </Link>
             ))}

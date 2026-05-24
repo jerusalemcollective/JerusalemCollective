@@ -66,7 +66,22 @@ export default async function AdminCasesPage({
     countQuery,
   ])
 
-  const cases = (data || []) as SupportCase[]
+  const cases: SupportCase[] = (data || []).map((supportCase) => ({
+    ...supportCase,
+    approved_refund_amount: supportCase.approved_refund_amount || 0,
+    bookings: Array.isArray(supportCase.bookings)
+      ? supportCase.bookings[0] || null
+      : supportCase.bookings,
+    listings: Array.isArray(supportCase.listings)
+      ? supportCase.listings[0] || null
+      : supportCase.listings,
+    guest: Array.isArray(supportCase.guest)
+      ? supportCase.guest[0] || null
+      : supportCase.guest,
+    host: Array.isArray(supportCase.host)
+      ? supportCase.host[0] || null
+      : supportCase.host,
+  }))
   const total = count || 0
   const summary = summarizeSupportCases(cases)
 
