@@ -68,6 +68,7 @@ export const neighborhoodDescriptions: Record<string, string> = {
   'Jewish Quarter': oldCityDsc,
   Katamon: katamonDsc,
   Baka: bakaDsc,
+  "Baka'a": bakaDsc,
   'Har Nof': harNofDsc,
   'Givat Shaul': givatShaulDsc,
   'Ramat Eshkol': ramatEshkolDsc,
