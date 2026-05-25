@@ -561,26 +561,30 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
         address = place.formattedAddress || suggestion.label
         latitude = place.location?.lat() ?? null
         longitude = place.location?.lng() ?? null
-      } else if (suggestion.placeId && placesLibrary.current?.PlacesService && placesServiceContainerRef.current) {
+      } else {
         const places = placesLibrary.current
-        const PlacesService = places.PlacesService
-        const service = new PlacesService(placesServiceContainerRef.current)
-        const place = await new Promise<LegacyPlaceResult | null>((resolve) => {
-          service.getDetails(
-            {
-              placeId: suggestion.placeId,
-              fields: ['formatted_address', 'geometry'],
-            },
-            (result, status) => {
-              const okStatus = places.PlacesServiceStatus?.OK || 'OK'
-              resolve(status === okStatus ? result : null)
-            },
-          )
-        })
+        const PlacesService = places?.PlacesService
+        const serviceContainer = placesServiceContainerRef.current
 
-        address = place?.formatted_address || suggestion.label
-        latitude = place?.geometry?.location?.lat() ?? null
-        longitude = place?.geometry?.location?.lng() ?? null
+        if (suggestion.placeId && PlacesService && serviceContainer) {
+          const service = new PlacesService(serviceContainer)
+          const place = await new Promise<LegacyPlaceResult | null>((resolve) => {
+            service.getDetails(
+              {
+                placeId: suggestion.placeId,
+                fields: ['formatted_address', 'geometry'],
+              },
+              (result, status) => {
+                const okStatus = places?.PlacesServiceStatus?.OK || 'OK'
+                resolve(status === okStatus ? result : null)
+              },
+            )
+          })
+
+          address = place?.formatted_address || suggestion.label
+          latitude = place?.geometry?.location?.lat() ?? null
+          longitude = place?.geometry?.location?.lng() ?? null
+        }
       }
 
       setInputValue(address)
