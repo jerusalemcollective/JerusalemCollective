@@ -14,6 +14,11 @@ type PaymentBooking = {
   profiles: { full_name: string | null } | null
 }
 
+type PaymentBookingRow = Omit<PaymentBooking, 'listings' | 'profiles'> & {
+  listings?: PaymentBooking['listings'] | NonNullable<PaymentBooking['listings']>[] | null
+  profiles?: PaymentBooking['profiles'] | NonNullable<PaymentBooking['profiles']>[] | null
+}
+
 export default async function HostPaymentsPage() {
   const { supabase, hostIds } = await requireHostDashboardAccess()
   const [{ data: profile }, { data: bookingsData }] = await Promise.all([
@@ -33,7 +38,16 @@ export default async function HostPaymentsPage() {
       .in('host_id', hostIds)
       .order('check_in', { ascending: false }),
   ])
-  const bookings = (bookingsData || []) as PaymentBooking[]
+  const bookings: PaymentBooking[] = (bookingsData || []).map((booking: PaymentBookingRow) => ({
+    id: booking.id,
+    check_in: booking.check_in,
+    check_out: booking.check_out,
+    payment_status: booking.payment_status,
+    payment_notes: booking.payment_notes,
+    payment_updated_at: booking.payment_updated_at,
+    listings: Array.isArray(booking.listings) ? booking.listings[0] || null : booking.listings || null,
+    profiles: Array.isArray(booking.profiles) ? booking.profiles[0] || null : booking.profiles || null,
+  }))
 
   return (
     <main className="min-h-screen bg-[#F8F5F2] px-5 py-10 text-[#252525] md:px-6">

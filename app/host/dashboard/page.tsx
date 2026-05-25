@@ -12,6 +12,10 @@ type UpcomingBooking = {
   } | null
 }
 
+type UpcomingBookingRow = Omit<UpcomingBooking, 'listings'> & {
+  listings?: UpcomingBooking['listings'] | NonNullable<UpcomingBooking['listings']>[] | null
+}
+
 type HostSupportCase = {
   id: string
   reason: string
@@ -102,10 +106,29 @@ export default async function HostDashboardPage() {
   const activeListings = activeListingsCount || 0
   const totalListings = totalListingsCount || 0
   const totalApplications = totalApplicationsCount || 0
-  const upcomingBookings = (upcomingBookingsData || []) as UpcomingBooking[]
-  const openSupportCases = (supportCasesData || []) as HostSupportCase[]
-  const pendingApplication = pendingApplicationData as PendingApplication | null
-  const hostCalendar = hostCalendarData as HostCalendar | null
+  const upcomingBookings: UpcomingBooking[] = (upcomingBookingsData || []).map((booking: UpcomingBookingRow) => ({
+    id: booking.id,
+    check_in: booking.check_in,
+    check_out: booking.check_out,
+    listings: Array.isArray(booking.listings) ? booking.listings[0] || null : booking.listings || null,
+  }))
+  const openSupportCases: HostSupportCase[] = (supportCasesData || []).map((supportCase: HostSupportCase) => ({
+    id: supportCase.id,
+    reason: supportCase.reason,
+    status: supportCase.status,
+  }))
+  const pendingApplication: PendingApplication | null = pendingApplicationData
+    ? {
+        id: pendingApplicationData.id,
+        status: pendingApplicationData.status,
+      }
+    : null
+  const hostCalendar: HostCalendar | null = hostCalendarData
+    ? {
+        name: hostCalendarData.name,
+        calendar_token: hostCalendarData.calendar_token,
+      }
+    : null
   const calendarUrl = hostCalendar?.calendar_token
     ? `https://jlmcollective.co/api/host-calendar/${hostCalendar.calendar_token}.ics`
     : null
