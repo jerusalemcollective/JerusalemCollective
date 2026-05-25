@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS public.listing_admin_messages (
   host_id uuid NOT NULL REFERENCES public.hosts(id) ON DELETE CASCADE,
   body text NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
   read_at timestamptz
 );
 

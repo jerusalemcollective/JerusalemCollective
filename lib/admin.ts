@@ -6,6 +6,7 @@ import {
   type AdminPermission,
   type AdminRole,
 } from '@/lib/admin-permissions'
+import { normalizeAdminRole } from '@/lib/admin/config'
 
 export type { AdminPermission, AdminRole }
 export { describeAdminRole }
@@ -41,12 +42,14 @@ export async function requireAdmin() {
   }
 
   const adminRole =
-    'admin_role' in profile && profile.admin_role ? profile.admin_role : 'owner'
+    'admin_role' in profile && profile.admin_role
+      ? normalizeAdminRole(profile.admin_role, 'owner')
+      : 'owner'
 
   return {
     supabase,
     user,
-    adminRole: adminRole as AdminRole,
+    adminRole,
   }
 }
 

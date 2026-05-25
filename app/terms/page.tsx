@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { HOST_TERMS, HOST_TERMS_LAST_UPDATED } from '@/lib/host-terms'
 
 export const metadata = {
   title: 'Terms of Service',
@@ -14,7 +15,7 @@ export default function TermsPage() {
             Terms of Service
           </h1>
           <p className="mb-8 text-sm text-stone-500">
-            Last updated: 18 May 2026
+            Last updated: {HOST_TERMS_LAST_UPDATED}
           </p>
 
           <div className="space-y-10">
@@ -58,19 +59,24 @@ export default function TermsPage() {
             <section>
               <h2 className="mb-4 text-xl font-bold text-stone-900">4. Host terms and conditions</h2>
               <p className="leading-relaxed text-stone-700">
-                Before submitting a first stay, a host must agree to these host terms. By doing so,
-                the host confirms that:
+                Before submitting a stay, a host must agree to the host terms below. These terms
+                are designed to protect guests, hosts, and the quality of the JLM Collective
+                marketplace.
               </p>
-              <ul className="mt-4 list-disc space-y-2 pl-6 text-stone-700">
-                <li>they are authorised to submit the stay for listing;</li>
-                <li>all listing information, pricing, photos, amenities, and descriptions are accurate;</li>
-                <li>the stay may lawfully be offered for the intended use;</li>
-                <li>they have the right to upload and use all photos and content provided;</li>
-                <li>they will keep material listing details reasonably up to date;</li>
-                <li>they will communicate honestly with guests and JLM Collective;</li>
-                <li>they understand that listings may be reviewed before publication;</li>
-                <li>they remain responsible for their property, availability, pricing, taxes, and legal obligations.</li>
-              </ul>
+              <div className="mt-6 space-y-6">
+                {HOST_TERMS.map((term) => (
+                  <div key={term.title}>
+                    <h3 className="text-base font-bold text-stone-900">{term.title}</h3>
+                    <div className="mt-2 space-y-3">
+                      {term.body.map((paragraph) => (
+                        <p key={paragraph} className="leading-relaxed text-stone-700">
+                          {paragraph}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </section>
 
             <section>

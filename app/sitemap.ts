@@ -1,5 +1,7 @@
 import type { MetadataRoute } from 'next'
 import { createClient } from '@/lib/supabase/server'
+import { allNeighborhoods } from '@/lib/neighborhoods'
+import { slugifyNeighborhood } from '@/lib/neighborhood-pages'
 
 const siteUrl = 'https://jlmcollective.co'
 
@@ -19,9 +21,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
     {
       url: `${siteUrl}/explore`,
-      lastModified: new Date('2026-05-18'),
+      lastModified: new Date(),
       changeFrequency: 'weekly',
       priority: 0.8,
+    },
+    {
+      url: `${siteUrl}/how-it-works`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.6,
     },
     {
       url: `${siteUrl}/map`,
@@ -54,6 +62,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.3,
     },
   ]
+  const neighborhoodPages: MetadataRoute.Sitemap = allNeighborhoods.map((name) => ({
+    url: `${siteUrl}/neighbourhoods/${slugifyNeighborhood(name)}`,
+    lastModified: new Date(),
+    changeFrequency: 'weekly',
+    priority: 0.6,
+  }))
 
   try {
     const supabase = await createClient()
@@ -82,8 +96,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.5,
     }))
 
-    return [...staticPages, ...listingPages, ...hostPages]
+    return [...staticPages, ...neighborhoodPages, ...listingPages, ...hostPages]
   } catch {
-    return staticPages
+    return [...staticPages, ...neighborhoodPages]
   }
 }

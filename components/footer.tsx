@@ -147,6 +147,9 @@ export function Footer() {
           </Link>
 
           <nav className="flex flex-wrap items-center gap-x-5 gap-y-3 text-sm font-semibold sm:justify-end">
+            <Link href="/how-it-works" className="text-stone-600 transition hover:text-[#c76f55]">How it works</Link>
+            <Link href="/stays" className="text-stone-600 transition hover:text-[#c76f55]">Browse stays</Link>
+            <Link href="/explore" className="text-stone-600 transition hover:text-[#c76f55]">Explore</Link>
             <Link href="/host/login" className="text-stone-600 transition hover:text-[#c76f55]">Host login</Link>
             <button 
               onClick={() => setShowTrustSafety(true)}

@@ -2,6 +2,30 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { requireAdminPermission } from '@/lib/admin'
 import { AdminListingMessageForm } from '@/components/admin-listing-message-form'
+import { ListingQualityScore } from '@/components/listing-quality-score'
+import { calculateListingScore } from '@/lib/marketplace-rules'
+
+type AdminListingDetail = {
+  id: string
+  title: string
+  area: string
+  host_id: string
+  is_published: boolean
+  is_featured: boolean
+  bedrooms: number | null
+  bathrooms: number | null
+  amenities: string[] | null
+  description: string | null
+  price_usd: number | null
+  price_ils: number | null
+  hosts?: {
+    name: string
+  } | null
+}
+
+type AdminListingDetailRow = Omit<AdminListingDetail, 'hosts'> & {
+  hosts?: AdminListingDetail['hosts'] | NonNullable<AdminListingDetail['hosts']>[] | null
+}
 
 export default async function AdminListingDetailPage({
   params,
@@ -10,10 +34,10 @@ export default async function AdminListingDetailPage({
 }) {
   const { id } = await params
   const { supabase } = await requireAdminPermission('listings')
-  const [{ data: listing }, { data: messages, error: messagesError }] = await Promise.all([
+  const [{ data: listingData }, { data: messages, error: messagesError }, { data: photos }] = await Promise.all([
     supabase
       .from('listings')
-      .select('id, title, area, host_id, is_published, is_featured, hosts(name)')
+      .select('id, title, area, host_id, is_published, is_featured, bedrooms, bathrooms, amenities, description, price_usd, price_ils, hosts(name)')
       .eq('id', id)
       .single(),
     supabase
@@ -21,9 +45,30 @@ export default async function AdminListingDetailPage({
       .select('id, body, created_at')
       .eq('listing_id', id)
       .order('created_at', { ascending: false }),
+    supabase
+      .from('listing_photos')
+      .select('id')
+      .eq('listing_id', id),
   ])
 
-  if (!listing) notFound()
+  if (!listingData) notFound()
+
+  const listingRow: AdminListingDetailRow = listingData
+  const listing: AdminListingDetail = {
+    ...listingRow,
+    hosts: Array.isArray(listingRow.hosts)
+      ? listingRow.hosts[0] || null
+      : listingRow.hosts,
+  }
+  const qualityScore = calculateListingScore({
+    photo_count: photos?.length || 0,
+    description: listing.description,
+    bedrooms: listing.bedrooms,
+    bathrooms: listing.bathrooms,
+    amenities: listing.amenities || [],
+    price_usd: listing.price_usd,
+    price_ils: listing.price_ils,
+  })
 
   return (
     <div>
@@ -42,6 +87,9 @@ export default async function AdminListingDetailPage({
             <Info label="Host" value={listing.hosts?.name || 'Host'} />
             <Info label="Published" value={listing.is_published ? 'Live' : 'Hidden'} />
             <Info label="Featured" value={listing.is_featured ? 'Featured' : 'Standard'} />
+          </div>
+          <div className="mt-6 rounded-2xl bg-[#F8F5F2] p-4">
+            <ListingQualityScore score={qualityScore} />
           </div>
 
           <div className="mt-8">

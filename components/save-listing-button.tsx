@@ -7,6 +7,7 @@ import { recordListingEngagement } from '@/lib/listing-engagement'
 
 export function SaveListingButton({ listingId }: { listingId: string }) {
   const [saved, setSaved] = useState(false)
+  const [optimisticSaved, setOptimisticSaved] = useState(false)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
@@ -30,11 +31,16 @@ export function SaveListingButton({ listingId }: { listingId: string }) {
         .maybeSingle()
 
       setSaved(Boolean(data))
+      setOptimisticSaved(Boolean(data))
       setLoading(false)
     }
 
     void loadSavedState()
   }, [listingId])
+
+  useEffect(() => {
+    setOptimisticSaved(saved)
+  }, [saved])
 
   async function toggleSaved() {
     const supabase = createClient()
@@ -47,28 +53,30 @@ export function SaveListingButton({ listingId }: { listingId: string }) {
       return
     }
 
-    setLoading(true)
+    const newValue = !optimisticSaved
+    setOptimisticSaved(newValue)
 
-    if (saved) {
-      await supabase
-        .from('saved_listings')
-        .delete()
-        .eq('listing_id', listingId)
-        .eq('user_id', user.id)
-      setSaved(false)
-    } else {
-      const { error } = await supabase.from('saved_listings').insert({
-        listing_id: listingId,
-        user_id: user.id,
-      })
-
-      if (!error) {
+    try {
+      if (newValue) {
+        const { error } = await supabase.from('saved_listings').insert({
+          listing_id: listingId,
+          user_id: user.id,
+        })
+        if (error) throw error
         setSaved(true)
-        await recordListingEngagement(supabase, listingId, 'save')
+        void recordListingEngagement(supabase, listingId, 'save')
+      } else {
+        const { error } = await supabase
+          .from('saved_listings')
+          .delete()
+          .eq('listing_id', listingId)
+          .eq('user_id', user.id)
+        if (error) throw error
+        setSaved(false)
       }
+    } catch {
+      setOptimisticSaved(!newValue)
     }
-
-    setLoading(false)
   }
 
   return (
@@ -78,7 +86,7 @@ export function SaveListingButton({ listingId }: { listingId: string }) {
       disabled={loading}
       className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 shadow-sm transition hover:border-[#c76f55] hover:text-[#c76f55] disabled:cursor-not-allowed disabled:opacity-60"
     >
-      <span aria-hidden="true">{saved ? 'Saved' : 'Save'}</span>
+      <span aria-hidden="true">{optimisticSaved ? 'Saved' : 'Save'}</span>
     </button>
   )
 }

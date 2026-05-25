@@ -1,4 +1,6 @@
-export type AdminRole = 'owner' | 'operations' | 'support' | 'content' | 'analyst'
+import { normalizeAdminRole, type AdminRole } from '@/lib/admin/config'
+
+export type { AdminRole }
 
 export type AdminPermission =
   | 'overview'
@@ -18,6 +20,7 @@ export const ADMIN_ROLE_LABELS: Record<AdminRole, string> = {
   support: 'Support',
   content: 'Content',
   analyst: 'Analyst',
+  none: 'No access',
 }
 
 export const ADMIN_ROLE_DESCRIPTIONS: Record<AdminRole, string> = {
@@ -26,6 +29,7 @@ export const ADMIN_ROLE_DESCRIPTIONS: Record<AdminRole, string> = {
   support: 'Handles hosts, guests, support cases, and messages.',
   content: 'Reviews applications, listings, reviews, and performance.',
   analyst: 'Views analytics, hosts, and guests without changing admin settings.',
+  none: 'No admin access.',
 }
 
 const ROLE_PERMISSIONS: Record<AdminRole, AdminPermission[]> = {
@@ -45,6 +49,7 @@ const ROLE_PERMISSIONS: Record<AdminRole, AdminPermission[]> = {
   support: ['overview', 'hosts', 'guests', 'cases', 'messages'],
   content: ['overview', 'applications', 'listings', 'reviews', 'analytics'],
   analyst: ['overview', 'analytics', 'hosts', 'guests'],
+  none: [],
 }
 
 export function canAdminRole(role: AdminRole | null | undefined, permission: AdminPermission) {
@@ -54,5 +59,5 @@ export function canAdminRole(role: AdminRole | null | undefined, permission: Adm
 
 export function describeAdminRole(role: string | null | undefined) {
   if (!role) return 'No admin access'
-  return ADMIN_ROLE_LABELS[role as AdminRole] || role
+  return ADMIN_ROLE_LABELS[normalizeAdminRole(role)] || role
 }
