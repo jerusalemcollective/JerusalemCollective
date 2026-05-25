@@ -414,10 +414,11 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
       setIsLoading(false)
       return
     }
+    const googleMapsApiKey = apiKey
 
     async function initAutocomplete() {
       try {
-        const places = await loadGooglePlacesLibrary(apiKey)
+        const places = await loadGooglePlacesLibrary(googleMapsApiKey)
 
         if (!isMounted) return
 
