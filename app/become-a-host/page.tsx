@@ -1764,7 +1764,7 @@ async function handleSubmit() {
                   <textarea
                     value={form.description}
                     onChange={(e) => updateField('description', e.target.value)}
-                    rows="6"
+                    rows={6}
                     placeholder="Example: Bright 3-bedroom apartment, close to shuls, suitable for families, elevator building..."
                     className={inputClass}
                   />
