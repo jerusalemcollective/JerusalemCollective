@@ -421,9 +421,12 @@ export function GoogleAddressField({
       let nextLatitude: number | null = null
       let nextLongitude: number | null = null
 
-      if (suggestion.legacyPlaceId && placesLibrary.current?.PlacesService && placesServiceContainerRef.current) {
-        const places = placesLibrary.current
-        const service = new places.PlacesService(placesServiceContainerRef.current)
+      const places = placesLibrary.current
+      const PlacesService = places?.PlacesService
+      const serviceContainer = placesServiceContainerRef.current
+
+      if (suggestion.legacyPlaceId && PlacesService && serviceContainer) {
+        const service = new PlacesService(serviceContainer)
         const place = await new Promise<LegacyPlaceResult | null>((resolve) => {
           service.getDetails(
             {
@@ -431,7 +434,7 @@ export function GoogleAddressField({
               fields: ['formatted_address', 'geometry'],
             },
             (result, status) => {
-              const okStatus = places.PlacesServiceStatus?.OK || 'OK'
+              const okStatus = places?.PlacesServiceStatus?.OK || 'OK'
               resolve(status === okStatus ? result : null)
             },
           )
