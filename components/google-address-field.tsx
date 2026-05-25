@@ -275,10 +275,11 @@ export function GoogleAddressField({
       setIsLoading(false)
       return
     }
+    const googleMapsApiKey = apiKey
 
     async function initPlaces() {
       try {
-        const places = await loadGooglePlacesLibrary(apiKey)
+        const places = await loadGooglePlacesLibrary(googleMapsApiKey)
         if (!isMounted) return
 
         if (!places.AutocompleteService && !places.AutocompleteSuggestion) {
