@@ -20,6 +20,10 @@ type UnavailableRange = {
   } | null
 }
 
+type UnavailableRangeRow = Omit<UnavailableRange, 'listings'> & {
+  listings?: UnavailableRange['listings'] | NonNullable<UnavailableRange['listings']>[] | null
+}
+
 export default async function HostCalendarPage() {
   const { supabase, hostIds } = await requireHostDashboardAccess()
   const [{ data: listings }, { data: ranges }] = await Promise.all([
@@ -35,8 +39,18 @@ export default async function HostCalendarPage() {
       .order('start_date', { ascending: true }),
   ])
 
-  const hostListings = (listings || []) as HostListing[]
-  const unavailableRanges = (ranges || []) as UnavailableRange[]
+  const hostListings: HostListing[] = (listings || []).map((listing: HostListing) => ({
+    id: listing.id,
+    title: listing.title,
+  }))
+  const unavailableRanges: UnavailableRange[] = (ranges || []).map((range: UnavailableRangeRow) => ({
+    id: range.id,
+    listing_id: range.listing_id,
+    start_date: range.start_date,
+    end_date: range.end_date,
+    reason: range.reason,
+    listings: Array.isArray(range.listings) ? range.listings[0] || null : range.listings || null,
+  }))
 
   return (
     <main className="min-h-screen bg-[#F8F5F2] px-5 py-10 text-[#252525] md:px-6">
