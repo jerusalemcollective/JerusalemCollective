@@ -113,10 +113,10 @@ function MenuLink({
       href={href}
       className={`flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-medium transition ${
         active
-          ? 'bg-white text-stone-950 shadow-sm'
+          ? 'border-b-2 border-[#c76f55] bg-white font-bold text-[#c76f55] shadow-sm'
           : accent
             ? 'border border-[#c76f55] text-[#c76f55] hover:bg-[#fff4ef]'
-            : 'text-stone-600 hover:bg-white hover:text-stone-950 hover:shadow-sm'
+            : 'text-stone-600 hover:bg-white hover:text-stone-900 hover:shadow-sm'
       }`}
     >
       {icon}

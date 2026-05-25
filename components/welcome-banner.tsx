@@ -35,7 +35,7 @@ export function WelcomeBanner() {
               Browse stays
             </Link>
             <Link
-              href="/stays?area=Rechavia"
+              href="/stays?neighborhood=Rechavia"
               onClick={dismiss}
               className="rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-300"
             >

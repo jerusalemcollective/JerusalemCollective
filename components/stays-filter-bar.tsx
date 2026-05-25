@@ -75,6 +75,20 @@ export function StaysFilterBar() {
       ),
     [searchParams],
   )
+  const activeFilterCount = [
+    checkInValue,
+    checkOutValue,
+    guests,
+    minPrice,
+    maxPrice,
+    kosherKitchen,
+    shabbatElevator,
+    physicalKey,
+    sukkahBalcony,
+    nearSynagogue,
+    maxWalkToKotel,
+    selectedAmenities.length > 0,
+  ].filter(Boolean).length
   const showSummary = !filtersOpen
   const activeArea = searchParams.get('neighborhood') || searchParams.get('area')
   const summaryItems = useMemo(() => {
@@ -197,6 +211,11 @@ export function StaysFilterBar() {
               className="rounded-full border border-stone-200 px-4 py-2 text-sm font-bold text-stone-700 transition hover:border-stone-300"
             >
               Edit filters
+              {activeFilterCount > 0 && (
+                <span className="ml-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#c76f55] text-[10px] font-bold text-white">
+                  {activeFilterCount}
+                </span>
+              )}
             </button>
             {hasFilters && (
               <button
@@ -221,6 +240,11 @@ export function StaysFilterBar() {
             className="rounded-full border border-stone-200 px-4 py-2 text-sm font-bold text-stone-700"
           >
             {filtersOpen ? 'Close' : 'Filters'}
+            {activeFilterCount > 0 && !filtersOpen && (
+              <span className="ml-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#c76f55] text-[10px] font-bold text-white">
+                {activeFilterCount}
+              </span>
+            )}
           </button>
         </div>
       )}

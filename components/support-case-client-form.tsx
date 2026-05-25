@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState, type FormEvent } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { StatusBadge } from '@/components/status-badge'
 
@@ -78,6 +79,7 @@ export function SupportCaseClientForm({
   const [bookings] = useState(initialBookings)
   const [cases, setCases] = useState(initialCases)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [selectedBookingId, setSelectedBookingId] = useState('')
   const [caseType, setCaseType] = useState('refund_request')
@@ -132,6 +134,7 @@ export function SupportCaseClientForm({
       setDetails('')
       setRequestedAmount('')
       setCurrency('ILS')
+      setSubmitted(true)
       setMessage('Your case has been sent to JLM Collective.')
     } catch (submitError) {
       setMessage(getSupportCaseErrorMessage(submitError))
@@ -142,6 +145,22 @@ export function SupportCaseClientForm({
 
   return (
     <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+      {submitted ? (
+        <div className="rounded-3xl bg-[#fff4ef] p-6 text-center">
+          <p className="font-bold text-stone-950">
+            Support case submitted
+          </p>
+          <p className="mt-2 text-sm text-stone-600">
+            We will be in touch shortly. You can track your case in your account.
+          </p>
+          <Link
+            href="/account/support"
+            className="mt-4 inline-flex rounded-full bg-[#c76f55] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#b85f47]"
+          >
+            View my cases
+          </Link>
+        </div>
+      ) : (
       <form onSubmit={handleSubmit} className="rounded-3xl bg-white p-6 shadow-sm">
         <h2 className="text-xl font-bold text-stone-950">Open a case</h2>
 
@@ -238,6 +257,7 @@ export function SupportCaseClientForm({
           </p>
         )}
       </form>
+      )}
 
       <section className="overflow-hidden rounded-3xl bg-white shadow-sm">
         <div className="border-b border-stone-100 px-6 py-4">

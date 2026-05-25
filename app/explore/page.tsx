@@ -30,17 +30,17 @@ const collectionCards = [
   {
     title: 'Family stays',
     description: 'Room to spread out, practical layouts, and stays suited to longer visits.',
-    href: '/stays?feature=Family%20friendly',
+    href: '/stays',
   },
   {
     title: 'Sukkah',
     description: 'Browse stays with a sukkah option for the right season.',
-    href: '/stays?feature=Sukkah',
+    href: '/stays?sukkahBalcony=1',
   },
   {
     title: 'Near synagogues',
     description: 'Useful choices for guests who want easy local access.',
-    href: '/stays?feature=Near%20synagogues',
+    href: '/stays?nearSynagogue=1',
   },
 ]
 

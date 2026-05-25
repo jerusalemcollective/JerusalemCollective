@@ -1,13 +1,17 @@
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function NotFound() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#F8F5F2] px-5 py-12">
       <section className="w-full max-w-xl rounded-3xl bg-white p-8 text-center shadow-sm">
-        <img
+        <Image
           src="/logos/JLM_Collective_Primary_Horizontal_Terracotta_UI.webp"
           alt="JLM Collective"
-          className="mx-auto h-auto w-52"
+          width={208}
+          height={48}
+          className="mx-auto"
+          priority
         />
         <h1 className="mt-8 text-3xl font-bold tracking-tight text-stone-950">
           We couldn&apos;t find that page

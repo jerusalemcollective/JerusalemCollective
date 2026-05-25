@@ -39,9 +39,6 @@ export function StaysNeighborhoodNav({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="mr-1 text-xs font-bold uppercase tracking-widest text-stone-400">
-        Suggested areas
-      </span>
       <AreaLink
         area="All"
         label="All Jerusalem"

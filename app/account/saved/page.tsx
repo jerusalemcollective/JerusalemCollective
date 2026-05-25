@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import { Heart } from 'lucide-react'
 import { z } from 'zod'
@@ -14,6 +15,12 @@ const savedListingSchema = z.object({
   max_guests: z.number().nullable(),
   price_ils: z.number().nullable(),
   price_usd: z.number().nullable(),
+  listing_photos: z
+    .array(z.object({
+      photo_url: z.string(),
+      is_cover: z.boolean().nullable(),
+    }))
+    .optional(),
 })
 
 const savedRowSchema = z.object({
@@ -35,7 +42,7 @@ export default async function SavedPage() {
 
   const { data } = await supabase
     .from('saved_listings')
-    .select('listing_id, listings(id, title, area, bedrooms, max_guests, price_ils, price_usd)')
+    .select('listing_id, listings(id, title, area, bedrooms, max_guests, price_ils, price_usd, listing_photos(photo_url, is_cover))')
     .eq('user_id', user.id)
 
   const savedListings = z.array(savedRowSchema).parse(data ?? [])
@@ -55,25 +62,52 @@ export default async function SavedPage() {
         {savedListings.length === 0 ? (
           <EmptyState />
         ) : (
-          <div className="grid gap-4 md:grid-cols-2">
-            {savedListings.map((listing) => (
-              <Link
-                key={listing.id}
-                href={`/listings/${listing.id}`}
-                className="rounded-lg bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-              >
-                <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
-                  {listing.area}
-                </p>
-                <h2 className="mt-2 text-xl font-bold text-stone-950">{listing.title}</h2>
-                <p className="mt-2 text-sm text-stone-600">
-                  {listing.bedrooms ?? '-'} bedrooms | sleeps {listing.max_guests ?? '-'}
-                </p>
-                <p className="mt-3 text-sm font-semibold text-stone-900">
-                  {formatDualCurrencyPrice(listing)}
-                </p>
-              </Link>
-            ))}
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+            {savedListings.map((listing) => {
+              const coverPhotoUrl =
+                listing.listing_photos?.find((photo) => photo.is_cover)?.photo_url ||
+                listing.listing_photos?.[0]?.photo_url ||
+                null
+
+              return (
+                <Link
+                  key={listing.id}
+                  href={`/listings/${listing.id}`}
+                  className="group block"
+                >
+                  <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-stone-100">
+                    {coverPhotoUrl ? (
+                      <Image
+                        src={coverPhotoUrl}
+                        alt={listing.title}
+                        fill
+                        className="object-cover transition group-hover:scale-[1.02]"
+                        sizes="(max-width: 640px) 50vw, 33vw"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-stone-50">
+                        <p className="text-xs text-stone-400">
+                          Photo coming soon
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-3">
+                    <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
+                      {listing.area}
+                    </p>
+                    <h2 className="mt-2 text-xl font-bold text-stone-950">{listing.title}</h2>
+                    <p className="mt-2 text-sm text-stone-600">
+                      {listing.bedrooms ?? '-'} bedrooms | sleeps {listing.max_guests ?? '-'}
+                    </p>
+                    <p className="mt-3 text-sm font-semibold text-stone-900">
+                      {formatDualCurrencyPrice(listing)}
+                    </p>
+                  </div>
+                </Link>
+              )
+            })}
           </div>
         )}
       </div>

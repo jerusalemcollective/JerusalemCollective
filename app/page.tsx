@@ -1,4 +1,5 @@
 ﻿import Link from 'next/link'
+import Image from 'next/image'
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { sampleListings } from '@/lib/sample-listings'
@@ -6,6 +7,7 @@ import { defaultExploreNeighborhoods } from '@/lib/neighborhoods'
 import { slugifyNeighborhood } from '@/lib/neighborhood-pages'
 import { HomeNeighborhoodSearch, HomeSearchForm } from '@/components/home-search-form'
 import { HomeMapSection } from '@/components/home-map-section'
+import { RecentlyViewed } from '@/components/recently-viewed-home'
 
 export const dynamic = 'force-dynamic'
 
@@ -329,6 +331,10 @@ export default async function JLMCollectiveHomePage() {
                 <HomeListingCard key={stay.id} listing={stay} />
               ))}
             </div>
+
+            <div className="mx-auto max-w-6xl px-5 md:px-8">
+              <RecentlyViewed />
+            </div>
           </div>
 
           <HomeMapSection listings={featuredStays.slice(0, 4)} />
@@ -389,11 +395,13 @@ function HomeListingCard({ listing }: { listing: FeaturedStay }) {
       >
         <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-stone-100 shadow-sm transition-shadow duration-200 group-hover:shadow-md">
         {listing.coverPhotoUrl ? (
-          <img
+          <Image
             src={listing.coverPhotoUrl}
             alt={listing.title}
+            fill
+            className="object-cover"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             loading="lazy"
-            className="h-full w-full object-cover"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-[#F8F5F2]">

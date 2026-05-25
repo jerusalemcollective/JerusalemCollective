@@ -68,11 +68,6 @@ export default async function EnquiriesPage() {
             {enquiries.map((enquiry) => {
               const waitTime = formatWaitTime(enquiry.created_at, enquiry.status)
               const shouldShowSimilarStays = shouldShowSimilarStaysLink(enquiry.created_at, enquiry.status)
-              const enquiryHref = enquiry.conversation_id
-                ? `/account/messages?conversation=${enquiry.conversation_id}`
-                : enquiry.listings?.id
-                  ? `/listings/${enquiry.listings.id}`
-                  : '/stays'
               const similarStaysHref = enquiry.listings?.id
                 ? `/stays?area=${encodeURIComponent(enquiry.listings.area || '')}`
                 : '/stays'
@@ -82,19 +77,46 @@ export default async function EnquiriesPage() {
                   key={enquiry.id}
                   className="grid gap-3 py-5 transition hover:bg-white/50 md:grid-cols-[1fr_auto] md:items-center"
                 >
-                  <Link href={enquiryHref}>
-                    <p className="font-bold text-stone-950">{enquiry.listings?.title || 'Stay enquiry'}</p>
+                  <div>
+                    {enquiry.listings?.id ? (
+                      <Link
+                        href={`/listings/${enquiry.listings.id}`}
+                        className="font-semibold text-stone-950 transition hover:text-[#c76f55]"
+                      >
+                        {enquiry.listings.title}
+                      </Link>
+                    ) : (
+                      <p className="font-bold text-stone-950">Stay enquiry</p>
+                    )}
                     <p className="mt-1 text-sm text-stone-600">{enquiry.listings?.area || 'Jerusalem'}</p>
-                    <p className="mt-2 text-sm font-medium text-stone-700">
-                      {formatDateDisplay(enquiry.check_in)} to {formatDateDisplay(enquiry.check_out)}
-                    </p>
+                    <div className="mt-2 flex items-center gap-2 text-sm text-stone-600">
+                      {enquiry.check_in && (
+                        <span>
+                          <span className="text-xs font-semibold uppercase tracking-wider text-stone-400">
+                            In
+                          </span>{' '}
+                          {formatDateDisplay(new Date(enquiry.check_in))}
+                        </span>
+                      )}
+                      {enquiry.check_in && enquiry.check_out && (
+                        <span className="text-stone-300">→</span>
+                      )}
+                      {enquiry.check_out && (
+                        <span>
+                          <span className="text-xs font-semibold uppercase tracking-wider text-stone-400">
+                            Out
+                          </span>{' '}
+                          {formatDateDisplay(new Date(enquiry.check_out))}
+                        </span>
+                      )}
+                    </div>
                     <p className="mt-1 text-sm text-stone-600">
                       {enquiry.guests} guest{enquiry.guests === 1 ? '' : 's'}
                     </p>
                     {enquiry.message && (
                       <p className="mt-3 line-clamp-2 text-sm text-stone-600">{enquiry.message}</p>
                     )}
-                  </Link>
+                  </div>
                   <div>
                     <StatusBadge status={enquiry.status} scheme="enquiry" />
                     {waitTime && <p className="mt-1 text-xs text-stone-500">{waitTime}</p>}

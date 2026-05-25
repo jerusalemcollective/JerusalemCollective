@@ -218,6 +218,13 @@ export default async function HostListingsPage() {
             <p className="mt-2 text-stone-600">
               Live stays and submitted stays in one clear place.
             </p>
+            <p className="mt-2 text-sm text-stone-500">
+              {hostListings.length === 0
+                ? 'No listings yet'
+                : hostListings.length === 1
+                  ? '1 listing'
+                  : `${hostListings.length} listings`}
+            </p>
           </div>
           <Link
             href="/become-a-host"

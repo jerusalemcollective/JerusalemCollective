@@ -111,6 +111,9 @@ export function BookingDateRangePicker({
               modifiers={{
                 jewishHoliday: (date) => Boolean(getJewishHoliday(date)),
               }}
+              modifiersClassNames={{
+                jewishHoliday: 'font-bold text-[#c76f55]',
+              }}
               showOutsideDays={false}
               className="w-full [--cell-size:2.75rem]"
               classNames={{

@@ -106,6 +106,23 @@ export default async function NeighbourhoodPage({
           </span>
         </div>
 
+        <Link
+          href="/stays"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-stone-500 transition hover:text-stone-900"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+          All stays
+        </Link>
+
         <h1 className="font-display mt-4 text-4xl font-bold tracking-tight text-stone-950 md:text-5xl">
           Stays in {name}
         </h1>

@@ -106,6 +106,13 @@ type ListingDetailClientProps = {
   avgResponseHours: number | null
 }
 
+function formatResponseTime(hours: number): string {
+  if (hours < 1) return 'Usually responds within an hour'
+  if (hours < 3) return 'Usually responds within a few hours'
+  if (hours < 24) return 'Usually responds same day'
+  return 'Usually responds within 1-2 days'
+}
+
 export function ListingDetailClient({
   listing,
   host,
@@ -133,12 +140,6 @@ export function ListingDetailClient({
   const mobilePhotoDragStartRef = useRef<number | null>(null)
   const mobilePhotoDidSwipeRef = useRef(false)
   const shareUrl = typeof window !== 'undefined' ? window.location.href : ''
-  function formatResponseTime(hours: number): string {
-    if (hours < 1) return 'Usually responds within an hour'
-    if (hours < 3) return 'Usually responds within a few hours'
-    if (hours < 24) return 'Usually responds same day'
-    return 'Usually responds within 1-2 days'
-  }
 
   const nights =
     bookingDateRange.from && bookingDateRange.to
@@ -184,6 +185,15 @@ export function ListingDetailClient({
       coverPhotoUrl: photos[0]?.photo_url || null,
     })
 
+    const preloadLinks = photos.slice(0, 3).map((photo) => {
+      const link = document.createElement('link')
+      link.rel = 'preload'
+      link.as = 'image'
+      link.href = photo.photo_url
+      document.head.appendChild(link)
+      return link
+    })
+
     const loadExistingConversation = async () => {
       const {
         data: { user },
@@ -208,6 +218,9 @@ export function ListingDetailClient({
 
     return () => {
       isActive = false
+      preloadLinks.forEach((link) => {
+        link.remove()
+      })
       if (copyTimeoutRef.current) {
         clearTimeout(copyTimeoutRef.current)
       }
@@ -275,14 +288,23 @@ export function ListingDetailClient({
             'Confirm together — agree details before any payment',
           ]
 
-  const goToMobilePhoto = (index: number) => {
-    if (photos.length === 0) return
-    setMobilePhotoIndex((index + photos.length) % photos.length)
-  }
-
   const handleMobilePhotoDragStart = (event: PointerLikeEvent) => {
     mobilePhotoDragStartRef.current = event.clientX
     mobilePhotoDidSwipeRef.current = false
+  }
+
+  const handleMobilePhotoDragMove = (event: PointerLikeEvent) => {
+    if (mobilePhotoDragStartRef.current === null || photos.length < 2) return
+    const delta = event.clientX - mobilePhotoDragStartRef.current
+    if (delta > 40) {
+      mobilePhotoDidSwipeRef.current = true
+      setMobilePhotoIndex((photoIndex) => Math.max(0, photoIndex - 1))
+      mobilePhotoDragStartRef.current = null
+    } else if (delta < -40) {
+      mobilePhotoDidSwipeRef.current = true
+      setMobilePhotoIndex((photoIndex) => Math.min(photos.length - 1, photoIndex + 1))
+      mobilePhotoDragStartRef.current = null
+    }
   }
 
   const handleMobilePhotoDragEnd = (event: PointerLikeEvent) => {
@@ -290,11 +312,10 @@ export function ListingDetailClient({
     const delta = event.clientX - mobilePhotoDragStartRef.current
     if (delta > 40) {
       mobilePhotoDidSwipeRef.current = true
-      goToMobilePhoto(mobilePhotoIndex - 1)
-    }
-    if (delta < -40) {
+      setMobilePhotoIndex((photoIndex) => Math.max(0, photoIndex - 1))
+    } else if (delta < -40) {
       mobilePhotoDidSwipeRef.current = true
-      goToMobilePhoto(mobilePhotoIndex + 1)
+      setMobilePhotoIndex((photoIndex) => Math.min(photos.length - 1, photoIndex + 1))
     }
     mobilePhotoDragStartRef.current = null
   }
@@ -309,7 +330,7 @@ export function ListingDetailClient({
   }
 
   return (
-    <div className="min-h-screen bg-white pb-24 md:pb-0">
+    <div className="min-h-screen bg-white pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-0">
       <header className="border-b border-stone-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <Link href="/" className="text-xl font-bold text-[#c76f55]">
@@ -365,21 +386,33 @@ export function ListingDetailClient({
                 <div
                   className="relative aspect-[4/3] overflow-hidden bg-stone-100"
                   onTouchStart={(event) => handleMobilePhotoDragStart(event.touches[0])}
+                  onTouchMove={(event) => handleMobilePhotoDragMove(event.touches[0])}
                   onTouchEnd={(event) => handleMobilePhotoDragEnd(event.changedTouches[0])}
                   onMouseDown={(event) => handleMobilePhotoDragStart(event)}
+                  onMouseMove={(event) => handleMobilePhotoDragMove(event)}
                   onMouseUp={(event) => handleMobilePhotoDragEnd(event)}
                   onClick={handleMobilePhotoClick}
                 >
-                  {photos[mobilePhotoIndex] && (
-                    <Image
-                      src={photos[mobilePhotoIndex].photo_url}
-                      alt={listing.title}
-                      fill
-                      className="object-cover"
-                      priority
-                      sizes="100vw"
-                    />
-                  )}
+                  {photos.map((photo, photoIndex) => (
+                    <div
+                      key={photo.id}
+                      className="absolute inset-0 transition-opacity duration-300"
+                      style={{
+                        opacity: photoIndex === mobilePhotoIndex ? 1 : 0,
+                        zIndex: photoIndex === mobilePhotoIndex ? 1 : 0,
+                      }}
+                    >
+                      <Image
+                        src={photo.photo_url}
+                        alt={listing.title}
+                        fill
+                        className="object-cover"
+                        priority={photoIndex === 0}
+                        loading={photoIndex === 0 ? 'eager' : 'lazy'}
+                        sizes="100vw"
+                      />
+                    </div>
+                  ))}
                 </div>
                 {photos.length > 1 && (
                   <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
@@ -889,7 +922,7 @@ export function ListingDetailClient({
         </div>
       </main>
 
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-stone-200 bg-white px-5 py-4 shadow-lg md:hidden">
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-stone-200 bg-white px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 shadow-lg md:hidden">
         <div className="flex items-center justify-between gap-4">
           <div>
             <p className="text-lg font-bold text-stone-950">
