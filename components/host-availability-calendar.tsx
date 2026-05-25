@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import type { DateRange as DayPickerDateRange } from 'react-day-picker'
 import { Calendar } from '@/components/ui/calendar'
 import { formatHebrewShortDate } from '@/lib/hebrew-date'
 import { formatDateISO } from '@/lib/utils/date'
@@ -38,6 +39,9 @@ export function HostAvailabilityCalendar({
     }),
     [dateRange],
   )
+  const selectedRange: DayPickerDateRange | undefined = dateRange.from
+    ? { from: dateRange.from, to: dateRange.to }
+    : undefined
 
   return (
     <form action={addUnavailableRangeAction} className="rounded-3xl bg-white p-6 shadow-sm">
@@ -106,7 +110,7 @@ export function HostAvailabilityCalendar({
           <div className="rounded-2xl bg-white p-4">
             <Calendar
               mode="range"
-              selected={dateRange}
+              selected={selectedRange}
               onSelect={(range) => {
                 if (range?.from && range?.to && range.from.getTime() === range.to.getTime()) {
                   setDateRange({ from: range.from, to: undefined })
