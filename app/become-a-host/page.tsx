@@ -2244,8 +2244,9 @@ async function handleSubmit() {
                         <button
                           type="button"
                           onClick={() => {
-                            if (form.verification_doc.preview) {
-                              URL.revokeObjectURL(form.verification_doc.preview)
+                            const verificationDoc = form.verification_doc
+                            if (verificationDoc?.preview) {
+                              URL.revokeObjectURL(verificationDoc.preview)
                             }
                             updateField('verification_doc', null)
                           }}
@@ -2335,8 +2336,9 @@ async function handleSubmit() {
                           <button
                             type="button"
                             onClick={() => {
-                              if (form.id_doc.preview) {
-                                URL.revokeObjectURL(form.id_doc.preview)
+                              const idDoc = form.id_doc
+                              if (idDoc?.preview) {
+                                URL.revokeObjectURL(idDoc.preview)
                               }
                               updateField('id_doc', null)
                             }}
