@@ -188,6 +188,9 @@ export function MessageHostDialog({
         )
         requestId = enquiry.requestId
         createdConversationId = enquiry.conversationId
+        if (!createdConversationId) {
+          throw new Error('Unable to create the conversation. Please try again.')
+        }
         await recordListingEngagement(supabase, listingId, 'booking_request')
       } else {
         createdConversationId = await getOrCreateConversation(
@@ -196,6 +199,9 @@ export function MessageHostDialog({
           hostId,
           listingId,
         )
+        if (!createdConversationId) {
+          throw new Error('Unable to create the conversation. Please try again.')
+        }
         await sendConversationMessage(
           supabase,
           createdConversationId,
