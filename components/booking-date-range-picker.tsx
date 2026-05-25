@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import type { DateRange as DayPickerDateRange } from 'react-day-picker'
 import { Calendar } from '@/components/ui/calendar'
 import { formatHebrewShortDate, getJewishHoliday } from '@/lib/hebrew-date'
 
@@ -51,6 +52,9 @@ export function BookingDateRangePicker({
       to: parseLocalDate(range.end_date),
     })),
   ]
+  const selectedRange: DayPickerDateRange | undefined = dateRange.from
+    ? { from: dateRange.from, to: dateRange.to }
+    : undefined
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -89,7 +93,7 @@ export function BookingDateRangePicker({
             <Calendar
               mode="range"
               excludeDisabled
-              selected={dateRange}
+              selected={selectedRange}
               onSelect={(range) => {
                 if (range?.from && range?.to && range.from.getTime() === range.to.getTime()) {
                   setDateRange({ from: range.from, to: undefined })
