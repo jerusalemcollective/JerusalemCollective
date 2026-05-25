@@ -488,7 +488,7 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
             await places.AutocompleteSuggestion.fetchAutocompleteSuggestions(request)
 
           nextSuggestions = (googleSuggestions || [])
-            .map((suggestion) => {
+            .map((suggestion): AddressSuggestion | null => {
               const prediction = suggestion.placePrediction
               if (!prediction) return null
 
@@ -497,7 +497,7 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
 
               return { label, prediction }
             })
-            .filter((suggestion): suggestion is AddressSuggestion => Boolean(suggestion))
+            .filter((suggestion): suggestion is AddressSuggestion => suggestion !== null)
             .slice(0, 8)
         } else if (places.AutocompleteService) {
           const service = new places.AutocompleteService()
