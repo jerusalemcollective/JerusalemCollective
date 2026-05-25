@@ -563,7 +563,8 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
         longitude = place.location?.lng() ?? null
       } else if (suggestion.placeId && placesLibrary.current?.PlacesService && placesServiceContainerRef.current) {
         const places = placesLibrary.current
-        const service = new places.PlacesService(placesServiceContainerRef.current)
+        const PlacesService = places.PlacesService
+        const service = new PlacesService(placesServiceContainerRef.current)
         const place = await new Promise<LegacyPlaceResult | null>((resolve) => {
           service.getDetails(
             {
