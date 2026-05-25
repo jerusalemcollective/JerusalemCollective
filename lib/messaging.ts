@@ -149,5 +149,12 @@ export async function loadConversationMessages(
     .order('created_at', { ascending: true })
 
   if (error) throw error
-  return (data || []) as ConversationMessage[]
+  return (data || []).map((message: ConversationMessage) => ({
+    id: message.id,
+    conversation_id: message.conversation_id,
+    sender_id: message.sender_id,
+    content: message.content,
+    read: message.read,
+    created_at: message.created_at,
+  }))
 }

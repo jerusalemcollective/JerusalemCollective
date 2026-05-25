@@ -64,7 +64,17 @@ export default async function NeighbourhoodPage({
     .eq('area', name)
     .order('is_featured', { ascending: false })
 
-  const listings = (listingsData || []) as NeighborhoodListing[]
+  const listings: NeighborhoodListing[] = (listingsData || []).map((listing: NeighborhoodListing) => ({
+    id: listing.id,
+    title: listing.title,
+    area: listing.area,
+    bedrooms: listing.bedrooms,
+    max_guests: listing.max_guests,
+    price_ils: listing.price_ils,
+    price_usd: listing.price_usd,
+    booking_type: listing.booking_type,
+    is_featured: listing.is_featured,
+  }))
   const listingIds = listings.map((listing) => listing.id)
 
   const { data: photoData } = listingIds.length
@@ -76,7 +86,7 @@ export default async function NeighbourhoodPage({
     : { data: [] }
 
   const photoMap = new Map(
-    ((photoData || []) as ListingPhoto[]).map((photo) => [
+    (photoData || []).map((photo: ListingPhoto) => [
       photo.listing_id,
       photo.photo_url,
     ]),

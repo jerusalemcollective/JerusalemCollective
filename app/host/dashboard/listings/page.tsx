@@ -86,8 +86,33 @@ export default async function HostListingsPage() {
       .order('created_at', { ascending: false }),
   ])
 
-  const hostApplications = (applications || []) as HostApplication[]
-  const hostListings = (listings || []) as HostListing[]
+  const hostApplications: HostApplication[] = (applications || []).map((application: HostApplication) => ({
+    id: application.id,
+    apartment_title: application.apartment_title,
+    area: application.area,
+    status: application.status,
+    verification_status: application.verification_status,
+    admin_feedback: application.admin_feedback,
+    created_at: application.created_at,
+    bedrooms: application.bedrooms,
+    sleeps: application.sleeps,
+  }))
+  const hostListings: HostListing[] = (listings || []).map((listing: HostListing) => ({
+    id: listing.id,
+    title: listing.title,
+    area: listing.area,
+    is_published: listing.is_published,
+    is_featured: listing.is_featured,
+    bedrooms: listing.bedrooms,
+    bathrooms: listing.bathrooms,
+    max_guests: listing.max_guests,
+    amenities: listing.amenities,
+    description: listing.description,
+    price_usd: listing.price_usd,
+    price_ils: listing.price_ils,
+    american_comfort: listing.american_comfort,
+    created_at: listing.created_at,
+  }))
   const applicationIds = hostApplications.map((application) => application.id)
   const listingIds = hostListings.map((listing) => listing.id)
   const [{ data: photos }, comparisonRows, performanceRows] = await Promise.all([
@@ -134,7 +159,13 @@ export default async function HostListingsPage() {
         )
       : Promise.resolve([]),
   ])
-  const listingPhotos = (photos || []) as ListingPhoto[]
+  const listingPhotos: ListingPhoto[] = (photos || []).map((photo: ListingPhoto) => ({
+    application_id: photo.application_id,
+    listing_id: photo.listing_id,
+    photo_url: photo.photo_url,
+    is_cover: photo.is_cover,
+    sort_order: photo.sort_order,
+  }))
   const comparisonByListing = new Map(
     comparisonRows
       .filter((comparison): comparison is PriceComparison => Boolean(comparison))

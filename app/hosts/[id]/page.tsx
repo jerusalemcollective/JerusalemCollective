@@ -107,8 +107,26 @@ export default async function HostProfilePage({ params }: HostPageProps) {
     notFound()
   }
 
-  const host = hostData as HostRow
-  const listingRows = (listingsData || []) as ListingRow[]
+  const host: HostRow = {
+    id: hostData.id,
+    name: hostData.name,
+    display_name: hostData.display_name,
+    show_full_name: hostData.show_full_name,
+    profile_photo_url: hostData.profile_photo_url,
+    is_verified: hostData.is_verified,
+    host_type: hostData.host_type,
+    bio: hostData.bio,
+  }
+  const listingRows: ListingRow[] = (listingsData || []).map((listing: ListingRow) => ({
+    id: listing.id,
+    title: listing.title,
+    area: listing.area,
+    bedrooms: listing.bedrooms,
+    max_guests: listing.max_guests,
+    price_ils: listing.price_ils,
+    price_usd: listing.price_usd,
+    booking_type: listing.booking_type,
+  }))
   const listingIds = listingRows.map((listing) => listing.id)
   const { data: photosData } = listingIds.length
     ? await supabase
@@ -118,7 +136,7 @@ export default async function HostProfilePage({ params }: HostPageProps) {
         .in('listing_id', listingIds)
     : { data: [] }
   const photoMap = new Map<string, string>()
-  ;((photosData || []) as ListingPhotoRow[]).forEach((photo) => {
+  ;(photosData || []).forEach((photo: ListingPhotoRow) => {
     if (photo.listing_id) {
       photoMap.set(photo.listing_id, photo.photo_url)
     }
@@ -127,7 +145,15 @@ export default async function HostProfilePage({ params }: HostPageProps) {
     ...listing,
     cover_photo_url: photoMap.get(listing.id) || null,
   }))
-  const reviews = (reviewsData || []) as ReviewRow[]
+  const reviews: ReviewRow[] = (reviewsData || []).map((review: ReviewRow) => ({
+    id: review.id,
+    reviewer_name: review.reviewer_name,
+    rating: review.rating,
+    title: review.title,
+    content: review.content,
+    stay_date: review.stay_date,
+    created_at: review.created_at,
+  }))
   const publicName = getPublicName(host)
   const averageRating = reviews.length > 0
     ? (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1)

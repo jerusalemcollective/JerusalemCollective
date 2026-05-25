@@ -41,9 +41,13 @@ export async function requireAdmin() {
     redirect('/')
   }
 
+  const profileAdminRole =
+    'admin_role' in profile && typeof profile.admin_role === 'string'
+      ? profile.admin_role
+      : null
   const adminRole =
-    'admin_role' in profile && profile.admin_role
-      ? normalizeAdminRole(profile.admin_role, 'owner')
+    profileAdminRole
+      ? normalizeAdminRole(profileAdminRole, 'owner')
       : 'owner'
 
   return {

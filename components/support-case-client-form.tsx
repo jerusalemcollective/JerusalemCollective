@@ -29,6 +29,10 @@ export type AccountSupportCase = {
   } | null
 }
 
+type AccountSupportCaseRow = Omit<AccountSupportCase, 'listings'> & {
+  listings?: AccountSupportCase['listings'] | NonNullable<AccountSupportCase['listings']>[] | null
+}
+
 type SupportCaseClientFormProps = {
   userId: string
   initialBookings: SupportBooking[]
@@ -48,6 +52,22 @@ const getSupportCaseErrorMessage = (error: unknown) => {
     return error.message
   }
   return 'We could not send your case. Please try again or contact us on WhatsApp.'
+}
+
+function normalizeSupportCase(supportCase: AccountSupportCaseRow): AccountSupportCase {
+  return {
+    id: supportCase.id,
+    case_type: supportCase.case_type,
+    status: supportCase.status,
+    reason: supportCase.reason,
+    requested_amount: supportCase.requested_amount,
+    approved_refund_amount: supportCase.approved_refund_amount,
+    currency: supportCase.currency,
+    created_at: supportCase.created_at,
+    listings: Array.isArray(supportCase.listings)
+      ? supportCase.listings[0] || null
+      : supportCase.listings || null,
+  }
 }
 
 export function SupportCaseClientForm({
@@ -106,7 +126,7 @@ export function SupportCaseClientForm({
         return
       }
 
-      setCases((current) => [data as AccountSupportCase, ...current])
+      setCases((current) => [normalizeSupportCase(data), ...current])
       setSelectedBookingId('')
       setReason('')
       setDetails('')
