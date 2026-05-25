@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState, type Dispatch, type RefObject, type SetStateAction } from 'react'
+import type { DateRange as DayPickerDateRange } from 'react-day-picker'
 import { allNeighborhoods } from '@/lib/neighborhoods'
 import { Calendar } from '@/components/ui/calendar'
 import { formatHebrewShortDate } from '@/lib/hebrew-date'
@@ -398,6 +399,10 @@ function DateSelector({
   setShowCalendar: Dispatch<SetStateAction<boolean>>
   getDateDisplay: () => string
 }) {
+  const selectedRange: DayPickerDateRange | undefined = dateRange.from
+    ? { from: dateRange.from, to: dateRange.to }
+    : undefined
+
   return (
     <div className="relative" ref={calendarRef}>
       <button onClick={() => setShowCalendar(!showCalendar)} className="flex w-full flex-col px-6 py-4 text-left hover:bg-stone-50">
@@ -417,7 +422,7 @@ function DateSelector({
           <div className="p-5">
             <Calendar
               mode="range"
-              selected={dateRange}
+              selected={selectedRange}
               onSelect={(range) => {
                 if (range?.from && range?.to && range.from.getTime() === range.to.getTime()) {
                   setDateRange({ from: range.from, to: undefined })
