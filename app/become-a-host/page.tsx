@@ -154,7 +154,14 @@ type PlacesLibrary = {
   }
 }
 
-type MapsWindow = Window & {
+type GoogleMapsValue = {
+  maps?: {
+    importLibrary?: (library: 'places') => Promise<PlacesLibrary>
+    Circle?: new (options: { center: { lat: number; lng: number }; radius: number }) => unknown
+  }
+}
+
+type MapsWindow = {
   google?: {
     maps?: {
       importLibrary?: (library: 'places') => Promise<PlacesLibrary>
@@ -164,7 +171,20 @@ type MapsWindow = Window & {
 }
 
 function getMapsWindow(): MapsWindow {
-  return window as MapsWindow
+  const googleValue: unknown = Reflect.get(window, 'google')
+  return isGoogleMapsValue(googleValue)
+    ? { google: googleValue }
+    : {}
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function isGoogleMapsValue(value: unknown): value is GoogleMapsValue {
+  if (!isRecord(value)) return false
+  const maps = value.maps
+  return maps === undefined || isRecord(maps)
 }
 
 // Jerusalem neighbourhoods for autocomplete suggestions

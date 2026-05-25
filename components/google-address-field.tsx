@@ -61,7 +61,15 @@ type PlacesLibrary = {
   }
 }
 
-type MapsWindow = Window & {
+type GoogleMapsValue = {
+  maps?: {
+    importLibrary?: (library: 'places') => Promise<PlacesLibrary>
+    Circle?: new (options: { center: { lat: number; lng: number }; radius: number }) => unknown
+    places?: PlacesLibrary
+  }
+}
+
+type MapsWindow = {
   google?: {
     maps?: {
       importLibrary?: (library: 'places') => Promise<PlacesLibrary>
@@ -129,8 +137,21 @@ type GoogleAddressFieldProps = {
 
 let googlePlacesPromise: Promise<PlacesLibrary> | null = null
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function isGoogleMapsValue(value: unknown): value is GoogleMapsValue {
+  if (!isRecord(value)) return false
+  const maps = value.maps
+  return maps === undefined || isRecord(maps)
+}
+
 function getMapsWindow(): MapsWindow {
-  return window as MapsWindow
+  const googleValue: unknown = Reflect.get(window, 'google')
+  return isGoogleMapsValue(googleValue)
+    ? { google: googleValue }
+    : {}
 }
 
 function getLoadedPlacesLibrary(): PlacesLibrary | null {
