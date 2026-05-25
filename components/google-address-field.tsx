@@ -363,12 +363,12 @@ export function GoogleAddressField({
             await places.AutocompleteSuggestion.fetchAutocompleteSuggestions(request)
 
           nextSuggestions = (googleSuggestions || [])
-            .map((suggestion) => {
+            .map((suggestion): AddressSuggestion | null => {
               const prediction = suggestion.placePrediction
               const label = prediction?.text?.toString() || prediction?.mainText?.toString() || ''
               return prediction && label ? { label: cleanAddressLabel(label), newPrediction: prediction } : null
             })
-            .filter((suggestion): suggestion is AddressSuggestion => Boolean(suggestion))
+            .filter((suggestion): suggestion is AddressSuggestion => suggestion !== null)
             .slice(0, 8)
         }
 
