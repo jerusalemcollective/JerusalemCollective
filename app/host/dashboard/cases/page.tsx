@@ -18,6 +18,11 @@ type HostSupportCase = {
   } | null
 }
 
+type HostSupportCaseRow = Omit<HostSupportCase, 'listings' | 'guest'> & {
+  listings?: HostSupportCase['listings'] | NonNullable<HostSupportCase['listings']>[] | null
+  guest?: HostSupportCase['guest'] | NonNullable<HostSupportCase['guest']>[] | null
+}
+
 export default async function HostCasesPage() {
   const { supabase, hostIds } = await requireHostDashboardAccess()
   const { data } = await supabase
@@ -37,7 +42,20 @@ export default async function HostCasesPage() {
     .in('host_id', hostIds)
     .order('created_at', { ascending: false })
 
-  const cases = (data || []) as HostSupportCase[]
+  const cases: HostSupportCase[] = (data || []).map((supportCase: HostSupportCaseRow) => ({
+    id: supportCase.id,
+    case_type: supportCase.case_type,
+    status: supportCase.status,
+    reason: supportCase.reason,
+    created_at: supportCase.created_at,
+    requested_amount: supportCase.requested_amount,
+    approved_refund_amount: supportCase.approved_refund_amount,
+    currency: supportCase.currency,
+    listings: Array.isArray(supportCase.listings)
+      ? supportCase.listings[0] || null
+      : supportCase.listings || null,
+    guest: Array.isArray(supportCase.guest) ? supportCase.guest[0] || null : supportCase.guest || null,
+  }))
 
   return (
     <main className="min-h-screen bg-[#F8F5F2] px-5 py-10 text-[#252525] md:px-6">
