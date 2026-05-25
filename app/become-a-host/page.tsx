@@ -2324,11 +2324,19 @@ async function handleSubmit() {
                         </label>
                       ) : (
                         <div className="flex items-center gap-4 rounded-2xl border border-stone-200 bg-white p-4">
-                          <img 
-                            src={form.id_doc.preview} 
-                            alt="ID preview" 
-                            className="h-16 w-16 rounded-lg object-cover"
-                          />
+                          {form.id_doc.preview ? (
+                            <img
+                              src={form.id_doc.preview}
+                              alt="ID preview"
+                              className="h-16 w-16 rounded-lg object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-stone-100">
+                              <svg className="h-8 w-8 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+                              </svg>
+                            </div>
+                          )}
                           <div className="flex-1">
                             <p className="font-medium text-stone-900">{form.id_doc.name}</p>
                             <p className="text-xs text-stone-500">ID Document</p>
