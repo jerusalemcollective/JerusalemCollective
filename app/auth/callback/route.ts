@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
   const tokenHash = searchParams.get('token_hash')
   const type = searchParams.get('type') as EmailOtpType | null
   const next = searchParams.get('next') ?? '/account'
+  const isHostSignup = searchParams.get('host') === '1'
 
   if (code || (tokenHash && type)) {
     try {
@@ -38,12 +39,12 @@ export async function GET(request: NextRequest) {
               id: user.id,
               full_name: fullName,
               avatar_url: user.user_metadata?.avatar_url || null,
-              is_host: user.user_metadata?.is_host || false,
+              is_host: Boolean(user.user_metadata?.is_host || isHostSignup),
             })
           }
 
           // If user signed up as host, also create host profile
-          if (user.user_metadata?.is_host) {
+          if (user.user_metadata?.is_host || isHostSignup) {
             const { data: existingHost } = await supabase
               .from('hosts')
               .select('id')
