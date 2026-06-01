@@ -24,7 +24,7 @@ export default function PrivacyPolicyPage() {
                 JLM Collective (&quot;we&quot;, &quot;us&quot; or &quot;our&quot;) operates an online platform for short-term stays, property listings, enquiries and related services.
               </p>
               <p className="mt-4 text-stone-700 leading-relaxed">
-                This Privacy Policy explains how we collect, use, store and share personal information when you use our website, create an account, submit a listing, make an enquiry, upload photos, contact us, or otherwise interact with our platform.
+                This Privacy Policy explains how we collect, use, store and share personal information when you use our website, create an account, submit a listing, make an enquiry, upload photos, contact us, or otherwise interact with our service.
               </p>
               <p className="mt-4 text-stone-700 leading-relaxed">
                 We aim to handle personal information in accordance with applicable privacy laws, including the UK GDPR, EU GDPR, Israeli privacy law and, where applicable, relevant US state privacy laws.
@@ -35,7 +35,7 @@ export default function PrivacyPolicyPage() {
             <section>
               <h2 className="mb-4 text-xl font-bold text-stone-900">2. Information we collect</h2>
               <p className="mb-4 text-stone-700 leading-relaxed">
-                We collect information needed to operate a secure and functional marketplace.
+                We collect information needed to operate a secure and functional letting agency service.
               </p>
               
               <h3 className="mb-2 mt-6 text-lg font-semibold text-stone-800">Identifiers and account information</h3>
@@ -50,7 +50,7 @@ export default function PrivacyPolicyPage() {
 
               <h3 className="mb-2 mt-6 text-lg font-semibold text-stone-800">Enquiry and communication information</h3>
               <p className="text-stone-700 leading-relaxed">
-                This may include messages sent through the platform, enquiry details, requested dates, guest numbers, support requests and communications sent by email, website form, WhatsApp or other contact methods.
+                This may include messages sent through JLM Collective, enquiry details, requested dates, guest numbers, support requests and communications sent by email, website form, WhatsApp or other contact methods.
               </p>
 
               <h3 className="mb-2 mt-6 text-lg font-semibold text-stone-800">Technical information</h3>
@@ -80,7 +80,7 @@ export default function PrivacyPolicyPage() {
                 <li>maintain website security;</li>
                 <li>respond to support requests;</li>
                 <li>comply with legal, regulatory, accounting, tax or dispute-related obligations;</li>
-                <li>improve the design, functionality and performance of the platform;</li>
+                <li>improve the design, functionality and performance of our service;</li>
                 <li>send marketing communications where permitted by law or where you have agreed to receive them.</li>
               </ul>
             </section>
@@ -94,12 +94,12 @@ export default function PrivacyPolicyPage() {
 
               <h3 className="mb-2 mt-6 text-lg font-semibold text-stone-800">Contract</h3>
               <p className="text-stone-700 leading-relaxed">
-                We use your information where necessary to provide the platform and services you request, such as creating an account, submitting a listing or sending an enquiry.
+                We use your information where necessary to provide JLM Collective and the services you request, such as creating an account, submitting a listing or sending an enquiry.
               </p>
 
               <h3 className="mb-2 mt-6 text-lg font-semibold text-stone-800">Legitimate interests</h3>
               <p className="text-stone-700 leading-relaxed">
-                We use information where necessary for our legitimate business interests, including operating the platform, improving our services, preventing fraud, reviewing listings, securing the website and communicating with users.
+                We use information where necessary for our legitimate business interests, including operating JLM Collective, improving our services, preventing fraud, reviewing listings, securing the website and communicating with users.
               </p>
 
               <h3 className="mb-2 mt-6 text-lg font-semibold text-stone-800">Consent</h3>
@@ -128,7 +128,7 @@ export default function PrivacyPolicyPage() {
 
               <h3 className="mb-2 mt-6 text-lg font-semibold text-stone-800">Service providers</h3>
               <p className="mb-2 text-stone-700 leading-relaxed">
-                We use third-party providers to operate the platform, including:
+                We use third-party providers to operate JLM Collective, including:
               </p>
               <ul className="list-disc pl-6 text-stone-700 space-y-2">
                 <li>Supabase for authentication, database and file storage;</li>
@@ -176,7 +176,7 @@ export default function PrivacyPolicyPage() {
 
               <h3 className="mb-2 mt-6 text-lg font-semibold text-stone-800">Israel</h3>
               <p className="text-stone-700 leading-relaxed">
-                Where Israeli privacy law applies, information provided to the platform is provided for the purpose of using our services. You may have rights to inspect information held about you and request correction or deletion of inaccurate or outdated information, subject to applicable law.
+                Where Israeli privacy law applies, information provided to JLM Collective is provided for the purpose of using our services. You may have rights to inspect information held about you and request correction or deletion of inaccurate or outdated information, subject to applicable law.
               </p>
 
               <h3 className="mb-2 mt-6 text-lg font-semibold text-stone-800">United States</h3>

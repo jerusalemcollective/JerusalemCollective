@@ -1838,6 +1838,15 @@ async function handleSubmit() {
           </aside>
 
           <section className="rounded-[2rem] bg-white p-6 shadow-xl ring-1 ring-stone-200 md:p-10">
+            <div className="mb-8 rounded-2xl bg-[#F8F5F2] p-5">
+              <p className="font-semibold text-stone-950">
+                Agency agreement
+              </p>
+              <p className="mt-1 text-sm leading-6 text-stone-600">
+                By listing with JLM Collective you appoint us as your agent to market, advertise, and let your Jerusalem property on your behalf. Our agency fee is deducted from booking proceeds. You remain the property owner and are party to any booking agreement with guests.
+              </p>
+            </div>
+
             {error && (
               <div className="mb-6 rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-700">
                 {error}
@@ -2860,7 +2869,7 @@ function HostTermsModal({ onClose }: { onClose: () => void }) {
           <p className="text-sm leading-6 text-stone-700">
             These host terms explain the standards expected when submitting and managing a stay on
             JLM Collective. They are intended to protect guests, hosts, and the quality of the
-            marketplace.
+            letting agency service.
           </p>
 
           <div className="mt-6 space-y-6">

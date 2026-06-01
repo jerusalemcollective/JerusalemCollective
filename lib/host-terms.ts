@@ -3,6 +3,14 @@ export const HOST_TERMS_LAST_UPDATED = '21 May 2026'
 
 export const HOST_TERMS = [
   {
+    title: 'Agency appointment',
+    body: [
+      'By submitting your property and accepting these terms, you appoint JLM Collective as your non-exclusive letting agent to market, advertise, and let your Jerusalem property to guests on your behalf.',
+      'JLM Collective may act on your behalf in receiving enquiries, facilitating bookings, and collecting payments as your agent where payment is handled through our service.',
+      'Our agency fee is deducted from booking proceeds at the rate confirmed at time of booking. You remain the property owner in any agreement with guests, and JLM Collective is not a party to any letting agreement between you and your guests.',
+    ],
+  },
+  {
     title: 'Authority to list',
     body: [
       'You confirm that you are the property owner, lawful tenant, authorised representative, or otherwise have full permission to offer the stay through JLM Collective.',
@@ -41,7 +49,7 @@ export const HOST_TERMS = [
     title: 'Content and photo rights',
     body: [
       'You confirm that you own or have permission to use all photos, text, and other content you provide to JLM Collective.',
-      'You grant JLM Collective permission to display, crop, resize, organise, and use that content for the purpose of operating, reviewing, promoting, and improving the platform and your listing.',
+      'You grant JLM Collective permission to display, crop, resize, organise, and use that content for the purpose of operating, reviewing, promoting, and improving our service and your listing.',
     ],
   },
   {
@@ -62,7 +70,7 @@ export const HOST_TERMS = [
     title: 'Professional conduct',
     body: [
       'You agree to communicate honestly, respectfully, and promptly with guests and with JLM Collective.',
-      'You must not discriminate unlawfully, misuse guest information, pressure guests to act outside the platform where platform rules apply, or use the platform for fraudulent, unsafe, abusive, or misleading activity.',
+      'You must not discriminate unlawfully, misuse guest information, pressure guests to act outside JLM Collective where our rules apply, or use JLM Collective for fraudulent, unsafe, abusive, or misleading activity.',
     ],
   },
   {

@@ -27,7 +27,7 @@ const steps = [
   {
     title: 'Arrange payment',
     description:
-      'Payment is agreed directly between you and the host. We recommend bank transfer or your preferred method.',
+      'Payment is collected by JLM Collective as agent for the host. We send clear payment instructions with your booking confirmation.',
   },
   {
     title: 'Receive check-in details',
@@ -99,9 +99,9 @@ export default function HowItWorksPage() {
           </h2>
           <div className="mt-6 space-y-4">
             {[
-              'Every listing personally reviewed by our Jerusalem team',
+              'Every property reviewed before we agree to represent it',
               'Local specialists who know every neighbourhood',
-              'Real human support throughout your stay',
+              'Dedicated agent support throughout your stay',
             ].map((point) => (
               <div key={point} className="flex items-center gap-3">
                 <svg

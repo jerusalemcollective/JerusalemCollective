@@ -228,6 +228,9 @@ function baseEmailHtml({
       </p>
       <p style="color:#78716c;font-size:13px">You may need to sign in before viewing the update.</p>
       <p>JLM Collective</p>
+      <p style="color:#a8a29e;font-size:11px;margin:8px 0 0;line-height:1.5">
+        JLM Collective acts as letting agent for Jerusalem property owners. Bookings are between guests and hosts. JLM Collective is not a party to any booking agreement.
+      </p>
     </div>
   `
 }

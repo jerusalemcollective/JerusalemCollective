@@ -17,7 +17,7 @@ export default function NotFound() {
           We couldn&apos;t find that page
         </h1>
         <p className="mt-3 text-stone-600">
-          The listing may have been removed or the link may be out of date.
+          The page you are looking for may have been removed or the link may be out of date.
         </p>
         <div className="mt-8 flex flex-col items-center gap-4">
           <Link

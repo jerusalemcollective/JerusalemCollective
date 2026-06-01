@@ -41,7 +41,7 @@ export default function TermsPage() {
             <section>
               <h2 className="mb-4 text-xl font-bold text-stone-900">2. Platform role</h2>
               <p className="leading-relaxed text-stone-700">
-                JLM Collective provides a marketplace where users can discover stays, submit listings,
+                JLM Collective provides a letting agency service where users can discover stays, submit listings,
                 send enquiries, and manage related communications. Unless clearly stated otherwise,
                 JLM Collective is not the owner, landlord, tenant, or operator of listed properties.
               </p>
@@ -52,7 +52,7 @@ export default function TermsPage() {
               <p className="leading-relaxed text-stone-700">
                 Users must provide accurate information, keep account access secure, and use the
                 platform honestly and lawfully. We may restrict or suspend access where reasonably
-                necessary to protect users, the platform, or comply with law.
+                necessary to protect users, JLM Collective, or comply with law.
               </p>
             </section>
 
@@ -61,7 +61,7 @@ export default function TermsPage() {
               <p className="leading-relaxed text-stone-700">
                 Before submitting a stay, a host must agree to the host terms below. These terms
                 are designed to protect guests, hosts, and the quality of the JLM Collective
-                marketplace.
+                letting agency service.
               </p>
               <div className="mt-6 space-y-6">
                 {HOST_TERMS.map((term) => (
@@ -91,7 +91,7 @@ export default function TermsPage() {
             <section>
               <h2 className="mb-4 text-xl font-bold text-stone-900">6. Enquiries, bookings, and payments</h2>
               <p className="leading-relaxed text-stone-700">
-                Users must follow the booking and payment process shown on the platform. Where direct
+                Users must follow the booking and payment process shown on JLM Collective. Where direct
                 payment to a host is permitted, the host remains responsible for clearly stating the
                 agreed terms. Any later integrated payment terms will apply in addition to these terms.
               </p>
@@ -100,7 +100,7 @@ export default function TermsPage() {
             <section>
               <h2 className="mb-4 text-xl font-bold text-stone-900">7. Disputes and refunds</h2>
               <p className="leading-relaxed text-stone-700">
-                Users may raise support cases through the platform where available. We may review
+                Users may raise support cases through JLM Collective where available. We may review
                 information from both sides and record case outcomes. Refund eligibility depends on the
                 applicable booking, payment, cancellation, and host terms in force for that stay.
               </p>
@@ -110,7 +110,7 @@ export default function TermsPage() {
               <h2 className="mb-4 text-xl font-bold text-stone-900">8. Prohibited use</h2>
               <p className="leading-relaxed text-stone-700">
                 Users must not submit misleading listings, impersonate others, upload content without
-                rights, misuse personal data, send spam, interfere with security, or use the platform for
+                rights, misuse personal data, send spam, interfere with security, or use JLM Collective for
                 unlawful, deceptive, abusive, or discriminatory purposes.
               </p>
             </section>

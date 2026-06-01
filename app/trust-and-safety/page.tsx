@@ -19,6 +19,21 @@ export default function TrustAndSafetyPage() {
           </p>
 
           <div className="space-y-10">
+            <section className="rounded-3xl bg-[#F8F5F2] p-6">
+              <h2 className="font-display text-xl font-bold text-stone-950">
+                How we work
+              </h2>
+              <p className="mt-3 text-base leading-8 text-stone-700">
+                JLM Collective is a Jerusalem letting agency. We act as agent for property owners, reviewing, verifying, and marketing their properties to guests on their behalf.
+              </p>
+              <p className="mt-4 text-base leading-8 text-stone-700">
+                When you book through JLM Collective your booking agreement is with the property owner. JLM Collective facilitates the booking as their appointed agent and supports you throughout your stay.
+              </p>
+              <p className="mt-4 text-base leading-8 text-stone-700">
+                Payments are collected by JLM Collective on behalf of the property owner when a booking is confirmed through our service.
+              </p>
+            </section>
+
             {/* 1. Introduction */}
             <section>
               <h2 className="mb-4 text-xl font-bold text-stone-900">1. Introduction</h2>
@@ -26,7 +41,7 @@ export default function TrustAndSafetyPage() {
                 JLM Collective is designed to help guests find short-term stays and to help owners, hosts, representatives and managing agents submit stays for listing.
               </p>
               <p className="mt-4 text-stone-700 leading-relaxed">
-                Trust is central to the platform. This Trust &amp; Safety Policy explains the standards we expect from users, how we review listings, and the steps we may take to protect guests, hosts and the JLM Collective marketplace.
+                Trust is central to our service. This Trust &amp; Safety Policy explains the standards we expect from users, how we review listings, and the steps we may take to protect guests, hosts and the JLM Collective letting agency.
               </p>
               <p className="mt-4 text-stone-700 leading-relaxed">
                 This policy should be read together with our <Link href="/terms" className="text-[#c76f55] hover:underline">Terms of Service</Link> and <Link href="/privacy" className="text-[#c76f55] hover:underline">Privacy Policy</Link>.
@@ -64,7 +79,7 @@ export default function TrustAndSafetyPage() {
             <section>
               <h2 className="mb-4 text-xl font-bold text-stone-900">3. Listing review</h2>
               <p className="text-stone-700 leading-relaxed">
-                JLM Collective may review listings before they go live on the platform.
+                JLM Collective may review listings before they go live on our service.
               </p>
               <p className="mt-4 text-stone-700 leading-relaxed">
                 A submitted listing does not automatically appear publicly. We may check the listing for completeness, quality, suitability, accuracy and platform standards.
@@ -103,13 +118,13 @@ export default function TrustAndSafetyPage() {
             <section>
               <h2 className="mb-4 text-xl font-bold text-stone-900">5. Guest responsibility</h2>
               <p className="text-stone-700 leading-relaxed">
-                Guests must use the platform honestly and respectfully.
+                Guests must use JLM Collective honestly and respectfully.
               </p>
               <p className="mt-4 text-stone-700 leading-relaxed">
                 Guests should provide accurate information when making enquiries or booking requests, including guest numbers, intended dates, contact details and any relevant requirements.
               </p>
               <p className="mt-4 text-stone-700 leading-relaxed">
-                Guests must not use the platform to send false enquiries, spam, abusive messages, fraudulent requests, misleading information or unlawful content.
+                Guests must not use JLM Collective to send false enquiries, spam, abusive messages, fraudulent requests, misleading information or unlawful content.
               </p>
             </section>
 
@@ -123,7 +138,7 @@ export default function TrustAndSafetyPage() {
                 Hosts should not upload photos that materially misrepresent the property, show a different property, hide important defects, or create a misleading impression of the stay.
               </p>
               <p className="mt-4 text-stone-700 leading-relaxed">
-                JLM Collective may reject or remove photos that are unclear, inappropriate, low quality, misleading, duplicated, copied without permission, or unsuitable for the platform.
+                JLM Collective may reject or remove photos that are unclear, inappropriate, low quality, misleading, duplicated, copied without permission, or unsuitable for our service.
               </p>
             </section>
 
@@ -131,7 +146,7 @@ export default function TrustAndSafetyPage() {
             <section>
               <h2 className="mb-4 text-xl font-bold text-stone-900">7. Verification and checks</h2>
               <p className="text-stone-700 leading-relaxed">
-                JLM Collective may carry out checks to help protect the platform.
+                JLM Collective may carry out checks to help protect our service.
               </p>
               <p className="mt-4 text-stone-700 leading-relaxed">
                 These may include requesting additional information from hosts, representatives, managing agents or guests. We may ask for confirmation of authority, contact details, ownership or management connection, listing details, or other information reasonably needed to assess a listing or enquiry.
@@ -145,10 +160,10 @@ export default function TrustAndSafetyPage() {
             <section>
               <h2 className="mb-4 text-xl font-bold text-stone-900">8. Payments, deposits and booking safety</h2>
               <p className="text-stone-700 leading-relaxed">
-                Where payment, deposit or booking features are available, users should follow the process shown on the platform.
+                Where payment, deposit or booking features are available, users should follow the process shown on JLM Collective.
               </p>
               <p className="mt-4 text-stone-700 leading-relaxed">
-                Guests should be cautious about sending money outside the platform or to unknown third parties. Hosts and representatives should not request payment in a way that is misleading, unsafe or contrary to the instructions shown on JLM Collective.
+                Guests should be cautious about sending money outside JLM Collective or to unknown third parties. Hosts and representatives should not request payment in a way that is misleading, unsafe or contrary to the instructions shown on JLM Collective.
               </p>
               <p className="mt-4 text-stone-700 leading-relaxed">
                 If JLM Collective introduces payment or deposit handling, the relevant payment terms will apply.
@@ -169,7 +184,7 @@ export default function TrustAndSafetyPage() {
                 <li>send spam or abusive messages;</li>
                 <li>attempt to avoid platform safety processes;</li>
                 <li>interfere with the website or platform security;</li>
-                <li>use the platform for unlawful, discriminatory, harmful or deceptive purposes;</li>
+                <li>use JLM Collective for unlawful, discriminatory, harmful or deceptive purposes;</li>
                 <li>misuse another person&apos;s personal information;</li>
                 <li>pressure users to communicate or pay in unsafe ways.</li>
               </ul>
@@ -223,7 +238,7 @@ export default function TrustAndSafetyPage() {
                 <li>refusing to publish a listing;</li>
                 <li>warning a user;</li>
                 <li>reporting serious issues to relevant authorities where appropriate;</li>
-                <li>taking any other reasonable step to protect users or the platform.</li>
+                <li>taking any other reasonable step to protect users or JLM Collective.</li>
               </ul>
               <p className="mt-4 text-stone-700 leading-relaxed">
                 We may act where we believe it is necessary, even if an issue has not yet been fully proven.
@@ -234,7 +249,7 @@ export default function TrustAndSafetyPage() {
             <section>
               <h2 className="mb-4 text-xl font-bold text-stone-900">12. No guarantee</h2>
               <p className="text-stone-700 leading-relaxed">
-                JLM Collective aims to support a safer and more reliable marketplace, but we cannot guarantee every listing, user, property, enquiry, payment or stay.
+                JLM Collective aims to support a safer and more reliable letting agency service, but we cannot guarantee every listing, user, property, enquiry, payment or stay.
               </p>
               <p className="mt-4 text-stone-700 leading-relaxed">
                 Users are responsible for making their own checks and decisions before entering into any arrangement.

@@ -48,17 +48,17 @@ const seasonalCards = [
   {
     title: 'Pesach stays',
     description: 'Start with suitable homes for busy holiday periods.',
-    href: '/stays?season=pesach',
+    href: '/stays?kosherKitchen=1',
   },
   {
     title: 'Sukkot stays',
     description: 'Look for homes with useful outdoor space and location fit.',
-    href: '/stays?season=sukkot',
+    href: '/stays?sukkahBalcony=1',
   },
   {
     title: 'Longer visits',
     description: 'Homes that suit family trips and extended stays.',
-    href: '/stays?season=longer-visits',
+    href: '/stays',
   },
 ]
 

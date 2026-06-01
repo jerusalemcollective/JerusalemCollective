@@ -142,9 +142,14 @@ export function Footer() {
     <>
       <footer className="border-t border-stone-200 bg-[#F8F5F2]">
         <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-4 px-5 py-5 sm:flex-row sm:items-center md:px-6">
-          <Link href="/" aria-label="JLM Collective home" className="shrink-0">
-            <JLMLogo variant="black" className="h-10 w-auto md:h-12" />
-          </Link>
+          <div className="max-w-sm">
+            <Link href="/" aria-label="JLM Collective home" className="inline-flex shrink-0">
+              <JLMLogo variant="black" className="h-10 w-auto md:h-12" />
+            </Link>
+            <p className="mt-3 text-sm leading-6 text-stone-500">
+              JLM Collective is a specialist Jerusalem letting agency. We market and let verified Jerusalem properties on behalf of property owners.
+            </p>
+          </div>
 
           <nav className="flex flex-wrap items-center gap-x-5 gap-y-3 text-sm font-semibold sm:justify-end">
             <Link href="/how-it-works" className="text-stone-600 transition hover:text-[#c76f55]">How it works</Link>
