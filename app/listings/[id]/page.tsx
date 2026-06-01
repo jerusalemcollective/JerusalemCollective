@@ -54,6 +54,7 @@ const listingDetailListingSchema = z.object({
   bedrooms: z.number().nullable(),
   bathrooms: z.number().nullable(),
   max_guests: z.number().nullable(),
+  sleeping_setup: z.string().nullable().optional().transform((value) => value ?? null),
   price_ils: z.number().nullable(),
   price_usd: z.number().nullable(),
   booking_type: z.string(),
@@ -89,6 +90,7 @@ const listingPhotoSchema = z.object({
   id: z.string(),
   photo_url: z.string(),
   is_cover: z.boolean().nullable(),
+  label: z.string().nullable().optional().transform((value) => value ?? null),
 })
 
 const listingReviewSchema = z.object({
@@ -254,6 +256,7 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
             ...sampleListing,
             host_id: null,
             bathrooms: sampleListing.bathrooms || null,
+            sleeping_setup: null,
             amenities: sampleListing.amenities || [],
             description: sampleListing.description || null,
             house_rules: null,
@@ -278,6 +281,7 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
             id: `${sampleListing.id}-cover`,
             photo_url: sampleListing.cover_photo_url,
             is_cover: true,
+            label: null,
           }] : []}
           reviews={[]}
           blockedRanges={[]}
@@ -318,7 +322,7 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
   ] = await Promise.all([
     supabase
       .from('listing_photos')
-      .select('id, photo_url, is_cover')
+      .select('id, photo_url, is_cover, label')
       .eq('listing_id', id)
       .order('sort_order', { ascending: true }),
     listing.host_id

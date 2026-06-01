@@ -98,6 +98,7 @@ export async function createAdminListing(formData: FormData) {
   const bedrooms = parseNumber(formData.get('bedrooms'), 0)
   const bathrooms = parseOptionalNumber(formData.get('bathrooms'))
   const maxGuests = parseNumber(formData.get('maxGuests'), 1)
+  const sleepingSetup = String(formData.get('sleepingSetup') || '').trim()
   const priceIls = parseOptionalNumber(formData.get('priceIls'))
   const priceUsd = parseOptionalNumber(formData.get('priceUsd'))
   const bookingType = String(formData.get('bookingType') || 'request')
@@ -137,6 +138,7 @@ export async function createAdminListing(formData: FormData) {
       bedrooms,
       bathrooms,
       max_guests: maxGuests,
+      sleeping_setup: sleepingSetup || null,
       price_ils: priceIls,
       price_usd: priceUsd,
       booking_type: bookingType,

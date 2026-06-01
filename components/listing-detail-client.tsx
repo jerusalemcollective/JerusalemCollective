@@ -28,6 +28,7 @@ export type ListingDetailListing = {
   bedrooms: number | null
   bathrooms: number | null
   max_guests: number | null
+  sleeping_setup: string | null
   price_ils: number | null
   price_usd: number | null
   booking_type: string
@@ -54,6 +55,7 @@ export type ListingDetailPhoto = {
   id: string
   photo_url: string
   is_cover: boolean | null
+  label: string | null
 }
 
 type PointerLikeEvent = {
@@ -406,7 +408,7 @@ export function ListingDetailClient({
                     >
                       <Image
                         src={photo.photo_url}
-                        alt={listing.title}
+                        alt={photo.label ? `${listing.title} - ${photo.label}` : `${listing.title} photo ${photoIndex + 1}`}
                         fill
                         className="object-cover"
                         priority={photoIndex === 0}
@@ -416,8 +418,16 @@ export function ListingDetailClient({
                     </div>
                   ))}
                 </div>
+                <div className="absolute left-3 top-3 rounded-full bg-stone-950/75 px-3 py-1 text-xs font-bold text-white">
+                  {mobilePhotoIndex + 1} of {photos.length}
+                </div>
+                {photos[mobilePhotoIndex]?.label && (
+                  <div className="absolute bottom-3 left-3 max-w-[calc(100%-6rem)] rounded-full bg-white/95 px-3 py-1.5 text-xs font-bold text-stone-800 shadow-sm">
+                    {photos[mobilePhotoIndex].label}
+                  </div>
+                )}
                 {photos.length > 1 && (
-                  <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
+                  <div className="absolute bottom-3 right-3 flex gap-1.5">
                     {photos.slice(0, 5).map((photo, i) => (
                       <button
                         key={photo.id}
@@ -455,6 +465,14 @@ export function ListingDetailClient({
                       sizes="50vw"
                     />
                   )}
+                  <div className="absolute left-4 top-4 rounded-full bg-stone-950/75 px-3 py-1 text-xs font-bold text-white">
+                    1 of {photos.length}
+                  </div>
+                  {photos[0]?.label && (
+                    <div className="absolute bottom-4 left-4 max-w-[calc(100%-2rem)] rounded-full bg-white/95 px-3 py-1.5 text-xs font-bold text-stone-800 shadow-sm">
+                      {photos[0].label}
+                    </div>
+                  )}
                 </div>
 
                 {[1, 2, 3, 4].map((index) => (
@@ -467,14 +485,21 @@ export function ListingDetailClient({
                     }}
                   >
                     {photos[index] ? (
-                      <Image
-                        src={photos[index].photo_url}
-                        alt={`${listing.title} photo ${index + 1}`}
-                        fill
-                        className="object-cover transition-opacity duration-300 hover:opacity-95"
-                        loading="lazy"
-                        sizes="25vw"
-                      />
+                      <>
+                        <Image
+                          src={photos[index].photo_url}
+                          alt={photos[index].label ? `${listing.title} - ${photos[index].label}` : `${listing.title} photo ${index + 1}`}
+                          fill
+                          className="object-cover transition-opacity duration-300 hover:opacity-95"
+                          loading="lazy"
+                          sizes="25vw"
+                        />
+                        {photos[index].label && (
+                          <div className="absolute bottom-2 left-2 right-2 truncate rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-bold text-stone-800 shadow-sm">
+                            {photos[index].label}
+                          </div>
+                        )}
+                      </>
                     ) : (
                       <div className="h-full w-full bg-stone-100" />
                     )}
@@ -497,7 +522,7 @@ export function ListingDetailClient({
                     <rect x="3" y="14" width="7" height="7" />
                     <rect x="14" y="14" width="7" height="7" />
                   </svg>
-                  Show all {photos.length} photos
+                  View gallery ({photos.length})
                 </button>
               )}
             </>
@@ -587,6 +612,18 @@ export function ListingDetailClient({
                 <div className="py-8">
                   <h2 className="mb-3 text-lg font-bold text-stone-900">About this stay</h2>
                   <p className="whitespace-pre-line text-base leading-8 text-stone-700">{listing.description}</p>
+                </div>
+              </>
+            )}
+
+            {listing.sleeping_setup?.trim() && (
+              <>
+                <hr className="border-stone-100" />
+                <div className="py-8">
+                  <h2 className="mb-3 text-lg font-bold text-stone-900">Sleeping setup</h2>
+                  <p className="whitespace-pre-line rounded-3xl bg-[#F8F5F2] p-5 text-sm leading-7 text-stone-700">
+                    {listing.sleeping_setup}
+                  </p>
                 </div>
               </>
             )}

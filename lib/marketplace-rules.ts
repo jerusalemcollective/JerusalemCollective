@@ -27,6 +27,7 @@ export type ListingScoreInput = {
   description: string | null
   bedrooms: number | null
   bathrooms: number | null
+  sleeping_setup?: string | null
   amenities: string[]
   price_usd: number | null
   price_ils: number | null
@@ -83,6 +84,7 @@ export function calculateListingScore(listing: ListingScoreInput): number {
 
   if (listing.bedrooms !== null) score += 5
   if (listing.bathrooms !== null) score += 5
+  if (listing.sleeping_setup?.trim()) score += 5
   if (listing.price_usd || listing.price_ils) score += 5
   if (listing.amenities.length >= 5) score += 5
 

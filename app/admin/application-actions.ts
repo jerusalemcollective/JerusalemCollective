@@ -28,6 +28,7 @@ const applicationEditableFields = [
   'bedrooms',
   'bathrooms',
   'sleeps',
+  'sleeping_setup',
   'price_ils',
   'price_usd',
   'amenities',
@@ -55,6 +56,7 @@ type ListingWritePayload = {
   bedrooms: number
   bathrooms: number | null
   max_guests: number
+  sleeping_setup?: string | null
   price_ils: number | null
   price_usd: number | null
   amenities: string[]
@@ -87,6 +89,7 @@ type HostApplicationRecord = {
   bedrooms: number | null
   bathrooms: number | null
   sleeps: number | null
+  sleeping_setup?: string | null
   price_ils: number | null
   price_usd: number | null
   amenities: string[] | null
@@ -251,6 +254,7 @@ export async function updateAdminApplicationDetails(formData: FormData) {
     bedrooms: parseNullableNumber(formData.get('bedrooms')),
     bathrooms: parseNullableNumber(formData.get('bathrooms')),
     sleeps: parseNullableNumber(formData.get('sleeps')),
+    sleeping_setup: String(formData.get('sleeping_setup') || '').trim() || null,
     price_ils: parseNullableNumber(formData.get('price_ils')),
     price_usd: parseNullableNumber(formData.get('price_usd')),
     amenities: parseAmenities(formData.getAll('amenities')),
@@ -284,6 +288,7 @@ export async function updateAdminApplicationDetails(formData: FormData) {
         bedrooms: update.bedrooms || 0,
         bathrooms: update.bathrooms,
         max_guests: update.sleeps || 1,
+        sleeping_setup: update.sleeping_setup,
         price_ils: update.price_ils,
         price_usd: update.price_usd,
         amenities: update.amenities,
@@ -364,6 +369,7 @@ export async function approveAndPublishApplication(formData: FormData) {
     bedrooms: hostApplication.bedrooms || 0,
     bathrooms: hostApplication.bathrooms,
     max_guests: hostApplication.sleeps || 1,
+    sleeping_setup: hostApplication.sleeping_setup || null,
     price_ils: hostApplication.price_ils,
     price_usd: hostApplication.price_usd,
     amenities: hostApplication.amenities || [],

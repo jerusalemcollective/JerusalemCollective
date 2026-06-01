@@ -21,6 +21,7 @@ export async function updateHostListing(formData: FormData) {
   const bathroomsValue = String(formData.get('bathrooms') || '')
   const bathrooms = bathroomsValue ? Number(bathroomsValue) : null
   const maxGuests = Number(formData.get('maxGuests') || 0)
+  const sleepingSetup = String(formData.get('sleepingSetup') || '').trim()
   const priceIlsValue = String(formData.get('priceIls') || '')
   const priceUsdValue = String(formData.get('priceUsd') || '')
   const priceIls = priceIlsValue ? Number(priceIlsValue) : null
@@ -60,6 +61,7 @@ export async function updateHostListing(formData: FormData) {
     new_price_usd: priceUsd,
     new_booking_type: bookingType,
     new_amenities: amenities,
+    new_sleeping_setup: sleepingSetup,
     new_description: description,
   })
 
@@ -154,6 +156,7 @@ export async function updateHostApplication(formData: FormData) {
   const bathroomsValue = String(formData.get('bathrooms') || '')
   const bathrooms = bathroomsValue ? Number(bathroomsValue) : null
   const sleeps = Number(formData.get('sleeps') || 0)
+  const sleepingSetup = String(formData.get('sleepingSetup') || '').trim()
   const priceIlsValue = String(formData.get('priceIls') || '')
   const priceUsdValue = String(formData.get('priceUsd') || '')
   const currencyPreference = String(formData.get('currencyPreference') || 'ILS')
@@ -191,6 +194,7 @@ export async function updateHostApplication(formData: FormData) {
     new_price_ils: priceIls,
     new_price_usd: priceUsd,
     new_amenities: amenities,
+    new_sleeping_setup: sleepingSetup,
     new_description: description,
     new_photo_link: photoLink || null,
     new_verification_doc_type: verificationDocType,

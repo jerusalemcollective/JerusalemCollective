@@ -18,7 +18,7 @@ export default async function HostListingEditPage({
     supabase
       .from('listings')
       .select(
-        'id, title, area, bedrooms, bathrooms, max_guests, price_ils, price_usd, booking_type, amenities, description, house_rules, welcome_message, check_in_instructions, is_published, external_calendar_url, calendar_last_synced_at, shabbat_elevator, physical_key_entry, shabbat_clock, kosher_kitchen_level, walking_minutes_to_kotel, near_synagogue, sukkah_balcony, american_comfort, central_ac, american_washer_dryer, american_mattress, powerful_water_heater',
+        'id, title, area, bedrooms, bathrooms, max_guests, sleeping_setup, price_ils, price_usd, booking_type, amenities, description, house_rules, welcome_message, check_in_instructions, is_published, external_calendar_url, calendar_last_synced_at, shabbat_elevator, physical_key_entry, shabbat_clock, kosher_kitchen_level, walking_minutes_to_kotel, near_synagogue, sukkah_balcony, american_comfort, central_ac, american_washer_dryer, american_mattress, powerful_water_heater',
       )
       .eq('id', id)
       .in('host_id', hostIds)
@@ -86,6 +86,20 @@ export default async function HostListingEditPage({
                 <Field label="Maximum guests">
                   <input name="maxGuests" type="number" min="1" defaultValue={listing.max_guests} className={inputClass} />
                 </Field>
+              </div>
+              <div className="mt-5">
+                <Field label="Sleeping setup">
+                  <textarea
+                    name="sleepingSetup"
+                    rows={5}
+                    defaultValue={listing.sleeping_setup || ''}
+                    placeholder={`Example:\nBedroom 1: king bed\nBedroom 2: two single beds\nLiving room: sofa bed`}
+                    className={`${inputClass} resize-y`}
+                  />
+                </Field>
+                <p className="mt-2 text-xs leading-5 text-stone-500">
+                  This appears on the public listing so guests can see exactly where everyone sleeps.
+                </p>
               </div>
             </EditorSection>
 

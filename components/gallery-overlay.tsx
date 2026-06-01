@@ -13,6 +13,7 @@ export type GalleryPhoto = {
   id: string
   photo_url: string
   is_cover: boolean | null
+  label: string | null
 }
 
 type GalleryOverlayProps = {
@@ -94,11 +95,18 @@ export function GalleryOverlay({
   if (total === 0) return null
 
   const translateX = -(index * 100) + (isDragging ? dragOffsetPercent : 0)
+  const currentPhoto = photos[index]
+  const currentLabel = currentPhoto?.label?.trim()
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-white">
       <div className="flex shrink-0 items-center justify-between border-b border-stone-100 bg-white px-6 py-4">
-        <p className="text-sm font-semibold text-stone-950">{title}</p>
+        <div>
+          <p className="text-sm font-semibold text-stone-950">{title}</p>
+          {currentLabel && (
+            <p className="mt-0.5 text-xs font-medium text-stone-500">{currentLabel}</p>
+          )}
+        </div>
         <div className="flex items-center gap-4">
           <span className="text-sm text-stone-500">
             {index + 1} / {total}
@@ -147,7 +155,7 @@ export function GalleryOverlay({
             >
               <img
                 src={photo.photo_url}
-                alt={`${title} - photo ${photoIndex + 1}`}
+                alt={photo.label ? `${title} - ${photo.label}` : `${title} - photo ${photoIndex + 1}`}
                 loading={Math.abs(photoIndex - index) <= 1 ? 'eager' : 'lazy'}
                 className="block h-auto max-h-[58vh] w-auto max-w-[78vw] select-none rounded-2xl object-contain shadow-xl md:max-h-[62vh] md:max-w-[70vw]"
                 draggable={false}
@@ -191,6 +199,12 @@ export function GalleryOverlay({
             <path d="M9 18l6-6-6-6" />
           </svg>
         </button>
+
+        {currentLabel && (
+          <div className="absolute bottom-5 left-1/2 z-10 max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-full bg-white/95 px-4 py-2 text-sm font-semibold text-stone-800 shadow-sm ring-1 ring-stone-200">
+            {currentLabel}
+          </div>
+        )}
       </div>
 
       <div className="flex shrink-0 gap-2 overflow-x-auto border-t border-stone-100 bg-white px-6 py-4">

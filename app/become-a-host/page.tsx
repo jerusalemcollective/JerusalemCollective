@@ -44,6 +44,7 @@ type FormState = {
   bedrooms: string
   bathrooms: string
   sleeps: string
+  sleeping_setup: string
   currency_preference: CurrencyPreference
   price_ils: string
   price_usd: string
@@ -768,6 +769,7 @@ apartment_title: '',
   bedrooms: '',
   bathrooms: '',
   sleeps: '',
+  sleeping_setup: '',
 
   currency_preference: 'ILS',
   price_ils: '',
@@ -1263,6 +1265,7 @@ export default function BecomeAHostPage() {
           bedrooms: form.bedrooms,
           bathrooms: form.bathrooms,
           sleeps: form.sleeps,
+          sleeping_setup: form.sleeping_setup,
           amenities: form.amenities,
           description: form.description,
         }),
@@ -1338,6 +1341,9 @@ export default function BecomeAHostPage() {
       }
       if (!form.sleeps || Number(form.sleeps) < 1) {
         issues.push('Add how many guests the stay sleeps.')
+      }
+      if (!form.sleeping_setup.trim()) {
+        issues.push('Add the sleeping setup so guests know exactly where everyone sleeps.')
       }
     }
 
@@ -1521,6 +1527,7 @@ async function handleSubmit() {
       bedrooms: Number(form.bedrooms) || null,
       bathrooms: Number(form.bathrooms) || null,
       sleeps: Number(form.sleeps) || null,
+      sleeping_setup: form.sleeping_setup.trim() || null,
 
       currency_preference: form.currency_preference,
       price_ils: Number(form.price_ils) || null,
@@ -2139,6 +2146,20 @@ async function handleSubmit() {
                     />
                   </Field>
                 </div>
+                <div className="mt-5">
+                  <Field label="Sleeping setup">
+                    <textarea
+                      value={form.sleeping_setup}
+                      onChange={(e) => updateField('sleeping_setup', e.target.value)}
+                      rows={5}
+                      placeholder={`Example:\nBedroom 1: king bed\nBedroom 2: two single beds\nLiving room: sofa bed`}
+                      className={`${inputClass} resize-y`}
+                    />
+                  </Field>
+                  <p className="mt-2 text-xs leading-5 text-stone-500">
+                    Help guests understand exactly where everyone will sleep.
+                  </p>
+                </div>
               </StepShell>
             )}
 
@@ -2665,6 +2686,11 @@ async function handleSubmit() {
                     value={`${form.bedrooms || '—'} bedrooms · ${
                       form.bathrooms || '—'
                     } bathrooms · sleeps ${form.sleeps || '—'}`}
+                  />
+
+                  <ReviewItem
+                    label="Sleeping setup"
+                    value={form.sleeping_setup || 'Not provided'}
                   />
 
                   <ReviewItem

@@ -16,6 +16,8 @@ type AdminListingDetail = {
   is_featured: boolean
   bedrooms: number | null
   bathrooms: number | null
+  max_guests: number | null
+  sleeping_setup: string | null
   amenities: string[] | null
   description: string | null
   price_usd: number | null
@@ -39,7 +41,7 @@ export default async function AdminListingDetailPage({
   const [{ data: listingData }, { data: messages, error: messagesError }, { data: photos }] = await Promise.all([
     supabase
       .from('listings')
-      .select('id, title, area, host_id, is_published, is_featured, bedrooms, bathrooms, amenities, description, price_usd, price_ils, hosts(name)')
+      .select('id, title, area, host_id, is_published, is_featured, bedrooms, bathrooms, max_guests, sleeping_setup, amenities, description, price_usd, price_ils, hosts(name)')
       .eq('id', id)
       .single(),
     supabase
@@ -67,6 +69,7 @@ export default async function AdminListingDetailPage({
     description: listing.description,
     bedrooms: listing.bedrooms,
     bathrooms: listing.bathrooms,
+    sleeping_setup: listing.sleeping_setup,
     amenities: listing.amenities || [],
     price_usd: listing.price_usd,
     price_ils: listing.price_ils,
@@ -90,6 +93,19 @@ export default async function AdminListingDetailPage({
             <Info label="Published" value={listing.is_published ? 'Live' : 'Hidden'} />
             <Info label="Featured" value={listing.is_featured ? 'Featured' : 'Standard'} />
           </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <Info label="Rooms" value={`${listing.bedrooms ?? '-'} bed / ${listing.bathrooms ?? '-'} bath`} />
+            <Info label="Sleeps" value={String(listing.max_guests ?? '-')} />
+            <Info label="Sleeping setup" value={listing.sleeping_setup ? 'Complete' : 'Missing'} />
+          </div>
+          {listing.sleeping_setup && (
+            <div className="mt-4 rounded-2xl bg-[#F8F5F2] p-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-stone-400">Sleeping setup</p>
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-stone-800">
+                {listing.sleeping_setup}
+              </p>
+            </div>
+          )}
           <div className="mt-6 rounded-2xl bg-[#F8F5F2] p-4">
             <ListingQualityScore score={qualityScore} />
           </div>

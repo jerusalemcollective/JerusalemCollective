@@ -25,6 +25,7 @@ type HostApplication = {
   bedrooms: number | null
   bathrooms: number | null
   sleeps: number | null
+  sleeping_setup?: string | null
   currency_preference?: string | null
   price_ils: number | null
   price_usd: number | null
@@ -212,6 +213,20 @@ export default async function HostApplicationEditPage({
                 <Field label="Sleeps">
                   <input name="sleeps" type="number" min="1" defaultValue={hostApplication.sleeps ?? ''} className={inputClass} />
                 </Field>
+              </div>
+              <div className="mt-5">
+                <Field label="Sleeping setup">
+                  <textarea
+                    name="sleepingSetup"
+                    rows={5}
+                    defaultValue={hostApplication.sleeping_setup || ''}
+                    placeholder={`Example:\nBedroom 1: king bed\nBedroom 2: two single beds\nLiving room: sofa bed`}
+                    className={`${inputClass} resize-y`}
+                  />
+                </Field>
+                <p className="mt-2 text-xs leading-5 text-stone-500">
+                  Help guests understand exactly where everyone will sleep.
+                </p>
               </div>
             </EditorSection>
 

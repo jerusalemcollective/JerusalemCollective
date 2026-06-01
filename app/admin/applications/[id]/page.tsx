@@ -32,6 +32,7 @@ type AdminApplication = {
   bedrooms: number | null
   bathrooms: number | null
   sleeps: number | null
+  sleeping_setup?: string | null
   price_ils: number | null
   price_usd: number | null
   amenities: string[] | null
@@ -105,6 +106,7 @@ export default async function AdminApplicationPage({
               <InfoRow label="Address" value={adminApplication.exact_address || 'Not provided'} />
               <InfoRow label="Rooms" value={`${adminApplication.bedrooms || '-'} bedrooms, ${adminApplication.bathrooms || '-'} bathrooms`} />
               <InfoRow label="Sleeps" value={String(adminApplication.sleeps || '-')} />
+              <InfoRow label="Sleeping setup" value={adminApplication.sleeping_setup || 'Not provided'} />
               <InfoRow label="Pricing" value={`ILS ${adminApplication.price_ils || '-'} / USD ${adminApplication.price_usd || '-'}`} />
               <InfoRow label="Amenities" value={(adminApplication.amenities || []).join(', ') || 'None selected'} />
               <InfoRow label="Description" value={adminApplication.description || 'Not provided'} />
@@ -125,6 +127,15 @@ export default async function AdminApplicationPage({
                   <EditField label="Price ILS" name="price_ils" type="number" defaultValue={String(adminApplication.price_ils || '')} />
                   <EditField label="Price USD" name="price_usd" type="number" defaultValue={String(adminApplication.price_usd || '')} />
                 </div>
+                <label className="block">
+                  <span className="text-xs font-bold uppercase tracking-widest text-stone-400">Sleeping setup</span>
+                  <textarea
+                    name="sleeping_setup"
+                    defaultValue={adminApplication.sleeping_setup || ''}
+                    rows={5}
+                    className="mt-2 min-h-28 w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
+                  />
+                </label>
                 <div>
                   <span className="text-xs font-bold uppercase tracking-widest text-stone-400">Amenities</span>
                   <div className="mt-2">

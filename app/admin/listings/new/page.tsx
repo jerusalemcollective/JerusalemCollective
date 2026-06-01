@@ -67,6 +67,19 @@ export default async function NewAdminListingPage() {
             <Field label="Max guests" name="maxGuests" type="number" min="1" defaultValue="1" />
           </div>
 
+          <label className="block">
+            <span className="text-sm font-semibold text-stone-800">Sleeping setup</span>
+            <textarea
+              name="sleepingSetup"
+              rows={5}
+              placeholder={`Example:\nBedroom 1: king bed\nBedroom 2: two single beds\nLiving room: sofa bed`}
+              className={`${inputClass} resize-y`}
+            />
+            <span className="mt-2 block text-xs leading-5 text-stone-500">
+              Add the plain-English sleeping arrangement guests will see on the listing.
+            </span>
+          </label>
+
           <div className="grid gap-5 md:grid-cols-2">
             <Field label="Price ILS" name="priceIls" type="number" min="0" />
             <Field label="Price USD" name="priceUsd" type="number" min="0" />

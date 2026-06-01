@@ -22,7 +22,10 @@ export function AdminNav({ adminRole }: { adminRole: AdminRole }) {
   const pathname = usePathname()
   const visibleLinks = adminLinks.filter((link) => canAdminRole(adminRole, link.permission))
   const ownerLinks = adminRole === 'owner'
-    ? [{ href: '/admin/settings', label: 'Settings' }]
+    ? [
+        { href: '/admin/readiness', label: 'Readiness' },
+        { href: '/admin/settings', label: 'Settings' },
+      ]
     : []
 
   return (
