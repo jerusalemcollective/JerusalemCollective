@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react'
 import Link from 'next/link'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
@@ -74,6 +74,12 @@ type FormState = {
 type SavedListingDraft = Omit<FormState, 'photos' | 'verification_doc' | 'id_doc'> & {
   step: number
   saved_at: string
+}
+
+type UploadProgress = {
+  completed: number
+  total: number
+  current: string
 }
 
 type AiSuggestion = {
@@ -807,8 +813,10 @@ const steps = [
 ]
 
 const minimumPhotoCount = 5
+const maxListingPhotoCount = 20
 const maxListingPhotoSizeMb = 10
 const listingDraftStorageKey = 'jlm-listing-draft-v1'
+const listingPhotoTypes = ['image/jpeg', 'image/png', 'image/webp']
 const isSupabaseEnvReady = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL &&
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -859,6 +867,11 @@ export default function BecomeAHostPage() {
   const [aiError, setAiError] = useState('')
   const [aiSuggestion, setAiSuggestion] = useState<AiSuggestion | null>(null)
   const [draggingPhotoIndex, setDraggingPhotoIndex] = useState<number | null>(null)
+  const [isPhotoDropActive, setIsPhotoDropActive] = useState(false)
+  const [photoUploadError, setPhotoUploadError] = useState('')
+  const [verificationDocError, setVerificationDocError] = useState('')
+  const [idDocError, setIdDocError] = useState('')
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
   const photoSwipeStartRef = useRef<{ index: number; x: number; pointerId: number } | null>(null)
 
   const progress = useMemo(() => {
@@ -1001,24 +1014,185 @@ export default function BecomeAHostPage() {
     updateField('photos', nextPhotos)
   }
 
+  function addPhotoFiles(files: File[]) {
+    setPhotoUploadError('')
+
+    if (files.length === 0) return
+
+    const availableSlots = maxListingPhotoCount - form.photos.length
+
+    if (availableSlots <= 0) {
+      setPhotoUploadError(`You can upload up to ${maxListingPhotoCount} photos. Remove one before adding another.`)
+      return
+    }
+
+    const nextPhotos: PhotoUpload[] = []
+    const messages: string[] = []
+    let skippedForLimit = 0
+
+    for (const file of files) {
+      if (nextPhotos.length >= availableSlots) {
+        skippedForLimit += 1
+        continue
+      }
+
+      if (!listingPhotoTypes.includes(file.type)) {
+        messages.push(`${file.name} is not a valid image type. Use JPG, PNG, or WebP.`)
+        continue
+      }
+
+      if (file.size > maxListingPhotoSizeMb * 1024 * 1024) {
+        messages.push(`${file.name} is too large. Use an image under ${maxListingPhotoSizeMb}MB.`)
+        continue
+      }
+
+      nextPhotos.push({
+        file,
+        preview: URL.createObjectURL(file),
+        label: '',
+      })
+    }
+
+    if (skippedForLimit > 0) {
+      messages.push(`Only ${availableSlots} more photo${availableSlots === 1 ? '' : 's'} can be added. The rest were not added.`)
+    }
+
+    if (nextPhotos.length > 0) {
+      updateField('photos', [...form.photos, ...nextPhotos])
+    }
+
+    if (messages.length > 0) {
+      setPhotoUploadError(messages.join(' '))
+    }
+  }
+
+  function handlePhotoInputChange(event: ChangeEvent<HTMLInputElement>) {
+    addPhotoFiles(Array.from(event.target.files || []))
+    event.target.value = ''
+  }
+
+  function handlePhotoDrop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault()
+    setIsPhotoDropActive(false)
+    addPhotoFiles(Array.from(event.dataTransfer.files || []))
+  }
+
+  function handleVerificationDocChange(event: ChangeEvent<HTMLInputElement>) {
+    setVerificationDocError('')
+    const file = event.target.files?.[0]
+
+    if (!file) return
+
+    const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp']
+    const maxSize = 10 * 1024 * 1024
+
+    if (!validTypes.includes(file.type)) {
+      setVerificationDocError('Please upload a PDF, JPG, PNG, or WebP file.')
+      event.target.value = ''
+      return
+    }
+
+    if (file.size > maxSize) {
+      setVerificationDocError('File is too large. Maximum size is 10MB.')
+      event.target.value = ''
+      return
+    }
+
+    updateField('verification_doc', {
+      file,
+      preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
+      name: file.name,
+      type: file.type,
+    })
+    event.target.value = ''
+  }
+
+  function handleIdDocChange(event: ChangeEvent<HTMLInputElement>) {
+    setIdDocError('')
+    const file = event.target.files?.[0]
+
+    if (!file) return
+
+    const maxSize = 10 * 1024 * 1024
+
+    if (!listingPhotoTypes.includes(file.type)) {
+      setIdDocError('Please upload a JPG, PNG, or WebP image.')
+      event.target.value = ''
+      return
+    }
+
+    if (file.size > maxSize) {
+      setIdDocError('File is too large. Maximum size is 10MB.')
+      event.target.value = ''
+      return
+    }
+
+    updateField('id_doc', {
+      file,
+      preview: URL.createObjectURL(file),
+      name: file.name,
+      type: file.type,
+    })
+    event.target.value = ''
+  }
+
   function dropPhoto(targetIndex: number) {
     if (draggingPhotoIndex === null) return
     reorderPhotos(draggingPhotoIndex, targetIndex)
     setDraggingPhotoIndex(null)
   }
 
+  function dragPhotoOver(targetIndex: number) {
+    if (draggingPhotoIndex === null || draggingPhotoIndex === targetIndex) return
+    reorderPhotos(draggingPhotoIndex, targetIndex)
+    setDraggingPhotoIndex(targetIndex)
+  }
+
   function startPhotoSwipe(index: number, event: PointerEvent<HTMLDivElement>) {
+    if (event.target instanceof HTMLElement && event.target.closest('input,button,textarea,select,a')) {
+      return
+    }
+
     photoSwipeStartRef.current = {
       index,
       x: event.clientX,
       pointerId: event.pointerId,
     }
+    setDraggingPhotoIndex(index)
     event.currentTarget.setPointerCapture(event.pointerId)
+  }
+
+  function movePhotoWithPointer(event: PointerEvent<HTMLDivElement>) {
+    const start = photoSwipeStartRef.current
+
+    if (!start || start.pointerId !== event.pointerId) return
+
+    const targetElement = document.elementFromPoint(event.clientX, event.clientY)
+    const photoElement = targetElement instanceof HTMLElement
+      ? targetElement.closest('[data-photo-index]')
+      : null
+    const photoIndexValue = photoElement?.getAttribute('data-photo-index')
+    const targetIndex = photoIndexValue ? Number(photoIndexValue) : Number.NaN
+
+    if (!Number.isInteger(targetIndex) || targetIndex < 0 || targetIndex >= form.photos.length) {
+      return
+    }
+
+    if (targetIndex === start.index) return
+
+    reorderPhotos(start.index, targetIndex)
+    photoSwipeStartRef.current = {
+      ...start,
+      index: targetIndex,
+      x: event.clientX,
+    }
+    setDraggingPhotoIndex(targetIndex)
   }
 
   function finishPhotoSwipe(index: number, event: PointerEvent<HTMLDivElement>) {
     const start = photoSwipeStartRef.current
     photoSwipeStartRef.current = null
+    setDraggingPhotoIndex(null)
 
     if (!start || start.index !== index || start.pointerId !== event.pointerId) return
 
@@ -1234,6 +1408,7 @@ async function handleSubmit() {
     setLoading(true)
     setError('')
     setSuccess(false)
+    setUploadProgress(null)
 
     if (!isSupabaseEnvReady) {
       setError('The live listing database is not connected yet. Add the Supabase environment variables before accepting submissions.')
@@ -1394,11 +1569,23 @@ async function handleSubmit() {
 
     // Upload photos to Supabase Storage with proper folder structure
     if (form.photos.length > 0) {
+      setUploadProgress({
+        completed: 0,
+        total: form.photos.length,
+        current: `Uploading photo 1 of ${form.photos.length}`,
+      })
+
       for (let i = 0; i < form.photos.length; i++) {
         const photo = form.photos[i]
         const fileExt = getImageExtension(photo.file)
         const fileName = `photo-${i + 1}-${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
         const storagePath = `listings/${applicationId}/${fileName}`
+
+        setUploadProgress({
+          completed: i,
+          total: form.photos.length,
+          current: `Uploading ${photo.label.trim() || photo.file.name} (${i + 1} of ${form.photos.length})`,
+        })
 
         const { error: uploadError } = await supabase.storage
           .from('listing-photos')
@@ -1411,6 +1598,7 @@ async function handleSubmit() {
         if (uploadError) {
           console.error('Upload error:', uploadError)
           setError(getUploadFailureMessage(photo.file.name, uploadError.message))
+          setUploadProgress(null)
           setLoading(false)
           return
         }
@@ -1435,6 +1623,15 @@ async function handleSubmit() {
         if (photoRecordError) {
           console.error('Photo record error:', photoRecordError)
         }
+
+        setUploadProgress({
+          completed: i + 1,
+          total: form.photos.length,
+          current:
+            i + 1 === form.photos.length
+              ? 'Finishing photo uploads'
+              : `Uploading photo ${i + 2} of ${form.photos.length}`,
+        })
       }
     }
 
@@ -1443,6 +1640,7 @@ async function handleSubmit() {
 
     setSuccess(true)
     setLoading(false)
+    setUploadProgress(null)
     window.localStorage.removeItem(listingDraftStorageKey)
     setForm(initialForm)
     setStep(0)
@@ -1586,6 +1784,25 @@ async function handleSubmit() {
             {error && (
               <div className="mb-6 rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-700">
                 {error}
+              </div>
+            )}
+
+            {uploadProgress && (
+              <div className="mb-6 rounded-2xl border border-stone-200 bg-[#F8F5F2] p-4 text-sm text-stone-700">
+                <div className="flex items-center justify-between gap-4 font-semibold">
+                  <span>{uploadProgress.current}</span>
+                  <span>
+                    {uploadProgress.completed}/{uploadProgress.total}
+                  </span>
+                </div>
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
+                  <div
+                    className="h-full rounded-full bg-[#c76f55] transition-all duration-300"
+                    style={{
+                      width: `${uploadProgress.total > 0 ? Math.round((uploadProgress.completed / uploadProgress.total) * 100) : 0}%`,
+                    }}
+                  />
+                </div>
               </div>
             )}
 
@@ -2026,63 +2243,76 @@ async function handleSubmit() {
                 title="Add photos of your stay"
                 description={`Upload at least ${minimumPhotoCount} clear photos to showcase your property. You'll be able to manage availability and block out dates from your Host Portal after approval.`}
               >
-                <Field label={`Upload photos (minimum ${minimumPhotoCount}, JPG, PNG, WebP - max ${maxListingPhotoSizeMb}MB each)`}>
+                <Field label={`Upload photos (minimum ${minimumPhotoCount}, maximum ${maxListingPhotoCount}, JPG, PNG, WebP - max ${maxListingPhotoSizeMb}MB each)`}>
                   <div className="space-y-4">
-                    <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-stone-300 bg-[#F8F5F2] p-8 transition hover:border-[#c76f55] hover:bg-[#F5F0EB]">
+                    <div
+                      onDragEnter={(event) => {
+                        event.preventDefault()
+                        setIsPhotoDropActive(true)
+                      }}
+                      onDragOver={(event) => {
+                        event.preventDefault()
+                        setIsPhotoDropActive(true)
+                      }}
+                      onDragLeave={(event) => {
+                        if (event.currentTarget === event.target) {
+                          setIsPhotoDropActive(false)
+                        }
+                      }}
+                      onDrop={handlePhotoDrop}
+                      className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8 text-center transition ${
+                        isPhotoDropActive
+                          ? 'border-[#c76f55] bg-[#fff4ef]'
+                          : 'border-stone-300 bg-[#F8F5F2] hover:border-[#c76f55] hover:bg-[#F5F0EB]'
+                      } ${form.photos.length >= maxListingPhotoCount ? 'cursor-not-allowed opacity-60' : ''}`}
+                    >
                       <svg className="mb-3 h-10 w-10 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
-                      <span className="text-sm font-medium text-stone-600">Click to upload photos</span>
-                      <span className="mt-1 text-xs text-stone-400">The first photo will be your cover image</span>
+                      <span className="text-sm font-semibold text-stone-700">
+                        {isPhotoDropActive ? 'Drop photos here' : 'Drag photos here or click to upload'}
+                      </span>
+                      <span className="mt-1 text-xs text-stone-500">
+                        {maxListingPhotoCount - form.photos.length} slot{maxListingPhotoCount - form.photos.length !== 1 ? 's' : ''} remaining. The first photo is the cover.
+                      </span>
                       <input
                         type="file"
                         accept="image/jpeg,image/png,image/webp"
                         multiple
-                        onChange={(e) => {
-                          const files = Array.from(e.target.files || [])
-                          const validFiles = files.filter(file => {
-                            const validTypes = ['image/jpeg', 'image/png', 'image/webp']
-                            const maxSize = maxListingPhotoSizeMb * 1024 * 1024
-                            if (!validTypes.includes(file.type)) {
-                              alert(`${file.name} is not a valid image type. Please use JPG, PNG, or WebP.`)
-                              return false
-                            }
-                            if (file.size > maxSize) {
-                              alert(`${file.name} is too large. Maximum size is ${maxListingPhotoSizeMb}MB.`)
-                              return false
-                            }
-                            return true
-                          })
-                          const newPhotos = validFiles.map(file => ({
-                            file,
-                            preview: URL.createObjectURL(file),
-                            label: '',
-                          }))
-                          updateField('photos', [...form.photos, ...newPhotos])
-                          e.target.value = '' // Reset input
-                        }}
+                        disabled={form.photos.length >= maxListingPhotoCount}
+                        onChange={handlePhotoInputChange}
                         className="hidden"
                       />
-                    </label>
+                    </div>
+
+                    {photoUploadError && (
+                      <div className="rounded-2xl border border-red-100 bg-red-50 p-3 text-sm font-semibold text-red-700">
+                        {photoUploadError}
+                      </div>
+                    )}
 
                     {form.photos.length > 0 && (
                       <div>
                         <p className="mb-3 text-xs font-semibold text-stone-500">
-                          Swipe a photo left or right to change the order. The first photo is the cover.
+                          Drag photos to reorder them. On touch screens, press and drag. Move a photo into the first position to make it the cover.
                         </p>
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
                           {form.photos.map((photo, index) => (
                             <div
                               key={`${photo.preview}-${index}`}
+                              data-photo-index={index}
                               draggable
                               onDragStart={() => setDraggingPhotoIndex(index)}
                               onDragOver={(event) => event.preventDefault()}
+                              onDragEnter={() => dragPhotoOver(index)}
                               onDrop={() => dropPhoto(index)}
                               onDragEnd={() => setDraggingPhotoIndex(null)}
                               onPointerDown={(event) => startPhotoSwipe(index, event)}
+                              onPointerMove={movePhotoWithPointer}
                               onPointerUp={(event) => finishPhotoSwipe(index, event)}
                               onPointerCancel={() => {
                                 photoSwipeStartRef.current = null
+                                setDraggingPhotoIndex(null)
                               }}
                               className={`touch-pan-y cursor-grab overflow-hidden rounded-xl bg-stone-100 active:cursor-grabbing ${draggingPhotoIndex === index ? 'opacity-60' : ''}`}
                             >
@@ -2101,6 +2331,7 @@ async function handleSubmit() {
                                 type="button"
                                 onClick={() => {
                                   URL.revokeObjectURL(photo.preview)
+                                  setPhotoUploadError('')
                                   updateField('photos', form.photos.filter((_, i) => i !== index))
                                 }}
                                 className="absolute right-2 top-2 rounded-full bg-white/90 p-1.5 text-stone-600 opacity-0 shadow-sm transition hover:bg-white hover:text-red-600 group-hover:opacity-100"
@@ -2213,30 +2444,7 @@ async function handleSubmit() {
                         <input
                           type="file"
                           accept="application/pdf,image/jpeg,image/png,image/webp"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0]
-                            if (!file) return
-                            
-                            const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp']
-                            const maxSize = 10 * 1024 * 1024 // 10MB
-                            
-                            if (!validTypes.includes(file.type)) {
-                              alert('Please upload a PDF, JPG, or PNG file.')
-                              return
-                            }
-                            if (file.size > maxSize) {
-                              alert('File is too large. Maximum size is 10MB.')
-                              return
-                            }
-                            
-                            updateField('verification_doc', {
-                              file,
-                              preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
-                              name: file.name,
-                              type: file.type,
-                            })
-                            e.target.value = ''
-                          }}
+                          onChange={handleVerificationDocChange}
                           className="hidden"
                         />
                       </label>
@@ -2268,6 +2476,7 @@ async function handleSubmit() {
                             if (verificationDoc?.preview) {
                               URL.revokeObjectURL(verificationDoc.preview)
                             }
+                            setVerificationDocError('')
                             updateField('verification_doc', null)
                           }}
                           className="rounded-full p-2 text-stone-400 transition hover:bg-stone-100 hover:text-red-600"
@@ -2276,6 +2485,11 @@ async function handleSubmit() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                           </svg>
                         </button>
+                      </div>
+                    )}
+                    {verificationDocError && (
+                      <div className="rounded-2xl border border-red-100 bg-red-50 p-3 text-sm font-semibold text-red-700">
+                        {verificationDocError}
                       </div>
                     )}
                   </div>
@@ -2315,30 +2529,7 @@ async function handleSubmit() {
                           <input
                             type="file"
                             accept="image/jpeg,image/png,image/webp"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0]
-                              if (!file) return
-                              
-                              const validTypes = ['image/jpeg', 'image/png', 'image/webp']
-                              const maxSize = 10 * 1024 * 1024 // 10MB
-                              
-                              if (!validTypes.includes(file.type)) {
-                                alert('Please upload a JPG or PNG image.')
-                                return
-                              }
-                              if (file.size > maxSize) {
-                                alert('File is too large. Maximum size is 10MB.')
-                                return
-                              }
-                              
-                              updateField('id_doc', {
-                                file,
-                                preview: URL.createObjectURL(file),
-                                name: file.name,
-                                type: file.type,
-                              })
-                              e.target.value = ''
-                            }}
+                            onChange={handleIdDocChange}
                             className="hidden"
                           />
                         </label>
@@ -2368,6 +2559,7 @@ async function handleSubmit() {
                               if (idDoc?.preview) {
                                 URL.revokeObjectURL(idDoc.preview)
                               }
+                              setIdDocError('')
                               updateField('id_doc', null)
                             }}
                             className="rounded-full p-2 text-stone-400 transition hover:bg-stone-100 hover:text-red-600"
@@ -2376,6 +2568,11 @@ async function handleSubmit() {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                             </svg>
                           </button>
+                        </div>
+                      )}
+                      {idDocError && (
+                        <div className="rounded-2xl border border-red-100 bg-red-50 p-3 text-sm font-semibold text-red-700">
+                          {idDocError}
                         </div>
                       )}
                     </div>
@@ -2531,7 +2728,13 @@ async function handleSubmit() {
                   disabled={loading || checkingHost}
                   className="rounded-full bg-[#c76f55] px-8 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {checkingHost ? 'Loading...' : loading ? 'Submitting...' : 'Submit listing'}
+                  {checkingHost
+                    ? 'Loading...'
+                    : uploadProgress
+                      ? `Uploading photos ${uploadProgress.completed}/${uploadProgress.total}`
+                      : loading
+                        ? 'Submitting...'
+                        : 'Submit listing'}
                 </button>
               )}
             </div>
