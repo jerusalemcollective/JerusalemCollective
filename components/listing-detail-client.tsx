@@ -104,6 +104,7 @@ type ListingDetailClientProps = {
     walking_minutes: number
   }>
   avgResponseHours: number | null
+  servicesBarEnabled?: boolean
 }
 
 function formatResponseTime(hours: number): string {
@@ -126,6 +127,7 @@ export function ListingDetailClient({
   walkingMinutes,
   shulDistances,
   avgResponseHours,
+  servicesBarEnabled = true,
 }: ListingDetailClientProps) {
   const [copiedLink, setCopiedLink] = useState(false)
   const [showGallery, setShowGallery] = useState(false)
@@ -739,7 +741,7 @@ export function ListingDetailClient({
               </>
             )}
 
-            {listing.host_id && (
+            {servicesBarEnabled && listing.host_id && (
               <>
                 <hr className="border-stone-100" />
                 <div className="py-8">

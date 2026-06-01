@@ -1,11 +1,19 @@
 import { CateringEnquiryForm } from '@/components/service-enquiry-forms'
+import { notFound } from 'next/navigation'
+import { getServicesBarEnabled } from '@/lib/platform-settings'
 
 export const metadata = {
   title: 'Kosher Catering & Shabbat Meals | JLM Collective',
   description: 'Custom kosher menus and Shabbat packages delivered to your Jerusalem rental. Arranged by JLM Collective.',
 }
 
-export default function CateringPage() {
+export default async function CateringPage() {
+  const servicesBarEnabled = await getServicesBarEnabled()
+
+  if (!servicesBarEnabled) {
+    notFound()
+  }
+
   return (
     <main className="min-h-screen bg-[#F8F5F2] px-5 py-12 text-[#252525] md:px-6">
       <section className="mx-auto max-w-5xl">

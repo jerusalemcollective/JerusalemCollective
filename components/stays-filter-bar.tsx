@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { STAY_AMENITY_GROUPS, getAmenityLabel, slugifyAmenity } from '@/lib/stay-amenities'
 
@@ -13,16 +13,17 @@ function parseLocalDate(value: string | null) {
 
 function formatSummaryDate(value: string | null) {
   if (!value) return null
-  return parseLocalDate(value)?.toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-  }) || null
+  return (
+    parseLocalDate(value)?.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+    }) || null
+  )
 }
 
 export function StaysFilterBar() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const filterPanelRef = useRef<HTMLDivElement>(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [checkInValue, setCheckInValue] = useState(searchParams.get('checkIn') || '')
   const [checkOutValue, setCheckOutValue] = useState(searchParams.get('checkOut') || '')
@@ -59,25 +60,15 @@ export function StaysFilterBar() {
   useEffect(() => {
     if (!filtersOpen) return
 
-    const handlePointerDown = (event: PointerEvent) => {
-      if (
-        filterPanelRef.current &&
-        event.target instanceof Node &&
-        !filterPanelRef.current.contains(event.target)
-      ) {
-        setFiltersOpen(false)
-      }
-    }
-
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setFiltersOpen(false)
     }
 
-    document.addEventListener('pointerdown', handlePointerDown)
+    document.body.style.overflow = 'hidden'
     document.addEventListener('keydown', handleKeyDown)
 
     return () => {
-      document.removeEventListener('pointerdown', handlePointerDown)
+      document.body.style.overflow = ''
       document.removeEventListener('keydown', handleKeyDown)
     }
   }, [filtersOpen])
@@ -102,6 +93,7 @@ export function StaysFilterBar() {
       ),
     [searchParams],
   )
+
   const activeFilterCount = [
     checkInValue,
     checkOutValue,
@@ -116,7 +108,7 @@ export function StaysFilterBar() {
     maxWalkToKotel,
     selectedAmenities.length > 0,
   ].filter(Boolean).length
-  const showSummary = !filtersOpen
+
   const activeArea = searchParams.get('neighborhood') || searchParams.get('area')
   const summaryItems = useMemo(() => {
     const items: string[] = []
@@ -150,9 +142,7 @@ export function StaysFilterBar() {
         .slice(0, 2)
       const remainingCount = activeAmenities.length - amenityLabels.length
       items.push(
-        remainingCount > 0
-          ? `${amenityLabels.join(', ')} +${remainingCount} more`
-          : amenityLabels.join(', '),
+        remainingCount > 0 ? `${amenityLabels.join(', ')} +${remainingCount} more` : amenityLabels.join(', '),
       )
     }
 
@@ -166,9 +156,7 @@ export function StaysFilterBar() {
   const toggleAmenity = (amenity: string) => {
     const value = slugifyAmenity(amenity)
     setSelectedAmenities((current) =>
-      current.includes(value)
-        ? current.filter((item) => item !== value)
-        : [...current, value],
+      current.includes(value) ? current.filter((item) => item !== value) : [...current, value],
     )
   }
 
@@ -220,260 +208,257 @@ export function StaysFilterBar() {
   }
 
   return (
-    <div className="rounded-3xl border border-stone-200 bg-white p-4 shadow-sm">
-      {showSummary ? (
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-stone-950">
-              {summaryItems.length > 0 ? summaryItems.join(' · ') : 'All Jerusalem stays'}
-            </p>
-            <p className="mt-1 text-xs text-stone-500">
+    <div className="rounded-full border border-stone-200 bg-white p-2 shadow-sm">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <button
+          type="button"
+          onClick={() => setFiltersOpen(true)}
+          className="flex min-w-0 flex-1 items-center gap-3 rounded-full px-3 py-2 text-left transition hover:bg-stone-50"
+        >
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F8F5F2] text-[#c76f55]">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M4 7h16" />
+              <path d="M7 7a2 2 0 1 0 4 0 2 2 0 0 0-4 0" />
+              <path d="M4 17h16" />
+              <path d="M13 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0" />
+            </svg>
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-bold text-stone-950">
+              {summaryItems.length > 0 ? summaryItems.join(' \u00b7 ') : 'All Jerusalem stays'}
+            </span>
+            <span className="mt-0.5 block text-xs text-stone-500">
               {hasFilters ? 'Filtered stays' : 'Dates, guests, price, amenities'}
-            </p>
-          </div>
-          <div className="flex shrink-0 gap-2">
-            <button
-              type="button"
-              onClick={() => setFiltersOpen(true)}
-              className="inline-flex items-center rounded-full border border-stone-200 px-4 py-2 text-sm font-bold text-stone-700 transition hover:border-stone-300"
-            >
-              Edit filters
-              {activeFilterCount > 0 && (
-                <span className="ml-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#c76f55] text-[10px] font-bold text-white">
-                  {activeFilterCount}
-                </span>
-              )}
-            </button>
-            {hasFilters && (
-              <button
-                type="button"
-                onClick={handleClear}
-                className="rounded-full bg-[#c76f55] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#b85f47]"
-              >
-                Clear
-              </button>
-            )}
-          </div>
-        </div>
-      ) : (
-        <div className="flex items-center justify-between gap-3 lg:hidden">
-          <div>
-            <p className="text-sm font-bold text-stone-950">Search filters</p>
-            <p className="text-xs text-stone-500">Dates, guests, price, amenities</p>
-          </div>
+            </span>
+          </span>
+        </button>
+
+        <div className="flex shrink-0 items-center gap-2 px-1 pb-1 md:px-0 md:pb-0">
           <button
             type="button"
-            onClick={() => setFiltersOpen((open) => !open)}
-            className="inline-flex items-center rounded-full border border-stone-200 px-4 py-2 text-sm font-bold text-stone-700"
+            onClick={() => setFiltersOpen(true)}
+            className="inline-flex flex-1 items-center justify-center rounded-full border border-stone-200 px-5 py-3 text-sm font-bold text-stone-700 transition hover:border-stone-300 md:flex-none"
           >
-            {filtersOpen ? 'Close' : 'Filters'}
-            {activeFilterCount > 0 && !filtersOpen && (
+            Filters
+            {activeFilterCount > 0 && (
               <span className="ml-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#c76f55] text-[10px] font-bold text-white">
                 {activeFilterCount}
               </span>
             )}
           </button>
-        </div>
-      )}
-
-      <div
-        ref={filterPanelRef}
-        className={`${filtersOpen ? 'mt-4 block' : 'hidden'} overflow-hidden rounded-[1.75rem] border border-stone-200 bg-[#fbfaf8] shadow-sm`}
-      >
-        <div className="flex items-start justify-between gap-4 border-b border-stone-200/70 bg-white px-5 py-4">
-          <div>
-            <p className="text-sm font-bold text-stone-950">Refine your stay</p>
-            <p className="mt-1 text-xs text-stone-500">
-              Choose only the details that matter for this visit.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setFiltersOpen(false)}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-stone-200 text-stone-500 transition hover:border-stone-300 hover:bg-stone-50 hover:text-stone-900"
-            aria-label="Close filters"
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path d="M18 6L6 18M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <div className="grid gap-5 p-4 lg:grid-cols-[1fr_1.2fr] lg:p-5">
-          <section className="space-y-4 rounded-3xl bg-white p-4 shadow-sm ring-1 ring-stone-100">
-            <div className="grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
-              <label className="flex flex-col gap-1">
-                <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">
-                  Check in
-                </span>
-                <input
-                  type="date"
-                  value={checkInValue}
-                  min={todayISO}
-                  onChange={(event) => setCheckInValue(event.target.value)}
-                  className="rounded-2xl border border-stone-200 bg-white px-3 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
-                />
-              </label>
-              <span className="hidden pb-3 text-stone-300 sm:block">→</span>
-              <label className="flex flex-col gap-1">
-                <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">
-                  Check out
-                </span>
-                <input
-                  type="date"
-                  value={checkOutValue}
-                  min={checkInValue || todayISO}
-                  onChange={(event) => setCheckOutValue(event.target.value)}
-                  className="rounded-2xl border border-stone-200 bg-white px-3 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
-                />
-              </label>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-3">
-              <label className="block text-sm font-semibold text-stone-700">
-                Guests
-                <input
-                  type="number"
-                  min={1}
-                  max={20}
-                  value={guests}
-                  onChange={(event) => setGuests(event.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
-                  placeholder="Any"
-                />
-              </label>
-              <label className="block text-sm font-semibold text-stone-700">
-                Min USD
-                <input
-                  type="number"
-                  min={0}
-                  value={minPrice}
-                  onChange={(event) => setMinPrice(event.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
-                  placeholder="Min"
-                />
-              </label>
-              <label className="block text-sm font-semibold text-stone-700">
-                Max USD
-                <input
-                  type="number"
-                  min={0}
-                  value={maxPrice}
-                  onChange={(event) => setMaxPrice(event.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
-                  placeholder="Max"
-                />
-              </label>
-            </div>
-          </section>
-
-          <section className="space-y-5 rounded-3xl bg-white p-4 shadow-sm ring-1 ring-stone-100">
-            <fieldset>
-              <legend className="text-sm font-bold text-stone-950">Amenities</legend>
-              <div className="mt-3 max-h-72 space-y-4 overflow-y-auto pr-1">
-                {STAY_AMENITY_GROUPS.map((group) => (
-                  <section key={group.title} className="border-b border-stone-100 pb-4 last:border-b-0 last:pb-0">
-                    <div className="mb-2 flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-xs font-bold uppercase tracking-widest text-stone-400">
-                          {group.title}
-                        </p>
-                        <p className="mt-0.5 text-xs text-stone-500">
-                          {group.description}
-                        </p>
-                      </div>
-                      <span className="rounded-full bg-stone-100 px-2 py-1 text-[11px] font-bold text-stone-500">
-                        {group.amenities.filter((amenity) => selectedAmenities.includes(slugifyAmenity(amenity))).length}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {group.amenities.map((amenity) => {
-                        const value = slugifyAmenity(amenity)
-                        const checked = selectedAmenities.includes(value)
-
-                        return (
-                          <label
-                            key={amenity}
-                            className={`inline-flex cursor-pointer items-center rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                              checked
-                                ? 'border-[#c76f55] bg-[#c76f55] text-white shadow-sm'
-                                : 'border-stone-200 bg-white text-stone-700 hover:border-[#c76f55] hover:text-[#c76f55]'
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => toggleAmenity(amenity)}
-                              className="sr-only"
-                            />
-                            {amenity}
-                          </label>
-                        )
-                      })}
-                    </div>
-                  </section>
-                ))}
-              </div>
-            </fieldset>
-
-            <fieldset className="rounded-2xl bg-[#F8F5F2] p-4">
-              <legend className="text-sm font-bold text-stone-950">Jewish lifestyle</legend>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <FilterToggle checked={kosherKitchen} label="Kosher kitchen" onChange={setKosherKitchen} />
-                <FilterToggle checked={shabbatElevator} label="Shabbat elevator" onChange={setShabbatElevator} />
-                <FilterToggle checked={physicalKey} label="Physical key entry" onChange={setPhysicalKey} />
-                <FilterToggle checked={sukkahBalcony} label="Sukkah balcony" onChange={setSukkahBalcony} />
-                <FilterToggle checked={nearSynagogue} label="Near synagogue" onChange={setNearSynagogue} />
-              </div>
-              <label className="mt-4 block text-xs font-semibold text-stone-600">
-                Walking distance to Kotel
-                <input
-                  type="number"
-                  min={1}
-                  value={maxWalkToKotel}
-                  onChange={(event) => setMaxWalkToKotel(event.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-3 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
-                  placeholder="Within X minutes"
-                />
-              </label>
-            </fieldset>
-          </section>
-        </div>
-
-        <div className="flex flex-col gap-2 border-t border-stone-200/70 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-end">
           {hasFilters && (
             <button
               type="button"
               onClick={handleClear}
-              className="rounded-full border border-stone-200 px-5 py-3 text-sm font-bold text-stone-700 transition hover:border-stone-300"
+              className="rounded-full bg-[#c76f55] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47]"
             >
-              Clear filters
+              Clear
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => setFiltersOpen(false)}
-            className="rounded-full border border-stone-200 px-5 py-3 text-sm font-bold text-stone-700 transition hover:border-stone-300"
-          >
-            Done
-          </button>
-          <button
-            type="button"
-            onClick={handleSearch}
-            className="rounded-full bg-[#c76f55] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47]"
-          >
-            Search stays
-          </button>
         </div>
       </div>
 
+      {filtersOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/35 px-3 pb-3 pt-10 backdrop-blur-sm sm:items-center sm:p-6"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setFiltersOpen(false)
+          }}
+        >
+          <div className="flex max-h-[min(88vh,760px)] w-full max-w-4xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl ring-1 ring-black/5">
+            <div className="grid grid-cols-[2.5rem_1fr_2.5rem] items-center border-b border-stone-100 px-4 py-4">
+              <button
+                type="button"
+                onClick={() => setFiltersOpen(false)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full text-stone-500 transition hover:bg-stone-100 hover:text-stone-950"
+                aria-label="Close filters"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+              <div className="text-center">
+                <p className="text-sm font-bold text-stone-950">Filters</p>
+                <p className="mt-0.5 text-xs text-stone-500">Refine your Jerusalem stay</p>
+              </div>
+              <span />
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <section className="border-b border-stone-100 px-5 py-6 md:px-7">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-base font-bold text-stone-950">Trip details</h3>
+                    <p className="mt-1 text-sm text-stone-500">Set the basics first, then tune the stay.</p>
+                  </div>
+                </div>
+
+                <div className="mt-5 grid gap-3 md:grid-cols-[1fr_auto_1fr] md:items-end">
+                  <label className="flex flex-col gap-2">
+                    <span className="text-xs font-bold uppercase tracking-widest text-stone-400">Check in</span>
+                    <input
+                      type="date"
+                      value={checkInValue}
+                      min={todayISO}
+                      onChange={(event) => setCheckInValue(event.target.value)}
+                      className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
+                    />
+                  </label>
+                  <span className="hidden pb-3 text-stone-300 md:block">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M5 12h14" />
+                      <path d="M13 6l6 6-6 6" />
+                    </svg>
+                  </span>
+                  <label className="flex flex-col gap-2">
+                    <span className="text-xs font-bold uppercase tracking-widest text-stone-400">Check out</span>
+                    <input
+                      type="date"
+                      value={checkOutValue}
+                      min={checkInValue || todayISO}
+                      onChange={(event) => setCheckOutValue(event.target.value)}
+                      className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
+                    />
+                  </label>
+                </div>
+
+                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  <label className="block text-sm font-semibold text-stone-700">
+                    Guests
+                    <input
+                      type="number"
+                      min={1}
+                      max={20}
+                      value={guests}
+                      onChange={(event) => setGuests(event.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
+                      placeholder="Any"
+                    />
+                  </label>
+                  <label className="block text-sm font-semibold text-stone-700">
+                    Min USD
+                    <input
+                      type="number"
+                      min={0}
+                      value={minPrice}
+                      onChange={(event) => setMinPrice(event.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
+                      placeholder="Min"
+                    />
+                  </label>
+                  <label className="block text-sm font-semibold text-stone-700">
+                    Max USD
+                    <input
+                      type="number"
+                      min={0}
+                      value={maxPrice}
+                      onChange={(event) => setMaxPrice(event.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
+                      placeholder="Max"
+                    />
+                  </label>
+                </div>
+              </section>
+
+              <section className="border-b border-stone-100 px-5 py-6 md:px-7">
+                <h3 className="text-base font-bold text-stone-950">Amenities</h3>
+                <p className="mt-1 text-sm text-stone-500">Choose the comforts that change the stay.</p>
+
+                <div className="mt-5 grid gap-6 lg:grid-cols-2">
+                  {STAY_AMENITY_GROUPS.map((group) => {
+                    const selectedCount = group.amenities.filter((amenity) =>
+                      selectedAmenities.includes(slugifyAmenity(amenity)),
+                    ).length
+
+                    return (
+                      <section key={group.title} className="space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-xs font-bold uppercase tracking-widest text-stone-400">{group.title}</p>
+                            <p className="mt-1 text-xs leading-5 text-stone-500">{group.description}</p>
+                          </div>
+                          {selectedCount > 0 && (
+                            <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[#c76f55] px-2 text-[11px] font-bold text-white">
+                              {selectedCount}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          {group.amenities.map((amenity) => {
+                            const value = slugifyAmenity(amenity)
+                            const checked = selectedAmenities.includes(value)
+
+                            return (
+                              <FilterToggle
+                                key={amenity}
+                                checked={checked}
+                                label={amenity}
+                                onChange={() => toggleAmenity(amenity)}
+                              />
+                            )
+                          })}
+                        </div>
+                      </section>
+                    )
+                  })}
+                </div>
+              </section>
+
+              <section className="px-5 py-6 md:px-7">
+                <h3 className="text-base font-bold text-stone-950">Jewish lifestyle</h3>
+                <p className="mt-1 text-sm text-stone-500">Practical details for Shabbos, Yom Tov, and daily rhythm.</p>
+
+                <div className="mt-5 flex flex-wrap gap-2">
+                  <FilterToggle checked={kosherKitchen} label="Kosher kitchen" onChange={setKosherKitchen} />
+                  <FilterToggle checked={shabbatElevator} label="Shabbat elevator" onChange={setShabbatElevator} />
+                  <FilterToggle checked={physicalKey} label="Physical key entry" onChange={setPhysicalKey} />
+                  <FilterToggle checked={sukkahBalcony} label="Sukkah balcony" onChange={setSukkahBalcony} />
+                  <FilterToggle checked={nearSynagogue} label="Near synagogue" onChange={setNearSynagogue} />
+                </div>
+
+                <label className="mt-5 block max-w-sm text-sm font-semibold text-stone-700">
+                  Walking distance to Kotel
+                  <input
+                    type="number"
+                    min={1}
+                    value={maxWalkToKotel}
+                    onChange={(event) => setMaxWalkToKotel(event.target.value)}
+                    className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
+                    placeholder="Within X minutes"
+                  />
+                </label>
+              </section>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 border-t border-stone-100 bg-white px-5 py-4 md:px-7">
+              <button
+                type="button"
+                onClick={handleClear}
+                className="text-sm font-bold text-stone-700 underline-offset-4 transition hover:text-stone-950 hover:underline"
+              >
+                Clear all
+              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setFiltersOpen(false)}
+                  className="hidden rounded-full border border-stone-200 px-5 py-3 text-sm font-bold text-stone-700 transition hover:border-stone-300 sm:inline-flex"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSearch}
+                  className="rounded-full bg-[#c76f55] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47]"
+                >
+                  Show stays
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -489,7 +474,7 @@ function FilterToggle({
 }) {
   return (
     <label
-      className={`inline-flex cursor-pointer items-center rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+      className={`inline-flex cursor-pointer items-center rounded-full border px-3.5 py-2 text-xs font-semibold transition ${
         checked
           ? 'border-[#c76f55] bg-[#c76f55] text-white shadow-sm'
           : 'border-stone-200 bg-white text-stone-700 hover:border-[#c76f55] hover:text-[#c76f55]'

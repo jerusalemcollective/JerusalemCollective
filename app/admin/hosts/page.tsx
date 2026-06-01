@@ -1,6 +1,6 @@
 ﻿import Link from 'next/link'
 import { requireAdminPermission } from '@/lib/admin'
-import { updateHostVerification } from '@/app/admin/host-actions'
+import { updateHostListingBlock, updateHostVerification } from '@/app/admin/host-actions'
 import { ConfirmSubmitButton } from '@/components/confirm-submit-button'
 import { BooleanBadge } from '@/components/boolean-badge'
 import { Pagination, normalizePaginationSearchParams, type PaginationSearchParams } from '@/components/pagination'
@@ -15,10 +15,18 @@ type PersonRow = {
   host_name: string | null
   host_type: string | null
   host_is_verified: boolean | null
+  listing_blocked?: boolean | null
+  listing_blocked_reason?: string | null
   listing_count: number
   application_count: number
   created_at: string
   last_sign_in_at: string | null
+}
+
+type HostBlockRow = {
+  id: string
+  listing_blocked: boolean | null
+  listing_blocked_reason: string | null
 }
 
 export default async function AdminHostsPage({
@@ -35,7 +43,7 @@ export default async function AdminHostsPage({
     throw error
   }
 
-  const hosts: PersonRow[] = (data || [])
+  const hostRows: PersonRow[] = (data || [])
     .map((person: PersonRow) => ({
       user_id: person.user_id,
       email: person.email,
@@ -50,6 +58,27 @@ export default async function AdminHostsPage({
       last_sign_in_at: person.last_sign_in_at,
     }))
     .filter((person: PersonRow) => person.host_id)
+  const hostIds = hostRows
+    .map((host) => host.host_id)
+    .filter((hostId): hostId is string => Boolean(hostId))
+  const { data: blockData } = hostIds.length
+    ? await supabase
+        .from('hosts')
+        .select('id, listing_blocked, listing_blocked_reason')
+        .in('id', hostIds)
+    : { data: [] }
+  const blockStatusByHost = new Map(
+    ((blockData || []) as HostBlockRow[]).map((host) => [host.id, host]),
+  )
+  const hosts = hostRows.map((host) => {
+    const blockStatus = host.host_id ? blockStatusByHost.get(host.host_id) : null
+
+    return {
+      ...host,
+      listing_blocked: blockStatus?.listing_blocked ?? false,
+      listing_blocked_reason: blockStatus?.listing_blocked_reason ?? null,
+    }
+  })
   const paged = hosts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
   const total = hosts.length
 
@@ -63,7 +92,7 @@ export default async function AdminHostsPage({
       </div>
 
       <div className="overflow-hidden border-y border-stone-200">
-        <div className="grid gap-4 border-b border-stone-200 py-4 text-xs font-bold uppercase tracking-widest text-stone-400 md:grid-cols-[1.2fr_1fr_0.75fr_0.85fr_0.8fr_0.8fr]">
+        <div className="grid gap-4 border-b border-stone-200 py-4 text-xs font-bold uppercase tracking-widest text-stone-400 md:grid-cols-[1.2fr_1fr_0.75fr_0.85fr_0.8fr_1.1fr]">
           <span>Host</span>
           <span>Email</span>
           <span>Type</span>
@@ -79,7 +108,7 @@ export default async function AdminHostsPage({
             {paged.map((host) => (
               <div
                 key={host.host_id}
-                className="grid gap-4 py-5 md:grid-cols-[1.2fr_1fr_0.75fr_0.85fr_0.8fr_0.8fr] md:items-center"
+                className="grid gap-4 py-5 md:grid-cols-[1.2fr_1fr_0.75fr_0.85fr_0.8fr_1.1fr] md:items-center"
               >
                 <Link href={`/hosts/${host.host_id}`} className="font-bold text-stone-950 hover:underline">
                   {host.host_name || host.full_name || 'Host'}
@@ -89,17 +118,41 @@ export default async function AdminHostsPage({
                 <p className="text-sm text-stone-700">
                   {Number(host.listing_count || 0)} live / {Number(host.application_count || 0)} submitted
                 </p>
-                <BooleanBadge value={Boolean(host.host_is_verified)} yes="Verified" no="Unverified" falseTone="strong" />
-                <form action={updateHostVerification}>
-                  <input type="hidden" name="hostId" value={host.host_id || ''} />
-                  <input type="hidden" name="value" value={String(!host.host_is_verified)} />
-                  <ConfirmSubmitButton
-                    message="Are you sure?"
-                    className="rounded-full border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-300"
-                  >
-                    {host.host_is_verified ? 'Remove' : 'Verify'}
-                  </ConfirmSubmitButton>
-                </form>
+                <div className="space-y-2">
+                  <BooleanBadge value={Boolean(host.host_is_verified)} yes="Verified" no="Unverified" falseTone="strong" />
+                  {host.listing_blocked && (
+                    <span className="inline-flex rounded-full bg-rose-100 px-3 py-1 text-xs font-bold text-rose-700">
+                      Listing blocked
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <form action={updateHostVerification}>
+                    <input type="hidden" name="hostId" value={host.host_id || ''} />
+                    <input type="hidden" name="value" value={String(!host.host_is_verified)} />
+                    <ConfirmSubmitButton
+                      message="Are you sure?"
+                      className="rounded-full border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-300"
+                    >
+                      {host.host_is_verified ? 'Remove verification' : 'Verify'}
+                    </ConfirmSubmitButton>
+                  </form>
+                  <form action={updateHostListingBlock}>
+                    <input type="hidden" name="hostId" value={host.host_id || ''} />
+                    <input type="hidden" name="value" value={String(!host.listing_blocked)} />
+                    <input type="hidden" name="reason" value="Blocked by platform admin" />
+                    <ConfirmSubmitButton
+                      message={host.listing_blocked ? 'Allow this host to list again?' : 'Block this host from listing and hide their live listings?'}
+                      className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
+                        host.listing_blocked
+                          ? 'border border-stone-200 text-stone-700 hover:border-stone-300'
+                          : 'bg-rose-600 text-white hover:bg-rose-700'
+                      }`}
+                    >
+                      {host.listing_blocked ? 'Unblock listing' : 'Block listing'}
+                    </ConfirmSubmitButton>
+                  </form>
+                </div>
               </div>
             ))}
           </div>

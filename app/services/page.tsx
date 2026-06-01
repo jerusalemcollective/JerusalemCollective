@@ -1,12 +1,20 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
+import { notFound } from 'next/navigation'
+import { getServicesBarEnabled } from '@/lib/platform-settings'
 
 export const metadata = {
   title: 'Guest Services | JLM Collective',
   description: 'Enhance your Jerusalem stay with custom catering, Shabbat meal packages, and housekeeping arranged by JLM Collective.',
 }
 
-export default function ServicesPage() {
+export default async function ServicesPage() {
+  const servicesBarEnabled = await getServicesBarEnabled()
+
+  if (!servicesBarEnabled) {
+    notFound()
+  }
+
   return (
     <main className="min-h-screen bg-[#F8F5F2] px-5 py-12 text-[#252525] md:px-6">
       <section className="mx-auto max-w-6xl">

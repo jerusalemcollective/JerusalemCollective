@@ -1,7 +1,9 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { requireAdminPermission } from '@/lib/admin'
+import { deleteListing } from '@/app/admin/listing-actions'
 import { AdminListingMessageForm } from '@/components/admin-listing-message-form'
+import { ConfirmSubmitButton } from '@/components/confirm-submit-button'
 import { ListingQualityScore } from '@/components/listing-quality-score'
 import { calculateListingScore } from '@/lib/marketplace-rules'
 
@@ -122,6 +124,22 @@ export default async function AdminListingDetailPage({
           <h2 className="text-lg font-bold text-stone-950">Message host</h2>
           <div className="mt-4">
             <AdminListingMessageForm listingId={listing.id} />
+          </div>
+
+          <div className="mt-6 border-t border-stone-100 pt-5">
+            <h2 className="text-sm font-bold text-stone-950">Danger zone</h2>
+            <p className="mt-1 text-xs leading-5 text-stone-500">
+              Remove this listing from the platform.
+            </p>
+            <form action={deleteListing} className="mt-3">
+              <input type="hidden" name="listingId" value={listing.id} />
+              <ConfirmSubmitButton
+                message="Remove this listing from the platform? This cannot be undone."
+                className="rounded-full bg-rose-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-rose-700"
+              >
+                Remove listing
+              </ConfirmSubmitButton>
+            </form>
           </div>
         </aside>
       </div>

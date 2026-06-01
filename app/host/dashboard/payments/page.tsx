@@ -10,6 +10,7 @@ type PaymentBooking = {
   payment_status: string | null
   payment_notes: string | null
   payment_updated_at: string | null
+  commission_percent: number | null
   listings: { title: string } | null
   profiles: { full_name: string | null } | null
 }
@@ -33,7 +34,7 @@ export default async function HostPaymentsPage() {
     supabase
       .from('bookings')
       .select(
-        'id, check_in, check_out, payment_status, payment_notes, payment_updated_at, listings(title), profiles!bookings_user_id_fkey(full_name)',
+        'id, check_in, check_out, payment_status, payment_notes, payment_updated_at, commission_percent, listings(title), profiles!bookings_user_id_fkey(full_name)',
       )
       .in('host_id', hostIds)
       .order('check_in', { ascending: false }),
@@ -45,6 +46,7 @@ export default async function HostPaymentsPage() {
     payment_status: booking.payment_status,
     payment_notes: booking.payment_notes,
     payment_updated_at: booking.payment_updated_at,
+    commission_percent: booking.commission_percent,
     listings: Array.isArray(booking.listings) ? booking.listings[0] || null : booking.listings || null,
     profiles: Array.isArray(booking.profiles) ? booking.profiles[0] || null : booking.profiles || null,
   }))
@@ -68,7 +70,7 @@ export default async function HostPaymentsPage() {
               <div className="rounded-2xl bg-[#F8F5F2] p-4">
                 <p className="font-bold text-stone-950">Receive online payments</p>
                 <p className="mt-1 text-sm leading-6 text-stone-600">
-                  Guests will be able to pay JLM Collective online, and your payout will be sent after the relevant booking milestone. At launch there is no JLM Collective commission; the host absorbs the payment processing fee.
+                  Guests will be able to pay JLM Collective online, and your payout will be sent after the relevant booking milestone.
                 </p>
               </div>
 
@@ -168,6 +170,9 @@ export default async function HostPaymentsPage() {
                         {booking.profiles?.full_name || 'Guest'} · {formatDate(booking.check_in)} to{' '}
                         {formatDate(booking.check_out)}
                       </p>
+                      <p className="mt-1 text-sm font-medium text-stone-600">
+                        JLM Collective commission: {formatCommission(booking.commission_percent)} for this booking
+                      </p>
                     </div>
                     <PaymentStatusBadge status={booking.payment_status || 'unpaid'} />
                   </div>
@@ -208,6 +213,13 @@ function PaymentStatusBadge({ status }: { status: string }) {
       {labels[status] || status}
     </span>
   )
+}
+
+function formatCommission(value: number | null) {
+  if (value === null) return '0%'
+  return `${value.toLocaleString('en-GB', {
+    maximumFractionDigits: 2,
+  })}%`
 }
 
 function formatDate(value: string) {

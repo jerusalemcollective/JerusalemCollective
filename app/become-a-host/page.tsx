@@ -89,6 +89,11 @@ type AiSuggestion = {
   error?: string
 }
 
+type HostListingBlockStatus = {
+  listing_blocked?: unknown
+  listing_blocked_reason?: unknown
+}
+
 type AddressSelection = {
   address: string
   latitude: number
@@ -185,6 +190,21 @@ function getMapsWindow(): MapsWindow {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
+}
+
+function getHostListingBlockStatus(value: unknown) {
+  if (!isRecord(value)) {
+    return { blocked: false, reason: null }
+  }
+
+  const status = value as HostListingBlockStatus
+  return {
+    blocked: status.listing_blocked === true,
+    reason:
+      typeof status.listing_blocked_reason === 'string'
+        ? status.listing_blocked_reason
+        : null,
+  }
 }
 
 function isGoogleMapsValue(value: unknown): value is GoogleMapsValue {
@@ -953,6 +973,15 @@ export default function BecomeAHostPage() {
 
       try {
         const hostProfile = await ensureHostProfile(supabase, user)
+        const blockStatus = getHostListingBlockStatus(hostProfile)
+        if (blockStatus.blocked) {
+          setError(
+            blockStatus.reason ||
+              'This host account cannot submit new listings right now. Please contact JLM Collective if you think this is a mistake.',
+          )
+          setHostId(null)
+          return
+        }
         setHostId(hostProfile.id)
         setAccountUser(user)
         setRequiresHostTermsAcceptance(!hostProfile.host_terms_accepted_at)
@@ -1428,6 +1457,27 @@ async function handleSubmit() {
     }
 
     const supabase = createClient()
+    const { data: hostBlockStatus, error: hostBlockError } = await supabase
+      .from('hosts')
+      .select('listing_blocked, listing_blocked_reason')
+      .eq('id', hostId)
+      .maybeSingle()
+
+    if (hostBlockError) {
+      setError('We could not confirm your host listing access. Please try again.')
+      setLoading(false)
+      return
+    }
+
+    const blockStatus = getHostListingBlockStatus(hostBlockStatus)
+    if (blockStatus.blocked) {
+      setError(
+        blockStatus.reason ||
+          'This host account cannot submit new listings right now. Please contact JLM Collective if you think this is a mistake.',
+      )
+      setLoading(false)
+      return
+    }
 
     let acceptedTermsAt = hostTermsAcceptedAt
 

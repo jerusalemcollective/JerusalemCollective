@@ -2,6 +2,7 @@
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { getSampleListing } from '@/lib/sample-listings'
+import { getServicesBarEnabled } from '@/lib/platform-settings'
 import {
   ListingDetailClient,
   type ListingDetailHost,
@@ -234,6 +235,7 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
   const query = searchParams ? await searchParams : {}
   const from = Array.isArray(query.from) ? query.from[0] : query.from
   const fromStays = from === 'stays'
+  const servicesBarEnabled = await getServicesBarEnabled()
   const supabase = await createClient()
 
   const { data: listingData } = await supabase
@@ -285,6 +287,7 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
           walkingMinutes={null}
           shulDistances={[]}
           avgResponseHours={null}
+          servicesBarEnabled={servicesBarEnabled}
         />
       )
     }
@@ -482,6 +485,7 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
         walkingMinutes={walkingMinutes}
         shulDistances={shulDistances}
         avgResponseHours={avgResponseHours}
+        servicesBarEnabled={servicesBarEnabled}
       />
     </>
   )

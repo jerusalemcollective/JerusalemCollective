@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { Header } from '@/components/header'
 import { Footer } from '@/components/footer'
 import { SessionTimeout } from '@/components/session-timeout'
+import { getServicesBarEnabled } from '@/lib/platform-settings'
 import './globals.css'
 
 const inter = Inter({
@@ -52,15 +53,17 @@ export const viewport: Viewport = {
   themeColor: '#F8F5F2',
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const servicesBarEnabled = await getServicesBarEnabled()
+
   return (
     <html lang="en">
       <body className={`${inter.variable} ${display.variable} font-sans antialiased bg-[#F8F5F2] text-[#252525]`}>
-        <Header />
+        <Header servicesBarEnabled={servicesBarEnabled} />
         <SessionTimeout />
         <main>{children}</main>
         <Footer />

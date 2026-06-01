@@ -1,6 +1,6 @@
 ﻿import Link from 'next/link'
 import { requireAdminPermission } from '@/lib/admin'
-import { updateListingVisibility } from '@/app/admin/listing-actions'
+import { deleteListing, updateListingVisibility } from '@/app/admin/listing-actions'
 import { ConfirmSubmitButton } from '@/components/confirm-submit-button'
 import { BooleanBadge } from '@/components/boolean-badge'
 import { ListingQualityScore } from '@/components/listing-quality-score'
@@ -132,9 +132,17 @@ export default async function AdminListingsPage({
 
   return (
     <div>
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold tracking-tight text-stone-950">Listings</h2>
-        <p className="mt-2 text-stone-600">Control what is live and what gets featured.</p>
+      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight text-stone-950">Listings</h2>
+          <p className="mt-2 text-stone-600">Control what is live, what gets featured, and create listings for hosts.</p>
+        </div>
+        <Link
+          href="/admin/listings/new"
+          className="rounded-full bg-stone-950 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-stone-800"
+        >
+          Create listing
+        </Link>
       </div>
 
       <div className="mb-6 space-y-3">
@@ -251,6 +259,15 @@ export default async function AdminListingsPage({
                   >
                     Message host
                   </Link>
+                  <form action={deleteListing}>
+                    <input type="hidden" name="listingId" value={listing.id} />
+                    <ConfirmSubmitButton
+                      message="Remove this listing from the platform? This cannot be undone."
+                      className="rounded-full bg-rose-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-rose-700"
+                    >
+                      Remove
+                    </ConfirmSubmitButton>
+                  </form>
                 </div>
               </div>
             ))}

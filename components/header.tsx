@@ -56,7 +56,11 @@ type UserState = {
   isAdmin: boolean
 } | null
 
-export function Header() {
+export function Header({
+  servicesBarEnabled = true,
+}: {
+  servicesBarEnabled?: boolean
+}) {
   const [user, setUser] = useState<UserState>(null)
   const [showDropdown, setShowDropdown] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -178,9 +182,11 @@ export function Header() {
           <Link href="/how-it-works" className={navLinkClass('/how-it-works')}>
             How it works
           </Link>
-          <Link href="/services" className={navLinkClass('/services')}>
-            Services
-          </Link>
+          {servicesBarEnabled && (
+            <Link href="/services" className={navLinkClass('/services')}>
+              Services
+            </Link>
+          )}
         </nav>
 
         <div className="flex items-center gap-1.5 sm:gap-2">
@@ -377,13 +383,15 @@ export function Header() {
             >
               How it works
             </Link>
-            <Link
-              href="/services"
-              onClick={() => setMobileOpen(false)}
-              className={`block px-5 py-4 font-medium ${pathname.startsWith('/services') ? 'text-[#c76f55]' : 'text-stone-900'}`}
-            >
-              Services
-            </Link>
+            {servicesBarEnabled && (
+              <Link
+                href="/services"
+                onClick={() => setMobileOpen(false)}
+                className={`block px-5 py-4 font-medium ${pathname.startsWith('/services') ? 'text-[#c76f55]' : 'text-stone-900'}`}
+              >
+                Services
+              </Link>
+            )}
             <Link
               href={user ? '/become-a-host' : '/login?redirect=/become-a-host'}
               onClick={() => setMobileOpen(false)}

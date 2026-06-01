@@ -1,12 +1,20 @@
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
 import { CleaningEnquiryForm } from '@/components/service-enquiry-forms'
+import { getServicesBarEnabled } from '@/lib/platform-settings'
 
 export const metadata = {
   title: 'Cleaning & Housekeeping | JLM Collective',
   description: 'Professional cleaning for guests and hosts in Jerusalem. Mid-stay housekeeping and between-booking turnaround cleaning.',
 }
 
-export default function CleaningPage() {
+export default async function CleaningPage() {
+  const servicesBarEnabled = await getServicesBarEnabled()
+
+  if (!servicesBarEnabled) {
+    notFound()
+  }
+
   return (
     <main className="min-h-screen bg-[#F8F5F2] px-5 py-12 text-[#252525] md:px-6">
       <section className="mx-auto max-w-5xl">

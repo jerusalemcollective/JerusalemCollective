@@ -21,10 +21,13 @@ const adminLinks = [
 export function AdminNav({ adminRole }: { adminRole: AdminRole }) {
   const pathname = usePathname()
   const visibleLinks = adminLinks.filter((link) => canAdminRole(adminRole, link.permission))
+  const ownerLinks = adminRole === 'owner'
+    ? [{ href: '/admin/settings', label: 'Settings' }]
+    : []
 
   return (
     <nav className="space-y-1">
-      {visibleLinks.map((link) => {
+      {[...visibleLinks, ...ownerLinks].map((link) => {
         const isActive =
           link.href === '/admin' ? pathname === link.href : pathname.startsWith(link.href)
 
