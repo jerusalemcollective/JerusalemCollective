@@ -2,10 +2,12 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
+import { getPaymentRouteSettings } from '@/lib/platform-settings'
 
 export async function updateHostPaymentPreferences(formData: FormData) {
-  const acceptsDirect = formData.get('acceptsDirect') === 'on'
-  const acceptsJlm = formData.get('acceptsJlm') === 'on'
+  const paymentRoutes = await getPaymentRouteSettings()
+  const acceptsDirect = paymentRoutes.directPaymentsEnabled && formData.get('acceptsDirect') === 'on'
+  const acceptsJlm = paymentRoutes.jlmPaymentsEnabled && formData.get('acceptsJlm') === 'on'
   const instructions = String(formData.get('instructions') || '')
   const preferredCurrency = String(formData.get('preferredCurrency') || '')
   const payoutCurrencies = formData.getAll('payoutCurrencies').map(String)

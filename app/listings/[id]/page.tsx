@@ -2,7 +2,7 @@
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { getSampleListing } from '@/lib/sample-listings'
-import { getServicesBarEnabled } from '@/lib/platform-settings'
+import { getPaymentRouteSettings, getServicesBarEnabled } from '@/lib/platform-settings'
 import {
   ListingDetailClient,
   type ListingDetailHost,
@@ -126,6 +126,11 @@ const responseTimeSchema = z.object({
   first_response_at: z.string(),
 })
 
+const paymentProfileSchema = z.object({
+  accepts_jlm_payment: z.boolean().nullable(),
+  payout_currencies: z.array(z.string()).nullable(),
+})
+
 export const revalidate = 3600
 
 function getPublicName(host: HostRecord): string {
@@ -238,7 +243,10 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
   const query = searchParams ? await searchParams : {}
   const from = Array.isArray(query.from) ? query.from[0] : query.from
   const fromStays = from === 'stays'
-  const servicesBarEnabled = await getServicesBarEnabled()
+  const [servicesBarEnabled, paymentRoutes] = await Promise.all([
+    getServicesBarEnabled(),
+    getPaymentRouteSettings(),
+  ])
   const supabase = await createClient()
 
   const { data: listingData } = await supabase
@@ -338,7 +346,7 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
     listing.host_id
       ? supabase
           .from('host_payment_profiles')
-          .select('accepts_jlm_payment')
+          .select('accepts_jlm_payment, payout_currencies')
           .eq('host_id', listing.host_id)
           .maybeSingle()
       : Promise.resolve({ data: null }),
@@ -405,6 +413,13 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
   const reviews: ListingDetailReview[] = z.array(listingReviewSchema).parse(reviewsData ?? [])
   const shulDistances: ShulDistance[] = z.array(shulDistanceSchema).parse(shulDistancesData ?? [])
   const responseRows: ResponseTimeRow[] = z.array(responseTimeSchema).parse(responseData ?? [])
+  const paymentProfile = paymentProfileData
+    ? paymentProfileSchema.parse(paymentProfileData)
+    : null
+  const listingCurrency = listing.price_usd ? 'USD' : listing.price_ils ? 'ILS' : null
+  const hostCanReceiveListingCurrency =
+    listingCurrency !== null &&
+    Boolean(paymentProfile?.payout_currencies?.includes(listingCurrency))
   const avgResponseHours =
     responseRows.length > 0
       ? responseRows.reduce((sum, row) => {
@@ -490,8 +505,10 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
         listing={{
           ...listing,
           online_payment_enabled:
+            paymentRoutes.jlmPaymentsEnabled &&
             listing.online_payment_enabled &&
-            Boolean(paymentProfileData?.accepts_jlm_payment),
+            Boolean(paymentProfile?.accepts_jlm_payment) &&
+            hostCanReceiveListingCurrency,
         }}
         host={host}
         publicHostName={publicHostName}

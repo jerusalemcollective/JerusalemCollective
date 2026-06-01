@@ -1,6 +1,7 @@
 import { HostDashboardNav } from '@/components/host-dashboard-nav'
 import { PaymentUpdateForm } from '@/components/payment-update-form'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
+import { getPaymentRouteSettings } from '@/lib/platform-settings'
 import { updateHostPaymentPreferences } from './actions'
 
 type PaymentBooking = {
@@ -22,7 +23,7 @@ type PaymentBookingRow = Omit<PaymentBooking, 'listings' | 'profiles'> & {
 
 export default async function HostPaymentsPage() {
   const { supabase, hostIds } = await requireHostDashboardAccess()
-  const [{ data: profile }, { data: bookingsData }] = await Promise.all([
+  const [{ data: profile }, { data: bookingsData }, paymentRoutes] = await Promise.all([
     supabase
       .from('host_payment_profiles')
       .select(
@@ -38,6 +39,7 @@ export default async function HostPaymentsPage() {
       )
       .in('host_id', hostIds)
       .order('check_in', { ascending: false }),
+    getPaymentRouteSettings(),
   ])
   const bookings: PaymentBooking[] = (bookingsData || []).map((booking: PaymentBookingRow) => ({
     id: booking.id,
@@ -72,13 +74,19 @@ export default async function HostPaymentsPage() {
                 <p className="mt-1 text-sm leading-6 text-stone-600">
                   Guests can pay JLM Collective online where enabled for a listing. JLM deducts the agency fee and sends your net payout in the currency received, where your payout account supports it.
                 </p>
+                {!paymentRoutes.jlmPaymentsEnabled && (
+                  <p className="mt-2 rounded-xl bg-white px-3 py-2 text-xs font-semibold text-amber-700">
+                    JLM-collected payments are currently paused by JLM Collective.
+                  </p>
+                )}
               </div>
 
               <label className="flex items-start gap-3 rounded-2xl bg-[#F8F5F2] p-4">
                 <input
                   type="checkbox"
                   name="acceptsJlm"
-                  defaultChecked={profile?.accepts_jlm_payment || false}
+                  defaultChecked={paymentRoutes.jlmPaymentsEnabled && (profile?.accepts_jlm_payment || false)}
+                  disabled={!paymentRoutes.jlmPaymentsEnabled}
                   className="mt-1"
                 />
                 <span>
@@ -93,7 +101,8 @@ export default async function HostPaymentsPage() {
                 <input
                   type="checkbox"
                   name="acceptsDirect"
-                  defaultChecked={profile?.accepts_direct_payment || false}
+                  defaultChecked={paymentRoutes.directPaymentsEnabled && (profile?.accepts_direct_payment || false)}
+                  disabled={!paymentRoutes.directPaymentsEnabled}
                   className="mt-1"
                 />
                 <span>
@@ -101,6 +110,11 @@ export default async function HostPaymentsPage() {
                   <span className="mt-1 block text-sm leading-6 text-stone-600">
                     Offer a host-direct route as an alternative where you handle the payment yourself.
                   </span>
+                  {!paymentRoutes.directPaymentsEnabled && (
+                    <span className="mt-2 block rounded-xl bg-white px-3 py-2 text-xs font-semibold text-amber-700">
+                      Direct-to-host payments are currently paused by JLM Collective.
+                    </span>
+                  )}
                 </span>
               </label>
 

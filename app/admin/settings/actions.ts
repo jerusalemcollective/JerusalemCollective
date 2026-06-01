@@ -75,3 +75,42 @@ export async function updateServicesVisibilitySetting(formData: FormData) {
   revalidatePath('/', 'layout')
   revalidatePath('/services')
 }
+
+export async function updatePaymentRouteSettings(formData: FormData) {
+  const { supabase, adminRole } = await requireAdmin()
+
+  if (adminRole !== 'owner') {
+    return
+  }
+
+  const jlmPaymentsEnabled = formData.get('jlmPaymentsEnabled') === 'on'
+  const directPaymentsEnabled = formData.get('directPaymentsEnabled') === 'on'
+  const updatedAt = new Date().toISOString()
+
+  const updates = [
+    {
+      key: 'jlm_payments_enabled',
+      value: jlmPaymentsEnabled ? 'true' : 'false',
+      description:
+        'Controls whether hosts can enable JLM-collected online payments and whether guests can use Book now.',
+      updated_at: updatedAt,
+    },
+    {
+      key: 'direct_payments_enabled',
+      value: directPaymentsEnabled ? 'true' : 'false',
+      description:
+        'Controls whether hosts can offer direct-to-host payment instructions.',
+      updated_at: updatedAt,
+    },
+  ]
+
+  await supabase
+    .from('platform_settings')
+    .upsert(updates, { onConflict: 'key' })
+
+  revalidatePath('/admin/settings')
+  revalidatePath('/admin/readiness')
+  revalidatePath('/admin/payments')
+  revalidatePath('/host/dashboard/payments')
+  revalidatePath('/', 'layout')
+}

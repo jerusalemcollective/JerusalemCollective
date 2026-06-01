@@ -24,6 +24,7 @@ export function AdminNav({ adminRole }: { adminRole: AdminRole }) {
   const ownerLinks = adminRole === 'owner'
     ? [
         { href: '/admin/readiness', label: 'Readiness' },
+        { href: '/admin/payments', label: 'Payments' },
         { href: '/admin/settings', label: 'Settings' },
       ]
     : []

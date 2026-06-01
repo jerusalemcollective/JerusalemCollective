@@ -48,12 +48,13 @@ begin
     raise exception 'Direct payment instructions are required';
   end if;
 
-  select coalesce(array_agg(distinct currency), array[]::text[])
+  select coalesce(array_agg(distinct normalized.currency), array[]::text[])
   into cleaned_currencies
   from (
-    select upper(trim(unnest(coalesce(supported_currencies, array[]::text[])))) as currency
+    select upper(trim(raw.currency)) as currency
+    from unnest(coalesce(supported_currencies, array[]::text[])) as raw(currency)
   ) normalized
-  where currency in ('GBP', 'USD', 'EUR', 'ILS');
+  where normalized.currency in ('GBP', 'USD', 'EUR', 'ILS');
 
   insert into public.host_payment_profiles (
     host_id,

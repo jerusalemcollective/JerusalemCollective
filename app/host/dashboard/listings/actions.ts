@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { syncExternalCalendar } from '@/lib/calendar-sync'
+import { getPaymentRouteSettings } from '@/lib/platform-settings'
 import {
   calculateShulDistances,
   saveShulDistances,
@@ -27,7 +28,9 @@ export async function updateHostListing(formData: FormData) {
   const priceIls = priceIlsValue ? Number(priceIlsValue) : null
   const priceUsd = priceUsdValue ? Number(priceUsdValue) : null
   const bookingType = String(formData.get('bookingType') || 'request')
-  const onlinePaymentEnabled = formData.get('onlinePaymentEnabled') === 'on'
+  const paymentRoutes = await getPaymentRouteSettings()
+  const onlinePaymentEnabled =
+    paymentRoutes.jlmPaymentsEnabled && formData.get('onlinePaymentEnabled') === 'on'
   const amenities = formData.getAll('amenities').map(String)
   const description = String(formData.get('description') || '')
   const houseRules = String(formData.get('houseRules') || '').trim() || null

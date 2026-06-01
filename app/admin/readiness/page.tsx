@@ -71,7 +71,12 @@ export default async function AdminReadinessPage() {
     supabase
       .from('platform_settings')
       .select('key, value')
-      .in('key', ['services_bar_enabled', 'commission_percent']),
+      .in('key', [
+        'services_bar_enabled',
+        'commission_percent',
+        'jlm_payments_enabled',
+        'direct_payments_enabled',
+      ]),
   ])
 
   const listings: ListingReadinessRow[] = (listingsData || []).map((listing: ListingReadinessRow) => ({
@@ -142,6 +147,8 @@ export default async function AdminReadinessPage() {
   }))
   const serviceVisibility = settings.find((setting) => setting.key === 'services_bar_enabled')?.value !== 'false'
   const commissionPercent = settings.find((setting) => setting.key === 'commission_percent')?.value ?? '0'
+  const jlmPaymentsEnabled = settings.find((setting) => setting.key === 'jlm_payments_enabled')?.value === 'true'
+  const directPaymentsEnabled = settings.find((setting) => setting.key === 'direct_payments_enabled')?.value !== 'false'
 
   const launchBlockers = [
     liveListingsMissingPhotos.length,
@@ -240,6 +247,22 @@ export default async function AdminReadinessPage() {
           tone={paymentNotReadyCount > 0 ? 'amber' : 'green'}
         />
         <ReadinessCard
+          title="JLM payments"
+          value={jlmPaymentsEnabled ? 'Enabled' : 'Off'}
+          detail="Book now and JLM-collected checkout."
+          href="/admin/settings"
+          action="Open settings"
+          tone={jlmPaymentsEnabled ? 'green' : 'stone'}
+        />
+        <ReadinessCard
+          title="Direct payments"
+          value={directPaymentsEnabled ? 'Enabled' : 'Off'}
+          detail="Host direct payment instructions."
+          href="/admin/settings"
+          action="Open settings"
+          tone={directPaymentsEnabled ? 'green' : 'stone'}
+        />
+        <ReadinessCard
           title="Services"
           value={serviceVisibility ? 'Visible' : 'Hidden'}
           detail="Public Services navigation and pages."
@@ -282,6 +305,18 @@ export default async function AdminReadinessPage() {
               label="Commission reviewed"
               complete={commissionPercent === '0'}
               helper={`Current commission is ${commissionPercent}%.`}
+              href="/admin/settings"
+            />
+            <ChecklistItem
+              label="JLM payment switch reviewed"
+              complete={!jlmPaymentsEnabled}
+              helper={jlmPaymentsEnabled ? 'Guests can use Book now where hosts have enabled it.' : 'JLM-collected payments are off globally.'}
+              href="/admin/settings"
+            />
+            <ChecklistItem
+              label="Direct payment switch reviewed"
+              complete={directPaymentsEnabled}
+              helper={directPaymentsEnabled ? 'Hosts may offer direct payment instructions.' : 'Direct-to-host payments are off globally.'}
               href="/admin/settings"
             />
             <ChecklistItem

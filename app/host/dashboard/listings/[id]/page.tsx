@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { HostDashboardNav } from '@/components/host-dashboard-nav'
 import { ExternalCalendarSyncForm } from '@/components/external-calendar-sync-form'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
+import { getPaymentRouteSettings } from '@/lib/platform-settings'
 import { updateHostListing } from '../actions'
 import { ListingAiAssistant } from '@/components/listing-ai-assistant'
 import { AmenitySelector } from '@/components/amenity-selector'
@@ -14,7 +15,7 @@ export default async function HostListingEditPage({
 }) {
   const { id } = await params
   const { supabase, hostIds } = await requireHostDashboardAccess()
-  const [{ data: listing }, { data: adminMessages }] = await Promise.all([
+  const [{ data: listing }, { data: adminMessages }, paymentRoutes] = await Promise.all([
     supabase
       .from('listings')
       .select(
@@ -28,6 +29,7 @@ export default async function HostListingEditPage({
       .select('id, body, created_at')
       .eq('listing_id', id)
       .order('created_at', { ascending: false }),
+    getPaymentRouteSettings(),
   ])
 
   if (!listing) notFound()
@@ -123,7 +125,8 @@ export default async function HostListingEditPage({
                 <input
                   type="checkbox"
                   name="onlinePaymentEnabled"
-                  defaultChecked={Boolean(listing.online_payment_enabled)}
+                  defaultChecked={paymentRoutes.jlmPaymentsEnabled && Boolean(listing.online_payment_enabled)}
+                  disabled={!paymentRoutes.jlmPaymentsEnabled}
                   className="mt-1"
                 />
                 <span>
@@ -131,6 +134,11 @@ export default async function HostListingEditPage({
                   <span className="mt-1 block text-sm leading-6 text-stone-600">
                     Guests can pay JLM Collective online for this listing. JLM deducts the agency fee and pays your net amount in the currency received where supported.
                   </span>
+                  {!paymentRoutes.jlmPaymentsEnabled && (
+                    <span className="mt-2 block rounded-xl bg-white px-3 py-2 text-xs font-semibold text-amber-700">
+                      JLM-collected payments are currently paused by JLM Collective.
+                    </span>
+                  )}
                 </span>
               </label>
             </EditorSection>

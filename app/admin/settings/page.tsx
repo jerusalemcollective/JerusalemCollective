@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { requireAdmin } from '@/lib/admin'
 import { UpdateCommissionForm } from '@/components/update-commission-form'
 import { ServicesVisibilityForm } from '@/components/services-visibility-form'
+import { PaymentRouteControlsForm } from '@/components/payment-route-controls-form'
 
 type PlatformSetting = {
   key: string
@@ -29,8 +30,16 @@ export default async function AdminSettingsPage() {
   const servicesVisibilitySetting = platformSettings.find(
     (setting) => setting.key === 'services_bar_enabled',
   )
+  const jlmPaymentsSetting = platformSettings.find(
+    (setting) => setting.key === 'jlm_payments_enabled',
+  )
+  const directPaymentsSetting = platformSettings.find(
+    (setting) => setting.key === 'direct_payments_enabled',
+  )
   const currentCommission = commissionSetting?.value ?? '0'
   const servicesBarEnabled = servicesVisibilitySetting?.value !== 'false'
+  const jlmPaymentsEnabled = jlmPaymentsSetting?.value === 'true'
+  const directPaymentsEnabled = directPaymentsSetting?.value !== 'false'
 
   return (
     <div>
@@ -79,6 +88,18 @@ export default async function AdminSettingsPage() {
         </p>
 
         <ServicesVisibilityForm enabled={servicesBarEnabled} />
+      </section>
+
+      <section className="mt-6 max-w-3xl rounded-3xl bg-white p-6 shadow-sm">
+        <h2 className="font-bold text-stone-950">Payment route controls</h2>
+        <p className="mt-1 text-sm leading-6 text-stone-600">
+          Globally allow or pause JLM-collected payments and direct-to-host payment options.
+        </p>
+
+        <PaymentRouteControlsForm
+          jlmPaymentsEnabled={jlmPaymentsEnabled}
+          directPaymentsEnabled={directPaymentsEnabled}
+        />
       </section>
 
       <section className="mt-6 max-w-3xl rounded-3xl bg-stone-50 p-6">

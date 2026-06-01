@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getPaymentRouteSettings } from '@/lib/platform-settings'
 
 type BookNowBody = {
   listingId?: string
@@ -17,6 +18,11 @@ type InstantListing = {
   booking_type: string | null
   online_payment_enabled: boolean | null
   is_published: boolean | null
+}
+
+type HostPaymentProfile = {
+  accepts_jlm_payment: boolean | null
+  payout_currencies: string[] | null
 }
 
 function isBookNowBody(value: unknown): value is BookNowBody {
@@ -76,6 +82,14 @@ export async function POST(request: Request) {
     )
   }
 
+  const paymentRoutes = await getPaymentRouteSettings()
+  if (!paymentRoutes.jlmPaymentsEnabled) {
+    return NextResponse.json(
+      { error: 'Online payments are not available right now.' },
+      { status: 503 },
+    )
+  }
+
   const supabase = await createClient()
   const {
     data: { user },
@@ -105,9 +119,9 @@ export async function POST(request: Request) {
 
   const { data: paymentProfile, error: paymentProfileError } = await supabase
     .from('host_payment_profiles')
-    .select('accepts_jlm_payment')
+    .select('accepts_jlm_payment, payout_currencies')
     .eq('host_id', listing.host_id)
-    .maybeSingle()
+    .maybeSingle<HostPaymentProfile>()
 
   if (paymentProfileError) {
     return NextResponse.json({ error: paymentProfileError.message }, { status: 400 })
@@ -137,6 +151,13 @@ export async function POST(request: Request) {
   const nightlyPrice = listing.price_usd || listing.price_ils
   if (!currency || !nightlyPrice) {
     return NextResponse.json({ error: 'This stay does not have an online booking price yet.' }, { status: 400 })
+  }
+
+  if (!paymentProfile.payout_currencies?.includes(currency.toUpperCase())) {
+    return NextResponse.json(
+      { error: 'This host has not enabled payouts in this listing currency yet.' },
+      { status: 400 },
+    )
   }
 
   const depositAmount = Math.max(Math.round(nightlyPrice * nights * 0.1 * 100), 50)
