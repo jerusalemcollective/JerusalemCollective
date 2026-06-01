@@ -11,6 +11,14 @@ export type ListingMessageState = {
   message: string
 }
 
+type ListingAdminStatus = 'needs_work' | 'ready_for_launch' | 'live'
+
+const listingAdminStatuses: ListingAdminStatus[] = [
+  'needs_work',
+  'ready_for_launch',
+  'live',
+]
+
 export async function updateListingVisibility(formData: FormData) {
   const listingId = String(formData.get('listingId') || '')
   const field = String(formData.get('field') || '')
@@ -45,6 +53,112 @@ export async function updateListingVisibility(formData: FormData) {
 
   revalidatePath('/admin')
   revalidatePath('/admin/listings')
+  revalidatePath(`/listings/${listingId}`)
+  revalidatePath('/stays')
+}
+
+export async function updateAdminListingStatus(formData: FormData) {
+  const listingId = String(formData.get('listingId') || '')
+  const status = String(formData.get('adminStatus') || '')
+
+  if (!listingId || !isListingAdminStatus(status)) {
+    throw new Error('Invalid listing status update.')
+  }
+
+  const update =
+    status === 'live'
+      ? { admin_status: status, is_published: true }
+      : { admin_status: status }
+
+  const { supabase } = await requireAdminPermission('listings')
+  const { error } = await supabase
+    .from('listings')
+    .update(update)
+    .eq('id', listingId)
+
+  if (error) throw error
+
+  await logAdminAction(supabase, `set_listing_admin_status_${status}`, 'listing', listingId)
+
+  revalidatePath('/admin')
+  revalidatePath('/admin/listings')
+  revalidatePath('/admin/readiness')
+  revalidatePath(`/admin/listings/${listingId}`)
+  revalidatePath(`/listings/${listingId}`)
+  revalidatePath('/stays')
+}
+
+export async function updateAdminListingDetails(formData: FormData) {
+  const listingId = String(formData.get('listingId') || '')
+  const title = String(formData.get('title') || '').trim()
+  const area = String(formData.get('area') || '').trim()
+  const exactAddress = String(formData.get('exactAddress') || '').trim()
+  const bedrooms = parseNumber(formData.get('bedrooms'), 0)
+  const bathrooms = parseOptionalNumber(formData.get('bathrooms'))
+  const maxGuests = parseNumber(formData.get('maxGuests'), 1)
+  const sleepingSetup = String(formData.get('sleepingSetup') || '').trim()
+  const priceIls = parseOptionalNumber(formData.get('priceIls'))
+  const priceUsd = parseOptionalNumber(formData.get('priceUsd'))
+  const bookingType = String(formData.get('bookingType') || 'request')
+  const amenities = formData.getAll('amenities').map(String).filter(Boolean)
+  const description = String(formData.get('description') || '').trim()
+  const isPublished = formData.get('isPublished') === 'on'
+  const isFeatured = formData.get('isFeatured') === 'on'
+  const adminStatus = String(formData.get('adminStatus') || 'needs_work')
+
+  if (!listingId || !title || !area) {
+    throw new Error('Listing id, title, and area are required.')
+  }
+
+  if (!['request', 'enquiry', 'instant'].includes(bookingType)) {
+    throw new Error('Invalid booking type.')
+  }
+
+  if (!isListingAdminStatus(adminStatus)) {
+    throw new Error('Invalid launch status.')
+  }
+
+  const finalPublished = adminStatus === 'live' ? true : isPublished
+
+  const { supabase } = await requireAdminPermission('listings')
+  const { error } = await supabase
+    .from('listings')
+    .update({
+      title,
+      area,
+      exact_address: exactAddress || null,
+      bedrooms,
+      bathrooms,
+      max_guests: maxGuests,
+      sleeping_setup: sleepingSetup || null,
+      price_ils: priceIls,
+      price_usd: priceUsd,
+      booking_type: bookingType,
+      amenities,
+      description: description || null,
+      is_published: finalPublished,
+      is_featured: isFeatured,
+      admin_status: adminStatus,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', listingId)
+
+  if (error) throw error
+
+  await logAdminAction(supabase, 'edit_listing_details', 'listing', listingId)
+  await sendListingHostAdminUpdateEmail({
+    supabase,
+    listingId,
+    subject: 'JLM Collective updated your listing details',
+    intro: 'JLM Collective made an administrative update to your listing details. Please sign in to review the latest version.',
+    ctaPath: `/host/dashboard/listings/${listingId}`,
+    ctaLabel: 'Review listing details',
+  })
+
+  revalidatePath('/admin')
+  revalidatePath('/admin/listings')
+  revalidatePath('/admin/readiness')
+  revalidatePath(`/admin/listings/${listingId}`)
   revalidatePath(`/listings/${listingId}`)
   revalidatePath('/stays')
 }
@@ -146,6 +260,7 @@ export async function createAdminListing(formData: FormData) {
       description: description || null,
       is_published: isPublished,
       is_featured: false,
+      admin_status: isPublished ? 'live' : 'needs_work',
     })
     .select('id')
     .single()
@@ -231,4 +346,8 @@ function parseOptionalNumber(value: FormDataEntryValue | null) {
   if (!rawValue) return null
   const parsed = Number(rawValue)
   return Number.isFinite(parsed) ? parsed : null
+}
+
+function isListingAdminStatus(value: string): value is ListingAdminStatus {
+  return listingAdminStatuses.includes(value as ListingAdminStatus)
 }

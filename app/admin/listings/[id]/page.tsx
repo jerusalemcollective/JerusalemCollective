@@ -1,23 +1,29 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { requireAdminPermission } from '@/lib/admin'
-import { deleteListing } from '@/app/admin/listing-actions'
+import { deleteListing, updateAdminListingDetails, updateAdminListingStatus } from '@/app/admin/listing-actions'
 import { AdminListingMessageForm } from '@/components/admin-listing-message-form'
 import { ConfirmSubmitButton } from '@/components/confirm-submit-button'
 import { ListingQualityScore } from '@/components/listing-quality-score'
 import { calculateListingScore } from '@/lib/marketplace-rules'
+import { AmenitySelector } from '@/components/amenity-selector'
+
+type ListingAdminStatus = 'needs_work' | 'ready_for_launch' | 'live'
 
 type AdminListingDetail = {
   id: string
   title: string
   area: string
+  exact_address: string | null
   host_id: string
   is_published: boolean
   is_featured: boolean
+  admin_status: ListingAdminStatus | null
   bedrooms: number | null
   bathrooms: number | null
   max_guests: number | null
   sleeping_setup: string | null
+  booking_type: string | null
   amenities: string[] | null
   description: string | null
   price_usd: number | null
@@ -41,7 +47,7 @@ export default async function AdminListingDetailPage({
   const [{ data: listingData }, { data: messages, error: messagesError }, { data: photos }] = await Promise.all([
     supabase
       .from('listings')
-      .select('id, title, area, host_id, is_published, is_featured, bedrooms, bathrooms, max_guests, sleeping_setup, amenities, description, price_usd, price_ils, hosts(name)')
+      .select('id, title, area, exact_address, host_id, is_published, is_featured, admin_status, bedrooms, bathrooms, max_guests, sleeping_setup, booking_type, amenities, description, price_usd, price_ils, hosts(name)')
       .eq('id', id)
       .single(),
     supabase
@@ -74,6 +80,7 @@ export default async function AdminListingDetailPage({
     price_usd: listing.price_usd,
     price_ils: listing.price_ils,
   })
+  const adminStatus = listing.admin_status || (listing.is_published ? 'live' : 'needs_work')
 
   return (
     <div>
@@ -110,6 +117,95 @@ export default async function AdminListingDetailPage({
             <ListingQualityScore score={qualityScore} />
           </div>
 
+          <div className="mt-8 border-t border-stone-100 pt-8">
+            <h2 className="text-lg font-bold text-stone-950">Edit listing details</h2>
+            <p className="mt-1 text-sm leading-6 text-stone-600">
+              Admin edits update the live listing directly.
+            </p>
+            <form action={updateAdminListingDetails} className="mt-5 grid gap-4">
+              <input type="hidden" name="listingId" value={listing.id} />
+              <div className="grid gap-4 md:grid-cols-2">
+                <EditField label="Title" name="title" defaultValue={listing.title} required />
+                <EditField label="Neighbourhood" name="area" defaultValue={listing.area} required />
+                <div className="md:col-span-2">
+                  <EditField label="Exact address" name="exactAddress" defaultValue={listing.exact_address || ''} />
+                </div>
+                <EditField label="Bedrooms" name="bedrooms" type="number" min="0" defaultValue={String(listing.bedrooms ?? '')} />
+                <EditField label="Bathrooms" name="bathrooms" type="number" min="0" step="0.5" defaultValue={String(listing.bathrooms ?? '')} />
+                <EditField label="Max guests" name="maxGuests" type="number" min="1" defaultValue={String(listing.max_guests ?? '')} />
+                <EditField label="Price ILS" name="priceIls" type="number" min="0" defaultValue={String(listing.price_ils ?? '')} />
+                <EditField label="Price USD" name="priceUsd" type="number" min="0" defaultValue={String(listing.price_usd ?? '')} />
+              </div>
+              <label className="block">
+                <span className="text-xs font-bold uppercase tracking-widest text-stone-400">Booking type</span>
+                <select
+                  name="bookingType"
+                  defaultValue={listing.booking_type || 'request'}
+                  className="mt-2 w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
+                >
+                  <option value="request">Request to book</option>
+                  <option value="enquiry">Enquiry only</option>
+                  <option value="instant">Instant book</option>
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-xs font-bold uppercase tracking-widest text-stone-400">Launch status</span>
+                <select
+                  name="adminStatus"
+                  defaultValue={adminStatus}
+                  className="mt-2 w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
+                >
+                  <option value="needs_work">Needs work</option>
+                  <option value="ready_for_launch">Ready for launch</option>
+                  <option value="live">Live</option>
+                </select>
+              </label>
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="flex items-start gap-3 rounded-2xl bg-[#F8F5F2] p-4 text-sm text-stone-700">
+                  <input type="checkbox" name="isPublished" defaultChecked={listing.is_published} className="mt-1" />
+                  <span>
+                    <span className="block font-bold text-stone-950">Published</span>
+                    <span className="mt-1 block text-xs text-stone-500">Guests can see this listing.</span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-3 rounded-2xl bg-[#F8F5F2] p-4 text-sm text-stone-700">
+                  <input type="checkbox" name="isFeatured" defaultChecked={listing.is_featured} className="mt-1" />
+                  <span>
+                    <span className="block font-bold text-stone-950">Featured</span>
+                    <span className="mt-1 block text-xs text-stone-500">Prioritise this stay in listing displays.</span>
+                  </span>
+                </label>
+              </div>
+              <label className="block">
+                <span className="text-xs font-bold uppercase tracking-widest text-stone-400">Sleeping setup</span>
+                <textarea
+                  name="sleepingSetup"
+                  defaultValue={listing.sleeping_setup || ''}
+                  rows={5}
+                  className="mt-2 min-h-28 w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
+                />
+              </label>
+              <div>
+                <span className="text-xs font-bold uppercase tracking-widest text-stone-400">Amenities</span>
+                <div className="mt-2">
+                  <AmenitySelector defaultSelectedAmenities={listing.amenities || []} />
+                </div>
+              </div>
+              <label className="block">
+                <span className="text-xs font-bold uppercase tracking-widest text-stone-400">Description</span>
+                <textarea
+                  name="description"
+                  defaultValue={listing.description || ''}
+                  rows={7}
+                  className="mt-2 min-h-36 w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
+                />
+              </label>
+              <button className="rounded-2xl bg-stone-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-stone-800">
+                Save listing edits
+              </button>
+            </form>
+          </div>
+
           <div className="mt-8">
             <h2 className="text-lg font-bold text-stone-950">Previous messages</h2>
             <div className="mt-4 space-y-3">
@@ -137,9 +233,37 @@ export default async function AdminListingDetailPage({
         </section>
 
         <aside className="rounded-3xl bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-bold text-stone-950">Launch status</h2>
+          <p className="mt-1 text-sm leading-6 text-stone-600">
+            Current status: <span className="font-bold text-stone-950">{adminStatusLabel(adminStatus)}</span>
+          </p>
+          <div className="mt-4 grid gap-2">
+            {([
+              ['needs_work', 'Needs work'],
+              ['ready_for_launch', 'Ready for launch'],
+              ['live', 'Live'],
+            ] as const).map(([value, label]) => (
+              <form key={value} action={updateAdminListingStatus}>
+                <input type="hidden" name="listingId" value={listing.id} />
+                <input type="hidden" name="adminStatus" value={value} />
+                <button
+                  className={`w-full rounded-2xl px-4 py-3 text-sm font-bold transition ${
+                    adminStatus === value
+                      ? 'bg-stone-950 text-white'
+                      : 'border border-stone-200 text-stone-700 hover:border-stone-300'
+                  }`}
+                >
+                  {label}
+                </button>
+              </form>
+            ))}
+          </div>
+
+          <div className="mt-6 border-t border-stone-100 pt-5">
           <h2 className="text-lg font-bold text-stone-950">Message host</h2>
           <div className="mt-4">
             <AdminListingMessageForm listingId={listing.id} />
+          </div>
           </div>
 
           <div className="mt-6 border-t border-stone-100 pt-5">
@@ -170,4 +294,45 @@ function Info({ label, value }: { label: string; value: string }) {
       <p className="mt-1 text-sm font-semibold text-stone-900">{value}</p>
     </div>
   )
+}
+
+function EditField({
+  label,
+  name,
+  defaultValue,
+  type = 'text',
+  min,
+  step,
+  required = false,
+}: {
+  label: string
+  name: string
+  defaultValue: string
+  type?: string
+  min?: string
+  step?: string
+  required?: boolean
+}) {
+  return (
+    <label className="block">
+      <span className="text-xs font-bold uppercase tracking-widest text-stone-400">
+        {label}
+      </span>
+      <input
+        name={name}
+        type={type}
+        min={min}
+        step={step}
+        required={required}
+        defaultValue={defaultValue}
+        className="mt-2 w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
+      />
+    </label>
+  )
+}
+
+function adminStatusLabel(status: ListingAdminStatus) {
+  if (status === 'ready_for_launch') return 'Ready for launch'
+  if (status === 'live') return 'Live'
+  return 'Needs work'
 }

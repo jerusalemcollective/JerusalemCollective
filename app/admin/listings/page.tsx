@@ -16,8 +16,10 @@ type ListingRow = {
   host_id: string
   is_published: boolean
   is_featured: boolean
+  admin_status: string | null
   bedrooms: number | null
   bathrooms: number | null
+  sleeping_setup: string | null
   amenities: string[] | null
   description: string | null
   house_rules: string | null
@@ -71,10 +73,11 @@ export default async function AdminListingsPage({
   const currentSearchParams = normalizePaginationSearchParams(searchParams ? await searchParams : {})
   const publishedFilter = currentSearchParams.published || 'all'
   const featuredFilter = currentSearchParams.featured || 'all'
+  const statusFilter = currentSearchParams.status || 'all'
   const page = Math.max(1, Number(currentSearchParams.page) || 1)
   let listingsQuery = supabase
     .from('listings')
-    .select('id, title, area, host_id, is_published, is_featured, bedrooms, bathrooms, amenities, description, house_rules, price_usd, price_ils, walking_minutes_to_kotel, american_comfort, created_at, hosts(name)')
+    .select('id, title, area, host_id, is_published, is_featured, admin_status, bedrooms, bathrooms, sleeping_setup, amenities, description, house_rules, price_usd, price_ils, walking_minutes_to_kotel, american_comfort, created_at, hosts(name)')
     .order('created_at', { ascending: false })
   let countQuery = supabase.from('listings').select('*', { count: 'exact', head: true })
 
@@ -92,6 +95,11 @@ export default async function AdminListingsPage({
   } else if (featuredFilter === 'standard') {
     listingsQuery = listingsQuery.eq('is_featured', false)
     countQuery = countQuery.eq('is_featured', false)
+  }
+
+  if (['needs_work', 'ready_for_launch', 'live'].includes(statusFilter)) {
+    listingsQuery = listingsQuery.eq('admin_status', statusFilter)
+    countQuery = countQuery.eq('admin_status', statusFilter)
   }
 
   const [{ data }, { count }] = await Promise.all([
@@ -184,12 +192,33 @@ export default async function AdminListingsPage({
             </Link>
           ))}
         </div>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { label: 'All launch statuses', value: 'all' },
+            { label: 'Needs work', value: 'needs_work' },
+            { label: 'Ready for launch', value: 'ready_for_launch' },
+            { label: 'Live status', value: 'live' },
+          ].map((option) => (
+            <Link
+              key={option.value}
+              href={buildAdminUrl('/admin/listings', currentSearchParams, { status: option.value })}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                statusFilter === option.value
+                  ? 'bg-stone-950 text-white'
+                  : 'border border-stone-200 bg-white text-stone-700 hover:border-stone-300'
+              }`}
+            >
+              {option.label}
+            </Link>
+          ))}
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-3xl bg-white shadow-sm">
-        <div className="grid gap-4 border-b border-stone-100 px-6 py-4 text-xs font-bold uppercase tracking-widest text-stone-400 md:grid-cols-[1.2fr_0.9fr_0.9fr_0.6fr_0.6fr_1fr]">
+        <div className="grid gap-4 border-b border-stone-100 px-6 py-4 text-xs font-bold uppercase tracking-widest text-stone-400 md:grid-cols-[1.2fr_0.8fr_0.8fr_0.9fr_0.55fr_0.55fr_1fr]">
           <span>Listing</span>
           <span>Host</span>
+          <span>Status</span>
           <span>Quality</span>
           <span>Published</span>
           <span>Featured</span>
@@ -203,7 +232,7 @@ export default async function AdminListingsPage({
             {listings.map((listing) => (
               <div
                 key={listing.id}
-                className="grid gap-4 px-6 py-5 md:grid-cols-[1.2fr_0.9fr_0.9fr_0.6fr_0.6fr_1fr] md:items-center"
+                className="grid gap-4 px-6 py-5 md:grid-cols-[1.2fr_0.8fr_0.8fr_0.9fr_0.55fr_0.55fr_1fr] md:items-center"
               >
                 <div>
                   <Link href={`/admin/listings/${listing.id}`} className="font-bold text-stone-950 hover:underline">
@@ -212,12 +241,16 @@ export default async function AdminListingsPage({
                   <p className="mt-1 text-sm text-stone-500">{listing.area}</p>
                 </div>
                 <p className="text-sm text-stone-700">{listing.hosts?.name || 'Host'}</p>
+                <span className="rounded-full bg-stone-100 px-3 py-1 text-center text-xs font-bold text-stone-700">
+                  {adminStatusLabel(listing.admin_status)}
+                </span>
                 <ListingQualityScore
                   score={calculateListingScore({
                     photo_count: photoCounts.get(listing.id) || 0,
                     description: listing.description,
                     bedrooms: listing.bedrooms,
                     bathrooms: listing.bathrooms,
+                    sleeping_setup: listing.sleeping_setup,
                     amenities: listing.amenities || [],
                     price_usd: listing.price_usd,
                     price_ils: listing.price_ils,
@@ -310,6 +343,7 @@ function listingQaSuggestions(
 
   if (photoCount < 5) suggestions.push('Add at least five photos before publishing.')
   if (!listing.price_usd && !listing.price_ils) suggestions.push('Add a clear nightly price.')
+  if (!listing.sleeping_setup?.trim()) suggestions.push('Add the sleeping setup.')
   if (!listing.house_rules?.trim()) suggestions.push('Add house rules for guests.')
   if (!listing.walking_minutes_to_kotel && shulDistanceCount === 0) {
     suggestions.push('Add shul or Old City walking distance.')
@@ -317,5 +351,11 @@ function listingQaSuggestions(
   if (!listing.american_comfort) suggestions.push('Confirm American comfort details.')
 
   return suggestions.slice(0, 4)
+}
+
+function adminStatusLabel(status: string | null) {
+  if (status === 'ready_for_launch') return 'Ready'
+  if (status === 'live') return 'Live'
+  return 'Needs work'
 }
 

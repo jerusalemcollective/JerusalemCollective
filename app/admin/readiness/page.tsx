@@ -7,6 +7,7 @@ type ListingReadinessRow = {
   title: string
   area: string | null
   is_published: boolean | null
+  admin_status: string | null
   bedrooms: number | null
   max_guests: number | null
   sleeping_setup: string | null
@@ -53,7 +54,7 @@ export default async function AdminReadinessPage() {
   ] = await Promise.all([
     supabase
       .from('listings')
-      .select('id, title, area, is_published, bedrooms, max_guests, sleeping_setup, price_ils, price_usd'),
+      .select('id, title, area, is_published, admin_status, bedrooms, max_guests, sleeping_setup, price_ils, price_usd'),
     supabase
       .from('listing_photos')
       .select('listing_id'),
@@ -78,6 +79,7 @@ export default async function AdminReadinessPage() {
     title: listing.title,
     area: listing.area,
     is_published: listing.is_published,
+    admin_status: listing.admin_status,
     bedrooms: listing.bedrooms,
     max_guests: listing.max_guests,
     sleeping_setup: listing.sleeping_setup,
@@ -85,6 +87,8 @@ export default async function AdminReadinessPage() {
     price_usd: listing.price_usd,
   }))
   const liveListings = listings.filter((listing) => listing.is_published)
+  const needsWorkListings = listings.filter((listing) => getAdminStatus(listing) === 'needs_work')
+  const readyForLaunchListings = listings.filter((listing) => getAdminStatus(listing) === 'ready_for_launch')
   const photoCounts = countPhotosByListing(
     (photosData || []).map((photo: ListingPhotoRow) => ({
       listing_id: photo.listing_id,
@@ -107,6 +111,7 @@ export default async function AdminReadinessPage() {
       ...listing,
       photoCount: photoCounts.get(listing.id) || 0,
       issues: [
+        getAdminStatus(listing) === 'needs_work' ? 'Marked needs work' : null,
         (photoCounts.get(listing.id) || 0) < 5 ? 'Needs 5+ photos' : null,
         !listing.price_ils && !listing.price_usd ? 'Missing price' : null,
         !listing.sleeping_setup?.trim() ? 'Missing sleeping setup' : null,
@@ -143,6 +148,7 @@ export default async function AdminReadinessPage() {
     liveListingsMissingPrice.length,
     liveListingsMissingSleepingSetup.length,
     liveListingsMissingCapacity.length,
+    needsWorkListings.length,
     Number(pendingApplicationsCount || 0),
   ].filter((count) => count > 0).length
 
@@ -168,6 +174,22 @@ export default async function AdminReadinessPage() {
           href="/admin/listings?published=live"
           action="Review listings"
           tone={liveListings.length > 0 ? 'green' : 'amber'}
+        />
+        <ReadinessCard
+          title="Ready for launch"
+          value={readyForLaunchListings.length}
+          detail="Listings marked internally ready but not necessarily public."
+          href="/admin/listings?status=ready_for_launch"
+          action="Review ready"
+          tone={readyForLaunchListings.length > 0 ? 'green' : 'stone'}
+        />
+        <ReadinessCard
+          title="Needs work"
+          value={needsWorkListings.length}
+          detail="Listings admin has marked as unfinished."
+          href="/admin/listings?status=needs_work"
+          action="Fix listings"
+          tone={needsWorkListings.length > 0 ? 'amber' : 'green'}
         />
         <ReadinessCard
           title="Missing photos"
@@ -269,6 +291,12 @@ export default async function AdminReadinessPage() {
               href="/admin/listings?published=live"
             />
             <ChecklistItem
+              label="No listings marked needs work"
+              complete={needsWorkListings.length === 0}
+              helper={`${needsWorkListings.length} listing${needsWorkListings.length === 1 ? '' : 's'} still marked needs work.`}
+              href="/admin/listings?status=needs_work"
+            />
+            <ChecklistItem
               label="No live listings missing photos"
               complete={liveListingsMissingPhotos.length === 0}
               helper={`${liveListingsMissingPhotos.length} live listing${liveListingsMissingPhotos.length === 1 ? '' : 's'} need more photos.`}
@@ -336,6 +364,9 @@ export default async function AdminReadinessPage() {
               <span>
                 <span className="block font-bold text-stone-950">{listing.title}</span>
                 <span className="mt-1 block text-sm text-stone-500">{listing.area || 'Jerusalem'}</span>
+                <span className="mt-1 block text-xs font-bold uppercase tracking-widest text-stone-400">
+                  {adminStatusLabel(getAdminStatus(listing))}
+                </span>
               </span>
               <span className="text-sm font-semibold text-stone-700">
                 {listing.photoCount} photo{listing.photoCount === 1 ? '' : 's'}
@@ -358,6 +389,20 @@ export default async function AdminReadinessPage() {
       </section>
     </div>
   )
+}
+
+function getAdminStatus(listing: ListingReadinessRow) {
+  if (listing.admin_status === 'ready_for_launch' || listing.admin_status === 'live') {
+    return listing.admin_status
+  }
+
+  return 'needs_work'
+}
+
+function adminStatusLabel(status: string) {
+  if (status === 'ready_for_launch') return 'Ready for launch'
+  if (status === 'live') return 'Live'
+  return 'Needs work'
 }
 
 function countPhotosByListing(photos: ListingPhotoRow[]) {
