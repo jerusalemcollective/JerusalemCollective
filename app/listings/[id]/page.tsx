@@ -58,6 +58,7 @@ const listingDetailListingSchema = z.object({
   price_ils: z.number().nullable(),
   price_usd: z.number().nullable(),
   booking_type: z.string(),
+  online_payment_enabled: z.boolean().nullish().transform((value) => Boolean(value)),
   amenities: z.array(z.string()).nullable(),
   description: z.string().nullable(),
   house_rules: z.string().nullable(),
@@ -260,6 +261,7 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
             amenities: sampleListing.amenities || [],
             description: sampleListing.description || null,
             house_rules: null,
+            online_payment_enabled: false,
             latitude: sampleListing.latitude || null,
             longitude: sampleListing.longitude || null,
             shabbat_elevator: false,
@@ -315,6 +317,7 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
   const [
     { data: photosData },
     { data: hostData },
+    { data: paymentProfileData },
     { data: reviewsData },
     { data: blockedRangesData },
     { data: shulDistancesData },
@@ -331,6 +334,13 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
           .select('id, name, display_name, show_full_name, is_verified, profile_photo_url')
           .eq('id', listing.host_id)
           .single()
+      : Promise.resolve({ data: null }),
+    listing.host_id
+      ? supabase
+          .from('host_payment_profiles')
+          .select('accepts_jlm_payment')
+          .eq('host_id', listing.host_id)
+          .maybeSingle()
       : Promise.resolve({ data: null }),
     supabase
       .from('reviews')
@@ -477,7 +487,12 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
         dangerouslySetInnerHTML={{ __html: JSON.stringify(cleanJsonLd) }}
       />
       <ListingDetailClient
-        listing={listing}
+        listing={{
+          ...listing,
+          online_payment_enabled:
+            listing.online_payment_enabled &&
+            Boolean(paymentProfileData?.accepts_jlm_payment),
+        }}
         host={host}
         publicHostName={publicHostName}
         photos={photos}

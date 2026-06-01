@@ -18,7 +18,7 @@ export default async function HostListingEditPage({
     supabase
       .from('listings')
       .select(
-        'id, title, area, bedrooms, bathrooms, max_guests, sleeping_setup, price_ils, price_usd, booking_type, amenities, description, house_rules, welcome_message, check_in_instructions, is_published, external_calendar_url, calendar_last_synced_at, shabbat_elevator, physical_key_entry, shabbat_clock, kosher_kitchen_level, walking_minutes_to_kotel, near_synagogue, sukkah_balcony, american_comfort, central_ac, american_washer_dryer, american_mattress, powerful_water_heater',
+        'id, title, area, bedrooms, bathrooms, max_guests, sleeping_setup, price_ils, price_usd, booking_type, online_payment_enabled, amenities, description, house_rules, welcome_message, check_in_instructions, is_published, external_calendar_url, calendar_last_synced_at, shabbat_elevator, physical_key_entry, shabbat_clock, kosher_kitchen_level, walking_minutes_to_kotel, near_synagogue, sukkah_balcony, american_comfort, central_ac, american_washer_dryer, american_mattress, powerful_water_heater',
       )
       .eq('id', id)
       .in('host_id', hostIds)
@@ -119,6 +119,20 @@ export default async function HostListingEditPage({
                   </select>
                 </Field>
               </div>
+              <label className="mt-5 flex items-start gap-3 rounded-2xl bg-[#F8F5F2] p-4">
+                <input
+                  type="checkbox"
+                  name="onlinePaymentEnabled"
+                  defaultChecked={Boolean(listing.online_payment_enabled)}
+                  className="mt-1"
+                />
+                <span>
+                  <span className="block font-bold text-stone-950">Allow Book now with JLM payment</span>
+                  <span className="mt-1 block text-sm leading-6 text-stone-600">
+                    Guests can pay JLM Collective online for this listing. JLM deducts the agency fee and pays your net amount in the currency received where supported.
+                  </span>
+                </span>
+              </label>
             </EditorSection>
 
             <EditorSection title="Amenities">

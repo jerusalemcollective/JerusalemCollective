@@ -27,6 +27,7 @@ export async function updateHostListing(formData: FormData) {
   const priceIls = priceIlsValue ? Number(priceIlsValue) : null
   const priceUsd = priceUsdValue ? Number(priceUsdValue) : null
   const bookingType = String(formData.get('bookingType') || 'request')
+  const onlinePaymentEnabled = formData.get('onlinePaymentEnabled') === 'on'
   const amenities = formData.getAll('amenities').map(String)
   const description = String(formData.get('description') || '')
   const houseRules = String(formData.get('houseRules') || '').trim() || null
@@ -91,6 +92,7 @@ export async function updateHostListing(formData: FormData) {
         americanWasherDryer &&
         americanMattress &&
         powerfulWaterHeater,
+      online_payment_enabled: onlinePaymentEnabled,
     })
     .eq('id', listingId)
     .in('host_id', hostIds)

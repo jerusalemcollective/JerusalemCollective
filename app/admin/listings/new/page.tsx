@@ -94,6 +94,16 @@ export default async function NewAdminListingPage() {
             </select>
           </label>
 
+          <label className="flex items-start gap-3 rounded-2xl bg-[#F8F5F2] p-4 text-sm text-stone-600">
+            <input type="checkbox" name="onlinePaymentEnabled" className="mt-1" />
+            <span>
+              <span className="block font-bold text-stone-950">Allow Book now with JLM payment</span>
+              <span className="mt-1 block text-xs leading-5 text-stone-500">
+                Guests can pay JLM Collective online. Host payout stays in the currency received where supported.
+              </span>
+            </span>
+          </label>
+
           <label className="block">
             <span className="text-sm font-semibold text-stone-800">Description</span>
             <textarea name="description" rows={5} className={`${inputClass} resize-y`} />

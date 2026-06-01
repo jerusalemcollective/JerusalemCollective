@@ -19,6 +19,7 @@ type AdminListingDetail = {
   is_published: boolean
   is_featured: boolean
   admin_status: ListingAdminStatus | null
+  online_payment_enabled: boolean | null
   bedrooms: number | null
   bathrooms: number | null
   max_guests: number | null
@@ -47,7 +48,7 @@ export default async function AdminListingDetailPage({
   const [{ data: listingData }, { data: messages, error: messagesError }, { data: photos }] = await Promise.all([
     supabase
       .from('listings')
-      .select('id, title, area, exact_address, host_id, is_published, is_featured, admin_status, bedrooms, bathrooms, max_guests, sleeping_setup, booking_type, amenities, description, price_usd, price_ils, hosts(name)')
+      .select('id, title, area, exact_address, host_id, is_published, is_featured, admin_status, online_payment_enabled, bedrooms, bathrooms, max_guests, sleeping_setup, booking_type, amenities, description, price_usd, price_ils, hosts(name)')
       .eq('id', id)
       .single(),
     supabase
@@ -147,6 +148,20 @@ export default async function AdminListingDetailPage({
                   <option value="enquiry">Enquiry only</option>
                   <option value="instant">Instant book</option>
                 </select>
+              </label>
+              <label className="flex items-start gap-3 rounded-2xl bg-[#F8F5F2] p-4 text-sm text-stone-700">
+                <input
+                  type="checkbox"
+                  name="onlinePaymentEnabled"
+                  defaultChecked={Boolean(listing.online_payment_enabled)}
+                  className="mt-1"
+                />
+                <span>
+                  <span className="block font-bold text-stone-950">Allow Book now with JLM payment</span>
+                  <span className="mt-1 block text-xs text-stone-500">
+                    Guests can pay JLM Collective online. Host payout stays in the currency received where supported.
+                  </span>
+                </span>
               </label>
               <label className="block">
                 <span className="text-xs font-bold uppercase tracking-widest text-stone-400">Launch status</span>

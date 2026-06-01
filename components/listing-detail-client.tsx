@@ -32,6 +32,7 @@ export type ListingDetailListing = {
   price_ils: number | null
   price_usd: number | null
   booking_type: string
+  online_payment_enabled: boolean
   amenities: string[] | null
   description: string | null
   house_rules: string | null
@@ -267,18 +268,19 @@ export function ListingDetailClient({
   const maxGuests = listing.max_guests || 6
   const priceIls = formatPrice(listing.price_ils)
   const priceUsd = formatPrice(listing.price_usd)
+  const allowsOnlinePayment = listing.online_payment_enabled
   const mobileActionLabel =
-    listing.booking_type === 'instant'
+    allowsOnlinePayment
       ? 'Book now'
       : listing.booking_type === 'enquiry'
         ? 'Message host'
         : 'Request to book'
   const howItWorksSteps =
-    listing.booking_type === 'instant'
+    allowsOnlinePayment
       ? [
           'Choose your dates and guests',
-          'Book instantly with a 10% deposit',
-          'Your dates are confirmed automatically',
+          'Pay JLM Collective securely online',
+          'The host receives payout in the currency paid where supported',
         ]
       : listing.booking_type === 'request'
         ? [
@@ -1035,7 +1037,7 @@ export function ListingDetailClient({
             <div className="px-6 pb-8">
               <div className="mb-6 flex items-center justify-between">
                 <h3 className="text-xl font-bold text-stone-900">
-                  {listing.booking_type === 'instant'
+                  {listing.online_payment_enabled
                     ? 'Book this stay'
                     : listing.booking_type === 'request'
                       ? 'Request to book'
@@ -1067,7 +1069,7 @@ export function ListingDetailClient({
                 blockedRanges={blockedRanges}
                 mobile
               />
-              {listing.booking_type === 'instant' ? (
+              {listing.online_payment_enabled ? (
                 <p className="mt-4 text-center text-xs text-stone-500">
                   10% deposit only after you confirm checkout.
                 </p>
@@ -1263,7 +1265,7 @@ function BookingControls({
   blockedRanges: ListingBlockedRange[]
   mobile?: boolean
 }) {
-  const allowsInstantBook = listing.booking_type === 'instant'
+  const allowsOnlinePayment = listing.online_payment_enabled
   const isEnquiryOnly = listing.booking_type === 'enquiry'
   const hasDates = Boolean(dateRange.from && dateRange.to)
   const dateRequiredMessage = 'Choose dates first.'
@@ -1326,7 +1328,7 @@ function BookingControls({
           </Link>
         ) : (
           <div className="space-y-2.5">
-            {allowsInstantBook && (
+            {allowsOnlinePayment && (
               <BookNowButton
                 listing={listing}
                 dateRange={dateRange}
@@ -1334,7 +1336,7 @@ function BookingControls({
                 disabled={!hasDates}
               />
             )}
-            {!allowsInstantBook && !isEnquiryOnly && (
+            {!allowsOnlinePayment && !isEnquiryOnly && (
               <MessageHostDialog
                 listingId={listing.id}
                 listingTitle={listing.title}
@@ -1350,7 +1352,7 @@ function BookingControls({
                 onConversationCreated={onConversationCreated}
               />
             )}
-            {(allowsInstantBook || !isEnquiryOnly) && (
+            {(allowsOnlinePayment || !isEnquiryOnly) && (
               <MessageHostDialog
                 listingId={listing.id}
                 listingTitle={listing.title}

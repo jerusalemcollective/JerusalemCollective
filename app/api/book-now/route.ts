@@ -15,6 +15,7 @@ type InstantListing = {
   price_usd: number | null
   price_ils: number | null
   booking_type: string | null
+  online_payment_enabled: boolean | null
   is_published: boolean | null
 }
 
@@ -86,7 +87,7 @@ export async function POST(request: Request) {
 
   const { data: listing, error: listingError } = await supabase
     .from('listings')
-    .select('id, title, host_id, price_usd, price_ils, booking_type, is_published')
+    .select('id, title, host_id, price_usd, price_ils, booking_type, online_payment_enabled, is_published')
     .eq('id', listingId)
     .maybeSingle<InstantListing>()
 
@@ -94,12 +95,26 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: listingError.message }, { status: 400 })
   }
 
-  if (!listing || !listing.is_published || listing.booking_type !== 'instant') {
-    return NextResponse.json({ error: 'This stay is not available for instant booking.' }, { status: 400 })
+  if (!listing || !listing.is_published || !listing.online_payment_enabled) {
+    return NextResponse.json({ error: 'This stay is not available for online booking.' }, { status: 400 })
   }
 
   if (!listing.host_id) {
     return NextResponse.json({ error: 'Host is not available for this listing.' }, { status: 400 })
+  }
+
+  const { data: paymentProfile, error: paymentProfileError } = await supabase
+    .from('host_payment_profiles')
+    .select('accepts_jlm_payment')
+    .eq('host_id', listing.host_id)
+    .maybeSingle()
+
+  if (paymentProfileError) {
+    return NextResponse.json({ error: paymentProfileError.message }, { status: 400 })
+  }
+
+  if (!paymentProfile?.accepts_jlm_payment) {
+    return NextResponse.json({ error: 'This host has not enabled JLM online payment yet.' }, { status: 400 })
   }
 
   const { data: blockedRanges, error: blockedError } = await supabase
@@ -175,6 +190,8 @@ export async function POST(request: Request) {
     platform_fee_amount: 0,
     processor_fee_amount: 0,
     host_payout_amount: depositAmount / 100,
+    host_payout_currency: currency.toUpperCase(),
+    fx_rate_used: null,
     status: 'pending',
     payout_status: 'not_ready',
     stripe_checkout_session_id: checkoutSessionId,

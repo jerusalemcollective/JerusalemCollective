@@ -26,7 +26,7 @@ export default async function HostPaymentsPage() {
     supabase
       .from('host_payment_profiles')
       .select(
-        'accepts_direct_payment, direct_payment_instructions, preferred_currency, stripe_account_id, payout_setup_status, stripe_charges_enabled, stripe_payouts_enabled',
+        'accepts_direct_payment, accepts_jlm_payment, direct_payment_instructions, preferred_currency, payout_currencies, stripe_account_id, payout_setup_status, stripe_charges_enabled, stripe_payouts_enabled',
       )
       .in('host_id', hostIds)
       .limit(1)
@@ -70,9 +70,24 @@ export default async function HostPaymentsPage() {
               <div className="rounded-2xl bg-[#F8F5F2] p-4">
                 <p className="font-bold text-stone-950">Receive online payments</p>
                 <p className="mt-1 text-sm leading-6 text-stone-600">
-                  Guests will be able to pay JLM Collective online, and your payout will be sent after the relevant booking milestone.
+                  Guests can pay JLM Collective online where enabled for a listing. JLM deducts the agency fee and sends your net payout in the currency received, where your payout account supports it.
                 </p>
               </div>
+
+              <label className="flex items-start gap-3 rounded-2xl bg-[#F8F5F2] p-4">
+                <input
+                  type="checkbox"
+                  name="acceptsJlm"
+                  defaultChecked={profile?.accepts_jlm_payment || false}
+                  className="mt-1"
+                />
+                <span>
+                  <span className="block font-bold text-stone-950">Allow JLM Collective to collect payment</span>
+                  <span className="mt-1 block text-sm leading-6 text-stone-600">
+                    Guests can use Book now on listings where online payment is enabled. JLM Collective collects as agent and pays you the net amount in the currency received where supported.
+                  </span>
+                </span>
+              </label>
 
               <label className="flex items-start gap-3 rounded-2xl bg-[#F8F5F2] p-4">
                 <input
@@ -102,6 +117,26 @@ export default async function HostPaymentsPage() {
                   <option value="ILS">ILS</option>
                 </select>
               </label>
+
+              <div>
+                <p className="text-sm font-semibold text-stone-800">Currencies you can receive</p>
+                <div className="mt-2 grid gap-2 sm:grid-cols-4">
+                  {['GBP', 'USD', 'EUR', 'ILS'].map((currency) => (
+                    <label key={currency} className="flex items-center gap-2 rounded-2xl border border-stone-200 px-4 py-3 text-sm font-semibold text-stone-700">
+                      <input
+                        type="checkbox"
+                        name="payoutCurrencies"
+                        value={currency}
+                        defaultChecked={(profile?.payout_currencies || []).includes(currency)}
+                      />
+                      {currency}
+                    </label>
+                  ))}
+                </div>
+                <p className="mt-2 text-xs leading-5 text-stone-500">
+                  JLM Collective will aim to pay you in the same currency the guest paid, if you can receive that currency.
+                </p>
+              </div>
 
               <label className="block">
                 <span className="text-sm font-semibold text-stone-800">Direct payment instructions</span>

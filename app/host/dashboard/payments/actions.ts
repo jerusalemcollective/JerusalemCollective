@@ -5,14 +5,18 @@ import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 
 export async function updateHostPaymentPreferences(formData: FormData) {
   const acceptsDirect = formData.get('acceptsDirect') === 'on'
+  const acceptsJlm = formData.get('acceptsJlm') === 'on'
   const instructions = String(formData.get('instructions') || '')
   const preferredCurrency = String(formData.get('preferredCurrency') || '')
+  const payoutCurrencies = formData.getAll('payoutCurrencies').map(String)
 
   const { supabase } = await requireHostDashboardAccess()
   const { error } = await supabase.rpc('update_host_payment_preferences', {
     accepts_direct: acceptsDirect,
     instructions,
     currency_code: preferredCurrency,
+    accepts_jlm: acceptsJlm,
+    supported_currencies: payoutCurrencies,
   })
 
   if (error) {

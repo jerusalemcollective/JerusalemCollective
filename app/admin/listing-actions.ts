@@ -100,6 +100,7 @@ export async function updateAdminListingDetails(formData: FormData) {
   const priceIls = parseOptionalNumber(formData.get('priceIls'))
   const priceUsd = parseOptionalNumber(formData.get('priceUsd'))
   const bookingType = String(formData.get('bookingType') || 'request')
+  const onlinePaymentEnabled = formData.get('onlinePaymentEnabled') === 'on'
   const amenities = formData.getAll('amenities').map(String).filter(Boolean)
   const description = String(formData.get('description') || '').trim()
   const isPublished = formData.get('isPublished') === 'on'
@@ -134,6 +135,7 @@ export async function updateAdminListingDetails(formData: FormData) {
       price_ils: priceIls,
       price_usd: priceUsd,
       booking_type: bookingType,
+      online_payment_enabled: onlinePaymentEnabled,
       amenities,
       description: description || null,
       is_published: finalPublished,
@@ -216,6 +218,7 @@ export async function createAdminListing(formData: FormData) {
   const priceIls = parseOptionalNumber(formData.get('priceIls'))
   const priceUsd = parseOptionalNumber(formData.get('priceUsd'))
   const bookingType = String(formData.get('bookingType') || 'request')
+  const onlinePaymentEnabled = formData.get('onlinePaymentEnabled') === 'on'
   const description = String(formData.get('description') || '').trim()
   const isPublished = formData.get('isPublished') === 'on'
 
@@ -256,6 +259,7 @@ export async function createAdminListing(formData: FormData) {
       price_ils: priceIls,
       price_usd: priceUsd,
       booking_type: bookingType,
+      online_payment_enabled: onlinePaymentEnabled,
       amenities: [],
       description: description || null,
       is_published: isPublished,
