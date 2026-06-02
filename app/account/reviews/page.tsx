@@ -25,8 +25,15 @@ export const metadata = {
   robots: { index: false, follow: false },
 }
 
-export default async function ReviewsPage() {
+export default async function ReviewsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
+}) {
   const supabase = await createClient()
+  const query = searchParams ? await searchParams : {}
+  const requestedBookingId = Array.isArray(query.booking) ? query.booking[0] : query.booking
+  const requestedRating = Array.isArray(query.rating) ? query.rating[0] : query.rating
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -72,7 +79,11 @@ export default async function ReviewsPage() {
           <p className="mt-2 text-stone-600">Share feedback after a completed stay.</p>
         </header>
 
-        <ReviewForm bookings={reviewableBookings} />
+        <ReviewForm
+          bookings={reviewableBookings}
+          initialBookingId={requestedBookingId || null}
+          initialRating={requestedRating || null}
+        />
       </div>
     </div>
   )

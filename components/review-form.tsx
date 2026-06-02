@@ -16,6 +16,8 @@ export type ReviewableBooking = {
 
 type ReviewFormProps = {
   bookings: ReviewableBooking[]
+  initialBookingId?: string | null
+  initialRating?: string | null
 }
 
 const getReviewErrorMessage = (error: unknown) => {
@@ -28,9 +30,21 @@ const getReviewErrorMessage = (error: unknown) => {
   return 'We could not save your review. Please try again.'
 }
 
-export function ReviewForm({ bookings }: ReviewFormProps) {
-  const [selectedBookingId, setSelectedBookingId] = useState(bookings[0]?.id || '')
-  const [rating, setRating] = useState(0)
+export function ReviewForm({
+  bookings,
+  initialBookingId = null,
+  initialRating = null,
+}: ReviewFormProps) {
+  const initialBooking = bookings.some((booking) => booking.id === initialBookingId)
+    ? initialBookingId || ''
+    : bookings[0]?.id || ''
+  const parsedRating = Number(initialRating || 0)
+  const initialStarRating =
+    Number.isInteger(parsedRating) && parsedRating >= 1 && parsedRating <= 5
+      ? parsedRating
+      : 0
+  const [selectedBookingId, setSelectedBookingId] = useState(initialBooking)
+  const [rating, setRating] = useState(initialStarRating)
   const [hoveredRating, setHoveredRating] = useState(0)
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
