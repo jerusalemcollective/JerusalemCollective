@@ -8,6 +8,10 @@ import { updateHostListing } from '../actions'
 import { ListingAiAssistant } from '@/components/listing-ai-assistant'
 import { AmenitySelector } from '@/components/amenity-selector'
 
+type HostPaymentProfile = {
+  commission_percent_override: number | null
+}
+
 export default async function HostListingEditPage({
   params,
 }: {
@@ -15,7 +19,7 @@ export default async function HostListingEditPage({
 }) {
   const { id } = await params
   const { supabase, hostIds } = await requireHostDashboardAccess()
-  const [{ data: listing }, { data: adminMessages }, paymentRoutes] = await Promise.all([
+  const [{ data: listing }, { data: adminMessages }, paymentRoutes, { data: paymentProfile }] = await Promise.all([
     supabase
       .from('listings')
       .select(
@@ -30,9 +34,18 @@ export default async function HostListingEditPage({
       .eq('listing_id', id)
       .order('created_at', { ascending: false }),
     getPaymentRouteSettings(),
+    supabase
+      .from('host_payment_profiles')
+      .select('commission_percent_override')
+      .in('host_id', hostIds)
+      .limit(1)
+      .maybeSingle<HostPaymentProfile>(),
   ])
 
   if (!listing) notFound()
+
+  const effectiveCommissionPercent = paymentProfile?.commission_percent_override ?? paymentRoutes.commissionPercent
+  const jlmPaymentDescription = getJlmPaymentDescription(effectiveCommissionPercent)
 
   return (
     <main className="min-h-screen bg-[#F8F5F2] px-5 py-10 text-[#252525] md:px-6">
@@ -121,26 +134,24 @@ export default async function HostListingEditPage({
                   </select>
                 </Field>
               </div>
-              <label className="mt-5 flex items-start gap-3 rounded-2xl bg-[#F8F5F2] p-4">
-                <input
-                  type="checkbox"
-                  name="onlinePaymentEnabled"
-                  defaultChecked={paymentRoutes.jlmPaymentsEnabled && Boolean(listing.online_payment_enabled)}
-                  disabled={!paymentRoutes.jlmPaymentsEnabled}
-                  className="mt-1"
-                />
-                <span>
-                  <span className="block font-bold text-stone-950">Allow Book now with JLM payment</span>
-                  <span className="mt-1 block text-sm leading-6 text-stone-600">
-                    Guests can pay JLM Collective online for this listing. JLM deducts the agency fee and pays your net amount in the currency received where supported.
-                  </span>
-                  {!paymentRoutes.jlmPaymentsEnabled && (
-                    <span className="mt-2 block rounded-xl bg-white px-3 py-2 text-xs font-semibold text-amber-700">
-                      JLM-collected payments are currently paused by JLM Collective.
+              {paymentRoutes.jlmPaymentsEnabled ? (
+                <label className="mt-5 flex items-start gap-3 rounded-2xl bg-[#F8F5F2] p-4">
+                  <input
+                    type="checkbox"
+                    name="onlinePaymentEnabled"
+                    defaultChecked={Boolean(listing.online_payment_enabled)}
+                    className="mt-1"
+                  />
+                  <span>
+                    <span className="block font-bold text-stone-950">Allow Book now with JLM payment</span>
+                    <span className="mt-1 block text-sm leading-6 text-stone-600">
+                      Guests can pay JLM Collective online for this listing. {jlmPaymentDescription}
                     </span>
-                  )}
-                </span>
-              </label>
+                  </span>
+                </label>
+              ) : (
+                <input type="hidden" name="onlinePaymentEnabled" value="" />
+              )}
             </EditorSection>
 
             <EditorSection title="Amenities">
@@ -391,6 +402,20 @@ function CheckboxField({
       <span className="text-sm text-stone-700">{children}</span>
     </label>
   )
+}
+
+function getJlmPaymentDescription(commissionPercent: number) {
+  if (commissionPercent > 0) {
+    return `JLM Collective collects payment as agent, deducts the ${formatCommission(commissionPercent)} admin fee, and pays you in the currency received where supported.`
+  }
+
+  return 'At the moment JLM Collective is not charging hosts a platform fee, and payouts are handled in the currency received where supported.'
+}
+
+function formatCommission(value: number) {
+  return `${value.toLocaleString('en-GB', {
+    maximumFractionDigits: 2,
+  })}%`
 }
 
 const inputClass =

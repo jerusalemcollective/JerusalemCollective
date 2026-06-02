@@ -45,6 +45,10 @@ const getErrorMessage = (error: unknown) => {
     }
     return error.message
   }
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    const message = String(error.message || '')
+    return message || 'We could not send your enquiry. Please try again or contact us on WhatsApp.'
+  }
   return 'We could not send your enquiry. Please try again or contact us on WhatsApp.'
 }
 

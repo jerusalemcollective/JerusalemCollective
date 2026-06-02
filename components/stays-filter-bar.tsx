@@ -2,7 +2,17 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import type { DateRange as DayPickerDateRange } from 'react-day-picker'
+import { Calendar } from '@/components/ui/calendar'
+import { formatHebrewShortDate, getJewishHoliday } from '@/lib/hebrew-date'
 import { STAY_AMENITY_GROUPS, getAmenityLabel, slugifyAmenity } from '@/lib/stay-amenities'
+
+const PRICE_PRESETS = [
+  { label: 'Under $150', min: '', max: '150' },
+  { label: '$150-$250', min: '150', max: '250' },
+  { label: '$250-$400', min: '250', max: '400' },
+  { label: '$400+', min: '400', max: '' },
+]
 
 function parseLocalDate(value: string | null) {
   if (!value) return undefined
@@ -19,6 +29,21 @@ function formatSummaryDate(value: string | null) {
       month: 'short',
     }) || null
   )
+}
+
+function formatDateISO(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function formatCompactDate(date: Date) {
+  return date.toLocaleDateString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  })
 }
 
 export function StaysFilterBar() {
@@ -39,7 +64,6 @@ export function StaysFilterBar() {
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>(
     searchParams.get('amenities')?.split(',').filter(Boolean) || [],
   )
-  const todayISO = new Date().toISOString().slice(0, 10)
 
   useEffect(() => {
     setCheckInValue(searchParams.get('checkIn') || '')
@@ -132,9 +156,9 @@ export function StaysFilterBar() {
     else if (checkIn) items.push(`From ${checkIn}`)
     else if (checkOut) items.push(`Until ${checkOut}`)
     if (activeGuests) items.push(`${activeGuests} guest${activeGuests === '1' ? '' : 's'}`)
-    if (activeMinPrice && activeMaxPrice) items.push(`$${activeMinPrice}-$${activeMaxPrice}`)
-    else if (activeMinPrice) items.push(`From $${activeMinPrice}`)
-    else if (activeMaxPrice) items.push(`Up to $${activeMaxPrice}`)
+    if (activeMinPrice && activeMaxPrice) items.push(`$${activeMinPrice}-$${activeMaxPrice} / night`)
+    else if (activeMinPrice) items.push(`From $${activeMinPrice} / night`)
+    else if (activeMaxPrice) items.push(`Up to $${activeMaxPrice} / night`)
 
     if (activeAmenities.length > 0) {
       const amenityLabels = activeAmenities
@@ -293,36 +317,16 @@ export function StaysFilterBar() {
                   </div>
                 </div>
 
-                <div className="mt-5 grid gap-3 md:grid-cols-[1fr_auto_1fr] md:items-end">
-                  <label className="flex flex-col gap-2">
-                    <span className="text-xs font-bold uppercase tracking-widest text-stone-400">Check in</span>
-                    <input
-                      type="date"
-                      value={checkInValue}
-                      min={todayISO}
-                      onChange={(event) => setCheckInValue(event.target.value)}
-                      className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
-                    />
-                  </label>
-                  <span className="hidden pb-3 text-stone-300 md:block">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M5 12h14" />
-                      <path d="M13 6l6 6-6 6" />
-                    </svg>
-                  </span>
-                  <label className="flex flex-col gap-2">
-                    <span className="text-xs font-bold uppercase tracking-widest text-stone-400">Check out</span>
-                    <input
-                      type="date"
-                      value={checkOutValue}
-                      min={checkInValue || todayISO}
-                      onChange={(event) => setCheckOutValue(event.target.value)}
-                      className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
-                    />
-                  </label>
-                </div>
+                <StaysDateRangeFilter
+                  checkInValue={checkInValue}
+                  checkOutValue={checkOutValue}
+                  onChange={(range) => {
+                    setCheckInValue(range.from ? formatDateISO(range.from) : '')
+                    setCheckOutValue(range.to ? formatDateISO(range.to) : '')
+                  }}
+                />
 
-                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                <div className="mt-4 grid gap-3 md:grid-cols-[minmax(10rem,1fr)_minmax(0,2fr)]">
                   <label className="block text-sm font-semibold text-stone-700">
                     Guests
                     <input
@@ -335,28 +339,12 @@ export function StaysFilterBar() {
                       placeholder="Any"
                     />
                   </label>
-                  <label className="block text-sm font-semibold text-stone-700">
-                    Min USD
-                    <input
-                      type="number"
-                      min={0}
-                      value={minPrice}
-                      onChange={(event) => setMinPrice(event.target.value)}
-                      className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
-                      placeholder="Min"
-                    />
-                  </label>
-                  <label className="block text-sm font-semibold text-stone-700">
-                    Max USD
-                    <input
-                      type="number"
-                      min={0}
-                      value={maxPrice}
-                      onChange={(event) => setMaxPrice(event.target.value)}
-                      className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
-                      placeholder="Max"
-                    />
-                  </label>
+                  <NightlyBudgetFilter
+                    minPrice={minPrice}
+                    maxPrice={maxPrice}
+                    onMinPriceChange={setMinPrice}
+                    onMaxPriceChange={setMaxPrice}
+                  />
                 </div>
               </section>
 
@@ -459,6 +447,182 @@ export function StaysFilterBar() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function NightlyBudgetFilter({
+  minPrice,
+  maxPrice,
+  onMinPriceChange,
+  onMaxPriceChange,
+}: {
+  minPrice: string
+  maxPrice: string
+  onMinPriceChange: (value: string) => void
+  onMaxPriceChange: (value: string) => void
+}) {
+  return (
+    <div className="rounded-[1.35rem] border border-stone-200 bg-white p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-stone-700">Nightly budget</p>
+          <p className="mt-1 text-xs text-stone-500">Filter by the listed price per night in USD.</p>
+        </div>
+        {(minPrice || maxPrice) && (
+          <button
+            type="button"
+            onClick={() => {
+              onMinPriceChange('')
+              onMaxPriceChange('')
+            }}
+            className="text-xs font-semibold text-stone-400 transition hover:text-stone-700"
+          >
+            Clear price
+          </button>
+        )}
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {PRICE_PRESETS.map((preset) => {
+          const selected = minPrice === preset.min && maxPrice === preset.max
+
+          return (
+            <button
+              key={preset.label}
+              type="button"
+              onClick={() => {
+                onMinPriceChange(preset.min)
+                onMaxPriceChange(preset.max)
+              }}
+              className={`rounded-full border px-3.5 py-2 text-xs font-semibold transition ${
+                selected
+                  ? 'border-[#c76f55] bg-[#c76f55] text-white shadow-sm'
+                  : 'border-stone-200 bg-[#fbfaf8] text-stone-700 hover:border-[#c76f55] hover:text-[#c76f55]'
+              }`}
+            >
+              {preset.label}
+            </button>
+          )
+        })}
+      </div>
+
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <label className="block text-xs font-bold uppercase tracking-widest text-stone-400">
+          From
+          <input
+            type="number"
+            min={0}
+            value={minPrice}
+            onChange={(event) => onMinPriceChange(event.target.value)}
+            className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
+            placeholder="$0"
+          />
+        </label>
+        <label className="block text-xs font-bold uppercase tracking-widest text-stone-400">
+          Up to
+          <input
+            type="number"
+            min={0}
+            value={maxPrice}
+            onChange={(event) => onMaxPriceChange(event.target.value)}
+            className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
+            placeholder="Any price"
+          />
+        </label>
+      </div>
+    </div>
+  )
+}
+
+function StaysDateRangeFilter({
+  checkInValue,
+  checkOutValue,
+  onChange,
+}: {
+  checkInValue: string
+  checkOutValue: string
+  onChange: (range: { from?: Date; to?: Date }) => void
+}) {
+  const checkInDate = parseLocalDate(checkInValue)
+  const checkOutDate = parseLocalDate(checkOutValue)
+  const selectedRange: DayPickerDateRange | undefined = checkInDate
+    ? { from: checkInDate, to: checkOutDate }
+    : undefined
+
+  return (
+    <div className="mt-5 overflow-hidden rounded-[1.75rem] border border-stone-200 bg-[#fbfaf8] shadow-sm">
+      <div className="grid grid-cols-2 border-b border-stone-100 bg-white">
+        <DateSummaryCell label="Check in" date={checkInDate} />
+        <DateSummaryCell label="Check out" date={checkOutDate} noBorder />
+      </div>
+
+      <div className="p-3 sm:p-4">
+        <Calendar
+          mode="range"
+          excludeDisabled
+          selected={selectedRange}
+          onSelect={(range) => {
+            if (range?.from && range?.to && range.from.getTime() === range.to.getTime()) {
+              onChange({ from: range.from, to: undefined })
+              return
+            }
+
+            onChange(range || { from: undefined, to: undefined })
+          }}
+          numberOfMonths={1}
+          disabled={{ before: new Date() }}
+          modifiers={{
+            jewishHoliday: (date) => Boolean(getJewishHoliday(date)),
+          }}
+          modifiersClassNames={{
+            jewishHoliday: 'font-bold text-[#c76f55]',
+          }}
+          showOutsideDays={false}
+          className="w-full rounded-[1.35rem] bg-white p-4 [--cell-size:2.55rem] sm:[--cell-size:2.75rem]"
+          classNames={{
+            root: 'w-full',
+            months: 'flex w-full flex-col',
+            month: 'w-full gap-5',
+            month_caption: 'min-h-12',
+            weekday: 'text-[10px] font-bold uppercase tracking-wider text-stone-400',
+            week: 'mt-2 flex w-full gap-1.5 sm:gap-2',
+            weekdays: 'flex gap-1.5 sm:gap-2',
+            day: 'aspect-square flex-1 rounded-2xl',
+            day_button:
+              'rounded-2xl border border-transparent text-sm hover:border-stone-200 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-30',
+          }}
+        />
+      </div>
+
+      <div className="flex items-center justify-between border-t border-stone-100 px-5 py-4">
+        <p className="text-xs leading-5 text-stone-500">Select arrival and departure dates.</p>
+        <button
+          type="button"
+          onClick={() => onChange({ from: undefined, to: undefined })}
+          className="text-xs font-semibold text-stone-400 transition hover:text-stone-700"
+        >
+          Clear dates
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function DateSummaryCell({
+  label,
+  date,
+  noBorder = false,
+}: {
+  label: string
+  date?: Date
+  noBorder?: boolean
+}) {
+  return (
+    <div className={`${noBorder ? '' : 'border-r border-stone-100'} min-h-24 p-4 text-left sm:p-5`}>
+      <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">{label}</p>
+      <p className="mt-1 text-sm font-bold text-stone-950">{date ? formatCompactDate(date) : 'Choose date'}</p>
+      {date && <p className="mt-1 text-[11px] font-medium text-stone-500">{formatHebrewShortDate(date)}</p>}
     </div>
   )
 }

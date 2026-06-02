@@ -62,6 +62,9 @@ const seasonalCards = [
   },
 ]
 
+const hiddenExploreNeighborhoods = new Set(['Pisgat Zeev'])
+const replacementExploreNeighborhood = 'Sorotzkin'
+
 export default async function ExplorePage() {
   let popularNeighborhoods = mergeNeighborhoods([])
   let featuredStays: Listing[] = []
@@ -221,8 +224,12 @@ export default async function ExplorePage() {
 }
 
 function mergeNeighborhoods(rows: PopularNeighborhood[]) {
-  const live = rows.map((row) => row.neighborhood).filter(Boolean)
-  return [...live, ...defaultExploreNeighborhoods, ...defaultPopularNeighborhoods]
+  const live = rows
+    .map((row) => row.neighborhood)
+    .filter((neighborhood): neighborhood is string => Boolean(neighborhood))
+    .filter((neighborhood) => !hiddenExploreNeighborhoods.has(neighborhood))
+
+  return [...live, replacementExploreNeighborhood, ...defaultExploreNeighborhoods, ...defaultPopularNeighborhoods]
     .filter((item: string, index: number, items: string[]) => items.indexOf(item) === index)
     .slice(0, 6)
 }

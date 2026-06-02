@@ -23,6 +23,7 @@ type InstantListing = {
 type HostPaymentProfile = {
   accepts_jlm_payment: boolean | null
   payout_currencies: string[] | null
+  commission_percent_override: number | null
 }
 
 function isBookNowBody(value: unknown): value is BookNowBody {
@@ -119,7 +120,7 @@ export async function POST(request: Request) {
 
   const { data: paymentProfile, error: paymentProfileError } = await supabase
     .from('host_payment_profiles')
-    .select('accepts_jlm_payment, payout_currencies')
+    .select('accepts_jlm_payment, payout_currencies, commission_percent_override')
     .eq('host_id', listing.host_id)
     .maybeSingle<HostPaymentProfile>()
 
@@ -161,6 +162,9 @@ export async function POST(request: Request) {
   }
 
   const depositAmount = Math.max(Math.round(nightlyPrice * nights * 0.1 * 100), 50)
+  const effectiveCommissionPercent = paymentProfile.commission_percent_override ?? paymentRoutes.commissionPercent
+  const platformFeeAmount = Math.round(depositAmount * effectiveCommissionPercent / 100) / 100
+  const hostPayoutAmount = Math.max(depositAmount / 100 - platformFeeAmount, 0)
   const siteUrl = getSiteUrl(request)
   const checkoutParams = new URLSearchParams()
   checkoutParams.set('mode', 'payment')
@@ -208,9 +212,9 @@ export async function POST(request: Request) {
     payment_mode: 'platform_checkout',
     currency: currency.toUpperCase(),
     amount: depositAmount / 100,
-    platform_fee_amount: 0,
+    platform_fee_amount: platformFeeAmount,
     processor_fee_amount: 0,
-    host_payout_amount: depositAmount / 100,
+    host_payout_amount: hostPayoutAmount,
     host_payout_currency: currency.toUpperCase(),
     fx_rate_used: null,
     status: 'pending',

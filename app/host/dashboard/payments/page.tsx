@@ -21,17 +21,30 @@ type PaymentBookingRow = Omit<PaymentBooking, 'listings' | 'profiles'> & {
   profiles?: PaymentBooking['profiles'] | NonNullable<PaymentBooking['profiles']>[] | null
 }
 
+type HostPaymentProfile = {
+  accepts_direct_payment: boolean | null
+  accepts_jlm_payment: boolean | null
+  direct_payment_instructions: string | null
+  preferred_currency: string | null
+  payout_currencies: string[] | null
+  stripe_account_id: string | null
+  payout_setup_status: string | null
+  stripe_charges_enabled: boolean | null
+  stripe_payouts_enabled: boolean | null
+  commission_percent_override: number | null
+}
+
 export default async function HostPaymentsPage() {
   const { supabase, hostIds } = await requireHostDashboardAccess()
   const [{ data: profile }, { data: bookingsData }, paymentRoutes] = await Promise.all([
     supabase
       .from('host_payment_profiles')
       .select(
-        'accepts_direct_payment, accepts_jlm_payment, direct_payment_instructions, preferred_currency, payout_currencies, stripe_account_id, payout_setup_status, stripe_charges_enabled, stripe_payouts_enabled',
+        'accepts_direct_payment, accepts_jlm_payment, direct_payment_instructions, preferred_currency, payout_currencies, stripe_account_id, payout_setup_status, stripe_charges_enabled, stripe_payouts_enabled, commission_percent_override',
       )
       .in('host_id', hostIds)
       .limit(1)
-      .maybeSingle(),
+      .maybeSingle<HostPaymentProfile>(),
     supabase
       .from('bookings')
       .select(
@@ -52,6 +65,8 @@ export default async function HostPaymentsPage() {
     listings: Array.isArray(booking.listings) ? booking.listings[0] || null : booking.listings || null,
     profiles: Array.isArray(booking.profiles) ? booking.profiles[0] || null : booking.profiles || null,
   }))
+  const effectiveCommissionPercent = profile?.commission_percent_override ?? paymentRoutes.commissionPercent
+  const jlmPaymentDescription = getJlmPaymentDescription(effectiveCommissionPercent)
 
   return (
     <main className="min-h-screen bg-[#F8F5F2] px-5 py-10 text-[#252525] md:px-6">
@@ -69,33 +84,35 @@ export default async function HostPaymentsPage() {
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           <form action={updateHostPaymentPreferences} className="rounded-3xl bg-white p-6 shadow-sm">
             <div className="space-y-5">
-              <div className="rounded-2xl bg-[#F8F5F2] p-4">
-                <p className="font-bold text-stone-950">Receive online payments</p>
-                <p className="mt-1 text-sm leading-6 text-stone-600">
-                  Guests can pay JLM Collective online where enabled for a listing. JLM deducts the agency fee and sends your net payout in the currency received, where your payout account supports it.
-                </p>
-                {!paymentRoutes.jlmPaymentsEnabled && (
-                  <p className="mt-2 rounded-xl bg-white px-3 py-2 text-xs font-semibold text-amber-700">
-                    JLM-collected payments are currently paused by JLM Collective.
-                  </p>
-                )}
-              </div>
+              {paymentRoutes.jlmPaymentsEnabled && (
+                <>
+                  <div className="rounded-2xl bg-[#F8F5F2] p-4">
+                    <p className="font-bold text-stone-950">Receive online payments</p>
+                    <p className="mt-1 text-sm leading-6 text-stone-600">
+                      {jlmPaymentDescription}
+                    </p>
+                  </div>
 
-              <label className="flex items-start gap-3 rounded-2xl bg-[#F8F5F2] p-4">
-                <input
-                  type="checkbox"
-                  name="acceptsJlm"
-                  defaultChecked={paymentRoutes.jlmPaymentsEnabled && (profile?.accepts_jlm_payment || false)}
-                  disabled={!paymentRoutes.jlmPaymentsEnabled}
-                  className="mt-1"
-                />
-                <span>
-                  <span className="block font-bold text-stone-950">Allow JLM Collective to collect payment</span>
-                  <span className="mt-1 block text-sm leading-6 text-stone-600">
-                    Guests can use Book now on listings where online payment is enabled. JLM Collective collects as agent and pays you the net amount in the currency received where supported.
-                  </span>
-                </span>
-              </label>
+                  <label className="flex items-start gap-3 rounded-2xl bg-[#F8F5F2] p-4">
+                    <input
+                      type="checkbox"
+                      name="acceptsJlm"
+                      defaultChecked={profile?.accepts_jlm_payment || false}
+                      className="mt-1"
+                    />
+                    <span>
+                      <span className="block font-bold text-stone-950">Allow JLM Collective to collect payment</span>
+                      <span className="mt-1 block text-sm leading-6 text-stone-600">
+                        Guests can use Book now on listings where online payment is enabled. {jlmPaymentDescription}
+                      </span>
+                    </span>
+                  </label>
+                </>
+              )}
+
+              {!paymentRoutes.jlmPaymentsEnabled && (
+                <input type="hidden" name="acceptsJlm" value="" />
+              )}
 
               <label className="flex items-start gap-3 rounded-2xl bg-[#F8F5F2] p-4">
                 <input
@@ -269,6 +286,14 @@ function formatCommission(value: number | null) {
   return `${value.toLocaleString('en-GB', {
     maximumFractionDigits: 2,
   })}%`
+}
+
+function getJlmPaymentDescription(commissionPercent: number) {
+  if (commissionPercent > 0) {
+    return `JLM Collective collects payment as agent, deducts the ${formatCommission(commissionPercent)} admin fee, and pays you in the currency received where your payout account supports it.`
+  }
+
+  return 'JLM Collective collects payment as agent. At the moment JLM Collective is not charging hosts a platform fee, so payouts are handled in the currency received where your payout account supports it.'
 }
 
 function formatDate(value: string) {

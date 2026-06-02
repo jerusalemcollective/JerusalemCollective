@@ -81,3 +81,37 @@ export async function updateHostListingBlock(formData: FormData) {
   revalidatePath(`/hosts/${hostId}`)
   revalidatePath('/stays')
 }
+
+export async function updateHostCommissionOverride(formData: FormData) {
+  const hostId = String(formData.get('hostId') || '')
+  const rawValue = String(formData.get('commissionOverride') || '').trim()
+  const overrideValue = rawValue ? Number(rawValue) : null
+
+  if (!hostId) {
+    throw new Error('Missing host id.')
+  }
+
+  if (overrideValue !== null && (!Number.isFinite(overrideValue) || overrideValue < 0)) {
+    throw new Error('Commission override must be 0 or higher.')
+  }
+
+  const { supabase } = await requireAdminPermission('hosts')
+  const { error } = await supabase.rpc('admin_update_host_commission_override', {
+    target_host_id: hostId,
+    override_percent: overrideValue,
+  })
+
+  if (error) throw error
+
+  await logAdminAction(
+    supabase,
+    overrideValue === null ? 'clear_host_commission_override' : 'set_host_commission_override',
+    'host',
+    hostId,
+    overrideValue === null ? 'Use platform default commission' : `Host commission override set to ${overrideValue}%`,
+  )
+
+  revalidatePath('/admin')
+  revalidatePath('/admin/hosts')
+  revalidatePath(`/hosts/${hostId}`)
+}
