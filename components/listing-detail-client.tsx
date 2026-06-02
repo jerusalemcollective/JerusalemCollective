@@ -275,24 +275,6 @@ export function ListingDetailClient({
       : listing.booking_type === 'enquiry'
         ? 'Message host'
         : 'Request to book'
-  const howItWorksSteps =
-    allowsOnlinePayment
-      ? [
-          'Choose your dates and guests',
-          'Pay JLM Collective securely online',
-          'The host receives payout in the currency paid where supported',
-        ]
-      : listing.booking_type === 'request'
-        ? [
-            'Choose your dates and request to book',
-            'Host reviews and confirms availability',
-            'You agree details before any payment',
-          ]
-        : [
-            'Send your message — free, no commitment',
-            'Host replies — usually within a few hours',
-            'Confirm together — agree details before any payment',
-          ]
 
   const handleMobilePhotoDragStart = (event: PointerLikeEvent) => {
     mobilePhotoDragStartRef.current = event.clientX
@@ -911,21 +893,7 @@ export function ListingDetailClient({
                   onConversationCreated={setExistingConversationId}
                   blockedRanges={blockedRanges}
                 />
-                <div className="mt-4 space-y-2.5 border-t border-stone-100 pt-4">
-                  <p className="text-xs font-bold uppercase tracking-widest text-stone-400">
-                    How it works
-                  </p>
-                  {howItWorksSteps.map((step, index) => (
-                    <div key={step} className="flex items-start gap-2.5">
-                      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-stone-100 text-[10px] font-bold text-stone-600">
-                        {index + 1}
-                      </span>
-                      <p className="text-xs leading-5 text-stone-600">
-                        {step}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                <PaymentClarityNote allowsOnlinePayment={allowsOnlinePayment} />
                 <div className="mt-5 space-y-2.5 border-t border-stone-100 pt-5">
                   {[
                     'Personally reviewed by JLM Collective',
@@ -957,9 +925,6 @@ export function ListingDetailClient({
                   </p>
                 )}
                 <HostCard host={host} publicHostName={publicHostName} />
-                <p className="mt-4 text-center text-[11px] leading-5 text-stone-400">
-                  Payments are collected by JLM Collective as agent for the host. Nothing is due until your booking is confirmed.
-                </p>
               </div>
             </div>
           </div>
@@ -1069,15 +1034,7 @@ export function ListingDetailClient({
                 blockedRanges={blockedRanges}
                 mobile
               />
-              {listing.online_payment_enabled ? (
-                <p className="mt-4 text-center text-xs text-stone-500">
-                  10% deposit only after you confirm checkout.
-                </p>
-              ) : (
-                <p className="mt-4 text-center text-xs text-stone-500">
-                  Payments are collected by JLM Collective as agent for the host. Nothing is due until your booking is confirmed.
-                </p>
-              )}
+              <PaymentClarityNote allowsOnlinePayment={allowsOnlinePayment} />
             </div>
           </div>
         </div>
@@ -1113,6 +1070,32 @@ function Pricing({ priceIls, priceUsd }: { priceIls: string | null; priceUsd: st
         {priceIls && <span className="ml-1 text-base font-normal text-stone-500">/ night</span>}
       </p>
       {priceUsd && <p className="text-sm text-stone-500">~${priceUsd} USD / night</p>}
+    </div>
+  )
+}
+
+function PaymentClarityNote({ allowsOnlinePayment }: { allowsOnlinePayment: boolean }) {
+  return (
+    <div className="mt-4 border-t border-stone-100 pt-4 text-center">
+      {allowsOnlinePayment ? (
+        <>
+          <p className="text-xs leading-5 text-stone-500">
+            You will review the payment step before anything is charged.
+          </p>
+          <p className="mt-1 text-xs leading-5 text-stone-400">
+            Your stay is confirmed once payment is complete.
+          </p>
+        </>
+      ) : (
+        <>
+          <p className="text-xs leading-5 text-stone-500">
+            No payment is taken when you send a request.
+          </p>
+          <p className="mt-1 text-xs leading-5 text-stone-400">
+            Your stay is confirmed only after the host accepts your dates and the agreed payment step is complete.
+          </p>
+        </>
+      )}
     </div>
   )
 }
@@ -1544,3 +1527,4 @@ function ChevronRightIcon() {
     </svg>
   )
 }
+
