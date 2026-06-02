@@ -5,7 +5,7 @@ export const revalidate = 86400
 export const metadata = {
   title: 'How It Works | JLM Collective',
   description:
-    'How to find and book a verified Jerusalem stay through JLM Collective — simple, personal, and transparent.',
+    'How to find and book a verified Jerusalem stay through JLM Collective \u2014 simple, personal, and transparent.',
 }
 
 const steps = [
@@ -27,7 +27,7 @@ const steps = [
   {
     title: 'Arrange payment',
     description:
-      'Payment is collected by JLM Collective as agent for the host. We send clear payment instructions with your booking confirmation.',
+      'Once the booking details are confirmed, we guide the payment step. Where online payment is available, JLM Collective collects payment as agent for the host; some hosts may arrange payment directly.',
   },
   {
     title: 'Receive check-in details',
@@ -67,7 +67,7 @@ export default function HowItWorksPage() {
           How JLM Collective works
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-lg leading-8 text-stone-600">
-          Simple, personal, and verified — from search to keys.
+          Simple, personal, and verified {'\u2014'} from search to keys.
         </p>
       </div>
 

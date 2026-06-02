@@ -146,7 +146,7 @@ export function Footer() {
             <Link href="/" aria-label="JLM Collective home" className="inline-flex shrink-0">
               <JLMLogo variant="black" className="h-10 w-auto md:h-12" />
             </Link>
-            <p className="mt-3 text-sm leading-6 text-stone-500">
+            <p className="mt-3 max-w-xs text-sm leading-6 text-stone-500">
               JLM Collective is a specialist Jerusalem letting agency. We market and let verified Jerusalem properties on behalf of property owners.
             </p>
           </div>
