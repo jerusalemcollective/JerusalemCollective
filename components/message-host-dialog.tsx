@@ -212,6 +212,13 @@ export function MessageHostDialog({
           user.id,
           message.trim(),
         )
+        await fetch('/api/notify-host-message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ conversationId: createdConversationId }),
+        }).catch((notificationError) => {
+          console.error('Unable to send host message notification', notificationError)
+        })
         await recordListingEngagement(supabase, listingId, 'enquiry')
       }
 

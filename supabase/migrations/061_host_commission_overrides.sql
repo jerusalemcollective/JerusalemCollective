@@ -1,3 +1,85 @@
+alter table public.profiles
+  add column if not exists admin_role text,
+  add column if not exists admin_notes text;
+
+alter table public.profiles
+  drop constraint if exists profiles_admin_role_check;
+
+alter table public.profiles
+  add constraint profiles_admin_role_check
+  check (
+    admin_role is null
+    or admin_role in ('owner', 'operations', 'support', 'content', 'analyst')
+  );
+
+update public.profiles
+set admin_role = 'owner'
+where is_admin = true
+  and admin_role is null;
+
+create or replace function public.current_user_admin_role()
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select profiles.admin_role
+  from public.profiles
+  where profiles.id = auth.uid()
+    and profiles.is_admin = true
+  limit 1;
+$$;
+
+create or replace function public.current_user_has_admin_permission(required_permission text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select case public.current_user_admin_role()
+    when 'owner' then true
+    when 'operations' then required_permission in (
+      'overview',
+      'applications',
+      'listings',
+      'hosts',
+      'guests',
+      'reviews',
+      'analytics'
+    )
+    when 'support' then required_permission in (
+      'overview',
+      'hosts',
+      'guests',
+      'cases',
+      'messages'
+    )
+    when 'content' then required_permission in (
+      'overview',
+      'applications',
+      'listings',
+      'reviews',
+      'analytics'
+    )
+    when 'analyst' then required_permission in (
+      'overview',
+      'analytics',
+      'hosts',
+      'guests'
+    )
+    else false
+  end;
+$$;
+
+revoke all on function public.current_user_admin_role() from public;
+revoke all on function public.current_user_has_admin_permission(text) from public;
+grant execute on function public.current_user_admin_role() to authenticated;
+grant execute on function public.current_user_admin_role() to service_role;
+grant execute on function public.current_user_has_admin_permission(text) to authenticated;
+grant execute on function public.current_user_has_admin_permission(text) to service_role;
+
 alter table public.host_payment_profiles
   add column if not exists commission_percent_override numeric;
 

@@ -41,12 +41,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, skipped: true })
   }
 
-  await sendHostNewEnquiryEmail({ supabase, requestId })
+  const emailSent = await sendHostNewEnquiryEmail({ supabase, requestId })
 
-  await supabase
-    .from('booking_requests')
-    .update({ host_notified_at: new Date().toISOString() })
-    .eq('id', requestId)
+  if (emailSent) {
+    await supabase
+      .from('booking_requests')
+      .update({ host_notified_at: new Date().toISOString() })
+      .eq('id', requestId)
+  }
 
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true, emailSent })
 }

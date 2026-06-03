@@ -14,7 +14,7 @@ import {
 
 const HOST_QUICK_REPLIES = [
   {
-    label: 'Available — tell me more',
+    label: 'Available - tell me more',
     text: 'Thank you for your enquiry. The property is available for your dates. Could you tell me a little more about your group and the purpose of your visit?',
   },
   {
@@ -42,6 +42,7 @@ const HOST_QUICK_REPLIES = [
 type MessagesInboxProps = {
   mode: 'guest' | 'host'
   initialConversationId?: string | null
+  participantIds?: string[]
 }
 
 type CurrentUser = {
@@ -169,7 +170,19 @@ function requestStatusLabel(status: string) {
   return labels[status] || status.replaceAll('_', ' ')
 }
 
-export function MessagesInbox({ mode, initialConversationId = null }: MessagesInboxProps) {
+function requestStatusClass(status: string) {
+  if (status === 'accepted') return 'bg-green-100 text-green-700 ring-green-200'
+  if (status === 'declined' || status === 'closed') return 'bg-stone-100 text-stone-600 ring-stone-200'
+  if (status === 'host_replied') return 'bg-amber-100 text-amber-700 ring-amber-200'
+  return 'bg-[#fff4ef] text-[#c76f55] ring-[#f2d2c7]'
+}
+
+function getInitials(name: string) {
+  const words = name.trim().split(/\s+/).filter(Boolean)
+  return words.slice(0, 2).map((word) => word.charAt(0).toUpperCase()).join('') || 'J'
+}
+
+export function MessagesInbox({ mode, initialConversationId = null, participantIds = [] }: MessagesInboxProps) {
   const [user, setUser] = useState<CurrentUser | null>(null)
   const [conversations, setConversations] = useState<ConversationSummary[]>([])
   const [messages, setMessages] = useState<ConversationMessage[]>([])
@@ -184,6 +197,7 @@ export function MessagesInbox({ mode, initialConversationId = null }: MessagesIn
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const router = useRouter()
   const searchParams = useSearchParams()
+  const participantIdsKey = participantIds.join('|')
 
   useEffect(() => {
     const loadInbox = async () => {
@@ -200,12 +214,18 @@ export function MessagesInbox({ mode, initialConversationId = null }: MessagesIn
 
         setUser({ id: authUser.id })
 
+        const hostParticipantIds = Array.from(
+          new Set([authUser.id, ...participantIdsKey.split('|')].filter(Boolean)),
+        )
         const participantColumn = mode === 'host' ? 'participant_2' : 'participant_1'
-        const { data: conversationRows, error: conversationError } = await supabase
+        const conversationQuery = supabase
           .from('conversations')
           .select('id, listing_id, participant_1, participant_2, created_at, updated_at')
-          .eq(participantColumn, authUser.id)
           .order('updated_at', { ascending: false })
+        const { data: conversationRows, error: conversationError } =
+          mode === 'host'
+            ? await conversationQuery.in(participantColumn, hostParticipantIds)
+            : await conversationQuery.eq(participantColumn, authUser.id)
 
         if (conversationError) throw conversationError
 
@@ -291,7 +311,7 @@ export function MessagesInbox({ mode, initialConversationId = null }: MessagesIn
     }
 
     loadInbox()
-  }, [initialConversationId, mode, router, searchParams])
+  }, [initialConversationId, mode, participantIdsKey, router, searchParams])
 
   useEffect(() => {
     if (
@@ -497,6 +517,14 @@ export function MessagesInbox({ mode, initialConversationId = null }: MessagesIn
     () => conversations.find((conversation) => conversation.id === selectedConversationId) || null,
     [conversations, selectedConversationId],
   )
+  const selectedParticipantName =
+    selectedConversation?.other_participant?.full_name || (mode === 'host' ? 'Guest' : 'Host')
+  const selectedListingTitle = selectedConversation?.listing?.title || 'Conversation'
+  const selectedListingArea = selectedConversation?.listing?.area || 'Jerusalem'
+  const newRequestCount = conversations.filter((conversation) => conversation.request?.status === 'new').length
+  const activeRequestCount = conversations.filter((conversation) =>
+    conversation.request ? ['new', 'host_replied'].includes(conversation.request.status) : false,
+  ).length
 
   const listingOptions = useMemo(() => {
     const seen = new Map<string, string>()
@@ -540,6 +568,15 @@ export function MessagesInbox({ mode, initialConversationId = null }: MessagesIn
     try {
       const supabase = createClient()
       await sendConversationMessage(supabase, selectedConversationId, user.id, draft.trim())
+      if (mode === 'guest') {
+        await fetch('/api/notify-host-message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ conversationId: selectedConversationId }),
+        }).catch((notificationError) => {
+          console.error('Unable to send host message notification', notificationError)
+        })
+      }
       if (shouldUpdateRequestStatus && selectedConversation?.request?.id) {
         await updateBookingRequestStatus(supabase, selectedConversation.request.id, 'host_replied')
       }
@@ -657,19 +694,51 @@ export function MessagesInbox({ mode, initialConversationId = null }: MessagesIn
   }
 
   return (
-    <div className="overflow-hidden rounded-3xl bg-white shadow-sm">
-      <div className="grid min-h-[620px] lg:grid-cols-[320px_1fr]">
-        <aside className="border-b border-stone-200 lg:border-b-0 lg:border-r">
-          <div className="border-b border-stone-100 px-5 py-4">
-            <h2 className="text-lg font-bold text-stone-900">Messages</h2>
+    <div className="overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm">
+      <div className="grid h-[min(74vh,720px)] min-h-[560px] lg:grid-cols-[380px_1fr]">
+        <aside className="border-b border-stone-200 bg-[#fbfaf8] lg:border-b-0 lg:border-r">
+          <div className="border-b border-stone-200 bg-white px-5 py-5">
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Inbox</p>
+                <h2 className="mt-1 text-2xl font-bold text-stone-950">Messages</h2>
+              </div>
+              {mode === 'host' && newRequestCount > 0 && (
+                <span className="rounded-full bg-[#c76f55] px-3 py-1 text-xs font-bold text-white">
+                  {newRequestCount} new
+                </span>
+              )}
+            </div>
+
+            {mode === 'host' && (
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('new')}
+                  className="rounded-2xl bg-[#fff4ef] px-3 py-3 text-left transition hover:bg-[#fde8df]"
+                >
+                  <span className="block text-xl font-bold text-[#c76f55]">{newRequestCount}</span>
+                  <span className="text-xs font-semibold text-stone-600">New requests</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('all')}
+                  className="rounded-2xl bg-stone-100 px-3 py-3 text-left transition hover:bg-stone-200"
+                >
+                  <span className="block text-xl font-bold text-stone-950">{activeRequestCount}</span>
+                  <span className="text-xs font-semibold text-stone-600">Active chats</span>
+                </button>
+              </div>
+            )}
           </div>
+
           {mode === 'host' && (
-            <div className="space-y-2 border-b border-stone-100 px-3 py-3">
+            <div className="space-y-2 border-b border-stone-200 px-4 py-4">
               {listingOptions.length > 1 && (
                 <select
                   value={listingFilter}
                   onChange={(event) => setListingFilter(event.target.value)}
-                  className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs text-stone-700"
+                  className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm font-semibold text-stone-700 outline-none transition focus:border-[#c76f55]"
                 >
                   <option value="all">All listings</option>
                   {listingOptions.map(([id, title]) => (
@@ -682,7 +751,7 @@ export function MessagesInbox({ mode, initialConversationId = null }: MessagesIn
               <select
                 value={statusFilter}
                 onChange={(event) => setStatusFilter(event.target.value)}
-                className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs text-stone-700"
+                className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm font-semibold text-stone-700 outline-none transition focus:border-[#c76f55]"
               >
                 <option value="all">All messages</option>
                 <option value="new">New enquiries</option>
@@ -691,150 +760,183 @@ export function MessagesInbox({ mode, initialConversationId = null }: MessagesIn
               </select>
             </div>
           )}
-          <div className="divide-y divide-stone-100">
-            {filteredConversations.map((conversation) => (
-              <button
-                key={conversation.id}
-                type="button"
-                onClick={() => setSelectedConversationId(conversation.id)}
-                className={`w-full px-5 py-4 text-left transition ${
-                  conversation.id === selectedConversationId ? 'bg-[#fff4ef]' : 'hover:bg-stone-50'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-stone-900">
-                      {conversation.other_participant?.full_name || (mode === 'host' ? 'Guest' : 'Host')}
-                    </p>
-                    <p className="mt-0.5 text-sm text-stone-500">
-                      {conversation.listing?.title || 'Listing conversation'}
-                    </p>
-                    {conversation.request && (
-                      <span className="mt-2 inline-flex rounded-full bg-[#fff4ef] px-2.5 py-1 text-[11px] font-bold text-[#c76f55]">
-                        {requestStatusLabel(conversation.request.status)}
+
+          <div className="h-[calc(100%-9.5rem)] space-y-2 overflow-y-auto px-3 py-3">
+            {filteredConversations.map((conversation) => {
+              const participantName = conversation.other_participant?.full_name || (mode === 'host' ? 'Guest' : 'Host')
+              const isSelected = conversation.id === selectedConversationId
+
+              return (
+                <button
+                  key={conversation.id}
+                  type="button"
+                  onClick={() => setSelectedConversationId(conversation.id)}
+                  className={`w-full rounded-3xl border p-4 text-left transition ${
+                    isSelected
+                      ? 'border-[#c76f55] bg-white shadow-md shadow-stone-200/70'
+                      : 'border-transparent bg-white/70 hover:border-stone-200 hover:bg-white hover:shadow-sm'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-stone-950 text-sm font-bold text-white">
+                      {getInitials(participantName)}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-start justify-between gap-3">
+                        <span className="min-w-0">
+                          <span className="block truncate font-bold text-stone-950">{participantName}</span>
+                          <span className="mt-0.5 block truncate text-sm text-stone-500">
+                            {conversation.listing?.title || 'Listing conversation'}
+                          </span>
+                        </span>
+                        <span className="shrink-0 text-[11px] font-medium text-stone-400">
+                          {formatTimestamp(conversation.updated_at)}
+                        </span>
                       </span>
-                    )}
+
+                      {conversation.request && (
+                        <span className={`mt-3 inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ${requestStatusClass(conversation.request.status)}`}>
+                          {requestStatusLabel(conversation.request.status)}
+                        </span>
+                      )}
+
+                      <span className="mt-3 block line-clamp-2 text-sm leading-5 text-stone-600">
+                        {conversation.last_message?.content || conversation.request?.message || 'Open conversation'}
+                      </span>
+                    </span>
                   </div>
-                  <span className="shrink-0 text-xs text-stone-400">
-                    {formatTimestamp(conversation.updated_at)}
-                  </span>
-                </div>
-                {conversation.last_message && (
-                  <p className="mt-3 line-clamp-2 text-sm text-stone-600">
-                    {conversation.last_message.content}
-                  </p>
-                )}
-              </button>
-            ))}
+                </button>
+              )
+            })}
           </div>
         </aside>
 
-        <section className="flex min-h-[620px] flex-col">
-          <div className="border-b border-stone-100 px-5 py-4">
-            <h3 className="font-bold text-stone-900">
-              {selectedConversation?.listing?.title || 'Conversation'}
-            </h3>
-            <p className="text-sm text-stone-500">
-              {selectedConversation?.listing?.area || 'Jerusalem'}
-            </p>
-            {selectedConversation?.request && (
-              <div className="mt-3 rounded-2xl bg-[#F8F5F2] p-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-stone-700">
-                    {requestStatusLabel(selectedConversation.request.status)}
-                  </span>
-                  <span className="text-sm font-medium text-stone-700">
-                    {formatRequestDate(selectedConversation.request.check_in)} to{' '}
-                    {formatRequestDate(selectedConversation.request.check_out)}
-                  </span>
-                  <span className="text-sm text-stone-500">
-                    {selectedConversation.request.guests} guest{selectedConversation.request.guests === 1 ? '' : 's'}
-                  </span>
+        <section className="flex min-h-0 flex-col bg-[#fcfaf8]">
+          <div className="border-b border-stone-200 bg-white px-5 py-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#F8F5F2] text-sm font-bold text-[#c76f55]">
+                  {getInitials(selectedParticipantName)}
+                </span>
+                <div className="min-w-0">
+                  <h3 className="truncate text-lg font-bold text-stone-950">{selectedListingTitle}</h3>
+                  <p className="truncate text-sm text-stone-500">
+                    {selectedParticipantName} · {selectedListingArea}
+                  </p>
                 </div>
-                {mode === 'host' && ['new', 'host_replied'].includes(selectedConversation.request.status) && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      disabled={sending}
-                      onClick={() => handleRequestStatus('accepted')}
-                      className="rounded-full bg-green-700 px-4 py-2 text-xs font-bold text-white transition hover:bg-green-800 disabled:opacity-50"
-                    >
-                      Accept request
-                    </button>
-                    <button
-                      type="button"
-                      disabled={sending}
-                      onClick={() => handleRequestStatus('declined')}
-                      className="rounded-full border border-red-200 px-4 py-2 text-xs font-bold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
-                    >
-                      Decline
-                    </button>
+              </div>
+              {selectedConversation?.request && (
+                <span className={`w-fit rounded-full px-3 py-1.5 text-xs font-bold ring-1 ${requestStatusClass(selectedConversation.request.status)}`}>
+                  {requestStatusLabel(selectedConversation.request.status)}
+                </span>
+              )}
+            </div>
+
+            {selectedConversation?.request && (
+              <div className="mt-4 rounded-3xl border border-stone-200 bg-[#fbfaf8] p-4">
+                <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-center">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">Dates</p>
+                    <p className="mt-1 text-sm font-bold text-stone-950">
+                      {formatRequestDate(selectedConversation.request.check_in)} to{' '}
+                      {formatRequestDate(selectedConversation.request.check_out)}
+                    </p>
                   </div>
-                )}
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">Guests</p>
+                    <p className="mt-1 text-sm font-bold text-stone-950">
+                      {selectedConversation.request.guests} guest{selectedConversation.request.guests === 1 ? '' : 's'}
+                    </p>
+                  </div>
+                  {mode === 'host' && ['new', 'host_replied'].includes(selectedConversation.request.status) && (
+                    <div className="flex flex-wrap gap-2 md:justify-end">
+                      <button
+                        type="button"
+                        disabled={sending}
+                        onClick={() => handleRequestStatus('accepted')}
+                        className="rounded-full bg-green-700 px-4 py-2 text-xs font-bold text-white transition hover:bg-green-800 disabled:opacity-50"
+                      >
+                        Accept
+                      </button>
+                      <button
+                        type="button"
+                        disabled={sending}
+                        onClick={() => handleRequestStatus('declined')}
+                        className="rounded-full border border-red-200 bg-white px-4 py-2 text-xs font-bold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
 
           {mode === 'host' && guestProfile && (
-            <div className="border-b border-stone-100 bg-[#F8F5F2] px-4 py-4">
-              <p className="mb-3 text-xs font-bold uppercase tracking-widest text-stone-400">
-                Guest
-              </p>
-              <div className="flex items-center gap-3">
-                {guestProfile.avatar_url ? (
-                  <img
-                    src={guestProfile.avatar_url}
-                    alt=""
-                    className="h-12 w-12 shrink-0 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-stone-300 text-base font-bold text-stone-600">
-                    {guestProfile.full_name?.charAt(0)?.toUpperCase() || 'G'}
-                  </div>
-                )}
-                <div className="min-w-0">
-                  <p className="truncate font-bold text-stone-950">
-                    {guestProfile.full_name || 'Guest'}
-                  </p>
-                  <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
-                    {guestProfile.visiting_from && (
-                      <span className="text-xs text-stone-500">
-                        From: {guestProfile.visiting_from}
-                      </span>
-                    )}
-                    {guestProfile.visit_reason && (
-                      <span className="text-xs text-stone-500">
-                        {guestProfile.visit_reason}
-                      </span>
-                    )}
-                    <span className="text-xs text-stone-500">
+            <div className="border-b border-stone-200 bg-white/80 px-5 py-4">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  {guestProfile.avatar_url ? (
+                    <img
+                      src={guestProfile.avatar_url}
+                      alt=""
+                      className="h-12 w-12 shrink-0 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-stone-200 text-base font-bold text-stone-600">
+                      {getInitials(guestProfile.full_name || 'Guest')}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate font-bold text-stone-950">{guestProfile.full_name || 'Guest'}</p>
+                    <p className="mt-0.5 text-xs text-stone-500">
                       {guestProfile.booking_count === 0
-                        ? 'First stay'
+                        ? 'First stay with JLM Collective'
                         : `${guestProfile.booking_count} previous stay${guestProfile.booking_count === 1 ? '' : 's'}`}
-                    </span>
+                    </p>
                   </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {guestProfile.visiting_from && (
+                    <span className="rounded-full bg-[#F8F5F2] px-3 py-1 text-xs font-semibold text-stone-600">
+                      From {guestProfile.visiting_from}
+                    </span>
+                  )}
+                  {guestProfile.visit_reason && (
+                    <span className="rounded-full bg-[#F8F5F2] px-3 py-1 text-xs font-semibold text-stone-600">
+                      {guestProfile.visit_reason}
+                    </span>
+                  )}
                 </div>
               </div>
               {guestProfile.about_me && (
-                <p className="mt-3 rounded-2xl bg-white px-3 py-2 text-sm leading-5 text-stone-600">
+                <p className="mt-3 rounded-2xl bg-[#F8F5F2] px-4 py-3 text-sm leading-6 text-stone-600">
                   {guestProfile.about_me}
                 </p>
               )}
             </div>
           )}
 
-          <div className="flex-1 space-y-4 overflow-y-auto bg-[#fcfaf8] px-5 py-5">
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5">
             {messages.map((message) => {
               const isMine = message.sender_id === user?.id
               return (
-                <div key={message.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+                <div key={message.id} className={`flex items-end gap-2 ${isMine ? 'justify-end' : 'justify-start'}`}>
+                  {!isMine && (
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-stone-200 text-[11px] font-bold text-stone-600">
+                      {getInitials(selectedParticipantName)}
+                    </span>
+                  )}
                   <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm shadow-sm ${
-                      isMine ? 'bg-[#c76f55] text-white' : 'bg-white text-stone-800'
+                    className={`max-w-[min(78%,34rem)] rounded-[1.35rem] px-4 py-3 text-sm shadow-sm ${
+                      isMine
+                        ? 'rounded-br-md bg-[#c76f55] text-white shadow-[#e6b09f]/40'
+                        : 'rounded-bl-md bg-white text-stone-800 ring-1 ring-stone-100'
                     }`}
                   >
                     <p className="whitespace-pre-wrap leading-6">{message.content}</p>
-                    <p className={`mt-1 text-[11px] ${isMine ? 'text-white/75' : 'text-stone-400'}`}>
+                    <p className={`mt-2 text-[11px] ${isMine ? 'text-white/75' : 'text-stone-400'}`}>
                       {formatTimestamp(message.created_at)}
                     </p>
                   </div>
@@ -843,14 +945,16 @@ export function MessagesInbox({ mode, initialConversationId = null }: MessagesIn
             })}
           </div>
 
-          <div className="border-t border-stone-100 p-4">
-            {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+          <div className="border-t border-stone-200 bg-white p-4">
+            {error && (
+              <p className="mb-3 rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                {error}
+              </p>
+            )}
             {canAcceptSelectedConversation && (
-              <div className="border-b border-stone-100 bg-[#fff4ef] px-4 py-3">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-semibold text-stone-900">
-                    Ready to confirm this booking?
-                  </p>
+              <div className="mb-3 rounded-2xl bg-[#fff4ef] px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-stone-900">Ready to confirm this booking?</p>
                   <button
                     type="button"
                     disabled={isAccepting}
@@ -863,17 +967,14 @@ export function MessagesInbox({ mode, initialConversationId = null }: MessagesIn
               </div>
             )}
             {mode === 'host' && (
-              <div className="border-t border-stone-100 bg-white px-4 pb-1 pt-3">
-                <p className="mb-2 text-xs font-bold uppercase tracking-widest text-stone-400">
-                  Quick replies
-                </p>
-                <div className="flex gap-2 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
+              <div className="mb-3">
+                <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
                   {HOST_QUICK_REPLIES.map((reply) => (
                     <button
                       key={reply.label}
                       type="button"
                       onClick={() => setDraft(reply.text)}
-                      className="shrink-0 whitespace-nowrap rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs font-semibold text-stone-700 transition hover:border-[#c76f55] hover:text-[#c76f55]"
+                      className="shrink-0 whitespace-nowrap rounded-full border border-stone-200 bg-[#fbfaf8] px-3.5 py-2 text-xs font-semibold text-stone-700 transition hover:border-[#c76f55] hover:bg-[#fff4ef] hover:text-[#c76f55]"
                     >
                       {reply.label}
                     </button>
@@ -881,20 +982,28 @@ export function MessagesInbox({ mode, initialConversationId = null }: MessagesIn
                 </div>
               </div>
             )}
-            <div className="flex gap-3">
+            <div className="flex items-end gap-3 rounded-[1.5rem] border border-stone-200 bg-[#fbfaf8] p-2 focus-within:border-[#c76f55]">
               <textarea
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
                 placeholder="Write a message..."
-                className="min-h-12 flex-1 resize-none rounded-2xl border border-stone-200 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
+                className="max-h-36 min-h-12 flex-1 resize-none bg-transparent px-3 py-3 text-sm text-stone-900 outline-none placeholder:text-stone-400"
               />
               <button
                 type="button"
                 onClick={handleSend}
                 disabled={!draft.trim() || sending}
-                className="h-12 rounded-2xl bg-[#252525] px-5 text-sm font-bold text-white transition hover:bg-[#111111] disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#c76f55] text-white transition hover:bg-[#b85f47] disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label="Send message"
               >
-                {sending ? 'Sending...' : 'Send'}
+                {sending ? (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 2L11 13" />
+                    <path d="M22 2L15 22L11 13L2 9L22 2Z" />
+                  </svg>
+                )}
               </button>
             </div>
           </div>

@@ -30,6 +30,18 @@ type BookingRequestEmailRow = {
   message: string | null
 }
 
+type ConversationEmailRow = {
+  id: string
+  listing_id: string | null
+  participant_1: string
+  participant_2: string
+}
+
+type MessageEmailRow = {
+  content: string
+  created_at: string
+}
+
 type ProfileEmailRow = {
   full_name: string | null
 }
@@ -127,7 +139,7 @@ export async function sendHostNewEnquiryEmail({
       .eq('id', requestId)
       .maybeSingle<BookingRequestEmailRow>()
 
-    if (!request?.host_id || !request.listing_id) return
+    if (!request?.host_id || !request.listing_id) return false
 
     const [{ data: host }, { data: listing }, { data: guest }] = await Promise.all([
       supabase
@@ -149,14 +161,14 @@ export async function sendHostNewEnquiryEmail({
         : Promise.resolve({ data: null }),
     ])
 
-    if (!host?.email) return
-    if (host.notify_new_enquiry_email === false) return
+    if (!host?.email) return false
+    if (host.notify_new_enquiry_email === false) return false
 
     const listingTitle = listing?.title || 'your stay'
     const dates = `${request.check_in || 'Date not set'} to ${request.check_out || 'date not set'}`
     const guestName = guest?.full_name || 'A guest'
 
-    await sendEmail({
+    return await sendEmail({
       to: host.email,
       subject: `New enquiry for ${listingTitle}`,
       html: baseEmailHtml({
@@ -168,6 +180,77 @@ export async function sendHostNewEnquiryEmail({
     })
   } catch (error) {
     console.error('Unable to send host enquiry email', error)
+    return false
+  }
+}
+
+export async function sendHostNewMessageEmail({
+  supabase,
+  conversationId,
+  senderId,
+}: {
+  supabase: SupabaseClient
+  conversationId: string
+  senderId: string
+}) {
+  try {
+    const { data: conversation } = await supabase
+      .from('conversations')
+      .select('id, listing_id, participant_1, participant_2')
+      .eq('id', conversationId)
+      .maybeSingle<ConversationEmailRow>()
+
+    if (!conversation || conversation.participant_1 !== senderId) return false
+
+    const [{ data: host }, { data: listing }, { data: guest }, { data: message }] = await Promise.all([
+      supabase
+        .from('hosts')
+        .select('id, name, email, notify_messages_email')
+        .or(`id.eq.${conversation.participant_2},user_id.eq.${conversation.participant_2}`)
+        .limit(1)
+        .maybeSingle<HostEmailRow & { notify_messages_email?: boolean | null }>(),
+      conversation.listing_id
+        ? supabase
+            .from('listings')
+            .select('id, title, host_id')
+            .eq('id', conversation.listing_id)
+            .maybeSingle<ListingEmailRow>()
+        : Promise.resolve({ data: null }),
+      supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', senderId)
+        .maybeSingle<ProfileEmailRow>(),
+      supabase
+        .from('messages')
+        .select('content, created_at')
+        .eq('conversation_id', conversationId)
+        .eq('sender_id', senderId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle<MessageEmailRow>(),
+    ])
+
+    if (!host?.email) return false
+    if (host.notify_messages_email === false) return false
+
+    const listingTitle = listing?.title || 'your listing'
+    const guestName = guest?.full_name || 'A guest'
+    const messagePreview = message?.content || 'New message received.'
+
+    return await sendEmail({
+      to: host.email,
+      subject: `New message about ${listingTitle}`,
+      html: baseEmailHtml({
+        greeting: `Hi ${escapeHtml(host.name || 'there')},`,
+        intro: `${guestName} sent you a new message about ${listingTitle}: ${messagePreview}`,
+        ctaLabel: 'Open host messages',
+        ctaUrl: `${siteUrl}/host/dashboard/messages?conversation=${conversationId}`,
+      }),
+    })
+  } catch (error) {
+    console.error('Unable to send host message email', error)
+    return false
   }
 }
 
@@ -184,7 +267,7 @@ async function sendEmail({
 
   if (!resendApiKey) {
     console.error('Missing RESEND_API_KEY')
-    return
+    return false
   }
 
   const response = await fetch('https://api.resend.com/emails', {
@@ -203,7 +286,10 @@ async function sendEmail({
 
   if (!response.ok) {
     console.error('Resend email failed', await response.text())
+    return false
   }
+
+  return true
 }
 
 function baseEmailHtml({

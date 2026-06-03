@@ -4,7 +4,7 @@ import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { HostDashboardNav } from '@/components/host-dashboard-nav'
 
 export default async function HostMessagesPage() {
-  await requireHostDashboardAccess()
+  const { hostIds } = await requireHostDashboardAccess()
 
   return (
     <main className="min-h-screen bg-[#F8F5F2] px-5 py-10 text-[#252525] md:px-6">
@@ -18,7 +18,7 @@ export default async function HostMessagesPage() {
           </p>
         </div>
         <Suspense fallback={<MessagesInboxSkeleton />}>
-          <MessagesInbox mode="host" />
+          <MessagesInbox mode="host" participantIds={hostIds} />
         </Suspense>
       </section>
     </main>
