@@ -46,6 +46,19 @@ type ProfileEmailRow = {
   full_name: string | null
 }
 
+type HostMessageEmailRow = {
+  id: string
+  user_id?: string | null
+  name: string | null
+  display_name?: string | null
+  email: string | null
+  notify_messages_email?: boolean | null
+}
+
+type ConversationRequestEmailRow = {
+  guest_email?: string | null
+}
+
 export async function sendHostAdminUpdateEmail({
   supabase,
   hostId,
@@ -254,6 +267,101 @@ export async function sendHostNewMessageEmail({
   }
 }
 
+export async function sendGuestNewMessageEmail({
+  supabase,
+  conversationId,
+  senderId,
+}: {
+  supabase: SupabaseClient
+  conversationId: string
+  senderId: string
+}) {
+  try {
+    const { data: conversation } = await supabase
+      .from('conversations')
+      .select('id, listing_id, participant_1, participant_2')
+      .eq('id', conversationId)
+      .maybeSingle<ConversationEmailRow>()
+
+    if (!conversation) {
+      console.error('Skipping guest message email: conversation not found')
+      return false
+    }
+
+    const [{ data: hostCandidates }, { data: listing }, { data: guest }, { data: message }] = await Promise.all([
+      supabase
+        .from('hosts')
+        .select('id, user_id, name, display_name, email, notify_messages_email')
+        .or(`id.eq.${conversation.participant_2},user_id.eq.${conversation.participant_2},id.eq.${senderId},user_id.eq.${senderId}`),
+      conversation.listing_id
+        ? supabase
+            .from('listings')
+            .select('id, title, host_id')
+            .eq('id', conversation.listing_id)
+            .maybeSingle<ListingEmailRow>()
+        : Promise.resolve({ data: null }),
+      supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', conversation.participant_1)
+        .maybeSingle<ProfileEmailRow>(),
+      supabase
+        .from('messages')
+        .select('content, created_at')
+        .eq('conversation_id', conversationId)
+        .eq('sender_id', senderId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle<MessageEmailRow>(),
+    ])
+
+    const hostRows = hostCandidates || []
+    const host =
+      hostRows.find((row) => row.id === conversation.participant_2) ||
+      hostRows.find((row) => row.user_id === conversation.participant_2) ||
+      hostRows.find((row) => row.id === senderId || row.user_id === senderId) ||
+      null
+    const senderOwnsConversationHost =
+      conversation.participant_2 === senderId ||
+      hostRows.some((row) => row.id === conversation.participant_2 && row.user_id === senderId) ||
+      hostRows.some((row) => row.user_id === conversation.participant_2 && row.id === senderId)
+
+    if (!senderOwnsConversationHost) {
+      console.error('Skipping guest message email: sender is not the conversation host')
+      return false
+    }
+
+    if (host?.notify_messages_email === false) return false
+
+    const guestEmail =
+      (await getAuthUserEmail(conversation.participant_1)) ||
+      (await getConversationGuestEmail(supabase, conversationId))
+    if (!guestEmail) {
+      console.error('Skipping guest message email: guest email not found')
+      return false
+    }
+
+    const hostName = host?.display_name || host?.name || 'The host'
+    const guestName = guest?.full_name || 'there'
+    const listingTitle = listing?.title || 'your enquiry'
+    const messagePreview = message?.content || 'New message received.'
+
+    return await sendEmail({
+      to: guestEmail,
+      subject: `${hostName} sent you a message`,
+      html: baseEmailHtml({
+        greeting: `Hi ${escapeHtml(guestName)},`,
+        intro: `${hostName} sent you a new message about ${listingTitle}: ${messagePreview}`,
+        ctaLabel: 'Open message',
+        ctaUrl: `${siteUrl}/account/messages?conversation=${conversationId}`,
+      }),
+    })
+  } catch (error) {
+    console.error('Unable to send guest message email', error)
+    return false
+  }
+}
+
 async function sendEmail({
   to,
   subject,
@@ -290,6 +398,73 @@ async function sendEmail({
   }
 
   return true
+}
+
+async function getAuthUserEmail(userId: string) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
+    return null
+  }
+
+  const response = await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {
+    headers: {
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
+    },
+  })
+
+  if (!response.ok) {
+    console.error('Failed to fetch auth user email', await response.text())
+    return null
+  }
+
+  const user = (await response.json()) as { email?: string | null }
+  return user.email || null
+}
+
+async function getConversationGuestEmail(supabase: SupabaseClient, conversationId: string) {
+  const { data, error } = await supabase
+    .from('booking_requests')
+    .select('guest_email')
+    .eq('conversation_id', conversationId)
+    .not('guest_email', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle<ConversationRequestEmailRow>()
+
+  if (error) {
+    console.error('Failed to fetch booking request guest email', error)
+  }
+
+  return data?.guest_email || (await getConversationGuestEmailWithServiceRole(conversationId))
+}
+
+async function getConversationGuestEmailWithServiceRole(conversationId: string) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !serviceRoleKey) return null
+
+  const response = await fetch(
+    `${supabaseUrl}/rest/v1/booking_requests?select=guest_email&conversation_id=eq.${conversationId}&guest_email=not.is.null&order=created_at.desc&limit=1`,
+    {
+      headers: {
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${serviceRoleKey}`,
+      },
+    },
+  )
+
+  if (!response.ok) {
+    console.error('Failed to fetch booking request guest email with service role', await response.text())
+    return null
+  }
+
+  const rows = (await response.json()) as ConversationRequestEmailRow[]
+  return rows[0]?.guest_email || null
 }
 
 function baseEmailHtml({

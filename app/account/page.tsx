@@ -59,7 +59,7 @@ export default async function AccountPage() {
       .eq('user_id', user.id),
   ])
 
-  const hasStay = Boolean(ownedApplication || ownedListing)
+  const hasStay = Boolean(host || ownedApplication || ownedListing)
   const isNewGuest = (bookingCount || 0) === 0
   const userEmail = user.email || ''
   const typedProfile = profile as Profile | null

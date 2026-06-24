@@ -20,7 +20,8 @@ import { createClient } from '@/lib/supabase/client'
 
 export function AccountMenu({ hasStay, isAdmin }: { hasStay: boolean; isAdmin: boolean }) {
   const pathname = usePathname()
-  const [unreadCount, setUnreadCount] = useState(0)
+  const [guestUnreadCount, setGuestUnreadCount] = useState(0)
+  const [hostUnreadCount, setHostUnreadCount] = useState(0)
 
   useEffect(() => {
     let isActive = true
@@ -33,41 +34,78 @@ export function AccountMenu({ hasStay, isAdmin }: { hasStay: boolean; isAdmin: b
 
       if (!user) return
 
-      const { data: conversations } = await supabase
+      const { data: guestConversations } = await supabase
         .from('conversations')
         .select('id')
-        .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`)
+        .eq('participant_1', user.id)
 
-      const conversationIds = (conversations || [])
+      const guestConversationIds = (guestConversations || [])
         .map((conversation: { id: string }) => conversation.id)
         .filter(Boolean)
 
-      if (conversationIds.length === 0) {
-        if (isActive) setUnreadCount(0)
-        return
+      let hostConversationIds: string[] = []
+      if (hasStay) {
+        const { data: hostRows } = await supabase
+          .from('hosts')
+          .select('id')
+          .or(`id.eq.${user.id},user_id.eq.${user.id}`)
+
+        const hostIds = Array.from(
+          new Set([user.id, ...(hostRows || []).map((host: { id: string }) => host.id)].filter(Boolean)),
+        )
+
+        if (hostIds.length > 0) {
+          const { data: hostConversations } = await supabase
+            .from('conversations')
+            .select('id')
+            .in('participant_2', hostIds)
+
+          hostConversationIds = (hostConversations || [])
+            .map((conversation: { id: string }) => conversation.id)
+            .filter(Boolean)
+        }
       }
 
-      const { count } = await supabase
-        .from('messages')
-        .select('*', { count: 'exact', head: true })
-        .in('conversation_id', conversationIds)
-        .eq('read', false)
-        .neq('sender_id', user.id)
+      const countUnread = async (conversationIds: string[]) => {
+        if (conversationIds.length === 0) return 0
 
-      if (isActive) setUnreadCount(count || 0)
+        const { count } = await supabase
+          .from('messages')
+          .select('*', { count: 'exact', head: true })
+          .in('conversation_id', conversationIds)
+          .eq('read', false)
+          .neq('sender_id', user.id)
+
+        return count || 0
+      }
+
+      const [guestUnread, hostUnread] = await Promise.all([
+        countUnread(guestConversationIds),
+        countUnread(hostConversationIds),
+      ])
+
+      if (isActive) {
+        setGuestUnreadCount(guestUnread)
+        setHostUnreadCount(hostUnread)
+      }
     }
 
     void loadUnreadCount()
     const handleFocus = () => {
       void loadUnreadCount()
     }
+    const handleMessagesRead = () => {
+      void loadUnreadCount()
+    }
     window.addEventListener('focus', handleFocus)
+    window.addEventListener('messages-read', handleMessagesRead)
 
     return () => {
       isActive = false
       window.removeEventListener('focus', handleFocus)
+      window.removeEventListener('messages-read', handleMessagesRead)
     }
-  }, [])
+  }, [hasStay])
 
   return (
     <nav className="space-y-1">
@@ -76,12 +114,29 @@ export function AccountMenu({ hasStay, isAdmin }: { hasStay: boolean; isAdmin: b
       <MenuLink href="/account/reviews" label="Reviews" icon={<Star className="h-5 w-5" />} active={pathname === '/account/reviews'} />
       <MenuLink href="/account/enquiries" label="Enquiries" icon={<MessageSquare className="h-5 w-5" />} active={pathname === '/account/enquiries'} />
       <MenuLink href="/account/saved" label="Saved" icon={<Heart className="h-5 w-5" />} active={pathname === '/account/saved'} />
-      <MenuLink href="/account/messages" label="Messages" icon={<MessageCircle className="h-5 w-5" />} active={pathname === '/account/messages'} badge={unreadCount} />
+      <MenuLink
+        href="/account/messages"
+        label={hasStay ? 'Guest messages' : 'Messages'}
+        icon={<MessageCircle className="h-5 w-5" />}
+        active={pathname === '/account/messages'}
+        badge={guestUnreadCount}
+      />
+      {hasStay && (
+        <MenuLink
+          href="/host/dashboard/messages"
+          label="Host messages"
+          icon={<MessageCircle className="h-5 w-5" />}
+          active={pathname === '/host/dashboard/messages'}
+          badge={hostUnreadCount}
+        />
+      )}
       <MenuLink href="/account/support" label="Support" icon={<LifeBuoy className="h-5 w-5" />} active={pathname === '/account/support'} />
 
       <div className="mt-3 space-y-2 border-t border-stone-200 pt-4">
         {hasStay ? (
-          <MenuLink href="/host/dashboard" label="Host dashboard" icon={<Home className="h-5 w-5" />} accent />
+          <>
+            <MenuLink href="/host/dashboard" label="Host dashboard" icon={<Home className="h-5 w-5" />} accent />
+          </>
         ) : (
           <MenuLink href="/become-a-host" label="Become a host" icon={<Plus className="h-5 w-5" />} accent />
         )}

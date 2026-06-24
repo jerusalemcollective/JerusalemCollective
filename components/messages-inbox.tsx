@@ -93,6 +93,10 @@ type RealtimeConversationMessage = Omit<ConversationMessage, 'read'> & {
   read: boolean | null
 }
 
+function isRequestOnlyConversationId(value: string | null) {
+  return Boolean(value?.startsWith('request:'))
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
@@ -229,8 +233,71 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
 
         if (conversationError) throw conversationError
 
-        const rows = (conversationRows || []) as ConversationSummary[]
-        const listingIds = rows.map((conversation) => conversation.listing_id).filter(Boolean) as string[]
+        const conversationRowsList = (conversationRows || []) as ConversationSummary[]
+        const hostRequestQuery =
+          mode === 'host'
+            ? supabase
+                .from('booking_requests')
+                .select('id, conversation_id, listing_id, host_id, guest_id, status, check_in, check_out, guests, message, created_at')
+                .in('host_id', hostParticipantIds)
+                .in('status', ['new', 'host_replied'])
+                .order('created_at', { ascending: false })
+            : Promise.resolve({ data: [] })
+        const { data: hostRequestRows } = await hostRequestQuery
+        const hostRequests = (hostRequestRows || []) as BookingRequestSummary[]
+        const conversationIdsFromRequests = hostRequests
+          .map((request) => request.conversation_id)
+          .filter(Boolean) as string[]
+        const missingConversationIds = conversationIdsFromRequests.filter(
+          (conversationId) => !conversationRowsList.some((conversation) => conversation.id === conversationId),
+        )
+        const { data: requestedConversationRows, error: requestedConversationError } =
+          missingConversationIds.length > 0
+            ? await supabase
+                .from('conversations')
+                .select('id, listing_id, participant_1, participant_2, created_at, updated_at')
+                .in('id', missingConversationIds)
+            : { data: [], error: null }
+
+        if (requestedConversationError) throw requestedConversationError
+
+        const rowsById = new Map<string, ConversationSummary>()
+        for (const conversation of conversationRowsList) {
+          rowsById.set(conversation.id, conversation)
+        }
+        for (const conversation of (requestedConversationRows || []) as ConversationSummary[]) {
+          rowsById.set(conversation.id, conversation)
+        }
+        for (const request of hostRequests) {
+          if (!request.conversation_id || rowsById.has(request.conversation_id)) continue
+
+          rowsById.set(`request:${request.id}`, {
+            id: `request:${request.id}`,
+            listing_id: request.listing_id,
+            participant_1: request.guest_id || '',
+            participant_2: request.host_id || authUser.id,
+            created_at: request.created_at,
+            updated_at: request.created_at,
+            last_message: request.message
+              ? {
+                  content: request.message,
+                  sender_id: request.guest_id || '',
+                  created_at: request.created_at,
+                }
+              : null,
+            request,
+          })
+        }
+
+        const rows = Array.from(rowsById.values()).sort(
+          (first, second) => Date.parse(second.updated_at) - Date.parse(first.updated_at),
+        )
+        const listingIds = Array.from(
+          new Set([
+            ...rows.map((conversation) => conversation.listing_id).filter(Boolean),
+            ...hostRequests.map((request) => request.listing_id).filter(Boolean),
+          ]),
+        ) as string[]
         const otherParticipantIds = rows.map((conversation) =>
           mode === 'host' ? conversation.participant_1 : conversation.participant_2,
         )
@@ -248,18 +315,18 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
                 .select('id, full_name, avatar_url')
                 .in('id', otherParticipantIds)
             : Promise.resolve({ data: [] }),
-          rows.length
+          rows.some((conversation) => !isRequestOnlyConversationId(conversation.id))
             ? supabase
                 .from('messages')
                 .select('conversation_id, content, sender_id, created_at')
-                .in('conversation_id', rows.map((conversation) => conversation.id))
+                .in('conversation_id', rows.map((conversation) => conversation.id).filter((id) => !isRequestOnlyConversationId(id)))
                 .order('created_at', { ascending: false })
             : Promise.resolve({ data: [] }),
-          rows.length
+          rows.some((conversation) => !isRequestOnlyConversationId(conversation.id))
             ? supabase
                 .from('booking_requests')
-                .select('id, conversation_id, listing_id, status, check_in, check_out, guests, message, created_at')
-                .in('conversation_id', rows.map((conversation) => conversation.id))
+                .select('id, conversation_id, listing_id, host_id, guest_id, status, check_in, check_out, guests, message, created_at')
+                .in('conversation_id', rows.map((conversation) => conversation.id).filter((id) => !isRequestOnlyConversationId(id)))
                 .order('created_at', { ascending: false })
             : Promise.resolve({ data: [] }),
         ])
@@ -267,7 +334,8 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
         const latestMessageRows: LatestMessagePreview[] = latestMessages || []
         const listingRows: ListingPreview[] = listings || []
         const profileRows: ParticipantProfile[] = profiles || []
-        const requestRows: BookingRequestSummary[] = requests || []
+        const requestRows: BookingRequestSummary[] =
+          mode === 'host' ? [...(requests || []), ...hostRequests] : requests || []
 
         const latestByConversation = new Map<string, ConversationSummary['last_message']>()
         latestMessageRows.forEach((message) => {
@@ -283,6 +351,7 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
           if (request.conversation_id && !requestByConversation.has(request.conversation_id)) {
             requestByConversation.set(request.conversation_id, request)
           }
+          requestByConversation.set(`request:${request.id}`, request)
         })
 
         const hydrated = rows.map((conversation) => ({
@@ -290,7 +359,7 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
           listing: conversation.listing_id ? listingMap.get(conversation.listing_id) || null : null,
           other_participant:
             profileMap.get(mode === 'host' ? conversation.participant_1 : conversation.participant_2) || null,
-          last_message: latestByConversation.get(conversation.id) || null,
+          last_message: latestByConversation.get(conversation.id) || conversation.last_message || null,
           request: requestByConversation.get(conversation.id) || null,
         }))
 
@@ -335,6 +404,30 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
     const supabase = createClient()
 
     let isActive = true
+    const selectedRequestOnlyConversation = conversations.find(
+      (conversation) => conversation.id === selectedConversationId && isRequestOnlyConversationId(conversation.id),
+    )
+
+    if (selectedRequestOnlyConversation?.request) {
+      const request = selectedRequestOnlyConversation.request
+      setMessages(
+        request.message
+          ? [
+              {
+                id: `request-message:${request.id}`,
+                conversation_id: selectedRequestOnlyConversation.id,
+                sender_id: request.guest_id || selectedRequestOnlyConversation.participant_1,
+                content: request.message,
+                read: true,
+                created_at: request.created_at,
+              },
+            ]
+          : [],
+      )
+      return () => {
+        isActive = false
+      }
+    }
 
     const loadMessages = async () => {
       try {
@@ -363,8 +456,35 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
           loadConversationMessages(supabase, selectedConversationId),
           profilePromise,
         ])
+        const unreadIncomingMessageIds = rows
+          .filter((message) => !message.read && message.sender_id !== user?.id)
+          .map((message) => message.id)
+
+        if (unreadIncomingMessageIds.length > 0) {
+          const { error: readAtError } = await supabase
+            .from('messages')
+            .update({ read: true, read_at: new Date().toISOString() })
+            .in('id', unreadIncomingMessageIds)
+
+          if (readAtError) {
+            await supabase
+              .from('messages')
+              .update({ read: true })
+              .in('id', unreadIncomingMessageIds)
+          }
+        }
+
         if (isActive) {
-          setMessages(rows)
+          setMessages(
+            rows.map((message) =>
+              unreadIncomingMessageIds.includes(message.id)
+                ? { ...message, read: true }
+                : message,
+            ),
+          )
+          if (unreadIncomingMessageIds.length > 0) {
+            window.dispatchEvent(new Event('messages-read'))
+          }
           if (mode === 'host' && guestContext) {
             const [{ data: profileData }, { count: bookingCount }] = guestContext
             setGuestProfile(
@@ -557,6 +677,10 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
 
   const handleSend = async () => {
     if (!user || !selectedConversationId || !draft.trim()) return
+    if (isRequestOnlyConversationId(selectedConversationId)) {
+      setError('This enquiry does not have a message thread yet.')
+      return
+    }
 
     setSending(true)
     setError(null)
@@ -575,6 +699,15 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
           body: JSON.stringify({ conversationId: selectedConversationId }),
         }).catch((notificationError) => {
           console.error('Unable to send host message notification', notificationError)
+        })
+      }
+      if (mode === 'host') {
+        await fetch('/api/notify-guest-message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ conversationId: selectedConversationId }),
+        }).catch((notificationError) => {
+          console.error('Unable to send guest message notification', notificationError)
         })
       }
       if (shouldUpdateRequestStatus && selectedConversation?.request?.id) {

@@ -56,12 +56,18 @@ type UserState = {
   isAdmin: boolean
 } | null
 
+type UnreadCounts = {
+  guest: number
+  host: number
+}
+
 export function Header({
   servicesBarEnabled = true,
 }: {
   servicesBarEnabled?: boolean
 }) {
   const [user, setUser] = useState<UserState>(null)
+  const [unreadCounts, setUnreadCounts] = useState<UnreadCounts>({ guest: 0, host: 0 })
   const [showDropdown, setShowDropdown] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -69,6 +75,62 @@ export function Header({
   const pathname = usePathname()
 
   useEffect(() => {
+    const loadUnreadCounts = async (userId: string, hasStay: boolean) => {
+      const supabase = createClient()
+
+      const { data: guestConversations } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('participant_1', userId)
+
+      const guestConversationIds = (guestConversations || [])
+        .map((conversation: { id: string }) => conversation.id)
+        .filter(Boolean)
+
+      let hostConversationIds: string[] = []
+      if (hasStay) {
+        const { data: hostRows } = await supabase
+          .from('hosts')
+          .select('id')
+          .or(`id.eq.${userId},user_id.eq.${userId}`)
+
+        const hostIds = Array.from(
+          new Set([userId, ...(hostRows || []).map((host: { id: string }) => host.id)].filter(Boolean)),
+        )
+
+        if (hostIds.length > 0) {
+          const { data: hostConversations } = await supabase
+            .from('conversations')
+            .select('id')
+            .in('participant_2', hostIds)
+
+          hostConversationIds = (hostConversations || [])
+            .map((conversation: { id: string }) => conversation.id)
+            .filter(Boolean)
+        }
+      }
+
+      const countUnread = async (conversationIds: string[]) => {
+        if (conversationIds.length === 0) return 0
+
+        const { count } = await supabase
+          .from('messages')
+          .select('*', { count: 'exact', head: true })
+          .in('conversation_id', conversationIds)
+          .eq('read', false)
+          .neq('sender_id', userId)
+
+        return count || 0
+      }
+
+      const [guest, host] = await Promise.all([
+        countUnread(guestConversationIds),
+        countUnread(hostConversationIds),
+      ])
+
+      setUnreadCounts({ guest, host })
+    }
+
     const loadUser = async () => {
       try {
         const supabase = createClient()
@@ -105,14 +167,19 @@ export function Header({
               .maybeSingle(),
           ])
 
-          setUser({
+          const nextUser = {
             id: authUser.id,
             email: authUser.email,
             avatarUrl: profile?.avatar_url || null,
             fullName: profile?.full_name || null,
-            hasStay: Boolean(ownedApplication || ownedListing),
+            hasStay: Boolean(host || ownedApplication || ownedListing),
             isAdmin: profile?.is_admin || false,
-          })
+          }
+
+          setUser(nextUser)
+          await loadUnreadCounts(authUser.id, nextUser.hasStay)
+        } else {
+          setUnreadCounts({ guest: 0, host: 0 })
         }
       } catch (error) {
         // User not logged in or error fetching profile
@@ -122,18 +189,31 @@ export function Header({
     }
 
     loadUser()
+    const handleFocus = () => {
+      void loadUser()
+    }
+    const handleMessagesRead = () => {
+      void loadUser()
+    }
+    window.addEventListener('focus', handleFocus)
+    window.addEventListener('messages-read', handleMessagesRead)
 
     // Listen for auth changes
     const supabase = createClient()
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT') {
         setUser(null)
+        setUnreadCounts({ guest: 0, host: 0 })
       } else if (event === 'SIGNED_IN') {
         loadUser()
       }
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      window.removeEventListener('focus', handleFocus)
+      window.removeEventListener('messages-read', handleMessagesRead)
+      subscription.unsubscribe()
+    }
   }, [])
 
   // Close dropdown when clicking outside
@@ -277,7 +357,14 @@ export function Header({
                         <svg className="h-4 w-4 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
                         </svg>
-                        Messages
+                        <span className="flex flex-1 items-center gap-2">
+                          <span>{user.hasStay ? 'Guest messages' : 'Messages'}</span>
+                          {unreadCounts.guest > 0 && (
+                            <span className="inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-[11px] font-bold leading-none text-white">
+                              {unreadCounts.guest}
+                            </span>
+                          )}
+                        </span>
                       </Link>
                     </div>
 
@@ -296,16 +383,35 @@ export function Header({
                         </Link>
                       )}
                       {user.hasStay ? (
-                        <Link
-                          href="/host/dashboard"
-                          onClick={() => setShowDropdown(false)}
-                          className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-[#c76f55] transition hover:bg-[#fff4ef]"
-                        >
-                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-                          </svg>
-                          Host Dashboard
-                        </Link>
+                        <>
+                          <Link
+                            href="/host/dashboard"
+                            onClick={() => setShowDropdown(false)}
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-[#c76f55] transition hover:bg-[#fff4ef]"
+                          >
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+                            </svg>
+                            Host Dashboard
+                          </Link>
+                          <Link
+                            href="/host/dashboard/messages"
+                            onClick={() => setShowDropdown(false)}
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-[#c76f55] transition hover:bg-[#fff4ef]"
+                          >
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+                            </svg>
+                            <span className="flex flex-1 items-center gap-2">
+                              <span>Host messages</span>
+                              {unreadCounts.host > 0 && (
+                                <span className="inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-[11px] font-bold leading-none text-white">
+                                  {unreadCounts.host}
+                                </span>
+                              )}
+                            </span>
+                          </Link>
+                        </>
                       ) : (
                         <Link
                           href="/become-a-host"
@@ -419,9 +525,14 @@ export function Header({
                 <Link
                   href="/account/messages"
                   onClick={() => setMobileOpen(false)}
-                  className="block px-5 py-4 font-medium text-stone-900"
+                  className="flex items-center justify-between gap-3 px-5 py-4 font-medium text-stone-900"
                 >
-                  Messages
+                  <span>{user.hasStay ? 'Guest messages' : 'Messages'}</span>
+                  {unreadCounts.guest > 0 && (
+                    <span className="inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-[11px] font-bold leading-none text-white">
+                      {unreadCounts.guest}
+                    </span>
+                  )}
                 </Link>
                 <Link
                   href="/account/bookings"
@@ -430,6 +541,29 @@ export function Header({
                 >
                   My trips
                 </Link>
+                {user.isAdmin && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setMobileOpen(false)}
+                    className="block px-5 py-4 font-medium text-[#c76f55]"
+                  >
+                    Admin dashboard
+                  </Link>
+                )}
+                {user.hasStay && (
+                  <Link
+                    href="/host/dashboard/messages"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center justify-between gap-3 px-5 py-4 font-medium text-[#c76f55]"
+                  >
+                    <span>Host messages</span>
+                    {unreadCounts.host > 0 && (
+                      <span className="inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-[11px] font-bold leading-none text-white">
+                        {unreadCounts.host}
+                      </span>
+                    )}
+                  </Link>
+                )}
                 <button
                   type="button"
                   onClick={handleSignOut}
