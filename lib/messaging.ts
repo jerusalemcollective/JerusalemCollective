@@ -30,6 +30,8 @@ export type BookingRequestSummary = {
   id: string
   conversation_id: string | null
   listing_id: string | null
+  host_id?: string | null
+  guest_id?: string | null
   status: 'new' | 'host_replied' | 'accepted' | 'declined' | 'closed'
   check_in: string | null
   check_out: string | null

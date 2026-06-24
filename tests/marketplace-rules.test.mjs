@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { filterListings, summarizeSupportCases } from '../lib/marketplace-rules.js'
+import { filterListings, summarizeSupportCases } from '../lib/marketplace-rules.ts'
 
 const listings = [
   {
