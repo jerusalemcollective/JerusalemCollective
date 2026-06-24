@@ -693,22 +693,34 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
       const supabase = createClient()
       await sendConversationMessage(supabase, selectedConversationId, user.id, draft.trim())
       if (mode === 'guest') {
-        await fetch('/api/notify-host-message', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ conversationId: selectedConversationId }),
-        }).catch((notificationError) => {
+        try {
+          const notificationResponse = await fetch('/api/notify-host-message', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ conversationId: selectedConversationId }),
+          })
+          const notificationResult = await notificationResponse.json().catch(() => null)
+          if (!notificationResponse.ok || notificationResult?.emailSent === false) {
+            console.error('Unable to send host message notification', notificationResult)
+          }
+        } catch (notificationError) {
           console.error('Unable to send host message notification', notificationError)
-        })
+        }
       }
       if (mode === 'host') {
-        await fetch('/api/notify-guest-message', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ conversationId: selectedConversationId }),
-        }).catch((notificationError) => {
+        try {
+          const notificationResponse = await fetch('/api/notify-guest-message', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ conversationId: selectedConversationId }),
+          })
+          const notificationResult = await notificationResponse.json().catch(() => null)
+          if (!notificationResponse.ok || notificationResult?.emailSent === false) {
+            console.error('Unable to send guest message notification', notificationResult)
+          }
+        } catch (notificationError) {
           console.error('Unable to send guest message notification', notificationError)
-        })
+        }
       }
       if (shouldUpdateRequestStatus && selectedConversation?.request?.id) {
         await updateBookingRequestStatus(supabase, selectedConversation.request.id, 'host_replied')
