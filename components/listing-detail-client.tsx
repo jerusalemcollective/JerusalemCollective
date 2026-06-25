@@ -117,6 +117,21 @@ function formatResponseTime(hours: number): string {
   return 'Usually responds within 1-2 days'
 }
 
+function getListingPhotoAlt(
+  listing: Pick<ListingDetailListing, 'title' | 'area'>,
+  photo: ListingDetailPhoto | undefined,
+  index: number,
+): string {
+  const label = photo?.label?.trim()
+  const titleWithArea = listing.title.toLowerCase().includes(listing.area.toLowerCase())
+    ? listing.title
+    : `${listing.title} in ${listing.area}`
+
+  return label
+    ? `${label} at ${titleWithArea}`
+    : `Interior view ${index + 1} of ${titleWithArea}`
+}
+
 export function ListingDetailClient({
   listing,
   host,
@@ -392,7 +407,7 @@ export function ListingDetailClient({
                     >
                       <Image
                         src={photo.photo_url}
-                        alt={photo.label ? `${listing.title} - ${photo.label}` : `${listing.title} photo ${photoIndex + 1}`}
+                        alt={getListingPhotoAlt(listing, photo, photoIndex)}
                         fill
                         className="object-cover"
                         priority={photoIndex === 0}
@@ -442,7 +457,7 @@ export function ListingDetailClient({
                   {photos[0] && (
                     <Image
                       src={photos[0].photo_url}
-                      alt={listing.title}
+                      alt={getListingPhotoAlt(listing, photos[0], 0)}
                       fill
                       className="object-cover transition-opacity duration-300 hover:opacity-95"
                       priority
@@ -472,7 +487,7 @@ export function ListingDetailClient({
                       <>
                         <Image
                           src={photos[index].photo_url}
-                          alt={photos[index].label ? `${listing.title} - ${photos[index].label}` : `${listing.title} photo ${index + 1}`}
+                          alt={getListingPhotoAlt(listing, photos[index], index)}
                           fill
                           className="object-cover transition-opacity duration-300 hover:opacity-95"
                           loading="lazy"

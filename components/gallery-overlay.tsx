@@ -24,6 +24,13 @@ type GalleryOverlayProps = {
   onIndexChange: (index: number) => void
 }
 
+function getGalleryPhotoAlt(title: string, photo: GalleryPhoto, index: number): string {
+  const label = photo.label?.trim()
+  return label
+    ? `${label} at ${title}`
+    : `Interior view ${index + 1} of ${title}`
+}
+
 export function GalleryOverlay({
   photos,
   index,
@@ -155,7 +162,7 @@ export function GalleryOverlay({
             >
               <img
                 src={photo.photo_url}
-                alt={photo.label ? `${title} - ${photo.label}` : `${title} - photo ${photoIndex + 1}`}
+                alt={getGalleryPhotoAlt(title, photo, photoIndex)}
                 loading={Math.abs(photoIndex - index) <= 1 ? 'eager' : 'lazy'}
                 className="block h-auto max-h-[58vh] w-auto max-w-[78vw] select-none rounded-2xl object-contain shadow-xl md:max-h-[62vh] md:max-w-[70vw]"
                 draggable={false}

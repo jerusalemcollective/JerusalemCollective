@@ -6,6 +6,18 @@ export const metadata = {
   alternates: {
     canonical: '/trust-and-safety',
   },
+  openGraph: {
+    title: 'Trust & Safety Policy | JLM Collective',
+    description: 'JLM Collective standards, review process, and user protection policies.',
+    url: '/trust-and-safety',
+    siteName: 'JLM Collective',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Trust & Safety Policy | JLM Collective',
+    description: 'JLM Collective standards, review process, and user protection policies.',
+  },
 }
 
 export default function TrustAndSafetyPage() {
