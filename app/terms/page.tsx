@@ -4,6 +4,9 @@ import { HOST_TERMS, HOST_TERMS_LAST_UPDATED } from '@/lib/host-terms'
 export const metadata = {
   title: 'Terms of Service',
   description: 'Terms of Service for guests and hosts using JLM Collective.',
+  alternates: {
+    canonical: '/terms',
+  },
 }
 
 export default function TermsPage() {

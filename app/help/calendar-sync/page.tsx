@@ -1,7 +1,10 @@
 import Link from 'next/link'
 
 export const metadata = {
-  title: 'Calendar sync help | JLM Collective',
+  title: 'Calendar sync help',
+  alternates: {
+    canonical: '/help/calendar-sync',
+  },
 }
 
 export default function CalendarSyncHelpPage() {

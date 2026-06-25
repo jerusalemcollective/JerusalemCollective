@@ -3,9 +3,22 @@ import Link from 'next/link'
 export const revalidate = 86400
 
 export const metadata = {
-  title: 'How It Works | JLM Collective',
+  title: 'How It Works',
   description:
     'How to find and book a verified Jerusalem stay through JLM Collective \u2014 simple, personal, and transparent.',
+  alternates: {
+    canonical: '/how-it-works',
+  },
+  openGraph: {
+    title: 'How It Works | JLM Collective',
+    description:
+      'How to find and book a verified Jerusalem stay through JLM Collective \u2014 simple, personal, and transparent.',
+    url: '/how-it-works',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+  },
 }
 
 const steps = [

@@ -9,6 +9,19 @@ export const metadata = {
   title: 'Explore Jerusalem stays',
   description:
     'Discover Jerusalem neighbourhoods, practical stay collections, and featured places before searching all stays.',
+  alternates: {
+    canonical: '/explore',
+  },
+  openGraph: {
+    title: 'Explore Jerusalem stays | JLM Collective',
+    description:
+      'Discover Jerusalem neighbourhoods, practical stay collections, and featured places before searching all stays.',
+    url: '/explore',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+  },
 }
 
 type PopularNeighborhood = {

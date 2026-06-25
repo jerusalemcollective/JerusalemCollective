@@ -4,8 +4,20 @@ import { notFound } from 'next/navigation'
 import { getServicesBarEnabled } from '@/lib/platform-settings'
 
 export const metadata = {
-  title: 'Guest Services | JLM Collective',
+  title: 'Guest Services',
   description: 'Enhance your Jerusalem stay with custom catering, Shabbat meal packages, and housekeeping arranged by JLM Collective.',
+  alternates: {
+    canonical: '/services',
+  },
+  openGraph: {
+    title: 'Guest Services | JLM Collective',
+    description: 'Enhance your Jerusalem stay with custom catering, Shabbat meal packages, and housekeeping arranged by JLM Collective.',
+    url: '/services',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+  },
 }
 
 export default async function ServicesPage() {

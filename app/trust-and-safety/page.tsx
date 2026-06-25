@@ -3,6 +3,9 @@ import Link from 'next/link'
 export const metadata = {
   title: 'Trust & Safety Policy',
   description: 'Trust & Safety Policy for JLM Collective - our standards, review process, and how we protect users.',
+  alternates: {
+    canonical: '/trust-and-safety',
+  },
 }
 
 export default function TrustAndSafetyPage() {

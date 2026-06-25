@@ -4,8 +4,11 @@ import { CleaningEnquiryForm } from '@/components/service-enquiry-forms'
 import { getServicesBarEnabled } from '@/lib/platform-settings'
 
 export const metadata = {
-  title: 'Cleaning & Housekeeping | JLM Collective',
+  title: 'Cleaning & Housekeeping',
   description: 'Professional cleaning for guests and hosts in Jerusalem. Mid-stay housekeeping and between-booking turnaround cleaning.',
+  alternates: {
+    canonical: '/services/cleaning',
+  },
 }
 
 export default async function CleaningPage() {

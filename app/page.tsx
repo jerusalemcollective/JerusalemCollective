@@ -50,13 +50,16 @@ type PopularNeighborhoodRow = {
 }
 
 export const metadata: Metadata = {
-  title: 'Jerusalem Short-Term Stays | JLM Collective',
+  title: 'Jerusalem Short-Term Stays',
   description:
     'Discover curated, verified short-term stays in Jerusalem. Browse apartments by neighbourhood, dates, and amenities — with expert local support.',
+  alternates: {
+    canonical: '/',
+  },
   openGraph: {
     title: 'Jerusalem Short-Term Stays | JLM Collective',
     description: 'Curated verified stays in Jerusalem with local expertise and real human support.',
-    url: 'https://jlmcollective.co',
+    url: '/',
     siteName: 'JLM Collective',
     images: [
       {
@@ -68,6 +71,9 @@ export const metadata: Metadata = {
     ],
     locale: 'en_GB',
     type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
   },
 }
 

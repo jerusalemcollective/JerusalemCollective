@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 
@@ -59,7 +60,7 @@ export async function generateMetadata({
   params,
 }: {
   params: Promise<{ id: string }>
-}) {
+}): Promise<Metadata> {
   const { id } = await params
   const supabase = await createClient()
   const { data: host } = await supabase
@@ -68,15 +69,24 @@ export async function generateMetadata({
     .eq('id', id)
     .single()
 
-  if (!host) return { title: 'Host | JLM Collective' }
+  if (!host) {
+    return {
+      title: 'Host',
+      alternates: { canonical: `/hosts/${id}` },
+    }
+  }
 
   const displayName = getPublicName(host)
 
   return {
-    title: `${displayName} | JLM Collective Host`,
-    description: `View ${displayName}'s listings on JLM Collective — curated Jerusalem stays.`,
+    title: `${displayName} Host`,
+    description: `View ${displayName}'s listings on JLM Collective, curated Jerusalem stays.`,
+    alternates: {
+      canonical: `/hosts/${id}`,
+    },
     openGraph: {
       title: `${displayName} | JLM Collective`,
+      url: `/hosts/${id}`,
       images: host.profile_photo_url
         ? [{ url: host.profile_photo_url, alt: displayName }]
         : [],

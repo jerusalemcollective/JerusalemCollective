@@ -1,6 +1,9 @@
 export const metadata = {
   title: 'Privacy Policy',
   description: 'Privacy Policy for JLM Collective - how we collect, use, and protect your information.',
+  alternates: {
+    canonical: '/privacy',
+  },
 }
 
 export default function PrivacyPolicyPage() {

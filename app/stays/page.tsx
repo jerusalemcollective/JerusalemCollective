@@ -13,8 +13,20 @@ import { StaysNeighborhoodNav } from '@/components/stays-neighborhood-nav'
 import { RecentlyViewed } from '@/components/recently-viewed'
 
 export const metadata = {
-  title: 'Jerusalem Stays | JLM Collective',
+  title: 'Jerusalem Stays',
   description: 'Find curated short-term stays in Jerusalem.',
+  alternates: {
+    canonical: '/stays',
+  },
+  openGraph: {
+    title: 'Jerusalem Stays | JLM Collective',
+    description: 'Find curated short-term stays in Jerusalem.',
+    url: '/stays',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+  },
 }
 
 export const revalidate = 1800

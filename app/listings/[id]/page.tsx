@@ -1,4 +1,5 @@
 ﻿import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { getSampleListing } from '@/lib/sample-listings'
@@ -165,7 +166,7 @@ export async function generateMetadata({
   params,
 }: {
   params: Promise<{ id: string }>
-}) {
+}): Promise<Metadata> {
   const { id } = await params
   const supabase = await createClient()
   const [{ data: listing }, { data: coverPhoto }] = await Promise.all([
@@ -178,18 +179,23 @@ export async function generateMetadata({
       .from('listing_photos')
       .select('photo_url')
       .eq('listing_id', id)
-      .eq('is_cover', true)
+      .order('is_cover', { ascending: false })
+      .order('sort_order', { ascending: true })
       .limit(1)
       .maybeSingle(),
   ])
 
   if (!listing) {
     return {
-      title: 'Stay | JLM Collective',
+      title: 'Stay',
+      alternates: { canonical: `/listings/${id}` },
     }
   }
 
-  const title = `${listing.title} in ${listing.area} | JLM Collective`
+  const title =
+    listing.title.trim().toLowerCase() === listing.area.trim().toLowerCase()
+      ? `Stay in ${listing.area}`
+      : `${listing.title} in ${listing.area}`
   const description = listing.description
     ? listing.description.slice(0, 155)
     : `${listing.bedrooms ?? 1}-bedroom stay in ${listing.area}, Jerusalem. Verified by JLM Collective.`
@@ -204,8 +210,8 @@ export async function generateMetadata({
         {
           url: coverPhoto.photo_url,
           width: 1200,
-          height: 800,
-          alt: listing.title,
+          height: 630,
+          alt: title,
         },
       ]
     : [
@@ -220,10 +226,13 @@ export async function generateMetadata({
   return {
     title,
     description,
+    alternates: {
+      canonical: `/listings/${id}`,
+    },
     openGraph: {
-      title,
+      title: `${title} | JLM Collective`,
       description: ogDescription,
-      url: `https://jlmcollective.co/listings/${id}`,
+      url: `/listings/${id}`,
       siteName: 'JLM Collective',
       images,
       locale: 'en_GB',
@@ -231,7 +240,7 @@ export async function generateMetadata({
     },
     twitter: {
       card: 'summary_large_image',
-      title,
+      title: `${title} | JLM Collective`,
       description: ogDescription,
       images: images.map((image) => image.url),
     },

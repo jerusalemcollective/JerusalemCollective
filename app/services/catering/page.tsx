@@ -3,8 +3,11 @@ import { notFound } from 'next/navigation'
 import { getServicesBarEnabled } from '@/lib/platform-settings'
 
 export const metadata = {
-  title: 'Kosher Catering & Shabbat Meals | JLM Collective',
+  title: 'Kosher Catering & Shabbat Meals',
   description: 'Custom kosher menus and Shabbat packages delivered to your Jerusalem rental. Arranged by JLM Collective.',
+  alternates: {
+    canonical: '/services/catering',
+  },
 }
 
 export default async function CateringPage() {

@@ -1,4 +1,5 @@
 ﻿import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
@@ -30,19 +31,34 @@ export async function generateMetadata({
   params,
 }: {
   params: Promise<{ slug: string }>
-}) {
+}): Promise<Metadata> {
   const { slug } = await params
   const name = findNeighborhoodBySlug(slug)
 
   if (!name) {
     return {
-      title: 'Neighbourhood | JLM Collective',
+      title: 'Neighbourhood',
+      alternates: { canonical: `/neighbourhoods/${slug}` },
     }
   }
 
+  const description = `Browse verified short-term stays in ${name}, Jerusalem. Curated by JLM Collective.`
+
   return {
-    title: `Stays in ${name}, Jerusalem | JLM Collective`,
-    description: `Browse verified short-term stays in ${name}, Jerusalem. Curated by JLM Collective.`,
+    title: `Stays in ${name}, Jerusalem`,
+    description,
+    alternates: { canonical: `/neighbourhoods/${slug}` },
+    openGraph: {
+      title: `Stays in ${name}, Jerusalem | JLM Collective`,
+      description,
+      url: `/neighbourhoods/${slug}`,
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `Stays in ${name}, Jerusalem | JLM Collective`,
+      description,
+    },
   }
 }
 

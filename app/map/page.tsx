@@ -26,8 +26,11 @@ const listingPhotoRowSchema = z.object({
 type ListingRow = z.infer<typeof listingRowSchema>
 
 export const metadata = {
-  title: 'Jerusalem Map | JLM Collective',
+  title: 'Jerusalem Map',
   description: 'Browse curated Jerusalem stays on the map.',
+  alternates: {
+    canonical: '/map',
+  },
 }
 
 function toMapListing(listing: ListingRow, coverPhotoUrl: string | null): MapListing {

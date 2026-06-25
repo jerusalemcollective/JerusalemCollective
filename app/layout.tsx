@@ -23,7 +23,7 @@ const display = Playfair_Display({
 export const metadata: Metadata = {
   metadataBase: new URL('https://jlmcollective.co'),
   title: {
-    default: 'JLM Collective | Jerusalem Short-Term Stays',
+    default: 'Jerusalem Short-Term Stays | JLM Collective',
     template: '%s | JLM Collective',
   },
   description:
@@ -36,16 +36,25 @@ export const metadata: Metadata = {
     shortcut: '/favicon.png',
     apple: '/apple-icon.png',
   },
-  alternates: {
-    canonical: '/',
-  },
   openGraph: {
-    title: 'JLM Collective | Jerusalem Short-Term Stays',
+    title: 'Jerusalem Short-Term Stays | JLM Collective',
     description:
       'Find verified short-term apartments and stays in Jerusalem with clear details, local neighbourhood search, and simple booking enquiries.',
-    url: 'https://jlmcollective.co',
+    url: '/',
     siteName: 'JLM Collective',
+    images: [
+      {
+        url: '/logos/JLM_Collective_Primary_Horizontal_Terracotta_UI.webp',
+        width: 1200,
+        height: 630,
+        alt: 'JLM Collective',
+      },
+    ],
+    locale: 'en_GB',
     type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
   },
 }
 
