@@ -1,68 +1,65 @@
-<svg width="1600" height="860" viewBox="0 0 1600 860" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="1680" height="920" viewBox="0 0 1680 920" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <filter id="paper-noise" x="-10%" y="-10%" width="120%" height="120%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.92" numOctaves="2" seed="7" stitchTiles="stitch" />
+    <filter id="grain" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.82" numOctaves="2" seed="11" stitchTiles="stitch" />
       <feColorMatrix type="matrix" values="
         1 0 0 0 0
         0 1 0 0 0
         0 0 1 0 0
-        0 0 0 0.06 0" />
+        0 0 0 0.08 0" />
     </filter>
-    <linearGradient id="paper-sweep" x1="309" y1="122" x2="1260" y2="779" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#C9B7A0" stop-opacity="0.06" />
-      <stop offset="0.5" stop-color="#E8D8C4" stop-opacity="0.015" />
-      <stop offset="1" stop-color="#C9B7A0" stop-opacity="0.06" />
+    <linearGradient id="paper-wash" x1="220" y1="60" x2="1440" y2="860" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F4E7D2" stop-opacity="0.22" />
+      <stop offset="0.5" stop-color="#F7F1E8" stop-opacity="0.04" />
+      <stop offset="1" stop-color="#E8D7BF" stop-opacity="0.2" />
     </linearGradient>
-    <radialGradient id="center-fade" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(800 352) rotate(90) scale(406 704)">
-      <stop offset="0.56" stop-color="white" stop-opacity="0" />
-      <stop offset="1" stop-color="white" stop-opacity="1" />
+    <radialGradient id="vignette" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(840 458) rotate(90) scale(420 760)">
+      <stop offset="0.6" stop-color="#F7F1E8" stop-opacity="0" />
+      <stop offset="1" stop-color="#F7F1E8" stop-opacity="1" />
     </radialGradient>
-    <mask id="edge-mask">
-      <rect width="1600" height="860" fill="url(#center-fade)" />
-    </mask>
   </defs>
 
-  <rect width="1600" height="860" fill="transparent" />
-  <rect width="1600" height="860" fill="url(#paper-sweep)" />
-  <rect width="1600" height="860" filter="url(#paper-noise)" opacity="0.75" />
+  <rect width="1680" height="920" fill="#F7F1E8" />
+  <rect width="1680" height="920" fill="url(#paper-wash)" />
 
-  <g mask="url(#edge-mask)">
-    <g opacity="0.2" stroke="#D8B19A" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M-30 40L65 28L128 50L204 36L262 58L318 104L307 176L356 214L366 286L324 332L248 350L176 338L112 372L42 344L18 272L42 198L-6 132L-30 40Z" />
-      <path d="M68 26L84 96M112 34L104 144M149 44L166 130M196 38L188 112M236 52L256 136M275 78L234 176M78 84L154 72L222 86L282 116M64 128L148 120L212 132L294 172M52 174L134 180L204 202L278 236M42 226L112 236L180 262L248 306M34 280L90 294L146 322L208 340" />
-      <path d="M1278 546L1368 512L1460 526L1554 588L1628 654L1614 744L1548 806L1458 836L1366 820L1288 754L1256 676L1278 546Z" />
-      <path d="M1320 558L1348 642M1362 536L1392 626M1408 530L1432 614M1452 546L1466 642M1498 578L1510 682M1298 604L1376 596L1452 614L1530 662M1282 654L1360 654L1440 680L1514 738M1288 714L1356 724L1428 760L1482 812" />
-    </g>
-
-    <g opacity="0.16" stroke="#A8A095" stroke-width="0.9" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M1216 38C1266 18 1330 14 1390 32C1460 52 1528 54 1608 34" />
-      <path d="M1188 74C1242 48 1308 42 1372 60C1442 80 1514 82 1594 62" />
-      <path d="M1160 114C1216 84 1284 78 1350 96C1424 116 1496 118 1578 96" />
-      <path d="M1134 156C1192 122 1264 116 1332 136C1408 156 1480 156 1562 132" />
-      <path d="M1112 202C1170 168 1242 164 1310 182C1386 202 1458 198 1538 176" />
-      <path d="M1092 252C1152 216 1226 214 1294 232C1372 252 1442 246 1522 220" />
-      <path d="M1074 304C1136 264 1210 262 1280 280C1356 300 1428 292 1508 266" />
-      <path d="M1056 360C1118 318 1194 316 1264 334C1340 352 1414 344 1494 318" />
-
-      <path d="M-24 708C44 674 116 668 182 690C254 712 322 710 396 688" />
-      <path d="M-10 746C58 708 132 704 200 726C272 748 344 744 418 720" />
-      <path d="M8 784C74 742 150 740 220 760C292 780 366 774 438 748" />
-      <path d="M28 824C96 780 172 778 242 796C316 816 390 806 460 780" />
-      <path d="M54 860C122 822 196 818 264 836C336 854 404 846 474 820" />
-    </g>
-
-    <g opacity="0.11" stroke="#B6AEA4" stroke-width="1.1" stroke-linecap="round">
-      <path d="M1098 254C1140 240 1180 240 1222 254C1260 266 1300 266 1338 254" />
-      <path d="M1084 280C1128 264 1170 264 1212 280C1254 294 1294 292 1336 278" />
-      <path d="M1070 306C1114 290 1158 292 1200 308C1244 324 1286 322 1328 306" />
-      <path d="M1056 334C1102 316 1146 320 1188 336C1232 352 1276 350 1318 332" />
-      <path d="M1044 364C1092 344 1136 350 1178 366C1220 382 1266 380 1308 360" />
-
-      <path d="M28 620C74 594 118 596 160 612C204 628 248 626 290 608" />
-      <path d="M18 648C64 620 110 624 152 640C196 656 240 654 284 634" />
-      <path d="M8 678C56 646 104 652 146 668C190 684 236 682 278 660" />
-      <path d="M2 710C50 678 96 684 138 700C182 716 228 714 270 692" />
-      <path d="M-4 742C42 708 88 714 130 732C174 748 220 746 264 720" />
-    </g>
+  <g opacity="0.18">
+    <path d="M0 40C280 130 538 112 858 18C1112 -56 1358 -44 1680 70V0H0V40Z" fill="#F2E4D0" />
+    <path d="M0 920H1680V870C1428 792 1184 800 928 872C622 958 320 948 0 854V920Z" fill="#EEDFCC" />
   </g>
+
+  <g opacity="0.08" stroke="#D7C5B0" stroke-width="13">
+    <path d="M-40 154C238 96 602 84 924 118C1252 152 1460 152 1732 116" />
+    <path d="M-50 336C234 276 596 270 920 306C1242 344 1454 348 1730 314" />
+    <path d="M-36 520C246 458 600 454 920 488C1248 524 1458 526 1728 498" />
+    <path d="M-20 706C250 644 598 642 916 674C1238 706 1450 710 1718 688" />
+  </g>
+
+  <rect width="1680" height="920" filter="url(#grain)" opacity="0.9" />
+
+  <g opacity="0.22" stroke="#E4A88F" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M-10 14L72 20L126 44L198 32L256 54L312 108L302 180L350 226L354 296L304 348L222 364L154 344L98 376L36 350L8 286L30 212L-6 146L-10 14Z" />
+    <path d="M54 18L72 100M98 28L94 154M134 36L150 126M182 36L176 120M226 50L244 136M266 84L224 180M58 84L138 74L208 90L278 122M46 132L130 126L198 142L286 178M38 186L114 188L190 212L272 248M30 244L98 252L170 282L236 320M20 304L78 316L134 344L198 360" />
+    <path d="M1326 592L1416 556L1504 570L1598 630L1686 698L1672 816L1598 884L1496 912L1400 888L1324 820L1292 738L1326 592Z" />
+    <path d="M1362 604L1388 692M1400 582L1428 674M1442 578L1462 664M1486 594L1498 694M1530 624L1540 730M1346 652L1422 644L1494 664L1576 716M1332 706L1410 706L1484 734L1560 790M1336 768L1402 776L1472 812L1528 874" />
+  </g>
+
+  <g opacity="0.16" stroke="#BEB6AA" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1288 34C1342 14 1406 12 1468 30C1532 48 1602 50 1688 28" />
+    <path d="M1262 66C1320 42 1388 42 1452 60C1518 78 1594 78 1678 54" />
+    <path d="M1234 104C1294 76 1366 78 1430 96C1498 114 1572 112 1656 88" />
+    <path d="M1206 146C1266 114 1340 116 1406 134C1474 152 1550 150 1634 124" />
+    <path d="M1180 192C1242 156 1318 160 1384 178C1452 196 1528 192 1610 164" />
+    <path d="M1156 242C1220 202 1296 206 1362 224C1432 242 1506 236 1588 208" />
+    <path d="M1134 294C1198 250 1276 254 1344 272C1412 290 1488 282 1568 254" />
+    <path d="M1114 350C1180 302 1256 306 1326 324C1396 342 1474 332 1552 304" />
+    <path d="M1098 410C1166 358 1242 364 1312 382C1382 400 1460 390 1538 360" />
+
+    <path d="M-6 664C62 628 138 624 204 646C274 668 346 668 420 642" />
+    <path d="M8 710C76 670 154 668 222 688C292 708 366 706 438 678" />
+    <path d="M24 758C90 714 170 712 240 732C312 752 388 748 458 718" />
+    <path d="M40 808C108 760 186 758 256 776C328 796 402 790 472 758" />
+    <path d="M58 860C126 814 204 810 272 828C344 846 416 840 488 806" />
+  </g>
+
+  <rect width="1680" height="920" fill="url(#vignette)" />
 </svg>
