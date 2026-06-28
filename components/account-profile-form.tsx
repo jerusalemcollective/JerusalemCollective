@@ -136,7 +136,7 @@ export function AccountProfileForm({ user, profile, hasStay }: AccountProfileFor
           <Button
             onClick={handleSave}
             disabled={isSaving}
-            className="rounded-lg bg-[#c76f55] text-white hover:bg-[#b5624a]"
+            className="rounded-lg bg-[#c76f55] text-white hover:bg-[#b85f47]"
           >
             {isSaving ? 'Saving...' : 'Save changes'}
           </Button>

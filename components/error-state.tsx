@@ -30,7 +30,7 @@ export function ErrorState({
           <button
             type="button"
             onClick={reset}
-            className="inline-flex items-center justify-center rounded-xl bg-[#c76f55] px-6 py-3 text-sm font-medium text-white transition hover:bg-[#b5624a]"
+            className="inline-flex items-center justify-center rounded-xl bg-[#c76f55] px-6 py-3 text-sm font-medium text-white transition hover:bg-[#b85f47]"
           >
             Try again
           </button>

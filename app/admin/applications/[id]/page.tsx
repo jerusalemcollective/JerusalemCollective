@@ -219,7 +219,7 @@ export default async function AdminApplicationPage({
 
                 <form action={approveAndPublishApplication}>
                   <input type="hidden" name="applicationId" value={adminApplication.id} />
-                  <button className="w-full rounded-2xl bg-[#c76f55] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#b55f47]">
+                  <button className="w-full rounded-2xl bg-[#c76f55] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47]">
                     Approve and publish
                   </button>
                 </form>

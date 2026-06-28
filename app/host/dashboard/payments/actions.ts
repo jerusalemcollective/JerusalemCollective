@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { getPaymentRouteSettings } from '@/lib/platform-settings'
 
@@ -21,11 +22,13 @@ export async function updateHostPaymentPreferences(formData: FormData) {
     supported_currencies: payoutCurrencies,
   })
 
+  revalidatePath('/host/dashboard/payments')
+
   if (error) {
-    throw error
+    redirect('/host/dashboard/payments?saved=error')
   }
 
-  revalidatePath('/host/dashboard/payments')
+  redirect('/host/dashboard/payments?saved=1')
 }
 
 export async function updateBookingPayment(

@@ -83,7 +83,7 @@ function ForgotPasswordForm() {
 
               <Button
                 type="submit"
-                className="h-12 w-full rounded-xl bg-[#c76f55] text-white hover:bg-[#b5624a]"
+                className="h-12 w-full rounded-xl bg-[#c76f55] text-white hover:bg-[#b85f47]"
                 disabled={isLoading}
               >
                 {isLoading ? 'Sending...' : 'Send reset link'}

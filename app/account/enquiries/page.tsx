@@ -149,7 +149,7 @@ function EmptyState() {
       <p className="mb-6 text-stone-600">When you enquire about a stay, it will appear here.</p>
       <Link
         href="/stays"
-        className="inline-flex rounded-full bg-[#c76f55] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#b5624a]"
+        className="inline-flex rounded-full bg-[#c76f55] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#b85f47]"
       >
         Start exploring
       </Link>

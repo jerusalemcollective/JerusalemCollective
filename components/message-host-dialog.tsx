@@ -465,7 +465,7 @@ export function MessageHostDialog({
                     type="button"
                     onClick={handleSend}
                     disabled={!message.trim() || loading}
-                    className="rounded-full bg-[#c76f55] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#b55f47] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-full bg-[#c76f55] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#b85f47] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {loading
                       ? 'Sending...'

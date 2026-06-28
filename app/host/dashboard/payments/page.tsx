@@ -34,7 +34,12 @@ type HostPaymentProfile = {
   commission_percent_override: number | null
 }
 
-export default async function HostPaymentsPage() {
+export default async function HostPaymentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ saved?: string }>
+}) {
+  const { saved } = await searchParams
   const { supabase, hostIds } = await requireHostDashboardAccess()
   const [{ data: profile }, { data: bookingsData }, paymentRoutes] = await Promise.all([
     supabase
@@ -80,6 +85,23 @@ export default async function HostPaymentsPage() {
             This is separate from listing your stay. Add your payment details here so you can receive payouts from bookings, and choose whether to also offer direct-to-host payment.
           </p>
         </div>
+
+        {saved === '1' && (
+          <div
+            role="status"
+            className="mb-6 rounded-2xl border border-green-200 bg-green-50 p-3 text-sm text-green-800"
+          >
+            Payment settings saved.
+          </div>
+        )}
+        {saved === 'error' && (
+          <div
+            role="alert"
+            className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+          >
+            We couldn’t save your payment settings. Please try again.
+          </div>
+        )}
 
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           <form action={updateHostPaymentPreferences} className="rounded-3xl bg-white p-6 shadow-sm">

@@ -2,7 +2,8 @@ import { HostDashboardNav } from '@/components/host-dashboard-nav'
 import { HostAvailabilityCalendar } from '@/components/host-availability-calendar'
 import { BlockRangeForm } from '@/components/block-range-form'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
-import { addUnavailableRange, removeUnavailableRange } from './actions'
+import { addUnavailableRange } from './actions'
+import { RemoveBlockedDateButton } from '@/components/remove-blocked-date-button'
 
 type HostListing = {
   id: string
@@ -103,12 +104,7 @@ export default async function HostCalendarPage() {
                       <p className="text-sm font-semibold text-stone-700">
                         {formatDate(range.start_date)} - {formatDate(range.end_date)}
                       </p>
-                      <form action={removeUnavailableRange}>
-                        <input type="hidden" name="rangeId" value={range.id} />
-                        <button className="rounded-full border border-stone-200 px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-300">
-                          Remove
-                        </button>
-                      </form>
+                      <RemoveBlockedDateButton rangeId={range.id} />
                     </div>
                   ))}
                 </div>
