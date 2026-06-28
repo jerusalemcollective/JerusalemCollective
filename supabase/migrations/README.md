@@ -11,4 +11,8 @@ The booking/payment flow work was implemented across:
 - `057_host_payment_choice_and_same_currency.sql`
 - `058_platform_payment_controls.sql`
 
-Future migrations should continue sequentially from `059`.
+Future migrations should continue sequentially. The latest is
+`064_security_followups.sql` (audit follow-ups), so continue from `065`.
+
+See also `REVIEW_FIRST_hosts_email_and_booking_dedup.sql` — guided steps that
+need the live schema confirmed before running (not auto-numbered on purpose).

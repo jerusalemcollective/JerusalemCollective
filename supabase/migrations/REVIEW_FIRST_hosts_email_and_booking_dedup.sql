@@ -1,0 +1,90 @@
+-- REVIEW_FIRST_hosts_email_and_booking_dedup.sql
+--
+-- ⚠️  DO NOT run this file wholesale. It contains two hardening steps whose exact
+--     SQL depends on your LIVE database, because the base `hosts` table and the
+--     create_listing_enquiry() function are not fully defined in the repo's
+--     migration set. Work through each step, fill in the blanks, then run only
+--     the lines you have confirmed.
+
+-- ===========================================================================
+-- STEP 1 (P1-A, DB side) — stop anonymous users reading host EMAIL via the API
+-- ===========================================================================
+-- Background: app/hosts/[id]/page.tsx no longer SELECTs email (already fixed in
+-- code). But if the `hosts` table has a public/anon SELECT policy, anyone can
+-- still call the REST API (GET /rest/v1/hosts?select=email) with the public anon
+-- key and scrape every host's email. We close that with COLUMN-level privileges
+-- while keeping name/photo/etc. publicly readable.
+--
+-- 1a. First, list the real columns so you grant the right safe set:
+--
+--     select column_name, data_type
+--     from information_schema.columns
+--     where table_schema = 'public' and table_name = 'hosts'
+--     order by ordinal_position;
+--
+-- 1b. Also confirm what public/anon SELECT policy exists today:
+--
+--     select policyname, roles, cmd, qual
+--     from pg_policies
+--     where schemaname = 'public' and tablename = 'hosts';
+--
+-- 1c. Then revoke blanket SELECT from anon and re-grant ONLY non-PII columns.
+--     EDIT the column list to match 1a — include every column your PUBLIC pages
+--     read, and EXCLUDE email, phone, calendar_token, and anything sensitive.
+--     (Column grants are role-wide; RLS still controls which rows are visible.)
+--
+--     -- revoke table-wide read from the anonymous role
+--     revoke select on public.hosts from anon;
+--
+--     -- grant back only the safe, public columns (ADJUST THIS LIST):
+--     grant select (
+--       id, name, display_name, show_full_name, profile_photo_url,
+--       is_verified, host_type, bio, created_at
+--     ) on public.hosts to anon;
+--
+--     NOTE: leave `authenticated` with full SELECT if hosts read their own email
+--     while logged in; RLS should already restrict rows. If `authenticated` is
+--     also over-broad for non-owners, repeat the revoke/grant for that role too,
+--     but verify the host dashboard still loads the owner's own email first.
+--
+-- 1d. Verify: with only the anon key, this should now FAIL / omit email:
+--     curl "$SUPABASE_URL/rest/v1/hosts?select=email&limit=1" \
+--          -H "apikey: $ANON_KEY"
+
+-- ===========================================================================
+-- STEP 2 (P2-B) — prevent duplicate booking_requests from rapid double-submit
+-- ===========================================================================
+-- The columns (guest_id, listing_id, check_in, check_out) are confirmed from
+-- migration 021. A partial unique index catches identical concrete-date repeats
+-- without affecting date-less enquiries (where check_in is null).
+--
+-- 2a. Add the guard index (safe & additive — but see 2c about existing dupes):
+--
+--     create unique index if not exists booking_requests_no_dupe_idx
+--       on public.booking_requests (guest_id, listing_id, check_in, check_out)
+--       where check_in is not null and check_out is not null;
+--
+-- 2b. IMPORTANT: the insert lives inside the create_listing_enquiry() function
+--     in 021_connected_enquiry_workflow.sql. Without an ON CONFLICT clause, a
+--     duplicate submit will now raise an error instead of silently inserting.
+--     Update that INSERT to swallow the conflict, e.g.:
+--
+--       insert into public.booking_requests (...columns...)
+--       values (...)
+--       on conflict (guest_id, listing_id, check_in, check_out)
+--         where check_in is not null and check_out is not null
+--       do nothing
+--       returning id into v_request_id;
+--
+--     Re-test the enquiry flow after editing the function.
+--
+-- 2c. If 2a errors with "could not create unique index" you already have real
+--     duplicates. Find them first:
+--
+--     select guest_id, listing_id, check_in, check_out, count(*)
+--     from public.booking_requests
+--     where check_in is not null and check_out is not null
+--     group by 1,2,3,4 having count(*) > 1;
+--
+--     Decide which to keep (usually the earliest created_at), delete the rest,
+--     then create the index.

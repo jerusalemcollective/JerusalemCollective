@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { GoogleAuthButton } from '@/components/google-auth-button'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, Suspense } from 'react'
 
@@ -137,10 +138,13 @@ function RegisterForm() {
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <Link href="/" className="inline-block">
-            <img 
-              src="/logos/JLM_Collective_Primary_Horizontal_Terracotta_UI.webp" 
-              alt="JLM Collective" 
-              className="h-10"
+            <Image
+              src="/logos/JLM_Collective_Primary_Horizontal_Terracotta_UI.webp"
+              alt="JLM Collective"
+              width={512}
+              height={128}
+              priority
+              className="h-10 w-auto"
             />
           </Link>
           <p className="mt-2 text-stone-600">Create your host account</p>

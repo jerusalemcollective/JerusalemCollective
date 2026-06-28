@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 
 const JLMLogo = ({ variant = 'terracotta', className = '' }: { variant?: 'terracotta' | 'black', className?: string }) => {
   const src = variant === 'black' 
@@ -6,9 +7,11 @@ const JLMLogo = ({ variant = 'terracotta', className = '' }: { variant?: 'terrac
     : '/logos/JLM_Collective_Primary_Horizontal_Terracotta_UI.webp'
   
   return (
-    <img 
-      src={src} 
-      alt="JLM Collective" 
+    <Image
+      src={src}
+      alt="JLM Collective"
+      width={512}
+      height={128}
       className={className}
     />
   )

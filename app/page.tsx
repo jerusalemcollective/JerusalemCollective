@@ -462,7 +462,7 @@ function formatFeaturedPrice(listing: Pick<FeaturedStay, 'price_ils' | 'price_us
 
 function SavedStayIcon({ className = '' }: { className?: string }) {
   return (
-    <img src="/icons/yemin-moshe-save-ui.webp" alt="" aria-hidden="true" className={`rounded-full object-cover ${className}`} />
+    <Image src="/icons/yemin-moshe-save-ui.webp" alt="" aria-hidden="true" width={96} height={96} className={`rounded-full object-cover ${className}`} />
   )
 }
 

@@ -374,30 +374,41 @@ async function sendEmail({
   const resendApiKey = process.env.RESEND_API_KEY
 
   if (!resendApiKey) {
-    console.error('Missing RESEND_API_KEY')
+    console.error('[transactional-email] Missing RESEND_API_KEY — email not sent', { to, subject })
     return false
   }
 
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${resendApiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: 'JLM Collective <no-reply@jlmcollective.co>',
-      to,
-      subject,
-      html,
-    }),
-  })
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'JLM Collective <no-reply@jlmcollective.co>',
+        to,
+        subject,
+        html,
+      }),
+    })
 
-  if (!response.ok) {
-    console.error('Resend email failed', await response.text())
+    if (!response.ok) {
+      const body = await response.text()
+      console.error('[transactional-email] Resend API error — email not sent', {
+        to,
+        subject,
+        status: response.status,
+        body,
+      })
+      return false
+    }
+
+    return true
+  } catch (error) {
+    console.error('[transactional-email] Network error sending email', { to, subject, error })
     return false
   }
-
-  return true
 }
 
 async function getAuthUserEmail(userId: string) {

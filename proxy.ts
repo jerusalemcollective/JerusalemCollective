@@ -39,23 +39,28 @@ function protectRoute(
   response: NextResponse,
   isAuthenticated: boolean,
 ) {
-  if (
-    request.nextUrl.pathname.startsWith('/host/dashboard') &&
-    !isAuthenticated
-  ) {
+  const { pathname } = request.nextUrl
+
+  if (pathname.startsWith('/host/dashboard') && !isAuthenticated) {
     const url = request.nextUrl.clone()
     url.pathname = '/host/login'
-    url.searchParams.set('redirect', request.nextUrl.pathname)
+    url.searchParams.set('redirect', pathname)
     return NextResponse.redirect(url)
   }
 
+  // Defense-in-depth for the remaining private areas. Page/layout guards
+  // (requireAdmin, the account layout) remain the primary enforcement; this
+  // just stops a signed-out request before any work is done. Login routes are
+  // outside these prefixes, so there is no redirect loop.
   if (
-    request.nextUrl.pathname === '/become-a-host' &&
+    (pathname === '/become-a-host' ||
+      pathname.startsWith('/admin') ||
+      pathname.startsWith('/account')) &&
     !isAuthenticated
   ) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
-    url.searchParams.set('redirect', request.nextUrl.pathname)
+    url.searchParams.set('redirect', pathname)
     return NextResponse.redirect(url)
   }
 
@@ -66,5 +71,7 @@ export const config = {
   matcher: [
     '/become-a-host',
     '/host/dashboard/:path*',
+    '/admin/:path*',
+    '/account/:path*',
   ],
 }

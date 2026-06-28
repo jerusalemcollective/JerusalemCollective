@@ -129,7 +129,7 @@ function LoginForm() {
 
         <p className="mt-6 text-center text-xs text-stone-500">
           By signing in, you agree to our{' '}
-          <Link href="/trust-and-safety" className="underline">Terms of Service</Link>
+          <Link href="/terms" className="underline">Terms of Service</Link>
           {' '}and{' '}
           <Link href="/privacy" className="underline">Privacy Policy</Link>
         </p>

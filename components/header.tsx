@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useState, useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { Menu, X } from 'lucide-react'
@@ -12,19 +13,24 @@ const JLMLogo = ({ variant = 'terracotta', className = '' }) => {
     : '/logos/JLM_Collective_Horizontal_Black_UI.webp'
   
   return (
-    <img 
-      src={src} 
-      alt="JLM Collective" 
+    <Image
+      src={src}
+      alt="JLM Collective"
+      width={512}
+      height={128}
+      priority
       className={className}
     />
   )
 }
 
 const SavedStayIcon = ({ className = '' }: { className?: string }) => (
-  <img
+  <Image
     src="/icons/yemin-moshe-save-ui.webp"
     alt=""
     aria-hidden="true"
+    width={96}
+    height={96}
     className={`rounded-full object-cover ${className}`}
   />
 )
@@ -301,6 +307,9 @@ export function Header({
                   title="Account"
                 >
                   {user.avatarUrl ? (
+                    // Intentionally a raw <img>: avatar URLs may come from external
+                    // OAuth providers not listed in next.config images.remotePatterns,
+                    // which would make next/image throw.
                     <img
                       src={user.avatarUrl}
                       alt=""
@@ -346,7 +355,7 @@ export function Header({
                         onClick={() => setShowDropdown(false)}
                         className="flex items-center gap-3 px-4 py-2.5 text-sm text-stone-700 transition hover:bg-stone-50"
                       >
-                        <img src="/icons/yemin-moshe-save-ui.webp" alt="" className="h-5 w-5 rounded-full object-cover" />
+                        <Image src="/icons/yemin-moshe-save-ui.webp" alt="" width={96} height={96} className="h-5 w-5 rounded-full object-cover" />
                         Saved
                       </Link>
                       <Link

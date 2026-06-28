@@ -29,6 +29,11 @@ export async function GET(
 ) {
   const { token: rawToken } = await params
   const token = rawToken.replace(/\.ics$/, '')
+  // Reject empty tokens so a request like `/.ics` can't match a host whose
+  // calendar_token is unset/empty.
+  if (!token) {
+    return new Response('Calendar not found.', { status: 404 })
+  }
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 

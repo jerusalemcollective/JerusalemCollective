@@ -181,7 +181,9 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
             <h1 className="font-display text-3xl font-bold tracking-tight text-stone-950">
               {selectedArea === 'All' ? 'All stays in Jerusalem' : `Stays in ${selectedArea}`}
             </h1>
-            <p className="mt-2 text-stone-500">{listings.length} verified apartments available</p>
+            <p className="mt-2 text-stone-500">
+              {listings.length} verified apartment{listings.length === 1 ? '' : 's'} available
+            </p>
             {activeFeature && (
               <p className="mt-1 text-sm text-stone-500">
                 Showing results related to {activeFeature}

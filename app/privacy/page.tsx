@@ -4,6 +4,18 @@ export const metadata = {
   alternates: {
     canonical: '/privacy',
   },
+  openGraph: {
+    title: 'Privacy Policy | JLM Collective',
+    description: 'How JLM Collective collects, uses, stores, and protects personal information.',
+    url: '/privacy',
+    siteName: 'JLM Collective',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Privacy Policy | JLM Collective',
+    description: 'How JLM Collective collects, uses, stores, and protects personal information.',
+  },
 }
 
 export default function PrivacyPolicyPage() {

@@ -19,6 +19,15 @@ type HostRecord = {
   show_full_name: boolean
 }
 
+type ListingTitleInput = {
+  title: string
+  area: string
+  bedrooms: number | null
+  max_guests?: number | null
+  description?: string | null
+  sukkah_balcony?: boolean | null
+}
+
 type ListingPageProps = {
   params: Promise<{ id: string }>
   searchParams?: Promise<Record<string, string | string[] | undefined>>
@@ -139,6 +148,61 @@ function getPublicName(host: HostRecord): string {
   return host.display_name || host.name.split(' ')[0]
 }
 
+function normaliseTitleText(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
+function isGenericListingTitle(title: string, area: string): boolean {
+  const normalisedTitle = normaliseTitleText(title)
+  const normalisedArea = normaliseTitleText(area)
+
+  return (
+    normalisedTitle === normalisedArea ||
+    normalisedTitle === `stay in ${normalisedArea}` ||
+    normalisedTitle === `${normalisedArea} apartment` ||
+    normalisedTitle === `apartment in ${normalisedArea}`
+  )
+}
+
+function formatBedroomTitle(bedrooms: number | null): string {
+  if (bedrooms === 0) return 'Studio Apartment'
+  if (bedrooms && bedrooms > 0) return `${bedrooms}-Bed Apartment`
+  return 'Jerusalem Apartment'
+}
+
+function buildListingDisplayTitle(listing: ListingTitleInput): string {
+  const rawTitle = listing.title.trim()
+  const area = listing.area.trim()
+
+  if (!isGenericListingTitle(rawTitle, area)) {
+    return normaliseTitleText(rawTitle).includes(normaliseTitleText(area))
+      ? rawTitle
+      : `${rawTitle} in ${area}`
+  }
+
+  const feature = listing.sukkah_balcony ? ' with Sukkah' : ''
+  return `${formatBedroomTitle(listing.bedrooms)}${feature} in ${area}`
+}
+
+function trimMetadataDescription(value: string): string {
+  const cleaned = value.replace(/\s+/g, ' ').trim()
+  if (cleaned.length <= 155) return cleaned
+  const truncated = cleaned.slice(0, 152)
+  return `${truncated.slice(0, truncated.lastIndexOf(' '))}...`
+}
+
+function buildListingDescription(listing: ListingTitleInput, title: string): string {
+  if (listing.description?.trim()) {
+    return trimMetadataDescription(listing.description)
+  }
+
+  const guestText = listing.max_guests
+    ? ` sleeping up to ${listing.max_guests} guest${listing.max_guests === 1 ? '' : 's'}`
+    : ''
+
+  return `${title}${guestText}. Verified Jerusalem short-term stay on JLM Collective.`
+}
+
 function estimateWalkingMinutes(
   lat: number,
   lng: number,
@@ -172,7 +236,7 @@ export async function generateMetadata({
   const [{ data: listing }, { data: coverPhoto }] = await Promise.all([
     supabase
       .from('listings')
-      .select('title, area, bedrooms, max_guests, price_ils, price_usd, description')
+      .select('title, area, bedrooms, max_guests, price_ils, price_usd, description, sukkah_balcony')
       .eq('id', id)
       .single(),
     supabase
@@ -192,13 +256,8 @@ export async function generateMetadata({
     }
   }
 
-  const title =
-    listing.title.trim().toLowerCase() === listing.area.trim().toLowerCase()
-      ? `Stay in ${listing.area}`
-      : `${listing.title} in ${listing.area}`
-  const description = listing.description
-    ? listing.description.slice(0, 155)
-    : `${listing.bedrooms ?? 1}-bedroom stay in ${listing.area}, Jerusalem. Verified by JLM Collective.`
+  const title = buildListingDisplayTitle(listing)
+  const description = buildListingDescription(listing, title)
   const priceText = listing.price_usd
     ? `From $${Number(listing.price_usd).toLocaleString()} per night`
     : listing.price_ils
@@ -319,7 +378,11 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
   }
 
   const structuredListing = listingDetailListingSchema.parse(listingData)
-  const listing: ListingDetailListing = structuredListing
+  const displayTitle = buildListingDisplayTitle(structuredListing)
+  const listing: ListingDetailListing = {
+    ...structuredListing,
+    title: displayTitle,
+  }
   const walkingMinutes =
     listing.walking_minutes_to_kotel ||
     (structuredListing.latitude && structuredListing.longitude
@@ -445,10 +508,10 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'LodgingBusiness',
-    name: structuredListing.title,
+    name: displayTitle,
     description:
       structuredListing.description ||
-      `${structuredListing.bedrooms ?? 1}-bedroom stay in ${structuredListing.area}, Jerusalem.`,
+      buildListingDescription(structuredListing, displayTitle),
     url: `https://jlmcollective.co/listings/${id}`,
     image: photos.map((photo) => photo.photo_url),
     address: {
@@ -476,6 +539,18 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
       ? `$${Number(structuredListing.price_usd).toLocaleString()} per night`
       : structuredListing.price_ils
         ? `\u20aa${Number(structuredListing.price_ils).toLocaleString()} per night`
+        : undefined,
+    offers:
+      structuredListing.price_usd || structuredListing.price_ils
+        ? {
+            '@type': 'Offer',
+            priceCurrency: structuredListing.price_usd ? 'USD' : 'ILS',
+            price: structuredListing.price_usd
+              ? Number(structuredListing.price_usd)
+              : Number(structuredListing.price_ils),
+            availability: 'https://schema.org/InStock',
+            url: `https://jlmcollective.co/listings/${id}`,
+          }
         : undefined,
     aggregateRating:
       avgRating !== null && reviews.length > 0

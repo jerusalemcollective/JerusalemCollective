@@ -7,6 +7,18 @@ export const metadata = {
   alternates: {
     canonical: '/terms',
   },
+  openGraph: {
+    title: 'Terms of Service | JLM Collective',
+    description: 'Terms for guests and hosts using JLM Collective.',
+    url: '/terms',
+    siteName: 'JLM Collective',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Terms of Service | JLM Collective',
+    description: 'Terms for guests and hosts using JLM Collective.',
+  },
 }
 
 export default function TermsPage() {

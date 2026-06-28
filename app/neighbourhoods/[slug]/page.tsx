@@ -53,6 +53,14 @@ export async function generateMetadata({
       description,
       url: `/neighbourhoods/${slug}`,
       type: 'website',
+      images: [
+        {
+          url: '/logos/JLM_Collective_Primary_Horizontal_Terracotta_UI.webp',
+          width: 1200,
+          height: 630,
+          alt: 'JLM Collective',
+        },
+      ],
     },
     twitter: {
       card: 'summary_large_image',

@@ -288,7 +288,7 @@ export function ApplicationPhotoManager({
                 className={`touch-pan-y cursor-grab overflow-hidden rounded-2xl bg-[#F8F5F2] active:cursor-grabbing ${draggingPhotoIndex === index ? 'opacity-60' : ''}`}
               >
               <div className="group relative">
-                <img src={photo.photo_url} alt={photo.label || ''} className="aspect-[4/3] w-full object-cover" />
+                <img src={photo.photo_url} alt={photo.label || 'Listing photo'} className="aspect-[4/3] w-full object-cover" />
                 <button
                   type="button"
                   onClick={() => void removePhoto(photo)}

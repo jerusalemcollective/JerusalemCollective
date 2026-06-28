@@ -13,7 +13,6 @@ type HostRow = {
   is_verified: boolean | null
   host_type: string | null
   bio: string | null
-  [key: string]: unknown
 }
 
 type ListingWithPhoto = {
@@ -89,7 +88,14 @@ export async function generateMetadata({
       url: `/hosts/${id}`,
       images: host.profile_photo_url
         ? [{ url: host.profile_photo_url, alt: displayName }]
-        : [],
+        : [
+            {
+              url: '/logos/JLM_Collective_Primary_Horizontal_Terracotta_UI.webp',
+              width: 1200,
+              height: 630,
+              alt: 'JLM Collective',
+            },
+          ],
     },
   }
 }
@@ -99,7 +105,11 @@ export default async function HostProfilePage({ params }: HostPageProps) {
   const supabase = await createClient()
   const [{ data: hostData }, { data: listingsData }, { data: reviewsData }] =
     await Promise.all([
-      supabase.from('hosts').select('*').eq('id', hostId).single(),
+      supabase
+        .from('hosts')
+        .select('id, name, display_name, show_full_name, profile_photo_url, is_verified, host_type, bio')
+        .eq('id', hostId)
+        .single(),
       supabase
         .from('listings')
         .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type')
