@@ -78,6 +78,7 @@ export function Header({
   const [mobileOpen, setMobileOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const accountButtonRef = useRef<HTMLButtonElement>(null)
   const pathname = usePathname()
 
   useEffect(() => {
@@ -222,15 +223,27 @@ export function Header({
     }
   }, [])
 
-  // Close dropdown when clicking outside
+  // Close dropdown when clicking outside, or close menus on Escape (with focus return)
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowDropdown(false)
       }
     }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      setShowDropdown((open) => {
+        if (open) accountButtonRef.current?.focus()
+        return false
+      })
+      setMobileOpen(false)
+    }
     document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
   }, [])
 
   useEffect(() => {
@@ -301,9 +314,12 @@ export function Header({
             ) : user ? (
               <>
                 <button
+                  ref={accountButtonRef}
                   onClick={() => setShowDropdown(!showDropdown)}
                   className="inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-stone-200 bg-white transition hover:border-stone-400 hover:bg-stone-50 sm:h-10 sm:w-10"
                   aria-label="Account menu"
+                  aria-haspopup="menu"
+                  aria-expanded={showDropdown}
                   title="Account"
                 >
                   {user.avatarUrl ? (
@@ -321,7 +337,7 @@ export function Header({
                 </button>
 
                 {showDropdown && (
-                  <div className="absolute right-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl">
+                  <div role="menu" className="absolute right-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl">
                     {/* User Info */}
                     <div className="border-b border-stone-100 px-4 py-3">
                       <p className="font-semibold text-stone-900">{user.fullName || 'User'}</p>

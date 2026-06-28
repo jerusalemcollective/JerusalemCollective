@@ -307,7 +307,7 @@ export function ApplicationPhotoManager({
                   defaultValue={photo.label || ''}
                   onBlur={(event) => void updatePhotoLabel(photo.id, event.target.value)}
                   placeholder="Photo label, e.g. Bedroom 1"
-                  className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#c76f55]"
+                  className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs text-stone-900 outline-none transition placeholder:text-stone-500 focus:border-[#c76f55]"
                 />
               </div>
               </div>

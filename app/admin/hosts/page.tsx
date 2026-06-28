@@ -183,7 +183,7 @@ export default async function AdminHostsPage({
                       name="commissionOverride"
                       defaultValue={host.commission_percent_override ?? ''}
                       placeholder="Default"
-                      className="min-w-0 flex-1 rounded-full border border-stone-200 px-3 py-1.5 text-xs text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#c76f55]"
+                      className="min-w-0 flex-1 rounded-full border border-stone-200 px-3 py-1.5 text-xs text-stone-900 outline-none transition placeholder:text-stone-500 focus:border-[#c76f55]"
                       aria-label="Host commission override"
                     />
                     <button

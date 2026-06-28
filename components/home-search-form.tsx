@@ -312,7 +312,7 @@ export function HomeSearchForm() {
                 setShouldLoadPlaces(true)
               }}
               placeholder="Rechavia, German Colony, Old City..."
-              className="mt-1 w-full border-0 bg-transparent p-0 text-sm text-stone-900 placeholder:text-stone-500 focus:outline-none focus:ring-0"
+              className="mt-1 w-full rounded border-0 bg-transparent p-0 text-sm text-stone-900 placeholder:text-stone-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c76f55]"
             />
           </div>
 
@@ -594,7 +594,7 @@ export function HomeNeighborhoodSearch({ popularNeighborhoods }: { popularNeighb
             }}
             onFocus={() => setIsOpen(true)}
             placeholder="Search area..."
-            className="w-32 rounded-full border border-stone-200 bg-white px-3 py-1.5 text-[10px] font-medium text-stone-700 shadow-sm placeholder:text-stone-400 focus:border-[#c76f55] focus:outline-none focus:ring-1 focus:ring-[#c76f55]"
+            className="w-32 rounded-full border border-stone-200 bg-white px-3 py-1.5 text-[10px] font-medium text-stone-700 shadow-sm placeholder:text-stone-500 focus:border-[#c76f55] focus:outline-none focus:ring-1 focus:ring-[#c76f55]"
           />
           <SearchSmallIcon />
         </div>

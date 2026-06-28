@@ -139,7 +139,7 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
 
   return (
     <div className="min-h-screen">
-      <div className="sticky top-[73px] z-20 border-b border-stone-200 bg-[#F8F5F2]/95 backdrop-blur">
+      <div className="sticky top-[var(--header-h)] z-20 border-b border-stone-200 bg-[#F8F5F2]/95 backdrop-blur">
         <div className="mx-auto grid max-w-7xl gap-3 px-4 py-4 sm:px-6 lg:grid-cols-[1fr_auto] lg:items-start">
           <Suspense fallback={<div className="h-14 rounded-3xl bg-white shadow-sm" />}>
             <StaysFilterBar />

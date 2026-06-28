@@ -49,7 +49,7 @@ export function AdminRequestChangesForm({ applicationId }: { applicationId: stri
         required
         rows={5}
         placeholder="Tell the host exactly what needs fixing..."
-        className="w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#c76f55]"
+        className="w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm text-stone-900 outline-none transition placeholder:text-stone-500 focus:border-[#c76f55]"
       />
       {state.message && (
         <div

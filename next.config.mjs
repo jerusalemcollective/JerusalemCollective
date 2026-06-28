@@ -1,5 +1,13 @@
+import { fileURLToPath } from 'node:url'
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Pin the Turbopack workspace root — this project sits in a nested folder
+  // layout that otherwise makes Turbopack infer the wrong root. Resolves to the
+  // project directory (what Vercel uses anyway), so it's deploy-neutral.
+  turbopack: {
+    root: fileURLToPath(new URL('.', import.meta.url)),
+  },
   compress: true,
 
   images: {

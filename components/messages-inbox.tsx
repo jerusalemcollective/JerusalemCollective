@@ -1132,7 +1132,7 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
                 placeholder="Write a message..."
-                className="max-h-36 min-h-12 flex-1 resize-none bg-transparent px-3 py-3 text-sm text-stone-900 outline-none placeholder:text-stone-400"
+                className="max-h-36 min-h-12 flex-1 resize-none bg-transparent px-3 py-3 text-sm text-stone-900 outline-none placeholder:text-stone-500"
               />
               <button
                 type="button"

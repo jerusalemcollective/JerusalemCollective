@@ -1302,7 +1302,7 @@ function BookingControls({
           <select
             value={guestCount}
             onChange={(event) => setGuestCount(Number(event.target.value))}
-            className="mt-1 w-full border-0 bg-transparent p-0 text-sm text-stone-900 focus:outline-none focus:ring-0"
+            className="mt-1 w-full rounded border-0 bg-transparent p-0 text-sm text-stone-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c76f55]"
           >
             {[...Array(maxGuests)].map((_, index) => (
               <option key={index + 1} value={index + 1}>

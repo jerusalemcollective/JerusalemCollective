@@ -3,20 +3,21 @@ import { Inter, Playfair_Display } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Header } from '@/components/header'
 import { Footer } from '@/components/footer'
+import { Toaster } from '@/components/ui/sonner'
 import { SessionTimeout } from '@/components/session-timeout'
 import { getServicesBarEnabled } from '@/lib/platform-settings'
 import './globals.css'
 
 const inter = Inter({
   subsets: ['latin'],
-  variable: '--font-sans',
+  variable: '--font-inter',
   display: 'swap',
 })
 
 const display = Playfair_Display({
   subsets: ['latin'],
   weight: ['400', '600', '700'],
-  variable: '--font-display',
+  variable: '--font-playfair',
   display: 'swap',
 })
 
@@ -76,6 +77,7 @@ export default async function RootLayout({
         <SessionTimeout />
         <main>{children}</main>
         <Footer />
+        <Toaster richColors position="top-center" />
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

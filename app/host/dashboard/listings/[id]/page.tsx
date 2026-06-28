@@ -256,7 +256,7 @@ export default async function HostListingEditPage({
                   rows={4}
                   defaultValue={listing.house_rules || ''}
                   placeholder="e.g. No smoking. Shabbat-observant property. Please remove shoes at the entrance."
-                  className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 placeholder:text-stone-400"
+                  className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 placeholder:text-stone-500"
                 />
               </label>
 
@@ -270,7 +270,7 @@ export default async function HostListingEditPage({
                   rows={4}
                   defaultValue={listing.welcome_message || ''}
                   placeholder="e.g. Welcome to our home. We hope you have a wonderful stay. Please make yourself comfortable."
-                  className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 placeholder:text-stone-400"
+                  className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 placeholder:text-stone-500"
                 />
               </label>
 
@@ -284,7 +284,7 @@ export default async function HostListingEditPage({
                   rows={5}
                   defaultValue={listing.check_in_instructions || ''}
                   placeholder="e.g. Check-in is from 3pm. The key box is to the right of the front door. Code: ****"
-                  className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 placeholder:text-stone-400"
+                  className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 placeholder:text-stone-500"
                 />
               </label>
             </section>
@@ -419,4 +419,4 @@ function formatCommission(value: number) {
 }
 
 const inputClass =
-  'mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#c76f55]'
+  'mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-stone-900 outline-none transition placeholder:text-stone-500 focus:border-[#c76f55]'

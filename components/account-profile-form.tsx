@@ -117,10 +117,10 @@ export function AccountProfileForm({ user, profile, hasStay }: AccountProfileFor
           </div>
         </div>
 
-        {error && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>}
+        {error && <div role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>}
 
         {success && (
-          <div className="rounded-lg bg-green-50 p-3 text-sm text-green-600">
+          <div role="status" className="rounded-lg bg-green-50 p-3 text-sm text-green-600">
             Changes saved successfully
           </div>
         )}

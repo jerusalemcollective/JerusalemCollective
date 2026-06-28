@@ -368,7 +368,7 @@ function Field({
 }
 
 const inputClass =
-  'mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#c76f55]'
+  'mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-stone-900 outline-none transition placeholder:text-stone-500 focus:border-[#c76f55]'
 
 function hostStatusLabel(status: string) {
   if (status === 'new') return 'In review'
