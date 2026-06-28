@@ -1,12 +1,16 @@
+import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+const projectRoot = dirname(fileURLToPath(import.meta.url))
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  outputFileTracingRoot: projectRoot,
   // Pin the Turbopack workspace root — this project sits in a nested folder
   // layout that otherwise makes Turbopack infer the wrong root. Resolves to the
   // project directory (what Vercel uses anyway), so it's deploy-neutral.
   turbopack: {
-    root: fileURLToPath(new URL('.', import.meta.url)),
+    root: projectRoot,
   },
   compress: true,
 
