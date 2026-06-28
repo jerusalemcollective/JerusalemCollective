@@ -212,7 +212,7 @@ export default async function JLMCollectiveHomePage() {
   ]
 
   return (
-    <div className="min-h-screen bg-[#F8F5F2] text-[#2D2D2D] antialiased">
+    <div className="jlm-home-backdrop min-h-screen bg-[#F8F5F2] text-[#2D2D2D] antialiased">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -483,5 +483,4 @@ function ShieldIcon({ className = '' }: { className?: string }) {
     </svg>
   )
 }
-
 

@@ -33,6 +33,12 @@ export function ListingAiAssistant({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [suggestion, setSuggestion] = useState<AiSuggestion | null>(null)
+  const [translateLoading, setTranslateLoading] = useState(false)
+  const [translateError, setTranslateError] = useState('')
+  const [translateResult, setTranslateResult] = useState<{
+    title: string
+    description: string
+  } | null>(null)
 
   async function generateSuggestion() {
     const form = document.getElementById(formId)
@@ -89,6 +95,77 @@ export function ListingAiAssistant({
     setFieldValue(formId, descriptionField, suggestion.description)
   }
 
+  async function translateField(text: string, kind: 'title' | 'description') {
+    const trimmed = text.trim()
+    if (!trimmed) return ''
+
+    const response = await fetch('/api/translate-listing', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ text: trimmed, kind }),
+    })
+
+    const data = (await response.json()) as { translated?: string; error?: string }
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Unable to translate right now.')
+    }
+
+    return data.translated || ''
+  }
+
+  async function translateToEnglish() {
+    const form = document.getElementById(formId)
+
+    if (!(form instanceof HTMLFormElement)) {
+      setTranslateError('The listing form could not be found. Please refresh and try again.')
+      return
+    }
+
+    const formData = new FormData(form)
+    const title = String(formData.get(titleField) || '').trim()
+    const description = String(formData.get(descriptionField) || '').trim()
+
+    if (!title && !description) {
+      setTranslateError('Write the title or description first, then translate it to English.')
+      return
+    }
+
+    setTranslateLoading(true)
+    setTranslateError('')
+    setTranslateResult(null)
+
+    try {
+      const [translatedTitle, translatedDescription] = await Promise.all([
+        translateField(title, 'title'),
+        translateField(description, 'description'),
+      ])
+
+      setTranslateResult({
+        title: translatedTitle || title,
+        description: translatedDescription || description,
+      })
+    } catch (translateErr) {
+      setTranslateError(
+        translateErr instanceof Error
+          ? translateErr.message
+          : 'Unable to translate right now.',
+      )
+    } finally {
+      setTranslateLoading(false)
+    }
+  }
+
+  function applyTranslation() {
+    if (!translateResult) return
+
+    setFieldValue(formId, titleField, translateResult.title)
+    setFieldValue(formId, descriptionField, translateResult.description)
+    setTranslateResult(null)
+  }
+
   return (
     <section className="rounded-3xl border border-stone-200 bg-[#fcfaf8] p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -97,15 +174,28 @@ export function ListingAiAssistant({
           <p className="mt-1 max-w-xl text-sm leading-6 text-stone-600">
             Use the details already entered to create cleaner guest-facing wording. Review it before saving.
           </p>
+          <p className="mt-1 max-w-xl text-sm leading-6 text-stone-600">
+            Writing in Hebrew? Enter the title and description in Hebrew, then translate them to polished English for guests.
+          </p>
         </div>
-        <button
-          type="button"
-          onClick={() => void generateSuggestion()}
-          disabled={loading}
-          className="rounded-full bg-[#252525] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#111111] disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {loading ? 'Improving...' : 'Improve with AI'}
-        </button>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <button
+            type="button"
+            onClick={() => void generateSuggestion()}
+            disabled={loading}
+            className="rounded-full bg-[#252525] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#111111] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loading ? 'Improving...' : 'Improve with AI'}
+          </button>
+          <button
+            type="button"
+            onClick={() => void translateToEnglish()}
+            disabled={translateLoading}
+            className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-bold text-stone-800 transition hover:border-stone-500 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {translateLoading ? 'Translating...' : 'Translate Hebrew → English'}
+          </button>
+        </div>
       </div>
 
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
@@ -137,6 +227,29 @@ export function ListingAiAssistant({
             className="mt-5 rounded-full border border-stone-300 px-4 py-2 text-sm font-bold text-stone-800 transition hover:border-stone-500"
           >
             Use this wording
+          </button>
+        </div>
+      )}
+
+      {translateError && <p className="mt-4 text-sm text-red-600">{translateError}</p>}
+
+      {translateResult && (
+        <div className="mt-5 rounded-2xl bg-white p-4 ring-1 ring-stone-200">
+          <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
+            English translation
+          </p>
+          <h3 className="mt-3 text-lg font-bold text-stone-950" dir="auto">
+            {translateResult.title}
+          </h3>
+          <p className="mt-3 whitespace-pre-line text-sm leading-6 text-stone-700" dir="auto">
+            {translateResult.description}
+          </p>
+          <button
+            type="button"
+            onClick={applyTranslation}
+            className="mt-5 rounded-full border border-stone-300 px-4 py-2 text-sm font-bold text-stone-800 transition hover:border-stone-500"
+          >
+            Use this English
           </button>
         </div>
       )}

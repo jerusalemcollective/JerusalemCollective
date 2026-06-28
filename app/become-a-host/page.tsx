@@ -889,6 +889,12 @@ export default function BecomeAHostPage() {
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
   const [aiSuggestion, setAiSuggestion] = useState<AiSuggestion | null>(null)
+  const [translateLoading, setTranslateLoading] = useState(false)
+  const [translateError, setTranslateError] = useState('')
+  const [translateResult, setTranslateResult] = useState<{
+    title: string
+    description: string
+  } | null>(null)
   const [draggingPhotoIndex, setDraggingPhotoIndex] = useState<number | null>(null)
   const [isPhotoDropActive, setIsPhotoDropActive] = useState(false)
   const [photoUploadError, setPhotoUploadError] = useState('')
@@ -1302,6 +1308,72 @@ export default function BecomeAHostPage() {
       apartment_title: aiSuggestion.title || current.apartment_title,
       description: aiSuggestion.description || current.description,
     }))
+  }
+
+  async function translateField(text: string, kind: 'title' | 'description') {
+    const trimmed = text.trim()
+    if (!trimmed) return ''
+
+    const response = await fetch('/api/translate-listing', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ text: trimmed, kind }),
+    })
+
+    const data = (await response.json()) as { translated?: string; error?: string }
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Unable to translate right now.')
+    }
+
+    return data.translated || ''
+  }
+
+  async function translateToEnglish() {
+    const title = form.apartment_title.trim()
+    const description = form.description.trim()
+
+    if (!title && !description) {
+      setTranslateError('Write the stay name or description first, then translate it to English.')
+      return
+    }
+
+    setTranslateLoading(true)
+    setTranslateError('')
+    setTranslateResult(null)
+
+    try {
+      const [translatedTitle, translatedDescription] = await Promise.all([
+        translateField(title, 'title'),
+        translateField(description, 'description'),
+      ])
+
+      setTranslateResult({
+        title: translatedTitle || title,
+        description: translatedDescription || description,
+      })
+    } catch (translateErr) {
+      setTranslateError(
+        translateErr instanceof Error
+          ? translateErr.message
+          : 'Unable to translate right now.',
+      )
+    } finally {
+      setTranslateLoading(false)
+    }
+  }
+
+  function applyTranslation() {
+    if (!translateResult) return
+
+    setForm((current) => ({
+      ...current,
+      apartment_title: translateResult.title || current.apartment_title,
+      description: translateResult.description || current.description,
+    }))
+    setTranslateResult(null)
   }
 
   function getStepIssues(stepIndex: number) {
@@ -2031,15 +2103,28 @@ async function handleSubmit() {
                         <p className="mt-1 max-w-xl text-sm leading-6 text-stone-600">
                           Add the facts first, then generate polished wording you can review and edit before submitting.
                         </p>
+                        <p className="mt-1 max-w-xl text-sm leading-6 text-stone-600">
+                          Writing in Hebrew? Fill in the name and description below in Hebrew, then translate them to polished English for guests.
+                        </p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={generateListingCopy}
-                        disabled={aiLoading}
-                        className="rounded-full bg-[#252525] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#111111] disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {aiLoading ? 'Improving...' : 'Improve with AI'}
-                      </button>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <button
+                          type="button"
+                          onClick={generateListingCopy}
+                          disabled={aiLoading}
+                          className="rounded-full bg-[#252525] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#111111] disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {aiLoading ? 'Improving...' : 'Improve with AI'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={translateToEnglish}
+                          disabled={translateLoading}
+                          className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-bold text-stone-800 transition hover:border-stone-500 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {translateLoading ? 'Translating...' : 'Translate Hebrew → English'}
+                        </button>
+                      </div>
                     </div>
 
                     {aiError && (
@@ -2076,6 +2161,31 @@ async function handleSubmit() {
                         </button>
                       </div>
                     )}
+
+                    {translateError && (
+                      <p className="mt-4 text-sm text-red-600">{translateError}</p>
+                    )}
+
+                    {translateResult && (
+                      <div className="mt-5 rounded-2xl bg-white p-4 ring-1 ring-stone-200">
+                        <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
+                          English translation
+                        </p>
+                        <h3 className="mt-3 text-lg font-bold text-stone-950" dir="auto">
+                          {translateResult.title}
+                        </h3>
+                        <p className="mt-3 whitespace-pre-line text-sm leading-6 text-stone-700" dir="auto">
+                          {translateResult.description}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={applyTranslation}
+                          className="mt-5 rounded-full border border-stone-300 px-4 py-2 text-sm font-bold text-stone-800 transition hover:border-stone-500"
+                        >
+                          Use this English
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <Field label="Give your stay a name" required>
@@ -2085,6 +2195,7 @@ async function handleSubmit() {
                       updateField('apartment_title', e.target.value)
                     }
                     type="text"
+                    dir="auto"
                     placeholder="Example: Rechavia family apartment"
                     className={inputClass}
                   />
@@ -2095,6 +2206,7 @@ async function handleSubmit() {
                     value={form.description}
                     onChange={(e) => updateField('description', e.target.value)}
                     rows={6}
+                    dir="auto"
                     placeholder="Example: Bright 3-bedroom apartment, close to shuls, suitable for families, elevator building..."
                     className={inputClass}
                   />

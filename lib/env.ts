@@ -42,6 +42,5 @@ export function getServerEnv() {
     stripeWebhookSecret: required('STRIPE_WEBHOOK_SECRET', process.env.STRIPE_WEBHOOK_SECRET),
     resendApiKey: required('RESEND_API_KEY', process.env.RESEND_API_KEY),
     googleMapsApiKey: required('GOOGLE_MAPS_API_KEY', process.env.GOOGLE_MAPS_API_KEY),
-    openaiApiKey: required('OPENAI_API_KEY', process.env.OPENAI_API_KEY),
   }
 }

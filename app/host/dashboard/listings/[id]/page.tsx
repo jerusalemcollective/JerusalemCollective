@@ -82,7 +82,7 @@ export default async function HostListingEditPage({
             <EditorSection title="Basics">
               <div className="grid gap-4 md:grid-cols-2">
                 <Field label="Title">
-                  <input name="title" defaultValue={listing.title} required className={inputClass} />
+                  <input name="title" defaultValue={listing.title} required dir="auto" className={inputClass} />
                 </Field>
                 <Field label="Neighbourhood">
                   <input name="area" defaultValue={listing.area} required className={inputClass} />
@@ -236,6 +236,7 @@ export default async function HostListingEditPage({
                 name="description"
                 defaultValue={listing.description || ''}
                 rows={8}
+                dir="auto"
                 className={`${inputClass} resize-y`}
               />
             </EditorSection>
