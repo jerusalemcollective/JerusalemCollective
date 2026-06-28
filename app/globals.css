@@ -164,12 +164,12 @@
 .jlm-home-backdrop::before {
   content: '';
   position: absolute;
-  inset: 0;
+  inset: 0 0 auto;
   z-index: 0;
+  height: min(980px, 100vh);
   pointer-events: none;
-  background:
-    url('/backgrounds/jerusalem-map-lines.svg') top center / min(1680px, 100vw) 920px no-repeat;
-  opacity: 1;
+  background: url('/backgrounds/homepage-paper-reference.png') center top / cover no-repeat;
+  opacity: 0.96;
 }
 
 .jlm-home-backdrop::after {
@@ -177,9 +177,9 @@
   position: absolute;
   inset: 0 0 auto;
   z-index: 0;
-  height: min(920px, 92vh);
+  height: min(980px, 100vh);
   pointer-events: none;
-  background: linear-gradient(180deg, rgb(247 241 232 / 0) 0%, rgb(247 241 232 / 0.08) 45%, #f7f1e8 92%);
+  background: linear-gradient(180deg, rgb(247 241 232 / 0) 0%, rgb(247 241 232 / 0.1) 54%, #f7f1e8 100%);
 }
 
 /* Header grows on md+ (logo h-10 -> h-12), so the sticky offset must too. */
