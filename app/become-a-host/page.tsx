@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { ensureHostProfile } from '@/lib/host-profile'
@@ -895,6 +896,10 @@ export default function BecomeAHostPage() {
   const [idDocError, setIdDocError] = useState('')
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
   const photoSwipeStartRef = useRef<{ index: number; x: number; pointerId: number } | null>(null)
+  // F4: reuse the created application + resume photo uploads on retry, so a
+  // failed-then-retried submit can't create duplicate applications/photos.
+  const submittedApplicationIdRef = useRef<string | null>(null)
+  const uploadedPhotoCountRef = useRef(0)
 
   const progress = useMemo(() => {
     return Math.round(((step + 1) / steps.length) * 100)
@@ -1565,20 +1570,24 @@ async function handleSubmit() {
       status: 'new',
     }
 
-    const { data: applicationData, error: applicationError } = await supabase
-      .from('host_applications')
-      .insert([payload])
-      .select('id')
-      .single()
+    let applicationId = submittedApplicationIdRef.current
+    if (!applicationId) {
+      const { data: applicationData, error: applicationError } = await supabase
+        .from('host_applications')
+        .insert([payload])
+        .select('id')
+        .single()
 
-    if (applicationError) {
-      console.error(applicationError)
-      setError('Something went wrong. Please try again.')
-      setLoading(false)
-      return
+      if (applicationError) {
+        console.error(applicationError)
+        setError('Something went wrong. Please try again.')
+        setLoading(false)
+        return
+      }
+
+      applicationId = applicationData.id
+      submittedApplicationIdRef.current = applicationId
     }
-
-    const applicationId = applicationData.id
 
     // Upload verification document to Supabase Storage
     if (form.verification_doc) {
@@ -1592,7 +1601,7 @@ async function handleSubmit() {
 
       if (verifyUploadError) {
         console.error('Verification upload error:', verifyUploadError)
-        // Don't fail the whole submission, just log it
+        toast.warning('Your verification document didn’t upload. You can add it later from your host dashboard.')
       } else {
         // Update the application with the verification doc path
         await supabase
@@ -1614,7 +1623,7 @@ async function handleSubmit() {
 
       if (idUploadError) {
         console.error('ID upload error:', idUploadError)
-        // Don't fail the whole submission, just log it
+        toast.warning('Your ID document didn’t upload. You can add it later from your host dashboard.')
       } else {
         // Update the application with the ID doc path
         await supabase
@@ -1632,7 +1641,7 @@ async function handleSubmit() {
         current: `Uploading photo 1 of ${form.photos.length}`,
       })
 
-      for (let i = 0; i < form.photos.length; i++) {
+      for (let i = uploadedPhotoCountRef.current; i < form.photos.length; i++) {
         const photo = form.photos[i]
         const fileExt = getImageExtension(photo.file)
         const fileName = `photo-${i + 1}-${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
@@ -1681,6 +1690,8 @@ async function handleSubmit() {
           console.error('Photo record error:', photoRecordError)
         }
 
+        uploadedPhotoCountRef.current = i + 1
+
         setUploadProgress({
           completed: i + 1,
           total: form.photos.length,
@@ -1695,6 +1706,8 @@ async function handleSubmit() {
     // Clean up preview URLs
     form.photos.forEach(photo => URL.revokeObjectURL(photo.preview))
 
+    submittedApplicationIdRef.current = null
+    uploadedPhotoCountRef.current = 0
     setSuccess(true)
     setLoading(false)
     setUploadProgress(null)
@@ -1771,6 +1784,20 @@ async function handleSubmit() {
                 Go to homepage
               </Link>
             </div>
+          </div>
+        )}
+
+        {!success && restoredDraft && (
+          <div
+            role="status"
+            className="mb-6 rounded-3xl border border-amber-300 bg-amber-100 p-5 text-sm text-amber-900"
+          >
+            <p className="font-bold">We restored your saved draft</p>
+            <p className="mt-1">
+              Your typed details are back — but for your security, uploaded{' '}
+              <strong>photos and documents are never saved in a draft</strong>. Please re-add your
+              photos and your ID/verification documents before submitting.
+            </p>
           </div>
         )}
 
