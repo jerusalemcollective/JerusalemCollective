@@ -69,7 +69,7 @@ export function ExternalCalendarSyncForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-full bg-[#c76f55] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47] disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-full bg-[#252525] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#111111] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {pending ? 'Syncing...' : 'Save and sync'}
         </button>

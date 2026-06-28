@@ -89,7 +89,7 @@ export function AccountProfileForm({ user, profile, hasStay }: AccountProfileFor
             type="text"
             value={fullName}
             onChange={(event) => setFullName(event.target.value)}
-            className="h-10 rounded-lg border-stone-200 bg-[#F8F5F2] px-4"
+            className="h-10 rounded-xl border-stone-200 bg-[#F8F5F2] px-4"
           />
         </div>
 
@@ -100,7 +100,7 @@ export function AccountProfileForm({ user, profile, hasStay }: AccountProfileFor
               type="email"
               value={user.email}
               disabled
-              className="h-10 rounded-lg border-stone-200 bg-stone-100 px-4 text-stone-500"
+              className="h-10 rounded-xl border-stone-200 bg-stone-100 px-4 text-stone-500"
             />
             <p className="mt-1 text-xs text-stone-500">Email cannot be changed</p>
           </div>
@@ -112,7 +112,7 @@ export function AccountProfileForm({ user, profile, hasStay }: AccountProfileFor
               value={phone}
               onChange={(event) => setPhone(event.target.value)}
               placeholder="+972 50 000 0000"
-              className="h-10 rounded-lg border-stone-200 bg-[#F8F5F2] px-4"
+              className="h-10 rounded-xl border-stone-200 bg-[#F8F5F2] px-4"
             />
           </div>
         </div>
@@ -136,7 +136,7 @@ export function AccountProfileForm({ user, profile, hasStay }: AccountProfileFor
           <Button
             onClick={handleSave}
             disabled={isSaving}
-            className="rounded-lg bg-[#c76f55] text-white hover:bg-[#b85f47]"
+            className="rounded-lg bg-[#252525] text-white hover:bg-[#111111]"
           >
             {isSaving ? 'Saving...' : 'Save changes'}
           </Button>

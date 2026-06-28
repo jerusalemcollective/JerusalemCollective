@@ -36,7 +36,7 @@ export default async function NewAdminListingPage() {
         <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
           Platform admin
         </p>
-        <h1 className="mt-2 text-3xl font-bold text-stone-950">Create listing</h1>
+        <h1 className="font-display mt-2 text-3xl font-bold text-stone-950">Create listing</h1>
         <p className="mt-2 text-sm leading-6 text-stone-600">
           Create a basic listing for a host. Photos, house rules, calendar, and richer details can be added after creation.
         </p>

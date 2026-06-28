@@ -10,7 +10,7 @@ export default function SavedPage() {
           aria-hidden="true"
           className="mx-auto h-12 w-12 object-contain"
         />
-        <h1 className="mt-5 text-3xl font-bold tracking-tight text-stone-950">
+        <h1 className="font-display mt-5 text-3xl font-bold tracking-tight text-stone-950">
           Saved stays
         </h1>
         <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-stone-500">
@@ -19,7 +19,7 @@ export default function SavedPage() {
         <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
           <Link
             href="/stays"
-            className="rounded-full bg-[#c76f55] px-5 py-3 text-sm font-bold text-white hover:bg-[#b85f47]"
+            className="rounded-full bg-[#252525] px-5 py-3 text-sm font-bold text-white hover:bg-[#111111]"
           >
             Browse stays
           </Link>

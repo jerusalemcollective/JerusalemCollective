@@ -30,7 +30,7 @@ export function WelcomeBanner() {
             <Link
               href="/stays"
               onClick={dismiss}
-              className="rounded-full bg-[#c76f55] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#b85f47]"
+              className="rounded-full bg-[#252525] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#111111]"
             >
               Browse stays
             </Link>

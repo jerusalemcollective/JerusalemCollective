@@ -179,7 +179,7 @@ export function MapPageClient({ listings }: { listings: MapListing[] }) {
                 <p className="font-bold text-stone-950">{formatMapListingPrice(selectedListing)}</p>
                 <Link
                   href={`/listings/${selectedListing.id}`}
-                  className="rounded-full bg-[#c76f55] px-4 py-2 text-sm font-bold text-white hover:bg-[#b85f47]"
+                  className="rounded-full bg-[#252525] px-4 py-2 text-sm font-bold text-white hover:bg-[#111111]"
                 >
                   View listing
                 </Link>

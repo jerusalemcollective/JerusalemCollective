@@ -71,7 +71,7 @@ function LoginForm() {
         </div>
 
         <div className="rounded-3xl bg-white p-8 shadow-sm">
-          <h1 className="mb-2 text-2xl font-bold text-stone-900">Welcome back</h1>
+          <h1 className="font-display mb-2 text-2xl font-bold text-stone-900">Welcome back</h1>
           <p className="mb-6 text-sm text-stone-600">
             Sign in to manage your listings
           </p>
@@ -134,7 +134,7 @@ function LoginForm() {
 
             <Button
               type="submit"
-              className="h-12 w-full rounded-xl bg-[#c76f55] text-white hover:bg-[#b85f47]"
+              className="h-12 w-full rounded-xl bg-[#252525] text-white hover:bg-[#111111]"
               disabled={isLoading}
             >
               {isLoading ? 'Signing in...' : 'Sign in'}

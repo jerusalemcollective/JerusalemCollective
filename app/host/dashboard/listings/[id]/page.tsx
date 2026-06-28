@@ -69,7 +69,7 @@ export default async function HostListingEditPage({
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Listing editor</p>
-                    <h1 className="mt-2 text-3xl font-bold text-stone-950">Edit stay details</h1>
+                    <h1 className="font-display mt-2 text-3xl font-bold text-stone-950">Edit stay details</h1>
                   </div>
                   <span className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-bold ${
                     listing.is_published ? 'bg-green-100 text-green-700' : 'bg-stone-100 text-stone-700'
@@ -307,7 +307,7 @@ export default async function HostListingEditPage({
             )}
 
               <div className="flex justify-end">
-                <button className="rounded-full bg-[#c76f55] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47]">
+                <button className="rounded-full bg-[#252525] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#111111]">
                   Save changes
                 </button>
               </div>

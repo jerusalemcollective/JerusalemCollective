@@ -94,7 +94,7 @@ export default async function AdminListingDetailPage({
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <section className="rounded-3xl bg-white p-6 shadow-sm">
           <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Listing</p>
-          <h1 className="mt-2 text-3xl font-bold text-stone-950">{listing.title}</h1>
+          <h1 className="font-display mt-2 text-3xl font-bold text-stone-950">{listing.title}</h1>
           <p className="mt-2 text-stone-600">{listing.area}</p>
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
             <Info label="Host" value={listing.hosts?.name || 'Host'} />

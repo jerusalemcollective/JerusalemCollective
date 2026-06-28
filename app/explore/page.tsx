@@ -122,7 +122,7 @@ export default async function ExplorePage() {
       <section className="mx-auto max-w-7xl">
         <div className="max-w-3xl">
           <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Explore</p>
-          <h1 className="mt-3 text-3xl font-bold tracking-tight text-stone-950 md:text-4xl">
+          <h1 className="font-display mt-3 text-3xl font-bold tracking-tight text-stone-950 md:text-4xl">
             Find the part of Jerusalem that fits your stay
           </h1>
           <p className="mt-3 max-w-2xl text-base leading-7 text-stone-600">

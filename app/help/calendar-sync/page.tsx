@@ -12,7 +12,7 @@ export default function CalendarSyncHelpPage() {
     <main className="min-h-screen bg-[#F8F5F2] px-5 py-10 text-[#252525] md:px-6">
       <section className="mx-auto max-w-3xl rounded-3xl bg-white p-6 shadow-sm md:p-8">
         <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Host help</p>
-        <h1 className="mt-2 text-3xl font-bold text-stone-950">How to find your iCal URL</h1>
+        <h1 className="font-display mt-2 text-3xl font-bold text-stone-950">How to find your iCal URL</h1>
         <p className="mt-3 text-sm leading-6 text-stone-600">
           Most calendar and booking platforms let you copy a private iCal link. Paste that link into your JLM Collective listing and we will block matching dates automatically.
         </p>
@@ -38,7 +38,7 @@ export default function CalendarSyncHelpPage() {
 
         <Link
           href="/host/dashboard/listings"
-          className="mt-8 inline-flex rounded-full bg-[#c76f55] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47]"
+          className="mt-8 inline-flex rounded-full bg-[#252525] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#111111]"
         >
           Back to listings
         </Link>

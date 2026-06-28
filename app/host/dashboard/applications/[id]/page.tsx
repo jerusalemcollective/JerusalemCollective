@@ -110,7 +110,7 @@ export default async function HostApplicationEditPage({
                   <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
                     Submitted stay editor
                   </p>
-                  <h1 className="mt-2 text-3xl font-bold text-stone-950">Edit and resubmit</h1>
+                  <h1 className="font-display mt-2 text-3xl font-bold text-stone-950">Edit and resubmit</h1>
                 </div>
                 <span className="inline-flex w-fit rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
                   {hostStatusLabel(hostApplication.status)}
@@ -317,7 +317,7 @@ export default async function HostApplicationEditPage({
             </EditorSection>
 
             <div className="flex justify-end">
-              <button className="rounded-full bg-[#c76f55] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47]">
+              <button className="rounded-full bg-[#252525] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#111111]">
                 Save and resubmit
               </button>
             </div>

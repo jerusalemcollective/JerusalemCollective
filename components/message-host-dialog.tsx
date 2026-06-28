@@ -367,7 +367,7 @@ export function MessageHostDialog({
                     <Link
                       href={`/account/messages?conversation=${conversationId}`}
                       onClick={closeDialog}
-                      className="flex w-full items-center justify-center gap-2 rounded-full bg-[#c76f55] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47]"
+                      className="flex w-full items-center justify-center gap-2 rounded-full bg-[#252525] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#111111]"
                     >
                       Open conversation
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -378,7 +378,7 @@ export function MessageHostDialog({
                     <Link
                       href="/account/messages"
                       onClick={closeDialog}
-                      className="flex w-full items-center justify-center gap-2 rounded-full bg-[#c76f55] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47]"
+                      className="flex w-full items-center justify-center gap-2 rounded-full bg-[#252525] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#111111]"
                     >
                       View your messages
                     </Link>
@@ -465,7 +465,7 @@ export function MessageHostDialog({
                     type="button"
                     onClick={handleSend}
                     disabled={!message.trim() || loading}
-                    className="rounded-full bg-[#c76f55] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#b85f47] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-full bg-[#252525] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#111111] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {loading
                       ? 'Sending...'

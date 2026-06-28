@@ -202,7 +202,7 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
               <div className="mt-6 flex flex-wrap justify-center gap-3">
                 <Link
                   href="/stays"
-                  className="rounded-full bg-[#c76f55] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#b85f47]"
+                  className="rounded-full bg-[#252525] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#111111]"
                 >
                   Clear all filters
                 </Link>

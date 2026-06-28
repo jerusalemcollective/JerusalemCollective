@@ -373,7 +373,7 @@ export function HomeSearchForm() {
         <div className="p-2">
           <button
             onClick={handleSearch}
-            className="flex h-14 w-full items-center justify-center rounded-2xl bg-[#c76f55] text-white shadow-sm transition hover:bg-[#b85f47] md:w-16 md:rounded-full"
+            className="flex h-14 w-full items-center justify-center rounded-2xl bg-[#252525] text-white shadow-sm transition hover:bg-[#111111] md:w-16 md:rounded-full"
           >
             <SearchIcon className="h-6 w-6" />
             <span className="sr-only">Search</span>

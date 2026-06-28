@@ -24,13 +24,13 @@ export function ErrorState({
   return (
     <div className="flex min-h-[60vh] w-full items-center justify-center bg-[#F8F5F2] p-6">
       <div className="w-full max-w-md rounded-3xl bg-white p-8 text-center shadow-sm">
-        <h1 className="mb-2 text-2xl font-bold text-stone-900">{title}</h1>
+        <h1 className="font-display mb-2 text-2xl font-bold text-stone-900">{title}</h1>
         <p className="mb-6 text-sm text-stone-600">{message}</p>
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
           <button
             type="button"
             onClick={reset}
-            className="inline-flex items-center justify-center rounded-xl bg-[#c76f55] px-6 py-3 text-sm font-medium text-white transition hover:bg-[#b85f47]"
+            className="inline-flex items-center justify-center rounded-xl bg-[#252525] px-6 py-3 text-sm font-medium text-white transition hover:bg-[#111111]"
           >
             Try again
           </button>

@@ -63,7 +63,7 @@ export default async function AccountSupportPage() {
         <Breadcrumb items={[{ label: 'Account', href: '/account' }, { label: 'Support' }]} />
 
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-stone-950">Support</h1>
+          <h1 className="font-display text-3xl font-bold tracking-tight text-stone-950">Support</h1>
           <p className="mt-2 text-stone-600">
             Ask for help with a booking, dispute, or refund request and keep the history in one place.
           </p>

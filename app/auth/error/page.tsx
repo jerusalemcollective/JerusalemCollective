@@ -9,7 +9,7 @@ export default function AuthErrorPage() {
           alt="JLM Collective"
           className="mx-auto h-10 w-auto"
         />
-        <h1 className="mt-8 text-2xl font-bold text-stone-950">
+        <h1 className="font-display mt-8 text-2xl font-bold text-stone-950">
           We could not verify that link
         </h1>
         <p className="mt-3 text-sm leading-6 text-stone-500">
@@ -18,7 +18,7 @@ export default function AuthErrorPage() {
         <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
           <Link
             href="/host/login"
-            className="rounded-full bg-[#c76f55] px-5 py-3 text-sm font-bold text-white hover:bg-[#b85f47]"
+            className="rounded-full bg-[#252525] px-5 py-3 text-sm font-bold text-white hover:bg-[#111111]"
           >
             Sign in
           </Link>

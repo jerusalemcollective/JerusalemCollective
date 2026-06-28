@@ -1104,7 +1104,7 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
                     type="button"
                     disabled={isAccepting}
                     onClick={handleAcceptEnquiry}
-                    className="rounded-full bg-[#c76f55] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#b85f47] disabled:opacity-60"
+                    className="rounded-full bg-[#252525] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#111111] disabled:opacity-60"
                   >
                     {isAccepting ? 'Confirming...' : 'Accept booking'}
                   </button>
@@ -1138,7 +1138,7 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
                 type="button"
                 onClick={handleSend}
                 disabled={!draft.trim() || sending}
-                className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#c76f55] text-white transition hover:bg-[#b85f47] disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#252525] text-white transition hover:bg-[#111111] disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label="Send message"
               >
                 {sending ? (

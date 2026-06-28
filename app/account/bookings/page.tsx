@@ -71,7 +71,7 @@ export default async function BookingsPage({
         )}
 
         <header className="mb-8 border-b border-stone-200 pb-6">
-          <h1 className="text-3xl font-bold tracking-tight text-stone-950">My trips</h1>
+          <h1 className="font-display text-3xl font-bold tracking-tight text-stone-950">My trips</h1>
           <p className="mt-2 text-stone-600">Upcoming and past stays in one place.</p>
         </header>
 
@@ -155,7 +155,7 @@ function EmptyState() {
       <p className="mb-6 text-stone-600">When you book a stay, it will appear here.</p>
       <Link
         href="/stays"
-        className="inline-flex rounded-full bg-[#c76f55] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#b85f47]"
+        className="inline-flex rounded-full bg-[#252525] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#111111]"
       >
         Start exploring
       </Link>

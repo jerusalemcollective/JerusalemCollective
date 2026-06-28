@@ -65,7 +65,7 @@ export default async function AdminPaymentsPage() {
         <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
           Owner payments
         </p>
-        <h1 className="mt-2 text-3xl font-bold text-stone-950">
+        <h1 className="font-display mt-2 text-3xl font-bold text-stone-950">
           Payment control
         </h1>
         <p className="mt-2 max-w-2xl text-stone-600">

@@ -48,7 +48,7 @@ function UpdatePasswordForm() {
     <div className="flex min-h-screen w-full items-center justify-center bg-[#F8F5F2] p-6">
       <div className="w-full max-w-md">
         <div className="rounded-3xl bg-white p-8 shadow-sm">
-          <h1 className="mb-2 text-2xl font-bold text-stone-900">Choose a new password</h1>
+          <h1 className="font-display mb-2 text-2xl font-bold text-stone-900">Choose a new password</h1>
           <p className="mb-6 text-sm text-stone-600">
             Set a new password for your JLM Collective account.
           </p>
@@ -101,7 +101,7 @@ function UpdatePasswordForm() {
 
               <Button
                 type="submit"
-                className="h-12 w-full rounded-xl bg-[#c76f55] text-white hover:bg-[#b85f47]"
+                className="h-12 w-full rounded-xl bg-[#252525] text-white hover:bg-[#111111]"
                 disabled={isLoading}
               >
                 {isLoading ? 'Saving...' : 'Save new password'}

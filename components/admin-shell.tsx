@@ -14,7 +14,7 @@ export function AdminShell({
         <aside className="h-fit lg:sticky lg:top-8">
           <div className="mb-5">
             <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Admin</p>
-            <h1 className="mt-2 text-2xl font-bold text-stone-950">Workspace</h1>
+            <h1 className="font-display mt-2 text-2xl font-bold text-stone-950">Workspace</h1>
           </div>
           <AdminNav adminRole={adminRole} />
         </aside>

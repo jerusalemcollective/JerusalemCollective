@@ -155,7 +155,7 @@ export function SupportCaseClientForm({
           </p>
           <Link
             href="/account/support"
-            className="mt-4 inline-flex rounded-full bg-[#c76f55] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#b85f47]"
+            className="mt-4 inline-flex rounded-full bg-[#252525] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#111111]"
           >
             View my cases
           </Link>

@@ -22,7 +22,7 @@ export default async function CleaningPage() {
     <main className="min-h-screen bg-[#F8F5F2] px-5 py-12 text-[#252525] md:px-6">
       <section className="mx-auto max-w-5xl">
         <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Cleaning & housekeeping</p>
-        <h1 className="mt-3 text-4xl font-bold tracking-tight text-stone-950 md:text-5xl">Housekeeping & Property Care</h1>
+        <h1 className="font-display mt-3 text-4xl font-bold tracking-tight text-stone-950 md:text-5xl">Housekeeping & Property Care</h1>
         <p className="mt-4 max-w-3xl text-lg leading-8 text-stone-600">
           Professional, reliable cleaning arranged through JLM Collective — for guests who want a fresh mid-stay clean and hosts who need a fast turnaround between bookings.
         </p>

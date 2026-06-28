@@ -274,7 +274,7 @@ export function StaysFilterBar() {
             <button
               type="button"
               onClick={handleClear}
-              className="rounded-full bg-[#c76f55] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47]"
+              className="rounded-full bg-[#252525] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#111111]"
             >
               Clear
             </button>
@@ -438,7 +438,7 @@ export function StaysFilterBar() {
                 <button
                   type="button"
                   onClick={handleSearch}
-                  className="rounded-full bg-[#c76f55] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47]"
+                  className="rounded-full bg-[#252525] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#111111]"
                 >
                   Show stays
                 </button>

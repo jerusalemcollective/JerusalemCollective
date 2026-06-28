@@ -201,7 +201,7 @@ export function ReviewForm({
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-full bg-[#c76f55] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47] disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-full bg-[#252525] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#111111] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {submitting ? 'Submitting...' : 'Submit review'}
         </button>

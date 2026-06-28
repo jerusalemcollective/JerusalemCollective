@@ -87,7 +87,7 @@ export default async function AdminApplicationPage({
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Application</p>
-                  <h1 className="mt-2 text-3xl font-bold text-stone-950">{adminApplication.apartment_title}</h1>
+                  <h1 className="font-display mt-2 text-3xl font-bold text-stone-950">{adminApplication.apartment_title}</h1>
                   <p className="mt-2 text-stone-600">{adminApplication.area}</p>
                 </div>
                 <StatusBadge status={adminApplication.status} scheme="application" />
@@ -219,7 +219,7 @@ export default async function AdminApplicationPage({
 
                 <form action={approveAndPublishApplication}>
                   <input type="hidden" name="applicationId" value={adminApplication.id} />
-                  <button className="w-full rounded-2xl bg-[#c76f55] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47]">
+                  <button className="w-full rounded-2xl bg-[#252525] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#111111]">
                     Approve and publish
                   </button>
                 </form>

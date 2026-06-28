@@ -29,7 +29,7 @@ export default async function HostNotificationsPage() {
     <main className="min-h-screen bg-[#F8F5F2] px-5 py-10 md:px-6">
       <section className="mx-auto max-w-2xl">
         <HostDashboardNav />
-        <h1 className="mt-6 text-3xl font-bold text-stone-950">
+        <h1 className="font-display mt-6 text-3xl font-bold text-stone-950">
           Notification preferences
         </h1>
         <p className="mt-2 text-stone-600">

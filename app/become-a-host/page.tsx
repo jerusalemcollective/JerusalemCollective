@@ -1728,7 +1728,7 @@ async function handleSubmit() {
               className="h-14 w-auto"
             />
 
-            <h1 className="mt-8 max-w-2xl text-4xl font-bold tracking-tight text-stone-950 md:text-6xl">
+            <h1 className="font-display mt-8 max-w-2xl text-4xl font-bold tracking-tight text-stone-950 md:text-6xl">
               Create your listing
             </h1>
 
@@ -1773,7 +1773,7 @@ async function handleSubmit() {
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <Link
                 href="/host/dashboard"
-                className="rounded-full bg-[#c76f55] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47]"
+                className="rounded-full bg-[#252525] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#111111]"
               >
                 Open host dashboard
               </Link>
@@ -2829,7 +2829,7 @@ async function handleSubmit() {
                 <button
                   type="button"
                   onClick={nextStep}
-                  className="rounded-full bg-[#c76f55] px-8 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47]"
+                  className="rounded-full bg-[#252525] px-8 py-3 text-sm font-bold text-white transition hover:bg-[#111111]"
                 >
                   Continue
                 </button>
@@ -2838,7 +2838,7 @@ async function handleSubmit() {
                   type="button"
                   onClick={handleSubmit}
                   disabled={loading || checkingHost}
-                  className="rounded-full bg-[#c76f55] px-8 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-full bg-[#252525] px-8 py-3 text-sm font-bold text-white transition hover:bg-[#111111] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {checkingHost
                     ? 'Loading...'
@@ -2919,7 +2919,7 @@ function HostTermsModal({ onClose }: { onClose: () => void }) {
           <button
             type="button"
             onClick={onClose}
-            className="w-full rounded-full bg-[#c76f55] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47]"
+            className="w-full rounded-full bg-[#252525] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#111111]"
           >
             I have read these terms
           </button>
@@ -2930,7 +2930,7 @@ function HostTermsModal({ onClose }: { onClose: () => void }) {
 }
 
 const inputClass =
-  'mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-stone-900 outline-none transition placeholder:text-stone-500 focus:border-[#c76f55]'
+  'mt-2 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-stone-900 outline-none transition placeholder:text-stone-500 focus:border-[#c76f55] focus:ring-2 focus:ring-[#c76f55]/30'
 
 function StepShell({
   eyebrow,

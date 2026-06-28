@@ -55,7 +55,7 @@ function MapFallback() {
       <div className="max-w-md rounded-3xl border border-stone-200 bg-white p-6 text-center shadow-xl">
         <h2 className="text-xl font-bold text-stone-950">Map temporarily unavailable</h2>
         <p className="mt-2 text-sm text-stone-500">The map could not be loaded. You can still browse listings in list view.</p>
-        <Link href="/stays" className="mt-5 inline-flex rounded-full bg-[#c76f55] px-5 py-3 text-sm font-bold text-white hover:bg-[#b85f47]">
+        <Link href="/stays" className="mt-5 inline-flex rounded-full bg-[#252525] px-5 py-3 text-sm font-bold text-white hover:bg-[#111111]">
           Browse stays
         </Link>
       </div>
@@ -189,7 +189,7 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
         <div className="max-w-md rounded-3xl border border-stone-200 bg-white p-6 text-center shadow-xl">
           <h2 className="text-xl font-bold text-stone-950">Map preview needs a Google Maps key</h2>
           <p className="mt-2 text-sm text-stone-500">Listings still work, and the live map will appear once the key is configured.</p>
-          <Link href="/stays" className="mt-5 inline-flex rounded-full bg-[#c76f55] px-5 py-3 text-sm font-bold text-white hover:bg-[#b85f47]">
+          <Link href="/stays" className="mt-5 inline-flex rounded-full bg-[#252525] px-5 py-3 text-sm font-bold text-white hover:bg-[#111111]">
             Browse stays
           </Link>
         </div>
@@ -212,7 +212,7 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
       <div className="absolute left-0 top-0 z-10 hidden h-full w-[300px] overflow-y-auto border-r border-stone-200 bg-white p-4 shadow-xl lg:block">
         <div className="mb-5">
           <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Search by map</p>
-          <h1 className="mt-2 text-2xl font-bold text-stone-950">Jerusalem stays</h1>
+          <h1 className="font-display mt-2 text-2xl font-bold text-stone-950">Jerusalem stays</h1>
           <p className="mt-2 text-sm text-stone-500">Browse verified apartments by location, area, and price.</p>
         </div>
 
@@ -369,7 +369,7 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
           <p className="mt-1 text-sm text-stone-500">{selectedListing.bedrooms} bedrooms · sleeps {selectedListing.sleeps}</p>
           <div className="mt-4 flex items-center justify-between">
             <p className="font-bold text-stone-950">{formatListingPrice(selectedListing)}</p>
-            <a href={`/listings/${selectedListing.id}?from=stays`} className="rounded-full bg-[#c76f55] px-4 py-2 text-sm font-bold text-white hover:bg-[#b85f47]">
+            <a href={`/listings/${selectedListing.id}?from=stays`} className="rounded-full bg-[#252525] px-4 py-2 text-sm font-bold text-white hover:bg-[#111111]">
               View stay
             </a>
           </div>

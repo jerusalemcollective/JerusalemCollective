@@ -13,7 +13,7 @@ export default function NotFound() {
           className="mx-auto"
           priority
         />
-        <h1 className="mt-8 text-3xl font-bold tracking-tight text-stone-950">
+        <h1 className="font-display mt-8 text-3xl font-bold tracking-tight text-stone-950">
           We couldn&apos;t find that page
         </h1>
         <p className="mt-3 text-stone-600">
@@ -22,7 +22,7 @@ export default function NotFound() {
         <div className="mt-8 flex flex-col items-center gap-4">
           <Link
             href="/stays"
-            className="rounded-full bg-[#c76f55] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47]"
+            className="rounded-full bg-[#252525] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#111111]"
           >
             Browse all stays
           </Link>

@@ -55,7 +55,7 @@ export default async function SavedPage() {
         <Breadcrumb items={[{ label: 'Account', href: '/account' }, { label: 'Saved' }]} />
 
         <header className="mb-8 border-b border-stone-200 pb-6">
-          <h1 className="text-3xl font-bold tracking-tight text-stone-950">Saved stays</h1>
+          <h1 className="font-display text-3xl font-bold tracking-tight text-stone-950">Saved stays</h1>
           <p className="mt-2 text-stone-600">Shortlist places you want to come back to.</p>
         </header>
 
@@ -125,7 +125,7 @@ function EmptyState() {
       <p className="mb-6 text-stone-600">Save stays you like and they will appear here.</p>
       <Link
         href="/stays"
-        className="inline-flex rounded-full bg-[#c76f55] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#b85f47]"
+        className="inline-flex rounded-full bg-[#252525] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#111111]"
       >
         Explore stays
       </Link>

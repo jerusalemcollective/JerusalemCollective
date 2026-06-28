@@ -143,7 +143,7 @@ export default async function HostDashboardPage() {
         <header className="flex flex-col gap-4 border-b border-stone-200 pb-6 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Host dashboard</p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight text-stone-950">Overview</h1>
+            <h1 className="font-display mt-2 text-3xl font-bold tracking-tight text-stone-950">Overview</h1>
             <p className="mt-2 max-w-2xl text-stone-600">
               The main things that need attention, your next stays, and the tools you use most.
             </p>
@@ -160,7 +160,7 @@ export default async function HostDashboardPage() {
           {newEnquiries > 0 ? (
             <Link
               href="/host/dashboard/messages"
-              className="block rounded-3xl bg-[#c76f55] p-6 text-white shadow-sm transition hover:bg-[#b85f47]"
+              className="block rounded-3xl bg-[#252525] p-6 text-white shadow-sm transition hover:bg-[#111111]"
             >
               <p className="text-5xl font-bold">{newEnquiries}</p>
               <p className="mt-2 text-lg font-semibold">
@@ -206,7 +206,7 @@ export default async function HostDashboardPage() {
               </p>
               <Link
                 href="/become-a-host"
-                className="mt-5 inline-flex rounded-full bg-[#c76f55] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47]"
+                className="mt-5 inline-flex rounded-full bg-[#252525] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#111111]"
               >
                 Submit a stay
               </Link>

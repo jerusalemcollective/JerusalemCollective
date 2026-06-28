@@ -15,7 +15,7 @@ export default async function MessagesPage({
       <div className="mx-auto max-w-6xl px-5 py-10 md:px-6">
         <Breadcrumb items={[{ label: 'Account', href: '/account' }, { label: 'Messages' }]} />
 
-        <h1 className="mb-8 text-3xl font-bold text-stone-900">Messages</h1>
+        <h1 className="font-display mb-8 text-3xl font-bold text-stone-900">Messages</h1>
         <Suspense fallback={<MessagesInboxSkeleton />}>
           <MessagesInbox mode="guest" initialConversationId={initialConversationId} />
         </Suspense>

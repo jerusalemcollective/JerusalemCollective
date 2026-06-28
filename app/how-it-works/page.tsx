@@ -137,7 +137,7 @@ export default function HowItWorksPage() {
           <div className="mt-8">
             <Link
               href="/stays"
-              className="inline-flex rounded-full bg-[#c76f55] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47]"
+              className="inline-flex rounded-full bg-[#252525] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#111111]"
             >
               Browse stays
             </Link>

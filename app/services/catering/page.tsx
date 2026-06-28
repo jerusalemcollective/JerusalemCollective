@@ -21,7 +21,7 @@ export default async function CateringPage() {
     <main className="min-h-screen bg-[#F8F5F2] px-5 py-12 text-[#252525] md:px-6">
       <section className="mx-auto max-w-5xl">
         <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Food & catering</p>
-        <h1 className="mt-3 text-4xl font-bold tracking-tight text-stone-950 md:text-5xl">Custom Menus & Shabbat Packages</h1>
+        <h1 className="font-display mt-3 text-4xl font-bold tracking-tight text-stone-950 md:text-5xl">Custom Menus & Shabbat Packages</h1>
         <p className="mt-4 max-w-3xl text-lg leading-8 text-stone-600">
           We arrange fresh, kosher meals delivered directly to your property — whether you need a Friday night dinner, a full Yom Tov package, or simple weekday meals.
         </p>

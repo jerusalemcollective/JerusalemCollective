@@ -214,7 +214,7 @@ export default async function HostListingsPage() {
 
         <header className="flex flex-col gap-4 border-b border-stone-200 pb-6 md:flex-row md:items-end md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-stone-950">Listings</h1>
+            <h1 className="font-display text-3xl font-bold tracking-tight text-stone-950">Listings</h1>
             <p className="mt-2 text-stone-600">
               Live stays and submitted stays in one clear place.
             </p>

@@ -80,7 +80,7 @@ export default async function HostPaymentsPage({
 
         <div className="mb-8">
           <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Host dashboard</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-stone-950">Payment setup</h1>
+          <h1 className="font-display mt-2 text-3xl font-bold tracking-tight text-stone-950">Payment setup</h1>
           <p className="mt-2 max-w-2xl text-stone-600">
             This is separate from listing your stay. Add your payment details here so you can receive payouts from bookings, and choose whether to also offer direct-to-host payment.
           </p>
@@ -203,7 +203,7 @@ export default async function HostPaymentsPage({
               </label>
 
               <div className="flex justify-end">
-                <button className="rounded-full bg-[#c76f55] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#b85f47]">
+                <button className="rounded-full bg-[#252525] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#111111]">
                   Save payment settings
                 </button>
               </div>
