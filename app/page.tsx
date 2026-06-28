@@ -212,7 +212,7 @@ export default async function JLMCollectiveHomePage() {
   ]
 
   return (
-    <div className="jlm-home-backdrop min-h-screen bg-[#F8F5F2] text-[#2D2D2D] antialiased">
+    <div className="min-h-screen bg-[#F8F5F2] text-[#2D2D2D] antialiased">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -231,7 +231,19 @@ export default async function JLMCollectiveHomePage() {
         }}
       />
       <main>
-        <section className="mx-auto max-w-7xl px-6 pb-12 pt-16 text-center md:pt-20">
+        <section className="relative overflow-hidden pt-16 text-center md:pt-20">
+          <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[34rem] md:h-[40rem]">
+            <div
+              className="absolute inset-0 bg-top bg-no-repeat"
+              style={{
+                backgroundImage: "url('/backgrounds/homepage-paper-reference-v2.png')",
+                backgroundSize: 'cover',
+              }}
+            />
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(248,245,242,0)_0%,rgba(248,245,242,0.12)_52%,#F8F5F2_100%)]" />
+          </div>
+
+          <div className="relative z-10 mx-auto max-w-7xl px-6 pb-12">
           <div className="mx-auto mb-8 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium shadow-sm ring-1 ring-stone-200">
             <ShieldIcon className="text-[#c76f55]" />
             <span>Curated Jerusalem listings</span>
@@ -255,6 +267,7 @@ export default async function JLMCollectiveHomePage() {
             <MapPinIcon className="text-[#c76f55]" />
             Open map view
           </Link>
+          </div>
         </section>
 
         <section id="explore" className="mx-auto max-w-7xl px-6 pb-8 pt-6">
@@ -483,4 +496,3 @@ function ShieldIcon({ className = '' }: { className?: string }) {
     </svg>
   )
 }
-

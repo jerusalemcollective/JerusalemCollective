@@ -149,39 +149,6 @@
   }
 }
 
-.jlm-home-backdrop {
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
-  background: #f7f1e8;
-}
-
-.jlm-home-backdrop > main {
-  position: relative;
-  z-index: 1;
-}
-
-.jlm-home-backdrop::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto;
-  z-index: 0;
-  height: min(980px, 100vh);
-  pointer-events: none;
-  background: url('/backgrounds/homepage-paper-reference.png') center top / cover no-repeat;
-  opacity: 0.96;
-}
-
-.jlm-home-backdrop::after {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto;
-  z-index: 0;
-  height: min(980px, 100vh);
-  pointer-events: none;
-  background: linear-gradient(180deg, rgb(247 241 232 / 0) 0%, rgb(247 241 232 / 0.1) 54%, #f7f1e8 100%);
-}
-
 /* Header grows on md+ (logo h-10 -> h-12), so the sticky offset must too. */
 @media (min-width: 768px) {
   :root {
