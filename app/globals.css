@@ -154,9 +154,7 @@
   isolation: isolate;
   overflow: hidden;
   background:
-    linear-gradient(180deg, rgb(248 245 242 / 0.1) 0%, #f8f5f2 46rem),
-    url('/backgrounds/jerusalem-map-lines.svg') top center / max(1600px, 100vw) 860px no-repeat,
-    #f8f5f2;
+    linear-gradient(180deg, #fbf8f4 0%, #f8f5f2 34rem, #f8f5f2 100%);
 }
 
 .jlm-home-backdrop > main {
@@ -167,12 +165,13 @@
 .jlm-home-backdrop::before {
   content: '';
   position: absolute;
-  inset: 0 0 auto;
+  inset: 0;
   z-index: 0;
-  height: min(760px, 82vh);
   pointer-events: none;
   background:
-    radial-gradient(circle at 50% 22%, rgb(248 245 242 / 0.54) 0 14rem, rgb(248 245 242 / 0.22) 29rem, rgb(248 245 242 / 0) 48rem);
+    radial-gradient(circle at 50% 12%, rgb(255 255 255 / 0.76) 0 11rem, rgb(255 255 255 / 0.34) 22rem, rgb(255 255 255 / 0) 38rem),
+    url('/backgrounds/jerusalem-map-lines.svg') top center / min(1500px, 100vw) 780px no-repeat;
+  opacity: 0.9;
 }
 
 .jlm-home-backdrop::after {
@@ -180,9 +179,11 @@
   position: absolute;
   inset: 0 0 auto;
   z-index: 0;
-  height: min(760px, 82vh);
+  height: min(820px, 84vh);
   pointer-events: none;
-  background: linear-gradient(180deg, rgb(248 245 242 / 0) 0%, rgb(248 245 242 / 0.1) 58%, #f8f5f2 100%);
+  background:
+    linear-gradient(180deg, rgb(251 248 244 / 0.04) 0%, rgb(248 245 242 / 0.28) 42%, #f8f5f2 82%),
+    radial-gradient(circle at 50% 18%, rgb(255 255 255 / 0.42) 0, rgb(255 255 255 / 0) 28rem);
 }
 
 /* Header grows on md+ (logo h-10 -> h-12), so the sticky offset must too. */
