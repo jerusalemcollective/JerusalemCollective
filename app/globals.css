@@ -153,7 +153,10 @@
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  background-color: #f8f5f2;
+  background:
+    linear-gradient(180deg, rgb(248 245 242 / 0.1) 0%, #f8f5f2 46rem),
+    url('/backgrounds/jerusalem-map-lines.svg') top center / max(1600px, 100vw) 860px no-repeat,
+    #f8f5f2;
 }
 
 .jlm-home-backdrop > main {
@@ -168,11 +171,8 @@
   z-index: 0;
   height: min(760px, 82vh);
   pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg width='1440' height='760' viewBox='0 0 1440 760' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cg stroke='%23c76f55' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round' opacity='0.58'%3E%3Cpath d='M-34 128C56 108 114 124 184 91C248 60 293 42 376 64C454 84 492 45 558 31'/%3E%3Cpath d='M-22 211C52 186 105 198 166 162C234 122 298 116 376 137C448 157 493 137 544 102'/%3E%3Cpath d='M30 311C104 282 154 298 209 254C264 211 329 196 396 218C468 242 526 216 574 177'/%3E%3Cpath d='M868 53C956 18 1056 33 1133 74C1203 111 1268 100 1323 71C1368 48 1412 41 1478 58'/%3E%3Cpath d='M900 134C982 91 1051 111 1125 142C1196 172 1285 151 1348 114C1397 85 1439 91 1486 116'/%3E%3Cpath d='M934 221C1028 180 1107 190 1170 223C1232 256 1311 241 1369 204C1406 181 1446 176 1490 193'/%3E%3Cpath d='M84 548C153 505 221 515 282 548C349 584 419 573 482 531C529 500 580 492 627 505'/%3E%3Cpath d='M1003 501C1067 462 1135 474 1195 512C1257 552 1322 545 1381 506C1421 480 1459 481 1490 499'/%3E%3C/g%3E%3Cg stroke='%238f8378' stroke-width='0.9' stroke-linecap='round' stroke-linejoin='round' opacity='0.42'%3E%3Cpath d='M77 36L123 108L101 180L154 248L132 339L188 408'/%3E%3Cpath d='M201 24L246 96L286 144L271 218L322 298L304 365'/%3E%3Cpath d='M403 30L382 101L429 167L421 236L467 299L459 379'/%3E%3Cpath d='M1054 18L1019 92L1058 162L1045 231L1095 312'/%3E%3Cpath d='M1194 38L1168 118L1213 180L1196 256L1247 326'/%3E%3Cpath d='M1354 27L1311 97L1342 167L1321 245L1378 330'/%3E%3Cpath d='M27 640C115 603 205 630 294 611C375 594 446 546 545 575'/%3E%3Cpath d='M857 618C928 583 1012 594 1085 625C1161 657 1235 637 1296 596C1352 558 1405 565 1466 593'/%3E%3C/g%3E%3Cg stroke='%23c76f55' stroke-width='0.8' stroke-linecap='round' opacity='0.34'%3E%3Cpath d='M-20 388H192M231 388H393M430 388H548'/%3E%3Cpath d='M894 383H1051M1088 383H1267M1307 383H1478'/%3E%3Cpath d='M35 477H179M224 477H357M401 477H510'/%3E%3Cpath d='M965 456H1098M1137 456H1280M1320 456H1484'/%3E%3C/g%3E%3C/svg%3E");
-  background-position: top center;
-  background-repeat: no-repeat;
-  background-size: max(1440px, 100%) 760px;
-  opacity: 0.92;
+  background:
+    radial-gradient(circle at 50% 22%, rgb(248 245 242 / 0.54) 0 14rem, rgb(248 245 242 / 0.22) 29rem, rgb(248 245 242 / 0) 48rem);
 }
 
 .jlm-home-backdrop::after {
@@ -182,9 +182,7 @@
   z-index: 0;
   height: min(760px, 82vh);
   pointer-events: none;
-  background:
-    radial-gradient(circle at 50% 25%, rgb(248 245 242 / 0.68) 0 15rem, rgb(248 245 242 / 0.42) 29rem, rgb(248 245 242 / 0) 48rem),
-    linear-gradient(180deg, rgb(248 245 242 / 0) 0%, rgb(248 245 242 / 0.24) 62%, #f8f5f2 100%);
+  background: linear-gradient(180deg, rgb(248 245 242 / 0) 0%, rgb(248 245 242 / 0.1) 58%, #f8f5f2 100%);
 }
 
 /* Header grows on md+ (logo h-10 -> h-12), so the sticky offset must too. */
