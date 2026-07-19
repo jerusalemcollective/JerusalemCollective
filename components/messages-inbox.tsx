@@ -203,6 +203,14 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
   const searchParams = useSearchParams()
   const participantIdsKey = participantIds.join('|')
   const composerRef = useRef<HTMLTextAreaElement | null>(null)
+  const threadScrollRef = useRef<HTMLDivElement | null>(null)
+
+  // Keep the newest message in view, on send and on receive.
+  useEffect(() => {
+    const thread = threadScrollRef.current
+    if (!thread) return
+    thread.scrollTop = thread.scrollHeight
+  }, [messages, selectedConversationId])
 
   // Open a conversation and you can start typing straight away, without
   // having to click into the box first.
@@ -690,6 +698,12 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
       return
     }
 
+    // Empty the box straight away so replying feels instant. The text is put
+    // back if the send fails, so nothing is ever lost.
+    const text = draft.trim()
+    setDraft('')
+    if (composerRef.current) composerRef.current.style.height = 'auto'
+
     setSending(true)
     setError(null)
     const shouldUpdateRequestStatus =
@@ -699,7 +713,7 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
 
     try {
       const supabase = createClient()
-      await sendConversationMessage(supabase, selectedConversationId, user.id, draft.trim())
+      await sendConversationMessage(supabase, selectedConversationId, user.id, text)
       if (mode === 'guest') {
         try {
           const notificationResponse = await fetch('/api/notify-host-message', {
@@ -742,7 +756,7 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
                 ...conversation,
                 updated_at: new Date().toISOString(),
                 last_message: {
-                  content: draft.trim(),
+                  content: text,
                   sender_id: user.id,
                   created_at: new Date().toISOString(),
                 },
@@ -764,9 +778,10 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
           ),
         )
       }
-      setDraft('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to send message.')
+      // Put the text back so a failed send never loses what was typed.
+      setDraft((current) => current || text)
     } finally {
       setSending(false)
     }
@@ -1071,7 +1086,7 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
             </div>
           )}
 
-          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5">
+          <div ref={threadScrollRef} className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5">
             {messages.map((message) => {
               const isMine = message.sender_id === user?.id
               return (
