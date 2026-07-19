@@ -294,10 +294,10 @@ export function HomeSearchForm() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl rounded-3xl border border-stone-200 bg-white p-2 shadow-2xl shadow-stone-200/50 md:rounded-full">
+    <div className="mx-auto max-w-4xl rounded-3xl border border-stone-200 bg-white p-2 shadow-2xl shadow-stone-200/50">
       <div className="grid grid-cols-1 divide-y divide-stone-100 md:grid-cols-[1.45fr_1fr_1fr_auto] md:divide-x md:divide-y-0">
         <div className="relative" ref={neighbourhoodRef}>
-          <div className="flex flex-col px-6 py-4 text-left md:rounded-l-full">
+          <div className="flex flex-col px-6 py-4 text-left">
             <span className="text-[11px] font-bold uppercase tracking-widest text-stone-900">Neighbourhood</span>
             <input
               type="text"
@@ -373,10 +373,10 @@ export function HomeSearchForm() {
         <div className="p-2">
           <button
             onClick={handleSearch}
-            className="flex h-14 w-full items-center justify-center rounded-2xl bg-[#252525] text-white shadow-sm transition hover:bg-[#111111] md:w-16 md:rounded-full"
+            className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#252525] px-7 text-sm font-bold text-white shadow-sm transition hover:bg-[#111111]"
           >
-            <SearchIcon className="h-6 w-6" />
-            <span className="sr-only">Search</span>
+            <SearchIcon className="h-5 w-5" />
+            Search
           </button>
         </div>
       </div>

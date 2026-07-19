@@ -1,12 +1,25 @@
-﻿import Link from 'next/link'
+import Link from 'next/link'
 import Image from 'next/image'
 import type { Metadata } from 'next'
+import type { LucideIcon } from 'lucide-react'
+import {
+  ArrowUpDown,
+  Building2,
+  Home,
+  Landmark,
+  LayoutGrid,
+  Lock,
+  MapPin,
+  MessageCircle,
+  ShieldCheck,
+  Tent,
+  Trees,
+} from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { sampleListings } from '@/lib/sample-listings'
 import { defaultExploreNeighborhoods } from '@/lib/neighborhoods'
 import { slugifyNeighborhood } from '@/lib/neighborhood-pages'
-import { HomeNeighborhoodSearch, HomeSearchForm } from '@/components/home-search-form'
-import { HomeMapSection } from '@/components/home-map-section'
+import { HomeSearchForm } from '@/components/home-search-form'
 import { RecentlyViewed } from '@/components/recently-viewed-home'
 
 export const dynamic = 'force-dynamic'
@@ -49,6 +62,12 @@ type PopularNeighborhoodRow = {
   neighborhood: string | null
 }
 
+type CategoryChip = {
+  label: string
+  href: string
+  Icon: LucideIcon
+}
+
 export const metadata: Metadata = {
   title: 'Jerusalem Short-Term Stays',
   description:
@@ -77,33 +96,6 @@ export const metadata: Metadata = {
   },
 }
 
-const baseExploreBlocks = [
-  {
-    label: 'Themes',
-    title: 'Search by what matters',
-    items: [
-      'Family stays',
-      'Shabbos-friendly',
-      'Near shuls',
-      'Lift access',
-      'Sukkah option',
-      'Longer visits',
-    ],
-  },
-  {
-    label: 'Stay types',
-    title: 'Choose your setup',
-    items: [
-      'Apartments',
-      'Garden flats',
-      'Penthouses',
-      'Large homes',
-      'Ground floor',
-      'Private entrance',
-    ],
-  },
-]
-
 function toFeaturedStay(listing: ListingRow & { cover_photo_url?: string | null }): FeaturedStay {
   return {
     id: listing.id,
@@ -120,14 +112,21 @@ function toFeaturedStay(listing: ListingRow & { cover_photo_url?: string | null 
 
 const defaultFeatured = sampleListings.map((listing) => toFeaturedStay(listing))
 
-function getExploreHref(blockLabel: string, item: string) {
-  const params = new URLSearchParams()
+const neighbourhoodIcons: LucideIcon[] = [Building2, Trees, Home, Landmark, MapPin]
 
-  if (blockLabel === 'Neighbourhoods') return `/neighbourhoods/${slugifyNeighborhood(item)}`
-  if (blockLabel === 'Themes') params.set('feature', item)
-  if (blockLabel === 'Stay types') params.set('type', item)
+function buildCategoryChips(popularNeighborhoods: string[]): CategoryChip[] {
+  const neighbourhoodChips = popularNeighborhoods.slice(0, 5).map((area, index) => ({
+    label: area,
+    href: `/neighbourhoods/${slugifyNeighborhood(area)}`,
+    Icon: neighbourhoodIcons[index % neighbourhoodIcons.length] ?? MapPin,
+  }))
 
-  return `/stays?${params.toString()}`
+  return [
+    { label: 'All stays', href: '/stays', Icon: LayoutGrid },
+    ...neighbourhoodChips,
+    { label: 'Lift access', href: `/stays?feature=${encodeURIComponent('Lift access')}`, Icon: ArrowUpDown },
+    { label: 'Sukkah option', href: `/stays?feature=${encodeURIComponent('Sukkah option')}`, Icon: Tent },
+  ]
 }
 
 async function getHomepageData() {
@@ -139,7 +138,7 @@ async function getHomepageData() {
         .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, amenities, latitude, longitude, is_featured')
         .eq('is_published', true)
         .eq('is_featured', true)
-        .limit(6),
+        .limit(8),
       supabase.rpc('popular_neighborhoods', {
         result_limit: 6,
         lookback_days: 30,
@@ -153,7 +152,7 @@ async function getHomepageData() {
         .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, amenities, latitude, longitude, is_featured')
         .eq('is_published', true)
         .order('created_at', { ascending: false })
-        .limit(6)
+        .limit(8)
 
       featuredRows = (fallbackListingsData || []) as ListingRow[]
     }
@@ -202,14 +201,7 @@ async function getHomepageData() {
 
 export default async function JLMCollectiveHomePage() {
   const { featuredStays, popularNeighborhoods } = await getHomepageData()
-  const exploreBlocks = [
-    {
-      label: 'Neighbourhoods',
-      title: 'Popular areas',
-      items: popularNeighborhoods.slice(0, 6),
-    },
-    ...baseExploreBlocks,
-  ]
+  const categoryChips = buildCategoryChips(popularNeighborhoods)
 
   return (
     <div className="min-h-screen bg-[#F8F5F2] text-[#2D2D2D] antialiased">
@@ -231,8 +223,8 @@ export default async function JLMCollectiveHomePage() {
         }}
       />
       <main>
-        <section className="relative overflow-hidden pt-16 text-center md:pt-20">
-          <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[34rem] md:h-[40rem]">
+        <section className="relative overflow-hidden pt-14 text-center md:pt-16">
+          <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[26rem] md:h-[32rem]">
             <div
               className="absolute inset-0 bg-top bg-no-repeat"
               style={{
@@ -243,148 +235,87 @@ export default async function JLMCollectiveHomePage() {
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(248,245,242,0)_0%,rgba(248,245,242,0.12)_52%,#F8F5F2_100%)]" />
           </div>
 
-          <div className="relative z-10 mx-auto max-w-7xl px-6 pb-12">
-          <div className="mx-auto mb-8 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium shadow-sm ring-1 ring-stone-200">
-            <ShieldIcon className="text-[#c76f55]" />
-            <span>Curated Jerusalem listings</span>
-          </div>
-
-          <div className="mx-auto mb-8 max-w-4xl">
-            <h1 className="font-display text-4xl font-bold tracking-tight text-stone-950 md:text-6xl">
-              Discover places to stay in Jerusalem
+          <div className="relative z-10 mx-auto max-w-7xl px-6 pb-10">
+            <h1 className="font-display mx-auto max-w-3xl text-4xl font-bold tracking-tight text-stone-950 md:text-5xl">
+              Curated stays in Jerusalem
             </h1>
-            <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-stone-600 md:text-lg">
-              Short-term Jerusalem homes, beautifully organised in one place.
-            </p>
-          </div>
 
-          <HomeSearchForm />
-
-          <Link
-            href="/stays?view=map"
-            className="mt-6 inline-flex items-center gap-2 rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-semibold text-stone-800 shadow-sm hover:border-stone-500"
-          >
-            <MapPinIcon className="text-[#c76f55]" />
-            Open map view
-          </Link>
+            <div className="mt-8">
+              <HomeSearchForm />
+            </div>
           </div>
         </section>
 
-        <section id="explore" className="mx-auto max-w-7xl px-6 pb-8 pt-6">
-          <div className="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Explore</p>
-              <h2 className="mt-2 text-3xl font-bold tracking-tight text-stone-950">
-                Start with the Jerusalem that suits you
-              </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-600">
-                From quiet family streets to central locations, explore stays by
-                area, setup and trip style.
-              </p>
-            </div>
+        <section aria-label="Browse by category" className="mx-auto max-w-7xl px-6">
+          <div className="flex flex-wrap gap-2 border-b border-stone-200 pb-6">
+            {categoryChips.map((chip, index) => (
+              <Link
+                key={chip.label}
+                href={chip.href}
+                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  index === 0
+                    ? 'bg-[#252525] text-white hover:bg-[#111111]'
+                    : 'bg-white text-stone-700 ring-1 ring-stone-200 hover:ring-stone-400'
+                }`}
+              >
+                <chip.Icon className="h-4 w-4" aria-hidden="true" />
+                {chip.label}
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section id="stays" className="mx-auto max-w-7xl px-6 pt-9">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="font-display text-2xl font-bold tracking-tight text-stone-950">
+              Stays in Jerusalem
+            </h2>
             <Link
-              href="/stays"
-              className="w-fit rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-semibold text-stone-800 shadow-sm hover:border-stone-500"
+              href="/map"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#c76f55] hover:underline"
             >
-              View all collections
+              <MapPin className="h-4 w-4" aria-hidden="true" />
+              Show map
             </Link>
           </div>
 
-          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-            {exploreBlocks.map((block) => (
-              <div key={block.label} className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
-                <p className="text-xs font-bold uppercase tracking-widest text-stone-500">{block.label}</p>
-                <h3 className="font-display mt-3 text-lg font-bold text-stone-950">{block.title}</h3>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {block.items.map((item) => (
-                    <Link
-                      key={item}
-                      href={getExploreHref(block.label, item)}
-                      className="rounded-full bg-stone-100 px-3 py-1.5 text-xs font-semibold text-stone-800 hover:bg-stone-200"
-                    >
-                      {item}
-                    </Link>
-                  ))}
-                </div>
-              </div>
+          <div className="grid grid-cols-2 gap-x-5 gap-y-9 md:grid-cols-3 lg:grid-cols-4">
+            {featuredStays.map((stay) => (
+              <HomeListingCard key={stay.id} listing={stay} />
             ))}
+          </div>
 
-            <div className="rounded-3xl border border-stone-200 bg-[#252525] p-5 text-white shadow-sm">
-              <p className="text-xs font-bold uppercase tracking-widest text-[#d9937e]">Seasonal</p>
-              <h3 className="mt-3 text-lg font-bold">Planning around busy dates?</h3>
-              <p className="mt-3 text-sm leading-6 text-stone-300">
-                Browse stays for Yom Tov, summer visits and longer family trips.
-              </p>
-              <Link
-                href="/stays?season=busy-dates"
-                className="mt-5 inline-flex rounded-full bg-white px-4 py-2 text-xs font-bold text-stone-950 hover:bg-stone-100"
-              >
-                See seasonal stays
-              </Link>
-            </div>
+          <div className="pt-10">
+            <RecentlyViewed />
           </div>
         </section>
 
-        <section id="stays" className="mx-auto grid max-w-7xl gap-6 px-6 py-8 lg:grid-cols-[1fr_380px]">
-          <div>
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="font-display text-lg font-bold tracking-tight text-stone-900">Featured stays</h2>
-                <p className="text-xs text-stone-500">Browse current listings across Jerusalem</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Link href="/stays" className="rounded-full border border-stone-300 bg-white px-3 py-1.5 text-[10px] font-bold text-stone-700 shadow-sm hover:bg-stone-50">
-                  Filters
-                </Link>
-                <Link href="/map" className="inline-flex items-center gap-1.5 rounded-full bg-[#252525] px-3 py-1.5 text-[10px] font-bold text-white shadow-sm hover:bg-[#111111]">
-                  <MapPinIcon className="h-3 w-3" />
-                  Map
-                </Link>
-              </div>
-            </div>
-
-            <HomeNeighborhoodSearch popularNeighborhoods={popularNeighborhoods.slice(0, 4)} />
-
-            <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
-              {featuredStays.map((stay) => (
-                <HomeListingCard key={stay.id} listing={stay} />
-              ))}
-            </div>
-
-            <div className="mx-auto max-w-6xl px-5 md:px-8">
-              <RecentlyViewed />
-            </div>
-          </div>
-
-          <HomeMapSection listings={featuredStays.slice(0, 4)} />
-        </section>
-
-        <section id="saved" className="mx-auto max-w-7xl px-6 pb-4">
-          <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="flex items-center gap-3">
-                <div className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full">
-                  <SavedStayIcon className="h-full w-full" />
-                </div>
-                <div>
-                  <h2 className="text-sm font-bold text-stone-900">Keep track of stays you like</h2>
-                  <p className="text-xs text-stone-500">
-                    Your saved properties will appear here once favourites are connected.
-                  </p>
-                </div>
-              </div>
-              <Link href="/host/register" className="w-fit rounded-full border border-stone-300 bg-white px-4 py-2 text-xs font-semibold text-stone-800 shadow-sm hover:border-stone-500">
-                Create account
-              </Link>
-            </div>
+        <section aria-label="Why book with JLM Collective" className="mx-auto max-w-7xl px-6 pt-12">
+          <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-3 border-t border-stone-200 pt-8 text-sm text-stone-600">
+            <span className="inline-flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-[#c76f55]" aria-hidden="true" />
+              Verified hosts
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-[#c76f55]" aria-hidden="true" />
+              Local Jerusalem team
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <Lock className="h-4 w-4 text-[#c76f55]" aria-hidden="true" />
+              Secure payment
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <MessageCircle className="h-4 w-4 text-[#c76f55]" aria-hidden="true" />
+              Real human support
+            </span>
           </div>
         </section>
 
-        <section id="owner" className="mx-auto max-w-7xl px-6 pb-12 pt-4">
+        <section id="owner" className="mx-auto max-w-7xl px-6 pb-16 pt-12">
           <div className="overflow-hidden rounded-2xl border border-stone-200 bg-[#252525] shadow-sm">
             <div className="flex flex-col gap-4 p-5 text-white md:flex-row md:items-center md:justify-between md:p-6">
               <div>
-                <h2 className="text-lg font-bold tracking-tight">Have a Jerusalem stay to list?</h2>
+                <h2 className="font-display text-lg font-bold tracking-tight">Have a Jerusalem stay to list?</h2>
                 <p className="mt-1 max-w-xl text-xs leading-5 text-stone-300">
                   Add your property, set your details, and submit it for approval.
                 </p>
@@ -408,28 +339,25 @@ export default async function JLMCollectiveHomePage() {
 function HomeListingCard({ listing }: { listing: FeaturedStay }) {
   return (
     <div className="group">
-      <Link
-        href={`/listings/${listing.id}?from=stays`}
-        className="block"
-      >
+      <Link href={`/listings/${listing.id}?from=stays`} className="block">
         <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-stone-100 shadow-sm transition-shadow duration-200 group-hover:shadow-md">
-        {listing.coverPhotoUrl ? (
-          <Image
-            src={listing.coverPhotoUrl}
-            alt={listing.title}
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            loading="lazy"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-[#F8F5F2]">
-            <div className="text-center">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-[#c76f55]">JLM Collective</p>
-              <p className="mt-1 text-xs text-stone-400">Photo coming soon</p>
+          {listing.coverPhotoUrl ? (
+            <Image
+              src={listing.coverPhotoUrl}
+              alt={listing.title}
+              fill
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              loading="lazy"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-[#F8F5F2]">
+              <div className="text-center">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#c76f55]">JLM Collective</p>
+                <p className="mt-1 text-xs text-stone-400">Photo coming soon</p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
         </div>
       </Link>
 
@@ -440,20 +368,15 @@ function HomeListingCard({ listing }: { listing: FeaturedStay }) {
         >
           {listing.area}
         </Link>
-        <Link
-          href={`/listings/${listing.id}?from=stays`}
-          className="block space-y-0.5"
-        >
-          <p className="line-clamp-1 font-semibold leading-snug text-stone-950">
-            {listing.title}
-          </p>
+        <Link href={`/listings/${listing.id}?from=stays`} className="block space-y-0.5">
+          <p className="line-clamp-1 font-semibold leading-snug text-stone-950">{listing.title}</p>
           <p className="text-sm text-stone-500">
             {[
               listing.bedrooms ? `${listing.bedrooms} bed` : null,
               listing.max_guests ? `sleeps ${listing.max_guests}` : null,
             ]
               .filter(Boolean)
-              .join(' \u00b7 ')}
+              .join(' · ')}
           </p>
           <p className="pt-1 text-sm font-semibold text-stone-950">
             {formatFeaturedPrice(listing)}
@@ -469,30 +392,6 @@ function HomeListingCard({ listing }: { listing: FeaturedStay }) {
 
 function formatFeaturedPrice(listing: Pick<FeaturedStay, 'price_ils' | 'price_usd'>) {
   if (listing.price_usd) return `$${Number(listing.price_usd).toLocaleString()}`
-  if (listing.price_ils) return `\u20aa${Number(listing.price_ils).toLocaleString()}`
+  if (listing.price_ils) return `₪${Number(listing.price_ils).toLocaleString()}`
   return 'Price on request'
-}
-
-function SavedStayIcon({ className = '' }: { className?: string }) {
-  return (
-    <Image src="/icons/yemin-moshe-save-ui.webp" alt="" aria-hidden="true" width={96} height={96} className={`rounded-full object-cover ${className}`} />
-  )
-}
-
-function MapPinIcon({ className = '' }: { className?: string }) {
-  return (
-    <svg className={className} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12z" />
-      <circle cx="12" cy="9" r="2.5" />
-    </svg>
-  )
-}
-
-function ShieldIcon({ className = '' }: { className?: string }) {
-  return (
-    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
-  )
 }
