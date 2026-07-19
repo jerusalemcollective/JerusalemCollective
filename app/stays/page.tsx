@@ -118,7 +118,7 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
   const minPrice = parsePositiveNumber(params.minPrice)
   const maxPrice = parsePositiveNumber(params.maxPrice)
   const amenityLabels = parseAmenityLabels(params.amenities)
-  const [listings, featuredNeighborhoods] = await Promise.all([
+  const [listings, featuredNeighborhoods, totalPublished] = await Promise.all([
     loadListings({
       selectedArea,
       checkIn,
@@ -135,17 +135,20 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
       maxWalkToKotel: params.maxWalkToKotel,
     }),
     loadFeaturedNeighborhoods(),
+    loadPublishedCount(),
   ])
 
   return (
     <div className="min-h-screen">
       <div className="sticky top-[var(--header-h)] z-20 border-b border-stone-200 bg-[#F8F5F2]">
-        <div className="mx-auto grid max-w-7xl gap-3 px-4 py-4 sm:px-6 lg:grid-cols-[1fr_auto] lg:items-start">
-          <Suspense fallback={<div className="h-14 rounded-3xl bg-white shadow-sm" />}>
-            <StaysFilterBar />
-          </Suspense>
+        <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:px-6">
+          <div className="min-w-0 flex-1">
+            <Suspense fallback={<div className="h-14 rounded-3xl bg-white shadow-sm" />}>
+              <StaysFilterBar />
+            </Suspense>
+          </div>
 
-          <div className="flex w-fit items-center gap-1 rounded-full border border-stone-200 bg-white p-1 shadow-sm">
+          <div className="flex w-fit shrink-0 items-center gap-1 rounded-full border border-stone-200 bg-white p-1 shadow-sm">
             <Link
               href={buildHref(params, { view: null })}
               className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
@@ -163,16 +166,16 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
               Map
             </Link>
           </div>
-
-          <div className="lg:col-span-2">
-            <StaysNeighborhoodNav
-              neighborhoods={neighborhoods}
-              featuredNeighborhoods={featuredNeighborhoods}
-              selectedArea={selectedArea}
-              baseQuery={params}
-            />
-          </div>
         </div>
+      </div>
+
+      <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6">
+        <StaysNeighborhoodNav
+          neighborhoods={neighborhoods}
+          featuredNeighborhoods={featuredNeighborhoods}
+          selectedArea={selectedArea}
+          baseQuery={params}
+        />
       </div>
 
       {view === 'list' ? (
@@ -181,9 +184,11 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
             <h1 className="font-display text-3xl font-bold tracking-tight text-stone-950">
               {selectedArea === 'All' ? 'All stays in Jerusalem' : `Stays in ${selectedArea}`}
             </h1>
-            <p className="mt-2 text-stone-500">
-              {listings.length} verified apartment{listings.length === 1 ? '' : 's'} available
-            </p>
+            {totalPublished > 0 && (
+              <p className="mt-2 text-stone-500">
+                {listings.length} verified apartment{listings.length === 1 ? '' : 's'} available
+              </p>
+            )}
             {activeFeature && (
               <p className="mt-1 text-sm text-stone-500">
                 Showing results related to {activeFeature}
@@ -192,34 +197,60 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
           </div>
 
           {listings.length === 0 ? (
-            <div className="py-16 text-center">
-              <p className="text-lg font-semibold text-stone-950">
-                No stays match your search
-              </p>
-              <p className="mt-2 text-stone-500">
-                Try adjusting your filters or browse all available properties.
-              </p>
-              <div className="mt-6 flex flex-wrap justify-center gap-3">
-                <Link
-                  href="/stays"
-                  className="rounded-full bg-[#252525] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#111111]"
-                >
-                  Clear all filters
-                </Link>
-                <Link
-                  href="/stays?neighborhood=Rechavia"
-                  className="rounded-full border border-stone-200 px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:border-stone-300"
-                >
-                  Browse Rechavia
-                </Link>
-                <Link
-                  href="/stays?neighborhood=German+Colony"
-                  className="rounded-full border border-stone-200 px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:border-stone-300"
-                >
-                  Browse German Colony
-                </Link>
+            totalPublished === 0 ? (
+              <div className="py-16 text-center">
+                <p className="font-display text-2xl font-bold text-stone-950">
+                  New Jerusalem stays are coming soon
+                </p>
+                <p className="mx-auto mt-3 max-w-md leading-7 text-stone-600">
+                  We&apos;re curating and verifying our first apartments. Have a look at the
+                  neighbourhoods in the meantime, or list your own place with us.
+                </p>
+                <div className="mt-6 flex flex-wrap justify-center gap-3">
+                  <Link
+                    href="/explore"
+                    className="rounded-full bg-[#252525] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#111111]"
+                  >
+                    Explore neighbourhoods
+                  </Link>
+                  <Link
+                    href="/become-a-host"
+                    className="rounded-full border border-stone-200 px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:border-stone-300"
+                  >
+                    List your stay
+                  </Link>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="py-16 text-center">
+                <p className="text-lg font-semibold text-stone-950">
+                  No stays match your search
+                </p>
+                <p className="mt-2 text-stone-500">
+                  Try adjusting your filters or browse all available properties.
+                </p>
+                <div className="mt-6 flex flex-wrap justify-center gap-3">
+                  <Link
+                    href="/stays"
+                    className="rounded-full bg-[#252525] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#111111]"
+                  >
+                    Clear all filters
+                  </Link>
+                  <Link
+                    href="/stays?neighborhood=Rechavia"
+                    className="rounded-full border border-stone-200 px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:border-stone-300"
+                  >
+                    Browse Rechavia
+                  </Link>
+                  <Link
+                    href="/stays?neighborhood=German+Colony"
+                    className="rounded-full border border-stone-200 px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:border-stone-300"
+                  >
+                    Browse German Colony
+                  </Link>
+                </div>
+              </div>
+            )
           ) : (
             <>
               <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
@@ -254,6 +285,20 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
       )}
     </div>
   )
+}
+
+async function loadPublishedCount() {
+  try {
+    const supabase = await createClient()
+    const { count } = await supabase
+      .from('listings')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_published', true)
+
+    return count || 0
+  } catch {
+    return 0
+  }
 }
 
 async function loadFeaturedNeighborhoods() {
