@@ -1,6 +1,6 @@
 ﻿import Link from 'next/link'
 import { requireAdminPermission } from '@/lib/admin'
-import { deleteListing, updateListingVisibility } from '@/app/admin/listing-actions'
+import { archiveListing, deleteListing, updateListingVisibility } from '@/app/admin/listing-actions'
 import { ConfirmSubmitButton } from '@/components/confirm-submit-button'
 import { BooleanBadge } from '@/components/boolean-badge'
 import { ListingQualityScore } from '@/components/listing-quality-score'
@@ -17,6 +17,7 @@ type ListingRow = {
   is_published: boolean
   is_featured: boolean
   admin_status: string | null
+  archived_at: string | null
   bedrooms: number | null
   bathrooms: number | null
   sleeping_setup: string | null
@@ -77,7 +78,7 @@ export default async function AdminListingsPage({
   const page = Math.max(1, Number(currentSearchParams.page) || 1)
   let listingsQuery = supabase
     .from('listings')
-    .select('id, title, area, host_id, is_published, is_featured, admin_status, bedrooms, bathrooms, sleeping_setup, amenities, description, house_rules, price_usd, price_ils, walking_minutes_to_kotel, american_comfort, created_at, hosts(name)')
+    .select('id, title, area, host_id, is_published, is_featured, admin_status, archived_at, bedrooms, bathrooms, sleeping_setup, amenities, description, house_rules, price_usd, price_ils, walking_minutes_to_kotel, american_comfort, created_at, hosts(name)')
     .order('created_at', { ascending: false })
   let countQuery = supabase.from('listings').select('*', { count: 'exact', head: true })
 
@@ -215,13 +216,10 @@ export default async function AdminListingsPage({
       </div>
 
       <div className="overflow-hidden rounded-3xl bg-white shadow-sm">
-        <div className="grid gap-4 border-b border-stone-100 px-6 py-4 text-xs font-bold uppercase tracking-widest text-stone-400 md:grid-cols-[1.2fr_0.8fr_0.8fr_0.9fr_0.55fr_0.55fr_1fr]">
+        <div className="grid gap-4 border-b border-stone-100 px-6 py-4 text-xs font-bold uppercase tracking-widest text-stone-400 md:grid-cols-[1.7fr_0.9fr_1fr_1.9fr]">
           <span>Listing</span>
           <span>Host</span>
           <span>Status</span>
-          <span>Quality</span>
-          <span>Published</span>
-          <span>Featured</span>
           <span>Actions</span>
         </div>
 
@@ -232,73 +230,121 @@ export default async function AdminListingsPage({
             {listings.map((listing) => (
               <div
                 key={listing.id}
-                className="grid gap-4 px-6 py-5 md:grid-cols-[1.2fr_0.8fr_0.8fr_0.9fr_0.55fr_0.55fr_1fr] md:items-center"
+                className={`grid gap-4 px-6 py-5 md:grid-cols-[1.7fr_0.9fr_1fr_1.9fr] md:items-center ${
+                  listing.archived_at ? 'bg-stone-50' : ''
+                }`}
               >
-                <div>
+                <div className="min-w-0">
                   <Link href={`/admin/listings/${listing.id}`} className="font-bold text-stone-950 hover:underline">
                     {listing.title}
                   </Link>
                   <p className="mt-1 text-sm text-stone-500">{listing.area}</p>
+                  <div className="mt-2">
+                    <ListingQualityScore
+                      score={calculateListingScore({
+                        photo_count: photoCounts.get(listing.id) || 0,
+                        description: listing.description,
+                        bedrooms: listing.bedrooms,
+                        bathrooms: listing.bathrooms,
+                        sleeping_setup: listing.sleeping_setup,
+                        amenities: listing.amenities || [],
+                        price_usd: listing.price_usd,
+                        price_ils: listing.price_ils,
+                      })}
+                      suggestions={listingQaSuggestions(
+                        listing,
+                        photoCounts.get(listing.id) || 0,
+                        shulDistanceCounts.get(listing.id) || 0,
+                      )}
+                    />
+                  </div>
                 </div>
+
                 <p className="text-sm text-stone-700">{listing.hosts?.name || 'Host'}</p>
-                <span className="rounded-full bg-stone-100 px-3 py-1 text-center text-xs font-bold text-stone-700">
-                  {adminStatusLabel(listing.admin_status)}
-                </span>
-                <ListingQualityScore
-                  score={calculateListingScore({
-                    photo_count: photoCounts.get(listing.id) || 0,
-                    description: listing.description,
-                    bedrooms: listing.bedrooms,
-                    bathrooms: listing.bathrooms,
-                    sleeping_setup: listing.sleeping_setup,
-                    amenities: listing.amenities || [],
-                    price_usd: listing.price_usd,
-                    price_ils: listing.price_ils,
-                  })}
-                  suggestions={listingQaSuggestions(
-                    listing,
-                    photoCounts.get(listing.id) || 0,
-                    shulDistanceCounts.get(listing.id) || 0,
+
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="rounded-full bg-stone-100 px-2.5 py-1 text-[11px] font-bold text-stone-700">
+                    {adminStatusLabel(listing.admin_status)}
+                  </span>
+                  {listing.archived_at ? (
+                    <span className="rounded-full bg-stone-800 px-2.5 py-1 text-[11px] font-bold text-white">
+                      Archived
+                    </span>
+                  ) : (
+                    <BooleanBadge value={listing.is_published} yes="Live" no="Hidden" />
                   )}
-                />
-                <BooleanBadge value={listing.is_published} yes="Live" no="Hidden" />
-                <BooleanBadge value={listing.is_featured} yes="Featured" no="Standard" />
+                  {listing.is_featured && (
+                    <span className="rounded-full bg-[#fff4ef] px-2.5 py-1 text-[11px] font-bold text-[#c76f55]">
+                      Featured
+                    </span>
+                  )}
+                </div>
+
                 <div className="flex flex-wrap gap-2">
-                  <form action={updateListingVisibility}>
-                    <input type="hidden" name="listingId" value={listing.id} />
-                    <input type="hidden" name="field" value="is_published" />
-                    <input type="hidden" name="value" value={String(!listing.is_published)} />
-                    <ConfirmSubmitButton
-                      message="Are you sure?"
-                      className="rounded-full border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-300"
-                    >
-                      {listing.is_published ? 'Hide' : 'Publish'}
-                    </ConfirmSubmitButton>
-                  </form>
-                  <form action={updateListingVisibility}>
-                    <input type="hidden" name="listingId" value={listing.id} />
-                    <input type="hidden" name="field" value="is_featured" />
-                    <input type="hidden" name="value" value={String(!listing.is_featured)} />
-                    <ConfirmSubmitButton
-                      message="Are you sure?"
-                      className="rounded-full bg-[#252525] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#111111]"
-                    >
-                      {listing.is_featured ? 'Unfeature' : 'Feature'}
-                    </ConfirmSubmitButton>
-                  </form>
+                  {listing.archived_at ? (
+                    <form action={archiveListing}>
+                      <input type="hidden" name="listingId" value={listing.id} />
+                      <input type="hidden" name="restore" value="true" />
+                      <ConfirmSubmitButton
+                        message="Restore this listing? It will return to the admin list as hidden, so you can review it before publishing."
+                        className="rounded-full bg-[#252525] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#111111]"
+                      >
+                        Restore
+                      </ConfirmSubmitButton>
+                    </form>
+                  ) : (
+                    <>
+                      <form action={updateListingVisibility}>
+                        <input type="hidden" name="listingId" value={listing.id} />
+                        <input type="hidden" name="field" value="is_published" />
+                        <input type="hidden" name="value" value={String(!listing.is_published)} />
+                        <ConfirmSubmitButton
+                          message={listing.is_published ? 'Hide this listing from the public site?' : 'Publish this listing to the public site?'}
+                          className="rounded-full border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-300"
+                        >
+                          {listing.is_published ? 'Hide' : 'Publish'}
+                        </ConfirmSubmitButton>
+                      </form>
+                      <form action={updateListingVisibility}>
+                        <input type="hidden" name="listingId" value={listing.id} />
+                        <input type="hidden" name="field" value="is_featured" />
+                        <input type="hidden" name="value" value={String(!listing.is_featured)} />
+                        <ConfirmSubmitButton
+                          message={listing.is_featured ? 'Remove this listing from the featured set?' : 'Feature this listing on the homepage?'}
+                          className="rounded-full border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-300"
+                        >
+                          {listing.is_featured ? 'Unfeature' : 'Feature'}
+                        </ConfirmSubmitButton>
+                      </form>
+                    </>
+                  )}
+
                   <Link
                     href={`/admin/listings/${listing.id}`}
-                    className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800 transition hover:bg-amber-100"
+                    className="rounded-full border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-300"
                   >
-                    Message host
+                    Edit
                   </Link>
+
+                  {!listing.archived_at && (
+                    <form action={archiveListing}>
+                      <input type="hidden" name="listingId" value={listing.id} />
+                      <ConfirmSubmitButton
+                        message="Archive this listing? It comes off the public site immediately and keeps its booking history. You can restore it at any time."
+                        className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800 transition hover:bg-amber-100"
+                      >
+                        Archive
+                      </ConfirmSubmitButton>
+                    </form>
+                  )}
+
                   <form action={deleteListing}>
                     <input type="hidden" name="listingId" value={listing.id} />
                     <ConfirmSubmitButton
-                      message="Remove this listing from the platform? This cannot be undone."
+                      message="Delete this listing permanently? This cannot be undone. If it has bookings or reviews the delete will be refused - archive it instead."
                       className="rounded-full bg-rose-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-rose-700"
                     >
-                      Remove
+                      Delete
                     </ConfirmSubmitButton>
                   </form>
                 </div>

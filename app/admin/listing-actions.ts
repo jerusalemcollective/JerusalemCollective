@@ -35,12 +35,22 @@ export async function updateListingVisibility(formData: FormData) {
   const value = rawValue === 'true'
 
   const { supabase } = await requireAdminPermission('listings')
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from('listings')
     .update({ [field]: value })
     .eq('id', listingId)
+    .select('id')
 
   if (error) throw error
+
+  // A row-level-security block returns no error, it simply updates nothing.
+  // Without this check the admin UI reports success while nothing changed.
+  if (!updated || updated.length === 0) {
+    throw new Error(
+      'The listing was not updated. Your admin account may not have permission to change listings — check the admin update policy on the listings table.',
+    )
+  }
+
   await logAdminAction(supabase, `set_${field}_${value}`, 'listing', listingId)
   await sendListingHostAdminUpdateEmail({
     supabase,
@@ -190,12 +200,23 @@ export async function deleteListing(formData: FormData) {
     .delete()
     .eq('listing_id', listingId)
 
-  const { error } = await supabase
+  const { data: deleted, error } = await supabase
     .from('listings')
     .delete()
     .eq('id', listingId)
+    .select('id')
 
-  if (error) throw error
+  if (error) {
+    throw new Error(
+      `This listing could not be deleted, most likely because bookings, enquiries or reviews still reference it. Archive it instead to take it off the site while keeping its history. (${error.message})`,
+    )
+  }
+
+  if (!deleted || deleted.length === 0) {
+    throw new Error(
+      'Nothing was deleted. Your admin account does not have delete permission on listings — run migration 068, which adds the missing policy.',
+    )
+  }
 
   await logAdminAction(supabase, 'delete_listing', 'listing', listingId)
 
@@ -204,6 +225,50 @@ export async function deleteListing(formData: FormData) {
   revalidatePath(`/listings/${listingId}`)
   revalidatePath('/stays')
   redirect('/admin/listings')
+}
+
+export async function archiveListing(formData: FormData) {
+  const listingId = String(formData.get('listingId') || '')
+  const restore = String(formData.get('restore') || '') === 'true'
+
+  if (!listingId) {
+    throw new Error('Missing listing id.')
+  }
+
+  const { supabase } = await requireAdminPermission('listings')
+
+  // Archiving also unpublishes, so every public query (which all filter on
+  // is_published) hides the listing without needing to know about archiving.
+  const { data, error } = await supabase
+    .from('listings')
+    .update(
+      restore
+        ? { archived_at: null }
+        : { archived_at: new Date().toISOString(), is_published: false },
+    )
+    .eq('id', listingId)
+    .select('id')
+
+  if (error) throw error
+
+  if (!data || data.length === 0) {
+    throw new Error(
+      'The listing was not changed. Check that your admin account has update permission on listings.',
+    )
+  }
+
+  await logAdminAction(
+    supabase,
+    restore ? 'restore_listing' : 'archive_listing',
+    'listing',
+    listingId,
+  )
+
+  revalidatePath('/admin')
+  revalidatePath('/admin/listings')
+  revalidatePath(`/admin/listings/${listingId}`)
+  revalidatePath(`/listings/${listingId}`)
+  revalidatePath('/stays')
 }
 
 export async function createAdminListing(formData: FormData) {
