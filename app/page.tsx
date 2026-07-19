@@ -236,7 +236,7 @@ export default async function JLMCollectiveHomePage() {
             <div
               className="absolute inset-0 bg-top bg-no-repeat"
               style={{
-                backgroundImage: "url('/backgrounds/homepage-paper-reference-v2.png')",
+                backgroundImage: "url('/backgrounds/homepage-paper-reference-livefix-20260628.png')",
                 backgroundSize: 'cover',
               }}
             />
