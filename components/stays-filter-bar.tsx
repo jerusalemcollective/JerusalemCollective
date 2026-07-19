@@ -570,7 +570,7 @@ function StaysDateRangeFilter({
 
             onChange(range || { from: undefined, to: undefined })
           }}
-          numberOfMonths={1}
+          numberOfMonths={2}
           disabled={{ before: new Date() }}
           modifiers={{
             jewishHoliday: (date) => Boolean(getJewishHoliday(date)),
@@ -579,10 +579,10 @@ function StaysDateRangeFilter({
             jewishHoliday: 'font-bold text-[#c76f55]',
           }}
           showOutsideDays={false}
-          className="mx-auto w-full max-w-sm rounded-[1.35rem] bg-white p-3 [--cell-size:2.4rem]"
+          className="mx-auto w-full max-w-[680px] rounded-[1.35rem] bg-white p-3 [--cell-size:2.4rem]"
           classNames={{
             root: 'w-full',
-            months: 'flex w-full flex-col',
+            months: 'flex w-full flex-col gap-6 md:flex-row md:gap-8',
             month: 'w-full gap-3',
             month_caption: 'min-h-10',
             weekday: 'text-[10px] font-bold uppercase tracking-wider text-stone-400',
@@ -619,10 +619,10 @@ function DateSummaryCell({
   noBorder?: boolean
 }) {
   return (
-    <div className={`${noBorder ? '' : 'border-r border-stone-100'} min-h-24 p-4 text-left sm:p-5`}>
+    <div className={`${noBorder ? '' : 'border-r border-stone-100'} p-3 text-left sm:p-4`}>
       <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">{label}</p>
-      <p className="mt-1 text-sm font-bold text-stone-950">{date ? formatCompactDate(date) : 'Choose date'}</p>
-      {date && <p className="mt-1 text-[11px] font-medium text-stone-500">{formatHebrewShortDate(date)}</p>}
+      <p className="mt-0.5 text-sm font-bold text-stone-950">{date ? formatCompactDate(date) : 'Choose date'}</p>
+      {date && <p className="text-[11px] font-medium text-stone-500">{formatHebrewShortDate(date)}</p>}
     </div>
   )
 }

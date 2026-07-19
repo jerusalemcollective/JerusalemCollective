@@ -421,7 +421,7 @@ function DateSelector({
             aria-modal="true"
             aria-label="Select your dates"
             onClick={(event) => event.stopPropagation()}
-            className="flex max-h-[88vh] w-full max-w-[360px] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl"
+            className="flex max-h-[88vh] w-full max-w-[380px] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl sm:max-w-[720px]"
           >
             <div className="flex items-start justify-between gap-3 border-b border-stone-100 bg-[#fbf8f5] px-4 py-3">
               <div className="min-w-0">
@@ -462,13 +462,15 @@ function DateSelector({
                     setTimeout(() => setShowCalendar(false), 300)
                   }
                 }}
-                numberOfMonths={1}
+                numberOfMonths={2}
                 disabled={{ before: new Date() }}
                 showOutsideDays={false}
                 className="w-full p-0"
                 classNames={{
-                  month: 'flex w-full flex-col gap-2',
-                  week: 'mt-1 flex w-full',
+                  months: 'flex flex-col gap-6 md:flex-row md:gap-8',
+                  month: 'flex w-full flex-col gap-3',
+                  weekday: 'flex-1 text-[10px] font-bold uppercase tracking-wider text-stone-400',
+                  week: 'mt-1.5 flex w-full',
                 }}
               />
             </div>
