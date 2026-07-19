@@ -223,19 +223,8 @@ export default async function JLMCollectiveHomePage() {
         }}
       />
       <main>
-        <section className="relative overflow-hidden pt-14 text-center md:pt-16">
-          <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[26rem] md:h-[32rem]">
-            <div
-              className="absolute inset-0 bg-top bg-no-repeat"
-              style={{
-                backgroundImage: "url('/backgrounds/homepage-paper-reference-livefix-20260628.png')",
-                backgroundSize: 'cover',
-              }}
-            />
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(248,245,242,0)_0%,rgba(248,245,242,0.12)_52%,#F8F5F2_100%)]" />
-          </div>
-
-          <div className="relative z-10 mx-auto max-w-7xl px-6 pb-10">
+        <section className="pt-14 text-center md:pt-16">
+          <div className="mx-auto max-w-7xl px-6 pb-10">
             <h1 className="font-display mx-auto max-w-3xl text-4xl font-bold tracking-tight text-stone-950 md:text-5xl">
               Curated stays in Jerusalem
             </h1>
