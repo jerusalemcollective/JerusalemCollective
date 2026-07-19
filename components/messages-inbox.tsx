@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -202,6 +202,14 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
   const router = useRouter()
   const searchParams = useSearchParams()
   const participantIdsKey = participantIds.join('|')
+  const composerRef = useRef<HTMLTextAreaElement | null>(null)
+
+  // Open a conversation and you can start typing straight away, without
+  // having to click into the box first.
+  useEffect(() => {
+    if (!selectedConversationId) return
+    composerRef.current?.focus()
+  }, [selectedConversationId])
 
   useEffect(() => {
     const loadInbox = async () => {
@@ -1129,8 +1137,22 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
             )}
             <div className="flex items-end gap-3 rounded-[1.5rem] border border-stone-200 bg-[#fbfaf8] p-2 focus-within:border-[#c76f55]">
               <textarea
+                ref={composerRef}
                 value={draft}
-                onChange={(event) => setDraft(event.target.value)}
+                rows={1}
+                onChange={(event) => {
+                  setDraft(event.target.value)
+                  // Grow with the message instead of scrolling inside a fixed box.
+                  const field = event.currentTarget
+                  field.style.height = 'auto'
+                  field.style.height = `${Math.min(field.scrollHeight, 144)}px`
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault()
+                    if (draft.trim() && !sending) void handleSend()
+                  }
+                }}
                 placeholder="Write a message..."
                 className="max-h-36 min-h-12 flex-1 resize-none bg-transparent px-3 py-3 text-sm text-stone-900 outline-none placeholder:text-stone-500"
               />
@@ -1151,6 +1173,9 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
                 )}
               </button>
             </div>
+            <p className="mt-2 px-2 text-[11px] text-stone-400">
+              Enter to send · Shift + Enter for a new line
+            </p>
           </div>
         </section>
       </div>
