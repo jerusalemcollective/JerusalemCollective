@@ -294,10 +294,10 @@ export function HomeSearchForm() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl rounded-3xl border border-stone-200 bg-white p-2 shadow-2xl shadow-stone-200/50">
+    <div className="mx-auto max-w-4xl rounded-3xl border border-stone-200 bg-white p-1.5 shadow-xl shadow-stone-200/40">
       <div className="grid grid-cols-1 divide-y divide-stone-100 md:grid-cols-[1.45fr_1fr_1fr_auto] md:divide-x md:divide-y-0">
         <div className="relative" ref={neighbourhoodRef}>
-          <div className="flex flex-col rounded-2xl px-6 py-4 text-left transition focus-within:bg-[#faf8f6] focus-within:ring-2 focus-within:ring-[#c76f55]/30">
+          <div className="flex flex-col rounded-2xl px-5 py-3 text-left transition focus-within:bg-[#faf8f6] focus-within:ring-2 focus-within:ring-stone-400">
             <span className="text-[11px] font-bold uppercase tracking-widest text-stone-900">Neighbourhood</span>
             <input
               type="text"
@@ -373,7 +373,7 @@ export function HomeSearchForm() {
         <div className="p-2">
           <button
             onClick={handleSearch}
-            className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#252525] px-7 text-sm font-bold text-white shadow-sm transition hover:bg-[#111111]"
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#252525] px-6 text-sm font-bold text-white shadow-sm transition hover:bg-[#111111]"
           >
             <SearchIcon className="h-5 w-5" />
             Search
@@ -405,7 +405,7 @@ function DateSelector({
 
   return (
     <div className="relative" ref={calendarRef}>
-      <button onClick={() => setShowCalendar(!showCalendar)} className="flex w-full flex-col rounded-2xl px-6 py-4 text-left transition hover:bg-stone-50 focus-visible:bg-[#faf8f6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c76f55]/30">
+      <button onClick={() => setShowCalendar(!showCalendar)} className="flex w-full flex-col rounded-2xl px-5 py-3 text-left transition hover:bg-stone-50 focus-visible:bg-[#faf8f6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400">
         <span className="text-[11px] font-bold uppercase tracking-widest text-stone-900">Dates</span>
         <span className={`mt-1 text-sm ${dateRange.from ? 'text-stone-900' : 'text-stone-500'}`}>{getDateDisplay()}</span>
       </button>
@@ -483,7 +483,7 @@ function GuestSelector({
 }) {
   return (
     <div className="relative" ref={guestRef}>
-      <button onClick={() => setShowGuestPanel(!showGuestPanel)} className="flex w-full flex-col rounded-2xl px-6 py-4 text-left transition hover:bg-stone-50 focus-visible:bg-[#faf8f6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c76f55]/30">
+      <button onClick={() => setShowGuestPanel(!showGuestPanel)} className="flex w-full flex-col rounded-2xl px-5 py-3 text-left transition hover:bg-stone-50 focus-visible:bg-[#faf8f6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400">
         <span className="text-[11px] font-bold uppercase tracking-widest text-stone-900">People</span>
         <span className={`mt-1 text-sm ${adults > 0 || children > 0 ? 'text-stone-900' : 'text-stone-500'}`}>{getGuestSummary()}</span>
       </button>

@@ -223,13 +223,13 @@ export default async function JLMCollectiveHomePage() {
         }}
       />
       <main>
-        <section className="pt-14 text-center md:pt-16">
-          <div className="mx-auto max-w-7xl px-6 pb-10">
-            <h1 className="font-display mx-auto max-w-3xl text-4xl font-bold tracking-tight text-stone-950 md:text-5xl">
+        <section className="pt-8 text-center md:pt-10">
+          <div className="mx-auto max-w-7xl px-6 pb-6">
+            <h1 className="font-display mx-auto max-w-3xl text-3xl font-bold tracking-tight text-stone-950 md:text-4xl">
               Curated stays in Jerusalem
             </h1>
 
-            <div className="mt-8">
+            <div className="mt-6">
               <HomeSearchForm />
             </div>
           </div>
@@ -268,7 +268,7 @@ export default async function JLMCollectiveHomePage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 gap-x-5 gap-y-9 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4">
             {featuredStays.map((stay) => (
               <HomeListingCard key={stay.id} listing={stay} />
             ))}
