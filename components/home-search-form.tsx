@@ -411,15 +411,15 @@ function DateSelector({
       </button>
 
       {showCalendar && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-2xl shadow-stone-300/40 md:left-1/2 md:right-auto md:w-[390px] md:-translate-x-1/2">
-          <div className="border-b border-stone-100 bg-[#fbf8f5] px-5 py-4">
+        <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl shadow-stone-300/30 md:left-1/2 md:right-auto md:w-[340px] md:-translate-x-1/2">
+          <div className="border-b border-stone-100 bg-[#fbf8f5] px-4 py-3">
             <p className="text-[11px] font-bold uppercase tracking-widest text-[#c76f55]">Select your stay</p>
-            <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="mt-2 grid grid-cols-2 gap-2">
               <DateSummary label="Arrival" date={dateRange.from} />
               <DateSummary label="Departure" date={dateRange.to} />
             </div>
           </div>
-          <div className="p-5">
+          <div className="p-3">
             <Calendar
               mode="range"
               selected={selectedRange}
@@ -439,10 +439,10 @@ function DateSelector({
               className="w-full"
             />
           </div>
-          <div className="flex items-center justify-between border-t border-stone-100 bg-white px-5 py-4">
+          <div className="flex items-center justify-between border-t border-stone-100 bg-white px-4 py-3">
             <div className="flex flex-wrap items-center gap-2">
-              <button onClick={() => { setDateRange({ from: new Date(), to: addDays(new Date(), 7) }); setTimeout(() => setShowCalendar(false), 300) }} className="rounded-full bg-stone-100 px-3 py-2 text-xs font-bold text-stone-700 hover:bg-stone-200">1 week</button>
-              <button onClick={() => { setDateRange({ from: new Date(), to: addDays(new Date(), 14) }); setTimeout(() => setShowCalendar(false), 300) }} className="rounded-full bg-stone-100 px-3 py-2 text-xs font-bold text-stone-700 hover:bg-stone-200">2 weeks</button>
+              <button onClick={() => { setDateRange({ from: new Date(), to: addDays(new Date(), 7) }); setTimeout(() => setShowCalendar(false), 300) }} className="rounded-full bg-stone-100 px-3 py-1.5 text-[11px] font-bold text-stone-700 hover:bg-stone-200">1 week</button>
+              <button onClick={() => { setDateRange({ from: new Date(), to: addDays(new Date(), 14) }); setTimeout(() => setShowCalendar(false), 300) }} className="rounded-full bg-stone-100 px-3 py-1.5 text-[11px] font-bold text-stone-700 hover:bg-stone-200">2 weeks</button>
             </div>
             <button onClick={() => setDateRange({ from: undefined, to: undefined })} className="text-xs font-bold text-stone-500 hover:text-stone-800">Clear</button>
           </div>
@@ -454,7 +454,7 @@ function DateSelector({
 
 function DateSummary({ label, date }: { label: string; date?: Date }) {
   return (
-    <div className="rounded-2xl bg-white p-3 ring-1 ring-stone-200">
+    <div className="rounded-2xl bg-white p-2.5 ring-1 ring-stone-200">
       <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">{label}</p>
       <p className="mt-1 text-sm font-bold text-stone-950">{date ? formatCompactDate(date) : 'Choose date'}</p>
       {date && <p className="mt-1 text-[11px] font-medium text-stone-500">{formatHebrewShortDate(date)}</p>}
@@ -489,16 +489,16 @@ function GuestSelector({
       </button>
 
       {showGuestPanel && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-2xl shadow-stone-300/40 md:left-auto md:right-0 md:w-[360px]">
-          <div className="border-b border-stone-100 bg-[#fbf8f5] px-5 py-4">
+        <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl shadow-stone-300/30 md:left-auto md:right-0 md:w-[320px]">
+          <div className="border-b border-stone-100 bg-[#fbf8f5] px-4 py-3">
             <p className="text-[11px] font-bold uppercase tracking-widest text-[#c76f55]">Guests</p>
             <p className="mt-1 text-sm font-semibold text-stone-950">{adults + children > 0 ? getGuestSummary() : 'Who is coming?'}</p>
           </div>
-          <div className="space-y-3 p-4">
+          <div className="space-y-2 p-3">
             <GuestRow label="Adults" note="Ages 18+" value={adults} setValue={setAdults} />
             <GuestRow label="Children" note="Under 18" value={children} setValue={setChildren} />
           </div>
-          <div className="flex items-center justify-between border-t border-stone-100 px-5 py-4">
+          <div className="flex items-center justify-between border-t border-stone-100 px-4 py-3">
             <button type="button" onClick={() => { setAdults(0); setChildren(0) }} className="text-xs font-bold text-stone-500 hover:text-stone-800">Clear</button>
             <button type="button" onClick={() => { setAdults(Math.max(1, adults)); setShowGuestPanel(false) }} className="rounded-full bg-stone-100 px-4 py-2 text-xs font-bold text-stone-700 hover:bg-stone-200">Just me</button>
           </div>
@@ -520,17 +520,17 @@ function GuestRow({
   setValue: Dispatch<SetStateAction<number>>
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-2xl bg-white p-4 ring-1 ring-stone-200">
+    <div className="flex items-center justify-between gap-4 rounded-2xl bg-white p-3 ring-1 ring-stone-200">
       <div>
         <div className="text-sm font-bold text-stone-950">{label}</div>
         <div className="mt-0.5 text-xs text-stone-500">{note}</div>
       </div>
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => setValue(Math.max(0, value - 1))} disabled={value === 0} className={`flex h-10 w-10 items-center justify-center rounded-full border transition ${value === 0 ? 'cursor-not-allowed border-stone-200 bg-stone-50 text-stone-300' : 'border-stone-300 bg-white text-stone-700 hover:border-[#c76f55] hover:text-[#c76f55]'}`} aria-label={`Decrease ${label.toLowerCase()}`}>
+        <button type="button" onClick={() => setValue(Math.max(0, value - 1))} disabled={value === 0} className={`flex h-9 w-9 items-center justify-center rounded-full border transition ${value === 0 ? 'cursor-not-allowed border-stone-200 bg-stone-50 text-stone-300' : 'border-stone-300 bg-white text-stone-700 hover:border-[#c76f55] hover:text-[#c76f55]'}`} aria-label={`Decrease ${label.toLowerCase()}`}>
           <MinusIcon />
         </button>
         <span className="w-7 text-center text-base font-bold text-stone-950">{value}</span>
-        <button type="button" onClick={() => setValue(value + 1)} className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-300 bg-white text-stone-700 transition hover:border-[#c76f55] hover:text-[#c76f55]" aria-label={`Increase ${label.toLowerCase()}`}>
+        <button type="button" onClick={() => setValue(value + 1)} className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-300 bg-white text-stone-700 transition hover:border-[#c76f55] hover:text-[#c76f55]" aria-label={`Increase ${label.toLowerCase()}`}>
           <PlusIcon />
         </button>
       </div>
