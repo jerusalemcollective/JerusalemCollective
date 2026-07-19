@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, type Dispatch, type RefObject, type SetStateAction } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type Dispatch, type RefObject, type SetStateAction } from 'react'
 import type { DateRange as DayPickerDateRange } from 'react-day-picker'
 import { allNeighborhoods } from '@/lib/neighborhoods'
 import { Calendar } from '@/components/ui/calendar'
@@ -426,7 +426,7 @@ function DateSelector({
               )}
             </p>
           </div>
-          <div className="p-3">
+          <div className="p-2">
             <Calendar
               mode="range"
               selected={selectedRange}
@@ -443,7 +443,12 @@ function DateSelector({
               numberOfMonths={1}
               disabled={{ before: new Date() }}
               showOutsideDays={false}
-              className="w-full"
+              className="w-full p-0"
+              style={{ '--cell-size': '2rem' } as CSSProperties}
+              classNames={{
+                month: 'flex w-full flex-col gap-2',
+                week: 'mt-1 flex w-full',
+              }}
             />
           </div>
           <div className="flex items-center justify-between border-t border-stone-100 bg-white px-4 py-3">
