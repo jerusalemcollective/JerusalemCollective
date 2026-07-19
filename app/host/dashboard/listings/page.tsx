@@ -2,7 +2,9 @@
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { HostDashboardNav } from '@/components/host-dashboard-nav'
 import { ListingQualityScore } from '@/components/listing-quality-score'
+import { ConfirmSubmitButton } from '@/components/confirm-submit-button'
 import { calculateListingScore } from '@/lib/marketplace-rules'
+import { deleteHostListing, setHostListingVisibility } from '@/app/host/dashboard/listings/actions'
 
 type HostApplication = {
   id: string
@@ -176,9 +178,18 @@ export default async function HostListingsPage() {
       .filter((performance): performance is PerformanceInsight => Boolean(performance))
       .map((performance) => [performance.listing_id, performance]),
   )
-  const pendingApplications = hostApplications.filter(
-    (application) => application.status !== 'approved',
-  )
+  // Rejected submissions drop off the host's list after a week, so it doesn't
+  // fill up with dead attempts. They are only hidden from this view, never
+  // deleted, so admins keep the full history.
+  const rejectedVisibleDays = 7
+  const rejectedVisibleCutoff = Date.now() - rejectedVisibleDays * 24 * 60 * 60 * 1000
+  const pendingApplications = hostApplications.filter((application) => {
+    if (application.status === 'approved') return false
+    if (application.status !== 'rejected') return true
+
+    const submittedAt = application.created_at ? new Date(application.created_at).getTime() : 0
+    return submittedAt >= rejectedVisibleCutoff
+  })
 
   const coverByApplication = new Map<string, string>()
   const coverByListing = new Map<string, string>()
@@ -279,6 +290,7 @@ export default async function HostListingsPage() {
                       label: listing.is_published ? 'Live' : 'Hidden',
                       tone: listing.is_published ? 'green' : 'stone',
                     }}
+                    isPublished={listing.is_published}
                   />
                 )
               })}
@@ -341,6 +353,7 @@ function ListingRow({
   americanComfort,
   performance,
   badge,
+  isPublished,
 }: {
   id: string
   title: string
@@ -354,6 +367,7 @@ function ListingRow({
   americanComfort: boolean
   performance: PerformanceInsight | null
   badge: { label: string; tone: 'green' | 'stone' }
+  isPublished: boolean
 }) {
   return (
     <article className="grid gap-4 py-4 md:grid-cols-[96px_1fr_auto] md:items-center">
@@ -399,6 +413,29 @@ function ListingRow({
           >
             Messages
           </Link>
+          <form action={setHostListingVisibility}>
+            <input type="hidden" name="listingId" value={id} />
+            <input type="hidden" name="value" value={String(!isPublished)} />
+            <ConfirmSubmitButton
+              message={
+                isPublished
+                  ? 'Hide this stay? It comes off the site straight away and guests can no longer find it. You can publish it again whenever you like.'
+                  : 'Publish this stay so guests can find and book it?'
+              }
+              className="rounded-full border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-300"
+            >
+              {isPublished ? 'Hide from site' : 'Publish'}
+            </ConfirmSubmitButton>
+          </form>
+          <form action={deleteHostListing}>
+            <input type="hidden" name="listingId" value={id} />
+            <ConfirmSubmitButton
+              message="Delete this stay permanently? This cannot be undone. If it already has bookings you will be asked to hide it instead, so your records stay intact."
+              className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 transition hover:bg-rose-100"
+            >
+              Delete
+            </ConfirmSubmitButton>
+          </form>
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2 md:justify-end">

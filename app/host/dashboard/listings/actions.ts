@@ -14,6 +14,100 @@ type ExternalCalendarState = {
   message: string
 }
 
+export async function setHostListingVisibility(formData: FormData) {
+  const listingId = String(formData.get('listingId') || '')
+  const rawValue = String(formData.get('value') || '')
+
+  if (!listingId || !['true', 'false'].includes(rawValue)) {
+    throw new Error('Invalid listing visibility update.')
+  }
+
+  const { supabase, hostIds } = await requireHostDashboardAccess()
+
+  const { data, error } = await supabase
+    .from('listings')
+    .update({ is_published: rawValue === 'true' })
+    .eq('id', listingId)
+    .in('host_id', hostIds)
+    .select('id')
+
+  if (error) throw error
+
+  // Row-level security refusals return no error, they just change nothing.
+  if (!data || data.length === 0) {
+    throw new Error(
+      'That listing could not be updated. If this keeps happening the host update policy is missing on the listings table (migration 069).',
+    )
+  }
+
+  revalidatePath('/host/dashboard')
+  revalidatePath('/host/dashboard/listings')
+  revalidatePath(`/host/dashboard/listings/${listingId}`)
+  revalidatePath(`/listings/${listingId}`)
+  revalidatePath('/stays')
+}
+
+export async function deleteHostListing(formData: FormData) {
+  const listingId = String(formData.get('listingId') || '')
+
+  if (!listingId) {
+    throw new Error('Missing listing id.')
+  }
+
+  const { supabase, hostIds } = await requireHostDashboardAccess()
+
+  // Confirm the listing belongs to this host before touching anything.
+  const { data: owned } = await supabase
+    .from('listings')
+    .select('id')
+    .eq('id', listingId)
+    .in('host_id', hostIds)
+    .maybeSingle()
+
+  if (!owned) {
+    throw new Error('That listing was not found on your account.')
+  }
+
+  // A listing with bookings must not be destroyed: the booking and payment
+  // history depends on it. Hide it instead.
+  const { count: bookingCount } = await supabase
+    .from('booking_requests')
+    .select('id', { count: 'exact', head: true })
+    .eq('listing_id', listingId)
+
+  if ((bookingCount || 0) > 0) {
+    throw new Error(
+      'This listing has booking history, so it cannot be deleted. Hide it instead - it comes off the site immediately and your records stay intact. Contact JLM Collective if you need it removed entirely.',
+    )
+  }
+
+  await supabase.from('listing_photos').delete().eq('listing_id', listingId)
+  await supabase.from('listing_unavailable_ranges').delete().eq('listing_id', listingId)
+
+  const { data: deleted, error } = await supabase
+    .from('listings')
+    .delete()
+    .eq('id', listingId)
+    .in('host_id', hostIds)
+    .select('id')
+
+  if (error) {
+    throw new Error(
+      `This listing could not be deleted because other records still reference it. Hide it instead. (${error.message})`,
+    )
+  }
+
+  if (!deleted || deleted.length === 0) {
+    throw new Error(
+      'Nothing was deleted. The host delete policy is missing on the listings table (migration 069).',
+    )
+  }
+
+  revalidatePath('/host/dashboard')
+  revalidatePath('/host/dashboard/listings')
+  revalidatePath('/stays')
+}
+
 export async function updateHostListing(formData: FormData) {
   const listingId = String(formData.get('listingId') || '')
   const title = String(formData.get('title') || '')
