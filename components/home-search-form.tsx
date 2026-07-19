@@ -123,14 +123,11 @@ export function HomeSearchForm() {
   const [placePredictions, setPlacePredictions] = useState<PlacePrediction[]>([])
   const [dateRange, setDateRange] = useState<DateRange>({})
   const [showCalendar, setShowCalendar] = useState(false)
-  const [adults, setAdults] = useState(0)
-  const [children, setChildren] = useState(0)
-  const [showGuestPanel, setShowGuestPanel] = useState(false)
+  const [guests, setGuests] = useState(0)
   const [isLoadingPlaces, setIsLoadingPlaces] = useState(false)
   const [shouldLoadPlaces, setShouldLoadPlaces] = useState(false)
   const neighbourhoodRef = useRef<HTMLDivElement | null>(null)
   const calendarRef = useRef<HTMLDivElement | null>(null)
-  const guestRef = useRef<HTMLDivElement | null>(null)
   const placesLibrary = useRef<PlacesLibrary | null>(null)
   const sessionToken = useRef<unknown>(null)
   const requestIdRef = useRef(0)
@@ -174,9 +171,6 @@ export function HomeSearchForm() {
       }
       if (calendarRef.current && !calendarRef.current.contains(event.target as Node)) {
         setShowCalendar(false)
-      }
-      if (guestRef.current && !guestRef.current.contains(event.target as Node)) {
-        setShowGuestPanel(false)
       }
     }
 
@@ -275,20 +269,12 @@ export function HomeSearchForm() {
     return `${formatShortDate(dateRange.from)} - ${formatShortDate(dateRange.to)}`
   }
 
-  const getGuestSummary = () => {
-    if (adults === 0 && children === 0) return 'Add guests'
-    const parts = []
-    if (adults > 0) parts.push(`${adults} adult${adults > 1 ? 's' : ''}`)
-    if (children > 0) parts.push(`${children} child${children > 1 ? 'ren' : ''}`)
-    return parts.join(', ')
-  }
-
   const handleSearch = () => {
     const params = new URLSearchParams()
     if (neighbourhood) params.set('neighborhood', neighbourhood)
     if (dateRange.from) params.set('checkIn', formatDateISO(dateRange.from))
     if (dateRange.to) params.set('checkOut', formatDateISO(dateRange.to))
-    if (adults + children > 0) params.set('guests', String(adults + children))
+    if (guests > 0) params.set('guests', String(guests))
     if (neighbourhood) trackNeighborhoodSearch(neighbourhood, 'hero_search')
     window.location.href = `/stays${params.toString() ? `?${params.toString()}` : ''}`
   }
@@ -359,16 +345,37 @@ export function HomeSearchForm() {
           getDateDisplay={getDateDisplay}
         />
 
-        <GuestSelector
-          guestRef={guestRef}
-          adults={adults}
-          children={children}
-          setAdults={setAdults}
-          setChildren={setChildren}
-          showGuestPanel={showGuestPanel}
-          setShowGuestPanel={setShowGuestPanel}
-          getGuestSummary={getGuestSummary}
-        />
+        <div className="flex items-center justify-between gap-3 px-5 py-3">
+          <div className="min-w-0 text-left">
+            <span className="block text-[11px] font-bold uppercase tracking-widest text-stone-900">Guests</span>
+            <span className={`mt-1 block truncate text-sm ${guests > 0 ? 'text-stone-900' : 'text-stone-500'}`}>
+              {guests > 0 ? `${guests} guest${guests === 1 ? '' : 's'}` : 'Add guests'}
+            </span>
+          </div>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setGuests(Math.max(0, guests - 1))}
+              disabled={guests === 0}
+              aria-label="Fewer guests"
+              className={`flex h-8 w-8 items-center justify-center rounded-full border transition ${
+                guests === 0
+                  ? 'cursor-not-allowed border-stone-200 bg-stone-50 text-stone-300'
+                  : 'border-stone-300 bg-white text-stone-700 hover:border-[#c76f55] hover:text-[#c76f55]'
+              }`}
+            >
+              <MinusIcon />
+            </button>
+            <button
+              type="button"
+              onClick={() => setGuests(guests + 1)}
+              aria-label="More guests"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-stone-300 bg-white text-stone-700 transition hover:border-[#c76f55] hover:text-[#c76f55]"
+            >
+              <PlusIcon />
+            </button>
+          </div>
+        </div>
 
         <div className="p-2">
           <button
@@ -488,82 +495,6 @@ function DateSelector({
           </div>
         </div>
       )}
-    </div>
-  )
-}
-
-function GuestSelector({
-  guestRef,
-  adults,
-  children,
-  setAdults,
-  setChildren,
-  showGuestPanel,
-  setShowGuestPanel,
-  getGuestSummary,
-}: {
-  guestRef: RefObject<HTMLDivElement | null>
-  adults: number
-  children: number
-  setAdults: Dispatch<SetStateAction<number>>
-  setChildren: Dispatch<SetStateAction<number>>
-  showGuestPanel: boolean
-  setShowGuestPanel: Dispatch<SetStateAction<boolean>>
-  getGuestSummary: () => string
-}) {
-  return (
-    <div className="relative" ref={guestRef}>
-      <button onClick={() => setShowGuestPanel(!showGuestPanel)} className="flex w-full flex-col rounded-2xl px-5 py-3 text-left transition hover:bg-stone-50 focus-visible:bg-[#faf8f6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400">
-        <span className="text-[11px] font-bold uppercase tracking-widest text-stone-900">People</span>
-        <span className={`mt-1 text-sm ${adults > 0 || children > 0 ? 'text-stone-900' : 'text-stone-500'}`}>{getGuestSummary()}</span>
-      </button>
-
-      {showGuestPanel && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-[70vh] overflow-y-auto rounded-2xl border border-stone-200 bg-white shadow-xl shadow-stone-300/30 md:left-auto md:right-0 md:w-[320px]">
-          <div className="border-b border-stone-100 bg-[#fbf8f5] px-4 py-3">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-[#c76f55]">Guests</p>
-            <p className="mt-1 text-sm font-semibold text-stone-950">{adults + children > 0 ? getGuestSummary() : 'Who is coming?'}</p>
-          </div>
-          <div className="space-y-2 p-3">
-            <GuestRow label="Adults" note="Ages 18+" value={adults} setValue={setAdults} />
-            <GuestRow label="Children" note="Under 18" value={children} setValue={setChildren} />
-          </div>
-          <div className="flex items-center justify-between border-t border-stone-100 px-4 py-3">
-            <button type="button" onClick={() => { setAdults(0); setChildren(0) }} className="text-xs font-bold text-stone-500 hover:text-stone-800">Clear</button>
-            <button type="button" onClick={() => { setAdults(Math.max(1, adults)); setShowGuestPanel(false) }} className="rounded-full bg-stone-100 px-4 py-2 text-xs font-bold text-stone-700 hover:bg-stone-200">Just me</button>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function GuestRow({
-  label,
-  note,
-  value,
-  setValue,
-}: {
-  label: string
-  note: string
-  value: number
-  setValue: Dispatch<SetStateAction<number>>
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4 rounded-2xl bg-white p-3 ring-1 ring-stone-200">
-      <div>
-        <div className="text-sm font-bold text-stone-950">{label}</div>
-        <div className="mt-0.5 text-xs text-stone-500">{note}</div>
-      </div>
-      <div className="flex items-center gap-3">
-        <button type="button" onClick={() => setValue(Math.max(0, value - 1))} disabled={value === 0} className={`flex h-9 w-9 items-center justify-center rounded-full border transition ${value === 0 ? 'cursor-not-allowed border-stone-200 bg-stone-50 text-stone-300' : 'border-stone-300 bg-white text-stone-700 hover:border-[#c76f55] hover:text-[#c76f55]'}`} aria-label={`Decrease ${label.toLowerCase()}`}>
-          <MinusIcon />
-        </button>
-        <span className="w-7 text-center text-base font-bold text-stone-950">{value}</span>
-        <button type="button" onClick={() => setValue(value + 1)} className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-300 bg-white text-stone-700 transition hover:border-[#c76f55] hover:text-[#c76f55]" aria-label={`Increase ${label.toLowerCase()}`}>
-          <PlusIcon />
-        </button>
-      </div>
     </div>
   )
 }
