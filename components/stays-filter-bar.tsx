@@ -284,7 +284,7 @@ export function StaysFilterBar() {
 
       {filtersOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/35 px-3 pb-3 pt-10 backdrop-blur-sm sm:items-center sm:p-6"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 px-3 pb-3 pt-10 sm:items-center sm:p-6"
           onClick={(event) => {
             if (event.target === event.currentTarget) setFiltersOpen(false)
           }}

@@ -265,7 +265,7 @@ export function Header({
     }`
 
   return (
-    <header className="sticky top-0 z-30 border-b border-stone-200 bg-[#F8F5F2]/85 backdrop-blur-md">
+    <header className="sticky top-0 z-30 border-b border-stone-200 bg-[#F8F5F2]">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 md:px-6">
         <Link href="/" className="shrink-0" aria-label="JLM Collective home">
           <JLMLogo variant="terracotta" className="h-10 w-auto md:h-12" />
