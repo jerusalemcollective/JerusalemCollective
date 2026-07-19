@@ -71,15 +71,36 @@ export async function syncExternalCalendar(
       .eq('source', 'external_calendar')
 
     if (blocks.length > 0) {
+      // host_id is NOT NULL on this table. Omitting it made every insert fail
+      // on the constraint, so a sync would clear the old blocks and import
+      // nothing. The sync-external-calendars Edge Function always set it; this
+      // copy had drifted.
+      const { data: listingRow } = await supabase
+        .from('listings')
+        .select('host_id')
+        .eq('id', listingId)
+        .maybeSingle<{ host_id: string | null }>()
+
+      if (!listingRow?.host_id) {
+        throw new Error(`Listing ${listingId} has no host_id; cannot import calendar blocks`)
+      }
+
       const rows = blocks.map((block) => ({
         listing_id: listingId,
+        host_id: listingRow.host_id,
         start_date: block.start,
         end_date: block.end,
         reason: 'External calendar',
         source: 'external_calendar',
       }))
 
-      await supabase.from('listing_unavailable_ranges').insert(rows)
+      const { error: insertError } = await supabase
+        .from('listing_unavailable_ranges')
+        .insert(rows)
+
+      if (insertError) {
+        throw insertError
+      }
     }
 
     await supabase

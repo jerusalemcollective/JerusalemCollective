@@ -1675,11 +1675,20 @@ async function handleSubmit() {
         console.error('Verification upload error:', verifyUploadError)
         toast.warning('Your verification document didn’t upload. You can add it later from your host dashboard.')
       } else {
-        // Update the application with the verification doc path
-        await supabase
-          .from('host_applications')
-          .update({ verification_doc_path: storagePath })
-          .eq('id', applicationId)
+        // Hosts have no UPDATE policy on host_applications, so a direct update
+        // matched zero rows without erroring — the file reached storage but the
+        // application row kept showing no document. This RPC writes just the
+        // one column after checking ownership.
+        const { error: pathError } = await supabase.rpc('set_host_application_document_path', {
+          application_uuid: applicationId,
+          document_kind: 'verification_doc',
+          document_path: storagePath,
+        })
+
+        if (pathError) {
+          console.error('Verification doc path error:', pathError)
+          toast.warning('Your verification document uploaded but we could not attach it. Please contact us.')
+        }
       }
     }
 
@@ -1697,11 +1706,16 @@ async function handleSubmit() {
         console.error('ID upload error:', idUploadError)
         toast.warning('Your ID document didn’t upload. You can add it later from your host dashboard.')
       } else {
-        // Update the application with the ID doc path
-        await supabase
-          .from('host_applications')
-          .update({ id_doc_path: storagePath })
-          .eq('id', applicationId)
+        const { error: pathError } = await supabase.rpc('set_host_application_document_path', {
+          application_uuid: applicationId,
+          document_kind: 'id_doc',
+          document_path: storagePath,
+        })
+
+        if (pathError) {
+          console.error('ID doc path error:', pathError)
+          toast.warning('Your ID uploaded but we could not attach it. Please contact us.')
+        }
       }
     }
 

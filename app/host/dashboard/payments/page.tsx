@@ -64,6 +64,10 @@ export default async function HostPaymentsPage({
         'id, booking_id, amount, currency, platform_fee_amount, host_payout_amount, host_payout_currency, status, payout_status, paid_at, payout_released_at, created_at',
       )
       .in('host_id', hostIds)
+      // A row is created before the guest reaches Stripe, so every abandoned
+      // checkout leaves a 'pending' row behind. Those are not real payments and
+      // must not appear as money owed.
+      .neq('status', 'pending')
       .order('created_at', { ascending: false })
       .limit(50),
   ])

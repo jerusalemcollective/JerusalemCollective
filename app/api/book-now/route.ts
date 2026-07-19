@@ -148,23 +148,34 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'These dates are no longer available.' }, { status: 409 })
   }
 
-  const currency = listing.price_usd ? 'usd' : listing.price_ils ? 'ils' : null
-  const nightlyPrice = listing.price_usd || listing.price_ils
-  if (!currency || !nightlyPrice) {
-    return NextResponse.json({ error: 'This stay does not have an online booking price yet.' }, { status: 400 })
-  }
+  // Every monetary value is recomputed inside this function from the listing
+  // and platform settings, so nothing about the price can be set by the client.
+  const { data: pendingPayment, error: pendingPaymentError } = await supabase.rpc(
+    'create_pending_booking_payment',
+    {
+      listing_uuid: listingId,
+      check_in_date: checkIn,
+      check_out_date: checkOut,
+      guest_count: guests,
+    },
+  )
 
-  if (!paymentProfile.payout_currencies?.includes(currency.toUpperCase())) {
+  if (pendingPaymentError || !isRecord(pendingPayment)) {
     return NextResponse.json(
-      { error: 'This host has not enabled payouts in this listing currency yet.' },
+      { error: pendingPaymentError?.message || 'Could not start deposit checkout.' },
       { status: 400 },
     )
   }
 
-  const depositAmount = Math.max(Math.round(nightlyPrice * nights * 0.1 * 100), 50)
-  const effectiveCommissionPercent = paymentProfile.commission_percent_override ?? paymentRoutes.commissionPercent
-  const platformFeeAmount = Math.round(depositAmount * effectiveCommissionPercent / 100) / 100
-  const hostPayoutAmount = Math.max(depositAmount / 100 - platformFeeAmount, 0)
+  const paymentId = typeof pendingPayment.id === 'string' ? pendingPayment.id : null
+  const depositMajor = Number(pendingPayment.amount)
+  const currency = String(pendingPayment.currency || '').toLowerCase()
+
+  if (!paymentId || !currency || !Number.isFinite(depositMajor) || depositMajor <= 0) {
+    return NextResponse.json({ error: 'Could not start deposit checkout.' }, { status: 400 })
+  }
+
+  const depositAmount = Math.round(depositMajor * 100)
   const siteUrl = getSiteUrl(request)
   const checkoutParams = new URLSearchParams()
   checkoutParams.set('mode', 'payment')
@@ -206,24 +217,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Checkout did not return a payment link.' }, { status: 502 })
   }
 
-  const { error: paymentError } = await supabase.from('booking_payments').insert({
-    host_id: listing.host_id,
-    guest_id: user.id,
-    payment_mode: 'platform_checkout',
-    currency: currency.toUpperCase(),
-    amount: depositAmount / 100,
-    platform_fee_amount: platformFeeAmount,
-    processor_fee_amount: 0,
-    host_payout_amount: hostPayoutAmount,
-    host_payout_currency: currency.toUpperCase(),
-    fx_rate_used: null,
-    status: 'pending',
-    payout_status: 'not_ready',
-    stripe_checkout_session_id: checkoutSessionId,
+  const { error: attachError } = await supabase.rpc('attach_checkout_session_to_payment', {
+    payment_uuid: paymentId,
+    checkout_session_id: checkoutSessionId,
   })
 
-  if (paymentError) {
-    return NextResponse.json({ error: paymentError.message }, { status: 400 })
+  if (attachError) {
+    return NextResponse.json({ error: attachError.message }, { status: 400 })
   }
 
   return NextResponse.json({ checkoutUrl })

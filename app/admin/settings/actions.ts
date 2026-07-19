@@ -104,9 +104,15 @@ export async function updatePaymentRouteSettings(formData: FormData) {
     },
   ]
 
-  await supabase
+  // The result was previously discarded entirely, so an RLS rejection was
+  // thrown away and the UI revalidated as if the toggle had saved.
+  const { error } = await supabase
     .from('platform_settings')
     .upsert(updates, { onConflict: 'key' })
+
+  if (error) {
+    throw error
+  }
 
   revalidatePath('/admin/settings')
   revalidatePath('/admin/readiness')

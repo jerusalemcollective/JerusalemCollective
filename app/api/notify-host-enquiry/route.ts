@@ -44,10 +44,17 @@ export async function POST(request: Request) {
   const emailSent = await sendHostNewEnquiryEmail({ supabase, requestId })
 
   if (emailSent) {
-    await supabase
-      .from('booking_requests')
-      .update({ host_notified_at: new Date().toISOString() })
-      .eq('id', requestId)
+    // The only UPDATE policy on booking_requests covers hosts and admins, but
+    // the actor here is the guest — a direct update matched zero rows without
+    // erroring, so host_notified_at never stuck and this email re-sent every
+    // time. This function sets that one column after checking guest ownership.
+    const { error: markError } = await supabase.rpc('mark_booking_request_host_notified', {
+      request_uuid: requestId,
+    })
+
+    if (markError) {
+      console.error('Could not record host notification for request', requestId, markError)
+    }
   }
 
   return NextResponse.json({ ok: true, emailSent })
