@@ -579,16 +579,16 @@ function StaysDateRangeFilter({
             jewishHoliday: 'font-bold text-[#c76f55]',
           }}
           showOutsideDays={false}
-          className="w-full rounded-[1.35rem] bg-white p-4 [--cell-size:2.55rem] sm:[--cell-size:2.75rem]"
+          className="mx-auto w-full max-w-sm rounded-[1.35rem] bg-white p-3 [--cell-size:2.4rem]"
           classNames={{
             root: 'w-full',
             months: 'flex w-full flex-col',
-            month: 'w-full gap-5',
-            month_caption: 'min-h-12',
+            month: 'w-full gap-3',
+            month_caption: 'min-h-10',
             weekday: 'text-[10px] font-bold uppercase tracking-wider text-stone-400',
-            week: 'mt-2 flex w-full gap-1.5 sm:gap-2',
-            weekdays: 'flex gap-1.5 sm:gap-2',
-            day: 'aspect-square flex-1 rounded-2xl',
+            week: 'mt-1.5 flex w-full gap-1.5',
+            weekdays: 'flex gap-1.5',
+            day: 'aspect-square flex-1 rounded-xl',
             day_button:
               'rounded-2xl border border-transparent text-sm hover:border-stone-200 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-30',
           }}
