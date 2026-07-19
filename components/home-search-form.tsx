@@ -411,13 +411,20 @@ function DateSelector({
       </button>
 
       {showCalendar && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl shadow-stone-300/30 md:left-1/2 md:right-auto md:w-[340px] md:-translate-x-1/2">
-          <div className="border-b border-stone-100 bg-[#fbf8f5] px-4 py-3">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-[#c76f55]">Select your stay</p>
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              <DateSummary label="Arrival" date={dateRange.from} />
-              <DateSummary label="Departure" date={dateRange.to} />
-            </div>
+        <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-[70vh] overflow-y-auto rounded-2xl border border-stone-200 bg-white shadow-xl shadow-stone-300/30 md:left-1/2 md:right-auto md:w-[340px] md:-translate-x-1/2">
+          <div className="flex items-center justify-between gap-3 border-b border-stone-100 bg-[#fbf8f5] px-4 py-2.5">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-[#c76f55]">Your dates</p>
+            <p className="truncate text-xs font-semibold text-stone-800">
+              {dateRange.from ? (
+                <>
+                  {formatCompactDate(dateRange.from)}
+                  {dateRange.to ? ` – ${formatCompactDate(dateRange.to)}` : ''}
+                  <span className="ml-2 font-normal text-stone-500">{formatHebrewShortDate(dateRange.from)}</span>
+                </>
+              ) : (
+                'Choose dates'
+              )}
+            </p>
           </div>
           <div className="p-3">
             <Calendar
@@ -452,16 +459,6 @@ function DateSelector({
   )
 }
 
-function DateSummary({ label, date }: { label: string; date?: Date }) {
-  return (
-    <div className="rounded-2xl bg-white p-2.5 ring-1 ring-stone-200">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">{label}</p>
-      <p className="mt-1 text-sm font-bold text-stone-950">{date ? formatCompactDate(date) : 'Choose date'}</p>
-      {date && <p className="mt-1 text-[11px] font-medium text-stone-500">{formatHebrewShortDate(date)}</p>}
-    </div>
-  )
-}
-
 function GuestSelector({
   guestRef,
   adults,
@@ -489,7 +486,7 @@ function GuestSelector({
       </button>
 
       {showGuestPanel && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl shadow-stone-300/30 md:left-auto md:right-0 md:w-[320px]">
+        <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-[70vh] overflow-y-auto rounded-2xl border border-stone-200 bg-white shadow-xl shadow-stone-300/30 md:left-auto md:right-0 md:w-[320px]">
           <div className="border-b border-stone-100 bg-[#fbf8f5] px-4 py-3">
             <p className="text-[11px] font-bold uppercase tracking-widest text-[#c76f55]">Guests</p>
             <p className="mt-1 text-sm font-semibold text-stone-950">{adults + children > 0 ? getGuestSummary() : 'Who is coming?'}</p>
