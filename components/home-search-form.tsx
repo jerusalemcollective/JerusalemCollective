@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type Dispatch, type RefObject, type SetStateAction } from 'react'
+import { useCallback, useEffect, useRef, useState, type Dispatch, type RefObject, type SetStateAction } from 'react'
 import type { DateRange as DayPickerDateRange } from 'react-day-picker'
 import { allNeighborhoods } from '@/lib/neighborhoods'
 import { Calendar } from '@/components/ui/calendar'
@@ -411,52 +411,78 @@ function DateSelector({
       </button>
 
       {showCalendar && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-[70vh] overflow-y-auto rounded-2xl border border-stone-200 bg-white shadow-xl shadow-stone-300/30 md:left-1/2 md:right-auto md:w-[340px] md:-translate-x-1/2">
-          <div className="flex items-center justify-between gap-3 border-b border-stone-100 bg-[#fbf8f5] px-4 py-2.5">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-[#c76f55]">Your dates</p>
-            <p className="truncate text-xs font-semibold text-stone-800">
-              {dateRange.from ? (
-                <>
-                  {formatCompactDate(dateRange.from)}
-                  {dateRange.to ? ` – ${formatCompactDate(dateRange.to)}` : ''}
-                  <span className="ml-2 font-normal text-stone-500">{formatHebrewShortDate(dateRange.from)}</span>
-                </>
-              ) : (
-                'Choose dates'
-              )}
-            </p>
-          </div>
-          <div className="p-2">
-            <Calendar
-              mode="range"
-              selected={selectedRange}
-              onSelect={(range) => {
-                if (range?.from && range?.to && range.from.getTime() === range.to.getTime()) {
-                  setDateRange({ from: range.from, to: undefined })
-                  return
-                }
-                setDateRange(range || { from: undefined, to: undefined })
-                if (range?.from && range?.to && range.from.getTime() !== range.to.getTime()) {
-                  setTimeout(() => setShowCalendar(false), 300)
-                }
-              }}
-              numberOfMonths={1}
-              disabled={{ before: new Date() }}
-              showOutsideDays={false}
-              className="w-full p-0"
-              style={{ '--cell-size': '2rem' } as CSSProperties}
-              classNames={{
-                month: 'flex w-full flex-col gap-2',
-                week: 'mt-1 flex w-full',
-              }}
-            />
-          </div>
-          <div className="flex items-center justify-between border-t border-stone-100 bg-white px-4 py-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <button onClick={() => { setDateRange({ from: new Date(), to: addDays(new Date(), 7) }); setTimeout(() => setShowCalendar(false), 300) }} className="rounded-full bg-stone-100 px-3 py-1.5 text-[11px] font-bold text-stone-700 hover:bg-stone-200">1 week</button>
-              <button onClick={() => { setDateRange({ from: new Date(), to: addDays(new Date(), 14) }); setTimeout(() => setShowCalendar(false), 300) }} className="rounded-full bg-stone-100 px-3 py-1.5 text-[11px] font-bold text-stone-700 hover:bg-stone-200">2 weeks</button>
+        <div
+          role="presentation"
+          onClick={() => setShowCalendar(false)}
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-3 sm:items-center sm:p-6"
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Select your dates"
+            onClick={(event) => event.stopPropagation()}
+            className="flex max-h-[88vh] w-full max-w-[360px] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl"
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-stone-100 bg-[#fbf8f5] px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-[#c76f55]">Your dates</p>
+                <p className="truncate text-sm font-semibold text-stone-900">
+                  {dateRange.from ? (
+                    <>
+                      {formatCompactDate(dateRange.from)}
+                      {dateRange.to ? ` – ${formatCompactDate(dateRange.to)}` : ''}
+                      <span className="ml-2 text-xs font-normal text-stone-500">{formatHebrewShortDate(dateRange.from)}</span>
+                    </>
+                  ) : (
+                    'Choose your dates'
+                  )}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCalendar(false)}
+                aria-label="Close date picker"
+                className="shrink-0 rounded-full p-1.5 text-stone-500 transition hover:bg-stone-100 hover:text-stone-900"
+              >
+                <CloseIcon />
+              </button>
             </div>
-            <button onClick={() => setDateRange({ from: undefined, to: undefined })} className="text-xs font-bold text-stone-500 hover:text-stone-800">Clear</button>
+
+            <div className="flex-1 overflow-y-auto p-3">
+              <Calendar
+                mode="range"
+                selected={selectedRange}
+                onSelect={(range) => {
+                  if (range?.from && range?.to && range.from.getTime() === range.to.getTime()) {
+                    setDateRange({ from: range.from, to: undefined })
+                    return
+                  }
+                  setDateRange(range || { from: undefined, to: undefined })
+                  if (range?.from && range?.to && range.from.getTime() !== range.to.getTime()) {
+                    setTimeout(() => setShowCalendar(false), 300)
+                  }
+                }}
+                numberOfMonths={1}
+                disabled={{ before: new Date() }}
+                showOutsideDays={false}
+                className="w-full p-0"
+                classNames={{
+                  month: 'flex w-full flex-col gap-2',
+                  week: 'mt-1 flex w-full',
+                }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-3 border-t border-stone-100 bg-white px-4 py-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <button onClick={() => { setDateRange({ from: new Date(), to: addDays(new Date(), 7) }); setTimeout(() => setShowCalendar(false), 300) }} className="rounded-full bg-stone-100 px-3 py-1.5 text-[11px] font-bold text-stone-700 hover:bg-stone-200">1 week</button>
+                <button onClick={() => { setDateRange({ from: new Date(), to: addDays(new Date(), 14) }); setTimeout(() => setShowCalendar(false), 300) }} className="rounded-full bg-stone-100 px-3 py-1.5 text-[11px] font-bold text-stone-700 hover:bg-stone-200">2 weeks</button>
+              </div>
+              <div className="flex shrink-0 items-center gap-3">
+                <button onClick={() => setDateRange({ from: undefined, to: undefined })} className="text-xs font-bold text-stone-500 hover:text-stone-800">Clear</button>
+                <button onClick={() => setShowCalendar(false)} className="rounded-full bg-[#252525] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#111111]">Done</button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -631,6 +657,14 @@ function SearchSmallIcon() {
   return (
     <svg className="pointer-events-none absolute right-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+    </svg>
+  )
+}
+
+function CloseIcon() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
     </svg>
   )
 }
