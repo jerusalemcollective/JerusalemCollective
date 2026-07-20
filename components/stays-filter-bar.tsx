@@ -128,35 +128,29 @@ export function StaysFilterBar() {
           </span>
         </button>
 
-        <div className="flex items-center justify-between gap-3 rounded-2xl px-4 py-2.5 sm:w-56">
-          <div className="min-w-0">
-            <span className="block text-[11px] font-bold uppercase tracking-widest text-stone-900">Guests</span>
-            <span className={`mt-0.5 block truncate text-sm ${guests > 0 ? 'text-stone-900' : 'text-stone-500'}`}>
-              {guests > 0 ? `${guests} guest${guests === 1 ? '' : 's'}` : 'Any'}
-            </span>
-          </div>
-          <div className="flex shrink-0 items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setGuests(Math.max(0, guests - 1))}
-              disabled={guests === 0}
-              aria-label="Fewer guests"
-              className={`flex h-8 w-8 items-center justify-center rounded-full border transition ${
-                guests === 0
-                  ? 'cursor-not-allowed border-stone-200 bg-stone-50 text-stone-300'
-                  : 'border-stone-300 bg-white text-stone-700 hover:border-[#c76f55] hover:text-[#c76f55]'
-              }`}
+        <div className="rounded-2xl px-4 py-2 sm:w-56">
+          <label
+            htmlFor="stays-guests"
+            className="block text-[11px] font-bold uppercase tracking-widest text-stone-900"
+          >
+            Guests
+          </label>
+          <div className="relative mt-0.5">
+            <select
+              id="stays-guests"
+              value={guests}
+              onChange={(event) => setGuests(Number(event.target.value))}
+              className="w-full cursor-pointer appearance-none border-0 bg-transparent py-0.5 pr-6 text-sm text-stone-900 focus:outline-none"
             >
-              <MinusIcon />
-            </button>
-            <button
-              type="button"
-              onClick={() => setGuests(guests + 1)}
-              aria-label="More guests"
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-stone-300 bg-white text-stone-700 transition hover:border-[#c76f55] hover:text-[#c76f55]"
-            >
-              <PlusIcon />
-            </button>
+              <option value={0}>Any</option>
+              {Array.from({ length: 9 }, (_, index) => index + 1).map((count) => (
+                <option key={count} value={count}>
+                  {count} guest{count === 1 ? '' : 's'}
+                </option>
+              ))}
+              <option value={10}>10+ guests</option>
+            </select>
+            <ChevronIcon className="pointer-events-none absolute right-1 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
           </div>
         </div>
 
@@ -288,18 +282,10 @@ function CloseIcon() {
   )
 }
 
-function PlusIcon() {
+function ChevronIcon({ className }: { className?: string }) {
   return (
-    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-    </svg>
-  )
-}
-
-function MinusIcon() {
-  return (
-    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
     </svg>
   )
 }
