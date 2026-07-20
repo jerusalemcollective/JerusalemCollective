@@ -53,12 +53,39 @@ export default async function BookingsPage({
   const bookings = z.array(bookingRowSchema).parse(data ?? [])
   const today = new Date().toISOString().slice(0, 10)
 
+  // After Stripe checkout the guest is redirected here immediately, before the
+  // webhook has necessarily finished. Derive the banner from the actual latest
+  // payment so we never claim "confirmed" when the booking failed or is still
+  // finalising.
+  let paymentNotice: 'confirmed' | 'review' | 'processing' | null = null
+  if (payment === 'success') {
+    const { data: latestPayment } = await supabase
+      .from('booking_payments')
+      .select('status, needs_manual_review, booking_id')
+      .eq('guest_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle<{
+        status: string | null
+        needs_manual_review: boolean | null
+        booking_id: string | null
+      }>()
+
+    if (latestPayment?.needs_manual_review) {
+      paymentNotice = 'review'
+    } else if (latestPayment?.status === 'paid' || latestPayment?.booking_id) {
+      paymentNotice = 'confirmed'
+    } else {
+      paymentNotice = 'processing'
+    }
+  }
+
   return (
     <div className="min-h-screen">
       <div className="mx-auto max-w-5xl px-5 py-10 md:px-6">
         <Breadcrumb items={[{ label: 'Account', href: '/account' }, { label: 'My trips' }]} />
 
-        {payment === 'success' && (
+        {paymentNotice === 'confirmed' && (
           <div
             role="status"
             className="mb-6 rounded-2xl border border-green-200 bg-green-50 p-4 text-sm text-green-800"
@@ -66,6 +93,30 @@ export default async function BookingsPage({
             <p className="font-semibold">Payment received — your stay is confirmed.</p>
             <p className="mt-1 text-green-700">
               Your booking is listed below. You can add it to your calendar from the booking.
+            </p>
+          </div>
+        )}
+
+        {paymentNotice === 'processing' && (
+          <div
+            role="status"
+            className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+          >
+            <p className="font-semibold">Payment received — we&rsquo;re finalising your booking.</p>
+            <p className="mt-1 text-amber-800">
+              This usually takes a few moments. Refresh this page shortly and your stay will appear below.
+            </p>
+          </div>
+        )}
+
+        {paymentNotice === 'review' && (
+          <div
+            role="status"
+            className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+          >
+            <p className="font-semibold">Payment received — we&rsquo;re confirming this manually.</p>
+            <p className="mt-1 text-amber-800">
+              Something needed a closer look on our end. Your payment is safe, and the JLM Collective team will contact you shortly to confirm your stay.
             </p>
           </div>
         )}

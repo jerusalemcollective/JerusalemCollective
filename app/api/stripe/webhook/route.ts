@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from 'crypto'
 import { NextResponse } from 'next/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { z } from 'zod'
+import { sendPaymentFailureAdminAlert } from '@/lib/transactional-email'
 
 export const runtime = 'nodejs'
 
@@ -125,10 +126,65 @@ export async function POST(request: Request) {
     rpcError = error
   }
 
+  const paymentIntentId =
+    typeof session.payment_intent === 'string' ? session.payment_intent : null
+
   if (rpcError) {
+    // The money was captured but the booking could not be finalised. Flag the
+    // payment for manual review and alert an admin — but only on the FIRST
+    // failure (dedup via needs_manual_review = false), so Stripe's retries
+    // don't send a fresh alert each time. We still return non-200 so Stripe
+    // keeps retrying: a transient failure will self-heal and clear the flag
+    // on the success path below.
+    const reviewUpdate: Record<string, unknown> = {
+      needs_manual_review: true,
+      manual_review_reason:
+        'Payment succeeded but the booking could not be finalised automatically.',
+      failure_reason: rpcError.message,
+      admin_alerted_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    if (paymentIntentId) reviewUpdate.stripe_payment_intent_id = paymentIntentId
+
+    const { data: flagged } = await supabase
+      .from('booking_payments')
+      .update(reviewUpdate)
+      .eq('stripe_checkout_session_id', session.id)
+      .eq('needs_manual_review', false)
+      .select('id, amount, currency')
+
+    if (flagged && flagged.length > 0) {
+      const exceptionRow = flagged[0] as { amount: number | null; currency: string | null }
+      await sendPaymentFailureAdminAlert({
+        supabase,
+        sessionId: session.id,
+        paymentIntentId,
+        listingId: meta.listing_id ?? null,
+        guestId: meta.guest_id ?? null,
+        checkIn: meta.check_in ?? null,
+        checkOut: meta.check_out ?? null,
+        amount: exceptionRow.amount,
+        currency: exceptionRow.currency,
+        failureReason: rpcError.message,
+      })
+    }
+
     // Do not record the event, so Stripe's retry reprocesses it.
     return NextResponse.json({ error: rpcError.message }, { status: 500 })
   }
+
+  // Success. Clear any manual-review flag left by an earlier failed attempt,
+  // and record the payment intent for reconciliation/refunds.
+  const successUpdate: Record<string, unknown> = {
+    needs_manual_review: false,
+    manual_review_reason: null,
+    updated_at: new Date().toISOString(),
+  }
+  if (paymentIntentId) successUpdate.stripe_payment_intent_id = paymentIntentId
+  await supabase
+    .from('booking_payments')
+    .update(successUpdate)
+    .eq('stripe_checkout_session_id', session.id)
 
   // Mark processed only after success.
   if (eventId) {

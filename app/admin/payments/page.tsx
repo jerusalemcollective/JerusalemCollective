@@ -20,6 +20,12 @@ type PaymentRow = {
   status: string
   payout_status: string
   stripe_checkout_session_id?: string | null
+  stripe_payment_intent_id?: string | null
+  needs_manual_review?: boolean | null
+  manual_review_reason?: string | null
+  failure_reason?: string | null
+  refunded_at?: string | null
+  stripe_refund_id?: string | null
   created_at: string
   hosts?: { name: string | null; email: string | null } | null
   profiles?: { full_name: string | null; email: string | null } | null
@@ -37,22 +43,34 @@ export default async function AdminPaymentsPage() {
     redirect('/admin')
   }
 
-  const [{ data }, paymentRoutes] = await Promise.all([
-    supabase
-      .from('booking_payments')
-      .select(
-        'id, booking_id, host_id, guest_id, payment_mode, payment_method, currency, amount, platform_fee_amount, processor_fee_amount, host_payout_amount, host_payout_currency, fx_rate_used, status, payout_status, stripe_checkout_session_id, created_at, hosts(name, email), profiles(full_name, email)',
-      )
-      .order('created_at', { ascending: false })
-      .limit(100),
-    getPaymentRouteSettings(),
-  ])
+  const selectColumns =
+    'id, booking_id, host_id, guest_id, payment_mode, payment_method, currency, amount, platform_fee_amount, processor_fee_amount, host_payout_amount, host_payout_currency, fx_rate_used, status, payout_status, stripe_checkout_session_id, stripe_payment_intent_id, needs_manual_review, manual_review_reason, failure_reason, refunded_at, stripe_refund_id, created_at, hosts(name, email), profiles(full_name, email)'
 
-  const payments: PaymentRow[] = (data || []).map((payment: PaymentQueryRow) => ({
+  const normalize = (payment: PaymentQueryRow): PaymentRow => ({
     ...payment,
     hosts: Array.isArray(payment.hosts) ? payment.hosts[0] || null : payment.hosts || null,
     profiles: Array.isArray(payment.profiles) ? payment.profiles[0] || null : payment.profiles || null,
-  }))
+  })
+
+  // Exceptions are queried separately so they surface even if they fall outside
+  // the 100 most recent payments.
+  const [{ data }, { data: exceptionData }, paymentRoutes] = await Promise.all([
+    supabase
+      .from('booking_payments')
+      .select(selectColumns)
+      .order('created_at', { ascending: false })
+      .limit(100),
+    supabase
+      .from('booking_payments')
+      .select(selectColumns)
+      .eq('needs_manual_review', true)
+      .order('created_at', { ascending: false })
+      .limit(50),
+    getPaymentRouteSettings(),
+  ])
+
+  const payments: PaymentRow[] = (data || []).map(normalize)
+  const exceptions: PaymentRow[] = (exceptionData || []).map(normalize)
 
   const paidPayments = payments.filter((payment) => payment.status === 'paid')
   const totalGross = paidPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
@@ -77,8 +95,70 @@ export default async function AdminPaymentsPage() {
         <Metric title="JLM payments" value={paymentRoutes.jlmPaymentsEnabled ? 'Enabled' : 'Off'} />
         <Metric title="Direct payments" value={paymentRoutes.directPaymentsEnabled ? 'Enabled' : 'Off'} />
         <Metric title="Paid gross" value={formatMoney(totalGross)} />
-        <Metric title="Host net due" value={formatMoney(totalHostPayout)} />
+        <Metric
+          title="Needs review"
+          value={String(exceptions.length)}
+          tone={exceptions.length > 0 ? 'alert' : 'default'}
+        />
       </section>
+
+      {exceptions.length > 0 && (
+        <section className="mt-6 rounded-3xl border border-red-200 bg-red-50 p-6">
+          <h2 className="text-xl font-bold text-red-900">Payments needing manual review</h2>
+          <p className="mt-1 text-sm text-red-800">
+            The guest was charged but the booking could not be finalised automatically. Check whether the
+            booking exists — finalise it manually, or refund the guest in Stripe and record the refund.
+          </p>
+
+          <div className="mt-5 space-y-3">
+            {exceptions.map((payment) => (
+              <article key={payment.id} className="rounded-2xl border border-red-200 bg-white p-4 text-sm">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-bold text-stone-950">
+                      {payment.profiles?.full_name || payment.profiles?.email || 'Guest'}
+                      <span className="font-normal text-stone-500"> · </span>
+                      {formatCurrency(payment.amount, payment.currency)}
+                    </p>
+                    <p className="mt-1 text-xs text-stone-500">
+                      {new Date(payment.created_at).toLocaleString('en-GB')}
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700">
+                    Needs review
+                  </span>
+                </div>
+                {payment.manual_review_reason && (
+                  <p className="mt-2 text-stone-700">{payment.manual_review_reason}</p>
+                )}
+                {payment.failure_reason && (
+                  <p className="mt-1 text-xs text-stone-500">Reason: {payment.failure_reason}</p>
+                )}
+                <dl className="mt-3 grid gap-x-6 gap-y-1 text-xs text-stone-500 sm:grid-cols-2">
+                  {payment.stripe_checkout_session_id && (
+                    <div className="truncate">
+                      <dt className="inline font-semibold">Session: </dt>
+                      <dd className="inline">{payment.stripe_checkout_session_id}</dd>
+                    </div>
+                  )}
+                  {payment.stripe_payment_intent_id && (
+                    <div className="truncate">
+                      <dt className="inline font-semibold">Payment intent: </dt>
+                      <dd className="inline">{payment.stripe_payment_intent_id}</dd>
+                    </div>
+                  )}
+                  {payment.refunded_at && (
+                    <div className="truncate text-green-700">
+                      <dt className="inline font-semibold">Refunded: </dt>
+                      <dd className="inline">{new Date(payment.refunded_at).toLocaleDateString('en-GB')}</dd>
+                    </div>
+                  )}
+                </dl>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="mt-6 rounded-3xl bg-white p-6 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -158,11 +238,20 @@ export default async function AdminPaymentsPage() {
   )
 }
 
-function Metric({ title, value }: { title: string; value: string }) {
+function Metric({
+  title,
+  value,
+  tone = 'default',
+}: {
+  title: string
+  value: string
+  tone?: 'default' | 'alert'
+}) {
+  const isAlert = tone === 'alert'
   return (
-    <article className="rounded-3xl bg-white p-5 shadow-sm">
-      <p className="text-sm font-semibold text-stone-500">{title}</p>
-      <p className="mt-2 text-2xl font-bold text-stone-950">{value}</p>
+    <article className={`rounded-3xl p-5 shadow-sm ${isAlert ? 'bg-red-50 ring-1 ring-red-200' : 'bg-white'}`}>
+      <p className={`text-sm font-semibold ${isAlert ? 'text-red-700' : 'text-stone-500'}`}>{title}</p>
+      <p className={`mt-2 text-2xl font-bold ${isAlert ? 'text-red-900' : 'text-stone-950'}`}>{value}</p>
     </article>
   )
 }

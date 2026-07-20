@@ -362,6 +362,118 @@ export async function sendGuestNewMessageEmail({
   }
 }
 
+export async function sendPaymentFailureAdminAlert({
+  supabase,
+  sessionId,
+  paymentIntentId,
+  listingId,
+  guestId,
+  checkIn,
+  checkOut,
+  amount,
+  currency,
+  failureReason,
+}: {
+  supabase: SupabaseClient
+  sessionId: string
+  paymentIntentId: string | null
+  listingId: string | null
+  guestId: string | null
+  checkIn: string | null
+  checkOut: string | null
+  amount: number | null
+  currency: string | null
+  failureReason: string
+}) {
+  try {
+    const recipients = await getAdminAlertRecipients(supabase)
+    if (recipients.length === 0) {
+      console.error(
+        '[payment-alert] No admin alert recipient — set ADMIN_ALERT_EMAIL or make sure an owner admin exists',
+      )
+      return false
+    }
+
+    const guestEmail = guestId ? await getAuthUserEmail(guestId) : null
+    const amountLabel =
+      amount != null ? `${(currency || '').toUpperCase()} ${Number(amount).toFixed(2)}` : 'Unknown'
+
+    const rows: [string, string][] = [
+      ['Listing ID', listingId || 'Unknown'],
+      ['Guest ID', guestId || 'Unknown'],
+      ['Guest email', guestEmail || 'Unknown'],
+      ['Dates', `${checkIn || 'Unknown'} to ${checkOut || 'Unknown'}`],
+      ['Amount charged', amountLabel],
+      ['Stripe session', sessionId],
+      ['Payment intent', paymentIntentId || 'Unknown'],
+      ['Failure reason', failureReason],
+    ]
+
+    const html = paymentAlertHtml(rows)
+
+    const results = await Promise.all(
+      recipients.map((to) =>
+        sendEmail({
+          to,
+          subject: 'Action needed: payment received but booking not finalised',
+          html,
+        }),
+      ),
+    )
+    return results.some(Boolean)
+  } catch (error) {
+    console.error('Unable to send payment failure admin alert', error)
+    return false
+  }
+}
+
+async function getAdminAlertRecipients(supabase: SupabaseClient): Promise<string[]> {
+  const configured = process.env.ADMIN_ALERT_EMAIL
+  if (configured) {
+    return configured
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean)
+  }
+
+  // No env override: fall back to owner admins so alerts still reach someone.
+  const { data } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('is_admin', true)
+    .eq('admin_role', 'owner')
+    .limit(5)
+
+  const ids = (data || []).map((row: { id: string }) => row.id)
+  const emails = await Promise.all(ids.map((id) => getAuthUserEmail(id)))
+  return emails.filter((email): email is string => Boolean(email))
+}
+
+function paymentAlertHtml(rows: [string, string][]) {
+  const rowHtml = rows
+    .map(
+      ([label, value]) =>
+        `<tr><td style="padding:6px 12px 6px 0;color:#78716c;vertical-align:top">${escapeHtml(
+          label,
+        )}</td><td style="padding:6px 0;color:#292524">${escapeHtml(value)}</td></tr>`,
+    )
+    .join('')
+
+  return `
+    <div style="font-family:Arial,sans-serif;line-height:1.6;color:#292524">
+      <p>A guest was charged, but their booking could not be finalised automatically. This payment needs manual review.</p>
+      <table style="border-collapse:collapse;font-size:14px;margin:12px 0">${rowHtml}</table>
+      <p>
+        <a href="${siteUrl}/admin/payments" style="display:inline-block;background:#c76f55;color:#ffffff;text-decoration:none;border-radius:999px;padding:12px 18px;font-weight:700">
+          Open payment control
+        </a>
+      </p>
+      <p style="color:#78716c;font-size:13px">Check whether the booking exists. If not, either finalise it manually or refund the guest in Stripe and record the refund.</p>
+      <p>JLM Collective</p>
+    </div>
+  `
+}
+
 async function sendEmail({
   to,
   subject,

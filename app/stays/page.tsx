@@ -364,11 +364,15 @@ async function loadListings({
   let blockedListingIds: string[] = []
 
   if (checkIn && checkOut) {
+    // Half-open overlap, matching app/api/book-now/route.ts exactly: a stay
+    // that ends the day another begins does NOT conflict. Using inclusive
+    // lte/gte here would hide listings that are in fact bookable on a same-day
+    // turnover.
     const { data: blockedRanges } = await supabase
       .from('listing_unavailable_ranges')
       .select('listing_id')
-      .lte('start_date', checkOut)
-      .gte('end_date', checkIn)
+      .lt('start_date', checkOut)
+      .gt('end_date', checkIn)
 
     blockedListingIds = Array.from(
       new Set(
