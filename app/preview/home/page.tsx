@@ -93,8 +93,14 @@ const defaultFeatured = sampleListings.map((listing) => toFeaturedStay(listing))
 
 const neighbourhoodIcons: LucideIcon[] = [Building2, Trees, Home, Landmark, MapPin]
 
-// Deterministic warm/neutral tones so photo-less tiles still feel designed.
-const tileTones = ['#9aa3ab', '#b0a08c', '#9fae9b', '#bfa9a0', '#a8b0a0', '#c9b6a8']
+// Illustrated Jerusalem scenes stand in until real photos exist.
+const placeholderScenes = [
+  '/preview-placeholders/scene-1.svg',
+  '/preview-placeholders/scene-2.svg',
+  '/preview-placeholders/scene-3.svg',
+  '/preview-placeholders/scene-4.svg',
+  '/preview-placeholders/scene-5.svg',
+]
 
 function buildCategoryChips(popularNeighborhoods: string[]): CategoryChip[] {
   const neighbourhoodChips = popularNeighborhoods.slice(0, 5).map((area, index) => ({
@@ -185,8 +191,6 @@ export default async function HomePreviewPage() {
   const { featuredStays, popularNeighborhoods } = await getHomepageData()
   const categoryChips = buildCategoryChips(popularNeighborhoods)
 
-  const largeStays = featuredStays.slice(0, 2)
-  const smallStays = featuredStays.slice(2, 5)
   const tileNeighbourhoods = popularNeighborhoods.slice(0, 4)
 
   return (
@@ -245,21 +249,13 @@ export default async function HomePreviewPage() {
             </Link>
           </div>
 
-          {largeStays.length > 0 && (
-            <div className="grid gap-5 sm:grid-cols-2">
-              {largeStays.map((stay) => (
-                <FeaturedCard key={stay.id} listing={stay} size="large" />
-              ))}
-            </div>
-          )}
-
-          {smallStays.length > 0 && (
-            <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3">
-              {smallStays.map((stay) => (
-                <FeaturedCard key={stay.id} listing={stay} size="small" />
-              ))}
-            </div>
-          )}
+          {/* Dense photo grid: 2 per row on mobile, 4 across on desktop.
+              Change lg:grid-cols-4 to lg:grid-cols-6 for a denser 6-up. */}
+          <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
+            {featuredStays.map((stay, index) => (
+              <FeaturedCard key={stay.id} listing={stay} sceneIndex={index} />
+            ))}
+          </div>
         </section>
 
         <section aria-label="Explore by neighbourhood" className="mx-auto max-w-7xl px-6 pt-12">
@@ -268,7 +264,11 @@ export default async function HomePreviewPage() {
           </h2>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {tileNeighbourhoods.map((area, index) => (
-              <NeighbourhoodTile key={area} area={area} tone={tileTones[index % tileTones.length]} />
+              <NeighbourhoodTile
+                key={area}
+                area={area}
+                scene={placeholderScenes[(index + 1) % placeholderScenes.length]}
+              />
             ))}
           </div>
         </section>
@@ -319,20 +319,14 @@ export default async function HomePreviewPage() {
   )
 }
 
-function FeaturedCard({ listing, size }: { listing: FeaturedStay; size: 'large' | 'small' }) {
-  const aspect = size === 'large' ? 'aspect-[3/2]' : 'aspect-[4/3]'
-  const titleClass = size === 'large' ? 'text-base' : 'text-sm'
-  const sizes =
-    size === 'large'
-      ? '(max-width: 640px) 100vw, 50vw'
-      : '(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 33vw'
+function FeaturedCard({ listing, sceneIndex }: { listing: FeaturedStay; sceneIndex: number }) {
+  const sizes = '(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw'
+  const scene = placeholderScenes[sceneIndex % placeholderScenes.length]
 
   return (
     <div className="group">
       <Link href={`/listings/${listing.id}?from=stays`} className="block">
-        <div
-          className={`relative ${aspect} overflow-hidden rounded-2xl bg-stone-100 shadow-sm transition-shadow duration-200 group-hover:shadow-md`}
-        >
+        <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-stone-100 shadow-sm transition-shadow duration-200 group-hover:shadow-md">
           {listing.coverPhotoUrl ? (
             <Image
               src={listing.coverPhotoUrl}
@@ -343,12 +337,12 @@ function FeaturedCard({ listing, size }: { listing: FeaturedStay; size: 'large' 
               loading="lazy"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-[#F8F5F2]">
-              <div className="text-center">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#c76f55]">JLM Collective</p>
-                <p className="mt-1 text-xs text-stone-400">Photo coming soon</p>
-              </div>
-            </div>
+            <div
+              className="h-full w-full bg-cover bg-center transition-transform duration-300 group-hover:scale-105"
+              style={{ backgroundImage: `url('${scene}')` }}
+              role="img"
+              aria-label={`Illustrated placeholder for a stay in ${listing.area}`}
+            />
           )}
         </div>
       </Link>
@@ -361,7 +355,7 @@ function FeaturedCard({ listing, size }: { listing: FeaturedStay; size: 'large' 
           {listing.area}
         </Link>
         <Link href={`/listings/${listing.id}?from=stays`} className="block space-y-0.5">
-          <p className={`line-clamp-1 font-semibold leading-snug text-stone-950 ${titleClass}`}>
+          <p className="line-clamp-1 text-sm font-semibold leading-snug text-stone-950">
             {listing.title}
           </p>
           <p className="text-sm text-stone-500">
@@ -384,14 +378,14 @@ function FeaturedCard({ listing, size }: { listing: FeaturedStay; size: 'large' 
   )
 }
 
-function NeighbourhoodTile({ area, tone }: { area: string; tone: string }) {
+function NeighbourhoodTile({ area, scene }: { area: string; scene: string }) {
   return (
     <Link
       href={`/neighbourhoods/${slugifyNeighborhood(area)}`}
-      className="group relative flex aspect-[4/3] items-end overflow-hidden rounded-2xl p-3 shadow-sm transition-shadow hover:shadow-md"
-      style={{ backgroundColor: tone }}
+      className="group relative flex aspect-[4/3] items-end overflow-hidden rounded-2xl bg-stone-200 bg-cover bg-center p-3 shadow-sm transition-shadow hover:shadow-md"
+      style={{ backgroundImage: `url('${scene}')` }}
     >
-      <span className="absolute inset-0 bg-black/10 transition group-hover:bg-black/20" aria-hidden="true" />
+      <span className="absolute inset-0 bg-black/20 transition group-hover:bg-black/30" aria-hidden="true" />
       <span className="relative text-sm font-semibold text-white drop-shadow">{area}</span>
     </Link>
   )

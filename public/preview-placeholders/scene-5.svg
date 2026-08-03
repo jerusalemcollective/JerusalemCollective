@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">
+  <rect width="400" height="300" fill="#dce4e4"/>
+  <rect y="150" width="400" height="150" fill="#cbb593"/>
+  <g fill="#bda078">
+    <rect x="0" y="120" width="90" height="80"/>
+    <rect x="110" y="135" width="70" height="65"/>
+    <rect x="250" y="115" width="80" height="85"/>
+    <rect x="345" y="140" width="55" height="60"/>
+  </g>
+  <circle cx="70" cy="55" r="18" fill="#f0d9a8"/>
+  <rect y="196" width="400" height="14" fill="#a98f68"/>
+  <rect x="30" y="210" width="340" height="90" fill="#c2a67d"/>
+  <g fill="#8a6f4e">
+    <rect x="30" y="210" width="10" height="90"/>
+    <rect x="130" y="210" width="10" height="90"/>
+    <rect x="230" y="210" width="10" height="90"/>
+    <rect x="330" y="210" width="10" height="90"/>
+  </g>
+  <g fill="#7f9469">
+    <circle cx="70" cy="205" r="22"/>
+    <circle cx="300" cy="205" r="22"/>
+  </g>
+  <g fill="#a87c53">
+    <rect x="58" y="215" width="24" height="24"/>
+    <rect x="288" y="215" width="24" height="24"/>
+  </g>
+  <rect x="180" y="230" width="70" height="70" rx="6" fill="#c76f55"/>
+</svg>
