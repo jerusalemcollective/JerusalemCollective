@@ -20,6 +20,7 @@ import { sampleListings } from '@/lib/sample-listings'
 import { defaultExploreNeighborhoods } from '@/lib/neighborhoods'
 import { slugifyNeighborhood } from '@/lib/neighborhood-pages'
 import { HomeSearchForm } from '@/components/home-search-form'
+import { PreviewImage } from '@/components/preview-image'
 
 // Draft of the photo-led homepage (option 2: clean cream hero, editorial body).
 // Lives at /preview/home so the live homepage is untouched. Not indexed.
@@ -63,6 +64,7 @@ type FeaturedStay = {
   price_usd: number | null
   is_featured?: boolean | null
   coverPhotoUrl: string | null
+  sample?: boolean
 }
 
 type PopularNeighborhoodRow = {
@@ -93,7 +95,7 @@ const defaultFeatured = sampleListings.map((listing) => toFeaturedStay(listing))
 
 const neighbourhoodIcons: LucideIcon[] = [Building2, Trees, Home, Landmark, MapPin]
 
-// Illustrated Jerusalem scenes stand in until real photos exist.
+// Illustrated Jerusalem scenes are the final fallback behind the stock photos.
 const placeholderScenes = [
   '/preview-placeholders/scene-1.svg',
   '/preview-placeholders/scene-2.svg',
@@ -101,6 +103,50 @@ const placeholderScenes = [
   '/preview-placeholders/scene-4.svg',
   '/preview-placeholders/scene-5.svg',
 ]
+
+// Preview-only real stock photography, fetched in the visitor's browser. Keyed
+// so each card/tile is stable. Swapped for real listing photos in production.
+function stockPhoto(keywords: string, seed: number) {
+  return `https://loremflickr.com/640/480/${keywords}?lock=${seed}`
+}
+function stockFallback(seed: number) {
+  return `https://picsum.photos/seed/jlm-${seed}/640/480`
+}
+
+// Preview-only: pad the grid with sample cards so the dense layout is visible
+// even before real listings exist. Real listings always come first.
+const sampleTitles = [
+  'Sunlit garden apartment',
+  'Stone-walled retreat',
+  'Quiet courtyard flat',
+  'Rooftop studio',
+  'Family maisonette',
+  'Bright city-view home',
+  'Restored heritage flat',
+  'Peaceful lane house',
+]
+
+function padFeatured(stays: FeaturedStay[], neighbourhoods: string[], target: number): FeaturedStay[] {
+  const result = [...stays]
+  let index = 0
+  while (result.length < target) {
+    const area = neighbourhoods[index % neighbourhoods.length] || 'Jerusalem'
+    result.push({
+      id: `sample-${index}`,
+      title: sampleTitles[index % sampleTitles.length],
+      area,
+      bedrooms: (index % 3) + 1,
+      max_guests: (index % 4) + 2,
+      price_ils: null,
+      price_usd: 150 + (index % 5) * 30,
+      is_featured: null,
+      coverPhotoUrl: null,
+      sample: true,
+    })
+    index += 1
+  }
+  return result
+}
 
 function buildCategoryChips(popularNeighborhoods: string[]): CategoryChip[] {
   const neighbourhoodChips = popularNeighborhoods.slice(0, 5).map((area, index) => ({
@@ -126,7 +172,7 @@ async function getHomepageData() {
         .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, amenities, latitude, longitude, is_featured')
         .eq('is_published', true)
         .eq('is_featured', true)
-        .limit(8),
+        .limit(12),
       supabase.rpc('popular_neighborhoods', {
         result_limit: 6,
         lookback_days: 30,
@@ -140,7 +186,7 @@ async function getHomepageData() {
         .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, amenities, latitude, longitude, is_featured')
         .eq('is_published', true)
         .order('created_at', { ascending: false })
-        .limit(8)
+        .limit(12)
 
       featuredRows = (fallbackListingsData || []) as ListingRow[]
     }
@@ -191,7 +237,8 @@ export default async function HomePreviewPage() {
   const { featuredStays, popularNeighborhoods } = await getHomepageData()
   const categoryChips = buildCategoryChips(popularNeighborhoods)
 
-  const tileNeighbourhoods = popularNeighborhoods.slice(0, 4)
+  const displayStays = padFeatured(featuredStays, popularNeighborhoods, 12)
+  const tileNeighbourhoods = popularNeighborhoods.slice(0, 6)
 
   return (
     <div className="min-h-screen bg-[#F8F5F2] text-[#2D2D2D] antialiased">
@@ -249,10 +296,9 @@ export default async function HomePreviewPage() {
             </Link>
           </div>
 
-          {/* Dense photo grid: 2 per row on mobile, 4 across on desktop.
-              Change lg:grid-cols-4 to lg:grid-cols-6 for a denser 6-up. */}
-          <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
-            {featuredStays.map((stay, index) => (
+          {/* Airbnb-style density: 2 on mobile, 3 tablet, 5 desktop, 6 wide. */}
+          <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
+            {displayStays.map((stay, index) => (
               <FeaturedCard key={stay.id} listing={stay} sceneIndex={index} />
             ))}
           </div>
@@ -262,12 +308,13 @@ export default async function HomePreviewPage() {
           <h2 className="font-display mb-5 text-2xl font-bold tracking-tight text-stone-950">
             Explore by neighbourhood
           </h2>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
             {tileNeighbourhoods.map((area, index) => (
               <NeighbourhoodTile
                 key={area}
                 area={area}
                 scene={placeholderScenes[(index + 1) % placeholderScenes.length]}
+                sceneIndex={index}
               />
             ))}
           </div>
@@ -320,13 +367,14 @@ export default async function HomePreviewPage() {
 }
 
 function FeaturedCard({ listing, sceneIndex }: { listing: FeaturedStay; sceneIndex: number }) {
-  const sizes = '(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw'
+  const sizes = '(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw'
   const scene = placeholderScenes[sceneIndex % placeholderScenes.length]
+  const stayHref = listing.sample ? '/stays' : `/listings/${listing.id}?from=stays`
 
   return (
     <div className="group">
-      <Link href={`/listings/${listing.id}?from=stays`} className="block">
-        <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-stone-100 shadow-sm transition-shadow duration-200 group-hover:shadow-md">
+      <Link href={stayHref} className="block">
+        <div className="relative aspect-square overflow-hidden rounded-xl bg-stone-100">
           {listing.coverPhotoUrl ? (
             <Image
               src={listing.coverPhotoUrl}
@@ -337,39 +385,33 @@ function FeaturedCard({ listing, sceneIndex }: { listing: FeaturedStay; sceneInd
               loading="lazy"
             />
           ) : (
-            <div
-              className="h-full w-full bg-cover bg-center transition-transform duration-300 group-hover:scale-105"
-              style={{ backgroundImage: `url('${scene}')` }}
-              role="img"
-              aria-label={`Illustrated placeholder for a stay in ${listing.area}`}
+            <PreviewImage
+              src={stockPhoto('apartment,interior', sceneIndex + 1)}
+              fallbackSrc={stockFallback(sceneIndex + 1)}
+              scene={scene}
+              alt={`Example interior for a stay in ${listing.area}`}
             />
           )}
         </div>
       </Link>
 
-      <div className="mt-3 space-y-0.5">
-        <Link
-          href={`/neighbourhoods/${slugifyNeighborhood(listing.area)}`}
-          className="block text-[11px] font-bold uppercase tracking-widest text-[#c76f55] hover:underline"
-        >
-          {listing.area}
-        </Link>
-        <Link href={`/listings/${listing.id}?from=stays`} className="block space-y-0.5">
+      <div className="mt-2.5">
+        <Link href={stayHref} className="block">
           <p className="line-clamp-1 text-sm font-semibold leading-snug text-stone-950">
             {listing.title}
           </p>
-          <p className="text-sm text-stone-500">
+          <p className="text-[13px] text-stone-500">
             {[
-              listing.bedrooms ? `${listing.bedrooms} bed` : null,
+              listing.area,
               listing.max_guests ? `sleeps ${listing.max_guests}` : null,
             ]
               .filter(Boolean)
               .join(' · ')}
           </p>
-          <p className="pt-1 text-sm font-semibold text-stone-950">
-            {formatFeaturedPrice(listing)}
+          <p className="pt-0.5 text-sm text-stone-950">
+            <span className="font-semibold">{formatFeaturedPrice(listing)}</span>
             {(listing.price_ils || listing.price_usd) && (
-              <span className="font-normal text-stone-500"> / night</span>
+              <span className="text-stone-500"> night</span>
             )}
           </p>
         </Link>
@@ -378,14 +420,27 @@ function FeaturedCard({ listing, sceneIndex }: { listing: FeaturedStay; sceneInd
   )
 }
 
-function NeighbourhoodTile({ area, scene }: { area: string; scene: string }) {
+function NeighbourhoodTile({
+  area,
+  scene,
+  sceneIndex,
+}: {
+  area: string
+  scene: string
+  sceneIndex: number
+}) {
   return (
     <Link
       href={`/neighbourhoods/${slugifyNeighborhood(area)}`}
-      className="group relative flex aspect-[4/3] items-end overflow-hidden rounded-2xl bg-stone-200 bg-cover bg-center p-3 shadow-sm transition-shadow hover:shadow-md"
-      style={{ backgroundImage: `url('${scene}')` }}
+      className="group relative flex aspect-[4/3] items-end overflow-hidden rounded-2xl bg-stone-200 p-3 shadow-sm transition-shadow hover:shadow-md"
     >
-      <span className="absolute inset-0 bg-black/20 transition group-hover:bg-black/30" aria-hidden="true" />
+      <PreviewImage
+        src={stockPhoto('jerusalem,architecture,street', sceneIndex + 20)}
+        fallbackSrc={stockFallback(sceneIndex + 20)}
+        scene={scene}
+        alt={`${area} neighbourhood`}
+      />
+      <span className="absolute inset-0 bg-black/25 transition group-hover:bg-black/35" aria-hidden="true" />
       <span className="relative text-sm font-semibold text-white drop-shadow">{area}</span>
     </Link>
   )
