@@ -57,7 +57,7 @@ export default async function BookingsPage({
   // webhook has necessarily finished. Derive the banner from the actual latest
   // payment so we never claim "confirmed" when the booking failed or is still
   // finalising.
-  let paymentNotice: 'confirmed' | 'review' | 'processing' | null = null
+  let paymentNotice: 'confirmed' | 'review' | 'processing' | 'failed' | null = null
   if (payment === 'success') {
     const { data: latestPayment } = await supabase
       .from('booking_payments')
@@ -75,6 +75,8 @@ export default async function BookingsPage({
       paymentNotice = 'review'
     } else if (latestPayment?.status === 'paid' || latestPayment?.booking_id) {
       paymentNotice = 'confirmed'
+    } else if (latestPayment?.status === 'failed') {
+      paymentNotice = 'failed'
     } else {
       paymentNotice = 'processing'
     }
@@ -117,6 +119,18 @@ export default async function BookingsPage({
             <p className="font-semibold">Payment received — we&rsquo;re confirming this manually.</p>
             <p className="mt-1 text-amber-800">
               Something needed a closer look on our end. Your payment is safe, and the JLM Collective team will contact you shortly to confirm your stay.
+            </p>
+          </div>
+        )}
+
+        {paymentNotice === 'failed' && (
+          <div
+            role="status"
+            className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+          >
+            <p className="font-semibold">Your payment didn&rsquo;t go through.</p>
+            <p className="mt-1 text-red-700">
+              No charge was completed and no booking was made. Please try booking again, or contact us if you need help.
             </p>
           </div>
         )}

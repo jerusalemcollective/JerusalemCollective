@@ -179,6 +179,10 @@ export async function POST(request: Request) {
   const siteUrl = getSiteUrl(request)
   const checkoutParams = new URLSearchParams()
   checkoutParams.set('mode', 'payment')
+  // Pin card-only so Stripe never offers an asynchronous method (bank debits
+  // etc.) that could complete checkout before the money settles. The webhook's
+  // payment_status guard is the primary fix; this is belt-and-suspenders.
+  checkoutParams.set('payment_method_types[0]', 'card')
   checkoutParams.set('client_reference_id', listingId)
   checkoutParams.set('success_url', `${siteUrl}/account/bookings?payment=success`)
   checkoutParams.set('cancel_url', `${siteUrl}/listings/${listingId}?payment=cancelled`)
