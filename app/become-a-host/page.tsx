@@ -457,7 +457,7 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
 
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
     if (!apiKey) {
-      console.log('[v0] No Google Maps API key found')
+      console.error('No Google Maps API key found')
       setLoadError('Address lookup is not configured yet. You can still type the address manually.')
       setIsLoading(false)
       return
@@ -481,7 +481,7 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
         setLoadError('')
         setIsLoading(false)
       } catch (err) {
-        console.log('[v0] Error initializing autocomplete:', err)
+        console.error('Error initializing autocomplete:', err)
 
         if (isMounted) {
           setLoadError('Google address lookup is unavailable right now. Type the address manually and continue.')
@@ -572,7 +572,7 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
         setIsOpen(nextSuggestions.length > 0)
         setHighlightedIndex(-1)
       } catch (error) {
-        console.log('[v0] Google address lookup error:', error instanceof Error ? error.message : error)
+        console.error('Google address lookup error:', error instanceof Error ? error.message : error)
         if (currentRequestId === requestIdRef.current) {
           setSuggestions([])
           setIsOpen(false)
@@ -649,7 +649,7 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
         })
       }
     } catch (error) {
-      console.log('[v0] Google address selection error:', error instanceof Error ? error.message : error)
+      console.error('Google address selection error:', error instanceof Error ? error.message : error)
       setLoadError('Google address lookup is unavailable right now. Type the address manually and continue.')
     }
   }

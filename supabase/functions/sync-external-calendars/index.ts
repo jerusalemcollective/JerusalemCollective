@@ -102,7 +102,17 @@ Deno.serve(async () => {
           source: 'external_calendar',
         }))
 
-        await supabase.from('listing_unavailable_ranges').insert(rows)
+        const { error: insertError } = await supabase
+          .from('listing_unavailable_ranges')
+          .insert(rows)
+
+        // The old blocks were already deleted above; if the re-import fails we
+        // must NOT mark the listing synced, or it would show imported dates as
+        // available. Skip to the next listing so this one retries next run.
+        if (insertError) {
+          console.error('Failed to import calendar blocks for listing', listing.id, insertError)
+          continue
+        }
       }
 
       await supabase

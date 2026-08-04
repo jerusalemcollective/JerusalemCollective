@@ -398,12 +398,15 @@ async function loadListings({
     listingsQuery = listingsQuery.gte('max_guests', guests)
   }
 
+  // The price filter is expressed in USD. ILS-only listings have a null
+  // price_usd; include them rather than dropping them (null >= x is not true in
+  // Postgres, which would silently hide every ILS-only stay).
   if (minPrice) {
-    listingsQuery = listingsQuery.gte('price_usd', minPrice)
+    listingsQuery = listingsQuery.or(`price_usd.gte.${minPrice},price_usd.is.null`)
   }
 
   if (maxPrice) {
-    listingsQuery = listingsQuery.lte('price_usd', maxPrice)
+    listingsQuery = listingsQuery.or(`price_usd.lte.${maxPrice},price_usd.is.null`)
   }
 
   amenityLabels.forEach((amenity) => {

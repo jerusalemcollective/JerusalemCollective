@@ -144,7 +144,7 @@ export function HomeSearchForm() {
           sessionToken.current = places.AutocompleteSessionToken ? new places.AutocompleteSessionToken() : null
         }
       } catch {
-        console.log('[v0] Google Places library not available, using local fallback')
+        console.error('Google Places library not available, using local fallback')
       }
     }
 
@@ -244,7 +244,7 @@ export function HomeSearchForm() {
           setPlacePredictions(localMatches.map((text) => ({ text, isGoogle: false })))
         }
       } catch (error) {
-        console.log('[v0] Google Places error, using local fallback:', error instanceof Error ? error.message : error)
+        console.error('Google Places error, using local fallback:', error instanceof Error ? error.message : error)
         setIsLoadingPlaces(false)
         setPlacePredictions(localMatches.map((text) => ({ text, isGoogle: false })))
       }
