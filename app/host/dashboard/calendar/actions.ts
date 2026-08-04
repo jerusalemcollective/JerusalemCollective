@@ -33,13 +33,21 @@ export async function blockDateRange(formData: FormData) {
     throw new Error('Listing not found.')
   }
 
+  // Store the block end-exclusive (the day AFTER the host's last blocked day),
+  // matching the half-open overlap used everywhere availability is checked
+  // (booking/ICS ranges already store end_date = checkout). Without this a
+  // single-day block (start == end) left its own day bookable.
+  const exclusiveEnd = new Date(`${endDate}T00:00:00.000Z`)
+  exclusiveEnd.setUTCDate(exclusiveEnd.getUTCDate() + 1)
+  const endDateExclusive = exclusiveEnd.toISOString().slice(0, 10)
+
   const { error } = await supabase
     .from('listing_unavailable_ranges')
     .insert({
       listing_id: listingId,
       host_id: host.id,
       start_date: startDate,
-      end_date: endDate,
+      end_date: endDateExclusive,
       reason,
       source: 'manual',
     })

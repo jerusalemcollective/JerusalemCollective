@@ -48,6 +48,8 @@ export default async function ReviewsPage({
     .select('id, listing_id, check_in, check_out, listings(title)')
     .eq('user_id', user.id)
     .lt('check_out', today)
+    // A cancelled stay never happened, so it isn't reviewable.
+    .neq('status', 'cancelled')
     .order('check_out', { ascending: false })
 
   const completedBookings = z.array(completedBookingSchema).parse(bookingRows ?? [])

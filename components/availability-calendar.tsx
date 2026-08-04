@@ -22,13 +22,22 @@ function startOfToday() {
   return new Date(today.getFullYear(), today.getMonth(), today.getDate())
 }
 
+// Blocked ranges are stored end-exclusive (end_date = checkout / day-after-block),
+// to match the half-open overlap used for availability. react-day-picker's `to`
+// is inclusive, so grey through end_date - 1 and leave the turnover day bookable.
+function blockedRangeInclusiveEnd(endDate: string) {
+  const date = parseLocalDate(endDate)
+  date.setDate(date.getDate() - 1)
+  return date
+}
+
 export function AvailabilityCalendar({ blockedRanges }: AvailabilityCalendarProps) {
   const disabledDates = useMemo(
     () => [
       { before: startOfToday() },
       ...blockedRanges.map((range) => ({
         from: parseLocalDate(range.start_date),
-        to: parseLocalDate(range.end_date),
+        to: blockedRangeInclusiveEnd(range.end_date),
       })),
     ],
     [blockedRanges],

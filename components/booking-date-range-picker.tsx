@@ -38,6 +38,15 @@ function parseLocalDate(value: string) {
   return new Date(year, month - 1, day)
 }
 
+// Blocked ranges are stored end-exclusive (end_date = checkout / day-after-block).
+// react-day-picker's `to` is inclusive, so grey through end_date - 1 so a
+// same-day turnover check-in stays selectable.
+function blockedRangeInclusiveEnd(endDate: string) {
+  const date = parseLocalDate(endDate)
+  date.setDate(date.getDate() - 1)
+  return date
+}
+
 export function BookingDateRangePicker({
   dateRange,
   setDateRange,
@@ -49,7 +58,7 @@ export function BookingDateRangePicker({
     { before: new Date() },
     ...blockedRanges.map((range) => ({
       from: parseLocalDate(range.start_date),
-      to: parseLocalDate(range.end_date),
+      to: blockedRangeInclusiveEnd(range.end_date),
     })),
   ]
   const selectedRange: DayPickerDateRange | undefined = dateRange.from
