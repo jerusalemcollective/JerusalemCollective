@@ -5,21 +5,21 @@ import { createAdminListing } from '@/app/admin/listing-actions'
 type HostOption = {
   id: string
   name: string | null
-  email: string | null
   listing_blocked: boolean | null
 }
 
 export default async function NewAdminListingPage() {
   const { supabase } = await requireAdminPermission('listings')
+  // email intentionally not selected — the authenticated (admin) role can no
+  // longer read hosts.email after migration 074, and the picker only needs a label.
   const { data } = await supabase
     .from('hosts')
-    .select('id, name, email, listing_blocked')
+    .select('id, name, listing_blocked')
     .order('name', { ascending: true })
 
   const hosts: HostOption[] = (data || []).map((host: HostOption) => ({
     id: host.id,
     name: host.name,
-    email: host.email,
     listing_blocked: host.listing_blocked,
   }))
   const availableHosts = hosts.filter((host) => !host.listing_blocked)
@@ -48,7 +48,7 @@ export default async function NewAdminListingPage() {
               <option value="">Select a host...</option>
               {availableHosts.map((host) => (
                 <option key={host.id} value={host.id}>
-                  {host.name || host.email || host.id}
+                  {host.name || host.id}
                 </option>
               ))}
             </select>

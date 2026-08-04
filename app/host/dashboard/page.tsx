@@ -33,7 +33,7 @@ type HostCalendar = {
 }
 
 export default async function HostDashboardPage() {
-  const { supabase, hostIds } = await requireHostDashboardAccess()
+  const { supabase, hostIds, host } = await requireHostDashboardAccess()
   const today = new Date().toISOString().slice(0, 10)
 
   const [
@@ -93,12 +93,11 @@ export default async function HostDashboardPage() {
         .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
+    // calendar_token is no longer readable via a user-scoped table select
+    // (migration 074); this definer returns only the caller's own token.
     supabase
-      .from('hosts')
-      .select('name, calendar_token')
-      .in('id', hostIds)
-      .limit(1)
-      .maybeSingle(),
+      .rpc('get_my_host_contact')
+      .maybeSingle<{ host_id: string; email: string | null; calendar_token: string | null }>(),
   ])
 
   const newEnquiries = newEnquiryCount || 0
@@ -125,7 +124,7 @@ export default async function HostDashboardPage() {
     : null
   const hostCalendar: HostCalendar | null = hostCalendarData
     ? {
-        name: hostCalendarData.name,
+        name: host.name,
         calendar_token: hostCalendarData.calendar_token,
       }
     : null

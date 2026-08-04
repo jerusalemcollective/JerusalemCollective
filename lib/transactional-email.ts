@@ -1,6 +1,16 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { createClient as createServiceRoleClient, type SupabaseClient } from '@supabase/supabase-js'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.jlmcollective.co'
+
+// After migration 074 the authenticated role can no longer read hosts.email, so
+// reads that need a host's email must use the service role (this is a server-only
+// module). Falls back to the passed client only if the service key is missing.
+function hostReader(fallback: SupabaseClient): SupabaseClient {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) return fallback
+  return createServiceRoleClient(url, key)
+}
 
 type HostEmailRow = {
   id: string
@@ -75,7 +85,7 @@ export async function sendHostAdminUpdateEmail({
   ctaLabel?: string
 }) {
   try {
-    const { data: host } = await supabase
+    const { data: host } = await hostReader(supabase)
       .from('hosts')
       .select('id, name, email')
       .eq('id', hostId)
@@ -114,7 +124,7 @@ export async function sendListingHostAdminUpdateEmail({
   ctaLabel?: string
 }) {
   try {
-    const { data: listing } = await supabase
+    const { data: listing } = await hostReader(supabase)
       .from('listings')
       .select('id, title, host_id, hosts(name, email)')
       .eq('id', listingId)
@@ -155,7 +165,7 @@ export async function sendHostNewEnquiryEmail({
     if (!request?.host_id || !request.listing_id) return false
 
     const [{ data: host }, { data: listing }, { data: guest }] = await Promise.all([
-      supabase
+      hostReader(supabase)
         .from('hosts')
         .select('id, name, email, notify_new_enquiry_email')
         .eq('id', request.host_id)
@@ -216,7 +226,7 @@ export async function sendHostNewMessageEmail({
     if (!conversation || conversation.participant_1 !== senderId) return false
 
     const [{ data: host }, { data: listing }, { data: guest }, { data: message }] = await Promise.all([
-      supabase
+      hostReader(supabase)
         .from('hosts')
         .select('id, name, email, notify_messages_email')
         .or(`id.eq.${conversation.participant_2},user_id.eq.${conversation.participant_2}`)
@@ -289,7 +299,7 @@ export async function sendGuestNewMessageEmail({
     }
 
     const [{ data: hostCandidates }, { data: listing }, { data: guest }, { data: message }] = await Promise.all([
-      supabase
+      hostReader(supabase)
         .from('hosts')
         .select('id, user_id, name, display_name, email, notify_messages_email')
         .or(`id.eq.${conversation.participant_2},user_id.eq.${conversation.participant_2},id.eq.${senderId},user_id.eq.${senderId}`),

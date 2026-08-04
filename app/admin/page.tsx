@@ -58,7 +58,7 @@ export default async function AdminOverviewPage() {
     supabase.from('host_applications').select('*', { count: 'exact', head: true }).eq('status', 'new'),
     supabase.from('listings').select('*', { count: 'exact', head: true }).eq('is_published', true),
     supabase.from('listings').select('*', { count: 'exact', head: true }).eq('is_published', false),
-    supabase.from('hosts').select('*', { count: 'exact', head: true }),
+    supabase.from('hosts').select('id', { count: 'exact', head: true }),
     supabase.from('booking_requests').select('*', { count: 'exact', head: true }).eq('status', 'new'),
     supabase
       .from('host_applications')

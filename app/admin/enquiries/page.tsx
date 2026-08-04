@@ -27,7 +27,6 @@ type EnquiryRow = {
   } | null
   hosts?: {
     name: string
-    email: string | null
   } | null
 }
 
@@ -71,7 +70,7 @@ export default async function AdminEnquiriesPage({
       id, listing_id, host_id, guest_id, status, check_in, check_out,
       guests, message, conversation_id, created_at,
       listings(title, area),
-      hosts(name, email),
+      hosts(name),
       guest:profiles!booking_requests_guest_id_fkey(full_name, phone)
     `)
     .order('created_at', { ascending: false })

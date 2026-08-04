@@ -11,9 +11,12 @@ export async function requireHostDashboardAccess() {
     redirect('/login?redirect=/host/dashboard')
   }
 
+  // email is intentionally NOT selected here: after migration 074 the
+  // authenticated role can't read hosts.email, and nothing consumes host.email
+  // from this guard. A host's own email is available via get_my_host_contact().
   const { data: host } = await supabase
     .from('hosts')
-    .select('id, user_id, name, display_name, email, host_type, is_verified')
+    .select('id, user_id, name, display_name, host_type, is_verified')
     .or(`id.eq.${user.id},user_id.eq.${user.id}`)
     .limit(1)
     .maybeSingle()
@@ -49,7 +52,6 @@ export async function requireHostDashboardAccess() {
       user_id: user.id,
       name: user.user_metadata?.full_name || user.email || 'Host',
       display_name: user.user_metadata?.name || null,
-      email: user.email || null,
       host_type: null,
       is_verified: false,
     },
