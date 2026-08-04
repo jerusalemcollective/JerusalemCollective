@@ -871,6 +871,8 @@ function getUploadFailureMessage(fileName: string, message?: string) {
     : `Failed to upload ${fileName}. Please try again.`
 }
 
+const AGENCY_AGREEMENT_STORAGE_KEY = 'jlm.agencyAgreementAccepted'
+
 export default function BecomeAHostPage() {
   const [step, setStep] = useState(0)
   const [form, setForm] = useState<FormState>(initialForm)
@@ -886,6 +888,8 @@ export default function BecomeAHostPage() {
   const [requiresHostTermsAcceptance, setRequiresHostTermsAcceptance] = useState(true)
   const [hostTermsAcceptedAt, setHostTermsAcceptedAt] = useState<string | null>(null)
   const [showHostTermsModal, setShowHostTermsModal] = useState(false)
+  const [agencyAccepted, setAgencyAccepted] = useState(false)
+  const [agencyGateReady, setAgencyGateReady] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
   const [aiSuggestion, setAiSuggestion] = useState<AiSuggestion | null>(null)
@@ -910,6 +914,47 @@ export default function BecomeAHostPage() {
   const progress = useMemo(() => {
     return Math.round(((step + 1) / steps.length) * 100)
   }, [step])
+
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(AGENCY_AGREEMENT_STORAGE_KEY) === '1') {
+        setAgencyAccepted(true)
+      }
+    } catch {
+      // localStorage unavailable (private mode / SSR) — show the gate.
+    }
+    setAgencyGateReady(true)
+  }, [])
+
+  const acceptAgencyAgreement = () => {
+    try {
+      window.localStorage.setItem(AGENCY_AGREEMENT_STORAGE_KEY, '1')
+    } catch {
+      // Non-fatal: acceptance just won't persist across reloads.
+    }
+    setAgencyAccepted(true)
+  }
+
+  // Uploaded files (photos + verification/ID docs) live only in memory — the draft
+  // autosave strips them out because File objects can't be serialised to localStorage.
+  // So warn before an unload would discard them, instead of a persistent inline banner.
+  const hasUnsavedUploads =
+    form.photos.length > 0 || form.verification_doc !== null || form.id_doc !== null
+
+  useEffect(() => {
+    if (!hasUnsavedUploads || success) return
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      // Browsers show their own generic "Leave site?" text; the return value is
+      // required for the prompt to appear at all.
+      event.returnValue = ''
+      return ''
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasUnsavedUploads, success])
 
   const stepIssues = useMemo(() => {
     return steps.map((_, index) => getStepIssues(index))
@@ -1805,6 +1850,41 @@ async function handleSubmit() {
 
   return (
     <main className="min-h-screen bg-[#F8F5F2] text-[#252525]">
+      {agencyGateReady && !agencyAccepted && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-stone-950/60 px-4 py-6">
+          <div className="flex max-h-[88vh] w-full max-w-lg flex-col rounded-3xl bg-white shadow-2xl">
+            <div className="border-b border-stone-100 px-6 py-5">
+              <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
+                Before you start
+              </p>
+              <h2 className="mt-1 text-2xl font-bold text-stone-950">Agency agreement</h2>
+            </div>
+            <div className="overflow-y-auto px-6 py-5">
+              <p className="text-sm leading-6 text-stone-700">
+                By listing with JLM Collective you appoint us as your agent to market, advertise, and
+                let your Jerusalem property on your behalf. Our agency fee is deducted from booking
+                proceeds. You remain the property owner and are party to any booking agreement with
+                guests.
+              </p>
+            </div>
+            <div className="flex flex-col-reverse gap-3 border-t border-stone-100 px-6 py-5 sm:flex-row sm:justify-end">
+              <Link
+                href="/"
+                className="inline-flex items-center justify-center rounded-full border border-stone-200 px-5 py-3 text-sm font-bold text-stone-700 transition hover:border-stone-400"
+              >
+                Not now
+              </Link>
+              <button
+                type="button"
+                onClick={acceptAgencyAgreement}
+                className="inline-flex items-center justify-center rounded-full bg-stone-950 px-6 py-3 text-sm font-semibold text-white transition hover:bg-stone-800"
+              >
+                Agree &amp; continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <section className="mx-auto max-w-6xl px-6 py-10 md:py-16">
         <div className="mb-10 grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
           <div>
@@ -1891,9 +1971,7 @@ async function handleSubmit() {
           <div className="mb-8 rounded-3xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-800">
             <p className="font-bold">Some sections still need information</p>
             <p className="mt-1 text-amber-700">
-              {restoredDraft
-                ? 'Your written details were saved, but uploaded files must be added again after signing out or refreshing.'
-                : 'Complete the highlighted sections before submitting your stay.'}
+              Complete the highlighted sections before submitting your stay.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               {incompleteStepNames.map((item) => (
@@ -1951,15 +2029,6 @@ async function handleSubmit() {
           </aside>
 
           <section className="rounded-[2rem] bg-white p-6 shadow-xl ring-1 ring-stone-200 md:p-10">
-            <div className="mb-8 rounded-2xl bg-[#F8F5F2] p-5">
-              <p className="font-semibold text-stone-950">
-                Agency agreement
-              </p>
-              <p className="mt-1 text-sm leading-6 text-stone-600">
-                By listing with JLM Collective you appoint us as your agent to market, advertise, and let your Jerusalem property on your behalf. Our agency fee is deducted from booking proceeds. You remain the property owner and are party to any booking agreement with guests.
-              </p>
-            </div>
-
             {error && (
               <div className="mb-6 rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-700">
                 {error}

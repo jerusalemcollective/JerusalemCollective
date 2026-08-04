@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation'
 import { AccountProfileForm } from '@/components/account-profile-form'
-import { AccountMenu } from '@/components/account-menu'
 import { WelcomeBanner } from '@/components/welcome-banner'
 import { createClient } from '@/lib/supabase/server'
 
@@ -72,16 +71,13 @@ export default async function AccountPage() {
           <p className="mt-1.5 text-sm text-stone-600">Profile, trips, saved stays, messages, and support.</p>
         </header>
 
-        <div className="grid gap-5 md:grid-cols-[240px_1fr]">
-          <AccountMenu hasStay={hasStay} isAdmin={Boolean(typedProfile?.is_admin)} />
-          <div>
-            {isNewGuest && <WelcomeBanner />}
-            <AccountProfileForm
-              user={{ id: user.id, email: userEmail }}
-              profile={typedProfile}
-              hasStay={hasStay}
-            />
-          </div>
+        <div>
+          {isNewGuest && <WelcomeBanner />}
+          <AccountProfileForm
+            user={{ id: user.id, email: userEmail }}
+            profile={typedProfile}
+            hasStay={hasStay}
+          />
         </div>
       </div>
     </div>

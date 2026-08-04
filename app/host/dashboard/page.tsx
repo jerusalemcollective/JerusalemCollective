@@ -151,7 +151,7 @@ export default async function HostDashboardPage() {
             href="/become-a-host"
             className="inline-flex w-fit rounded-full bg-stone-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-stone-800"
           >
-            Add another stay
+            {totalListings === 0 ? 'List your first stay' : 'Add another stay'}
           </Link>
         </header>
 

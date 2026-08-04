@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 
 type StaysNeighborhoodNavProps = {
@@ -18,6 +18,31 @@ export function StaysNeighborhoodNav({
 }: StaysNeighborhoodNavProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    function handlePointerDown(event: PointerEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setIsOpen(false)
+      }
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isOpen])
   const visibleAreas = useMemo(() => {
     const selectedExtra =
       selectedArea !== 'All' && !featuredNeighborhoods.includes(selectedArea)
@@ -55,7 +80,7 @@ export function StaysNeighborhoodNav({
         />
       ))}
 
-      <div className="relative">
+      <div className="relative" ref={dropdownRef}>
         <button
           type="button"
           onClick={() => setIsOpen((open) => !open)}
