@@ -73,9 +73,27 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} ${display.variable} font-sans antialiased bg-[#F8F5F2] text-[#252525]`}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Organization',
+              name: 'JLM Collective',
+              url: 'https://jlmcollective.co',
+              logo: 'https://jlmcollective.co/logos/JLM_Collective_Primary_Horizontal_Terracotta_UI.webp',
+            }),
+          }}
+        />
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-stone-900 focus:shadow"
+        >
+          Skip to content
+        </a>
         <Header servicesBarEnabled={servicesBarEnabled} />
         <SessionTimeout />
-        <main>{children}</main>
+        <main id="main-content">{children}</main>
         <Footer />
         <Toaster richColors position="top-center" />
         {process.env.NODE_ENV === 'production' && <Analytics />}

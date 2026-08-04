@@ -21,6 +21,5 @@ export default function robots(): MetadataRoute.Robots {
       ],
     },
     sitemap: 'https://jlmcollective.co/sitemap.xml',
-    host: 'https://jlmcollective.co',
   }
 }

@@ -585,7 +585,14 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(cleanJsonLd) }}
+        dangerouslySetInnerHTML={{
+          // Escape so host/review text containing </script> or < can't break
+          // out of the JSON-LD block (stored XSS on a public, indexed page).
+          __html: JSON.stringify(cleanJsonLd)
+            .replace(/</g, '\\u003c')
+            .replace(/>/g, '\\u003e')
+            .replace(/&/g, '\\u0026'),
+        }}
       />
       {paymentCancelled && (
         <div role="status" className="mx-auto max-w-6xl px-4 pt-4">

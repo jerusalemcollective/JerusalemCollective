@@ -284,9 +284,13 @@ export function HomeSearchForm() {
       <div className="grid grid-cols-1 divide-y divide-stone-100 md:grid-cols-[1.45fr_1fr_1fr_auto] md:divide-x md:divide-y-0">
         <div className="relative" ref={neighbourhoodRef}>
           <div className="flex flex-col rounded-2xl px-5 py-3 text-left transition focus-within:bg-[#faf8f6] focus-within:ring-2 focus-within:ring-stone-400">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-stone-900">Neighbourhood</span>
+            <label htmlFor="home-neighbourhood" className="text-[11px] font-bold uppercase tracking-widest text-stone-900">
+              Neighbourhood
+            </label>
             <input
+              id="home-neighbourhood"
               type="text"
+              aria-label="Search by neighbourhood"
               value={neighbourhood}
               onChange={(event) => {
                 setNeighbourhood(event.target.value)
