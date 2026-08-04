@@ -362,6 +362,35 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
 
         const listingMap = new Map(listingRows.map((listing) => [listing.id, listing]))
         const profileMap = new Map(profileRows.map((profile) => [profile.id, profile]))
+
+        // Legacy "message host" threads (created before conversations were
+        // unified on COALESCE(hosts.user_id, hosts.id)) carry
+        // participant_2 = hosts.id, which is not resolvable via profileMap.
+        // Without this the guest sees the literal "Host". Resolve the display
+        // name from the publicly-readable hosts table (by id or user_id).
+        // Guest mode only; in host mode the other participant is always a guest.
+        const unresolvedHostParticipantIds =
+          mode === 'guest'
+            ? Array.from(new Set(otherParticipantIds.filter((id) => id && !profileMap.has(id))))
+            : []
+        const hostParticipantMap = new Map<string, ParticipantProfile>()
+        if (unresolvedHostParticipantIds.length > 0) {
+          const idList = unresolvedHostParticipantIds.join(',')
+          const { data: hostProfiles } = await supabase
+            .from('hosts')
+            .select('id, user_id, name, display_name, profile_photo_url')
+            .or(`id.in.(${idList}),user_id.in.(${idList})`)
+          for (const host of hostProfiles || []) {
+            const entry: ParticipantProfile = {
+              id: host.id,
+              full_name: host.display_name || host.name || null,
+              avatar_url: host.profile_photo_url || null,
+            }
+            if (host.id) hostParticipantMap.set(host.id, entry)
+            if (host.user_id) hostParticipantMap.set(host.user_id, entry)
+          }
+        }
+
         const requestByConversation = new Map<string, BookingRequestSummary>()
         requestRows.forEach((request) => {
           if (request.conversation_id && !requestByConversation.has(request.conversation_id)) {

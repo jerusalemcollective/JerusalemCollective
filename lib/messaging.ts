@@ -55,11 +55,26 @@ export async function getOrCreateConversation(
   hostId: string,
   listingId: string,
 ) {
+  // Resolve the host to the SAME value create_listing_enquiry uses
+  // (COALESCE(hosts.user_id, hosts.id)), so the "message host" and "request to
+  // book" paths converge on one conversation row instead of fragmenting on the
+  // unique (participant_1, participant_2, listing_id) index. hostId here is
+  // listing.host_id = hosts.id; a split-identity host has hosts.user_id <> hosts.id.
+  let resolvedHostId = hostId
+  const { data: hostRow, error: hostLookupError } = await supabase
+    .from('hosts')
+    .select('user_id')
+    .eq('id', hostId)
+    .maybeSingle()
+
+  if (hostLookupError) throw hostLookupError
+  if (hostRow?.user_id) resolvedHostId = hostRow.user_id
+
   const { data: existing, error: existingError } = await supabase
     .from('conversations')
     .select('id')
     .eq('participant_1', guestId)
-    .eq('participant_2', hostId)
+    .eq('participant_2', resolvedHostId)
     .eq('listing_id', listingId)
     .maybeSingle()
 
@@ -70,7 +85,7 @@ export async function getOrCreateConversation(
     .from('conversations')
     .insert({
       participant_1: guestId,
-      participant_2: hostId,
+      participant_2: resolvedHostId,
       listing_id: listingId,
     })
     .select('id')
