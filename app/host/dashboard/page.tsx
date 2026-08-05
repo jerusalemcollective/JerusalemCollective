@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { HostDashboardNav } from '@/components/host-dashboard-nav'
 import { CopyCalendarUrlButton } from '@/components/copy-calendar-url-button'
+import { DraftListingCard } from '@/components/draft-listing-card'
 
 type UpcomingBooking = {
   id: string
@@ -154,6 +155,8 @@ export default async function HostDashboardPage() {
             {totalListings === 0 ? 'List your first stay' : 'Add another stay'}
           </Link>
         </header>
+
+        <DraftListingCard />
 
         <section className="border-b border-stone-200 py-6">
           {newEnquiries > 0 ? (
