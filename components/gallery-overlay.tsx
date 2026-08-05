@@ -39,6 +39,7 @@ export function GalleryOverlay({
   onIndexChange,
 }: GalleryOverlayProps) {
   const total = photos.length
+  const dialogRef = useRef<HTMLDivElement | null>(null)
   const touchStartX = useRef<number | null>(null)
   const touchStartY = useRef<number | null>(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -59,6 +60,26 @@ export function GalleryOverlay({
       if (event.key === 'ArrowLeft') prev()
       if (event.key === 'ArrowRight') next()
       if (event.key === 'Escape') onClose()
+      if (event.key === 'Tab') {
+        // Trap focus inside the dialog.
+        const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        )
+        if (!focusable || focusable.length === 0) {
+          event.preventDefault()
+          dialogRef.current?.focus()
+          return
+        }
+        const first = focusable[0]
+        const last = focusable[focusable.length - 1]
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault()
+          last.focus()
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault()
+          first.focus()
+        }
+      }
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
@@ -66,8 +87,12 @@ export function GalleryOverlay({
 
   useEffect(() => {
     document.body.style.overflow = 'hidden'
+    // Move focus into the dialog on open, restore it to the trigger on close.
+    const previouslyFocused = document.activeElement as HTMLElement | null
+    dialogRef.current?.focus()
     return () => {
       document.body.style.overflow = ''
+      previouslyFocused?.focus?.()
     }
   }, [])
 
@@ -106,7 +131,14 @@ export function GalleryOverlay({
   const currentLabel = currentPhoto?.label?.trim()
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-white">
+    <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Photos of ${title}`}
+      tabIndex={-1}
+      className="fixed inset-0 z-50 flex flex-col bg-white outline-none"
+    >
       <div className="flex shrink-0 items-center justify-between border-b border-stone-100 bg-white px-6 py-4">
         <div>
           <p className="text-sm font-semibold text-stone-950">{title}</p>

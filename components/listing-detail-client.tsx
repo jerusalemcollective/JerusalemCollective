@@ -8,12 +8,19 @@ import { createClient } from '@/lib/supabase/client'
 import { BookingDateRangePicker } from '@/components/booking-date-range-picker'
 import { GalleryOverlay } from '@/components/gallery-overlay'
 import { MessageHostDialog } from '@/components/message-host-dialog'
-import { ListingNeighbourhoodMap } from '@/components/listing-neighbourhood-map'
+import dynamic from 'next/dynamic'
 import { SaveListingButton } from '@/components/save-listing-button'
 import { AmenityDisplay } from '@/components/amenity-display'
 import { recordListingView } from '@/components/recently-viewed'
 import { recordListingEngagement } from '@/lib/listing-engagement'
 import { formatListingPrice, formatPrice } from '@/lib/utils/currency'
+
+// Google Maps (@react-google-maps/api) is heavy; load it only in the browser,
+// on demand, so it doesn't ship in or block this high-traffic SEO page.
+const ListingNeighbourhoodMap = dynamic(
+  () => import('@/components/listing-neighbourhood-map').then((mod) => mod.ListingNeighbourhoodMap),
+  { ssr: false },
+)
 
 type DateRange = {
   from?: Date
