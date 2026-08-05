@@ -9,7 +9,7 @@ export const metadata = {
 
 export default function CalendarSyncHelpPage() {
   return (
-    <main className="min-h-screen bg-[#F8F5F2] px-5 py-10 text-[#252525] md:px-6">
+    <div className="min-h-screen bg-[#F8F5F2] px-5 py-10 text-[#252525] md:px-6">
       <section className="mx-auto max-w-3xl rounded-3xl bg-white p-6 shadow-sm md:p-8">
         <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Host help</p>
         <h1 className="font-display mt-2 text-3xl font-bold text-stone-950">How to find your iCal URL</h1>
@@ -43,7 +43,7 @@ export default function CalendarSyncHelpPage() {
           Back to listings
         </Link>
       </section>
-    </main>
+    </div>
   )
 }
 

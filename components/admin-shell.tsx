@@ -9,7 +9,7 @@ export function AdminShell({
   children: React.ReactNode
 }) {
   return (
-    <main className="min-h-screen bg-[#F8F5F2] px-5 py-8 text-[#252525] md:px-6">
+    <div className="min-h-screen bg-[#F8F5F2] px-5 py-8 text-[#252525] md:px-6">
       <section className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[210px_1fr]">
         <aside className="h-fit lg:sticky lg:top-8">
           <div className="mb-5">
@@ -21,6 +21,6 @@ export function AdminShell({
 
         <div className="min-w-0">{children}</div>
       </section>
-    </main>
+    </div>
   )
 }

@@ -3,7 +3,7 @@ import Image from 'next/image'
 
 export default function NotFound() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#F8F5F2] px-5 py-12">
+    <div className="flex min-h-screen items-center justify-center bg-[#F8F5F2] px-5 py-12">
       <section className="w-full max-w-xl rounded-3xl bg-white p-8 text-center shadow-sm">
         <Image
           src="/logos/JLM_Collective_Primary_Horizontal_Terracotta_UI.webp"
@@ -31,6 +31,6 @@ export default function NotFound() {
           </Link>
         </div>
       </section>
-    </main>
+    </div>
   )
 }

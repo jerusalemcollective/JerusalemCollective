@@ -345,7 +345,7 @@ export function ListingDetailClient({
         </div>
       </header>
 
-      <main className="pb-28 lg:pb-8">
+      <div className="pb-28 lg:pb-8">
         <div className="mx-auto max-w-6xl px-5 py-8 md:px-8">
         {fromStays && (
           <Link href="/stays" className="mb-4 inline-flex text-sm font-medium text-stone-500 transition hover:text-stone-900">
@@ -945,7 +945,7 @@ export function ListingDetailClient({
           </div>
         </div>
         </div>
-      </main>
+      </div>
 
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-stone-200 bg-white px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 shadow-lg md:hidden">
         <div className="flex items-center justify-between gap-4">

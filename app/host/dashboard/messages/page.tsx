@@ -7,7 +7,7 @@ export default async function HostMessagesPage() {
   const { hostIds } = await requireHostDashboardAccess()
 
   return (
-    <main className="min-h-screen bg-[#F8F5F2] px-5 py-10 text-[#252525] md:px-6">
+    <div className="min-h-screen bg-[#F8F5F2] px-5 py-10 text-[#252525] md:px-6">
       <section className="mx-auto max-w-6xl">
         <HostDashboardNav />
         <div className="mb-8">
@@ -21,6 +21,6 @@ export default async function HostMessagesPage() {
           <MessagesInbox mode="host" participantIds={hostIds} />
         </Suspense>
       </section>
-    </main>
+    </div>
   )
 }

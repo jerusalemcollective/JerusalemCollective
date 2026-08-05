@@ -1,6 +1,6 @@
 export default function StaysLoading() {
   return (
-    <main className="min-h-screen bg-[#F8F5F2] px-4 py-8">
+    <div className="min-h-screen bg-[#F8F5F2] px-4 py-8">
       <div className="mx-auto max-w-6xl">
         <div className="mb-6 h-14 w-full animate-pulse rounded-2xl bg-white shadow-sm ring-1 ring-stone-100" />
         <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
@@ -17,6 +17,6 @@ export default function StaysLoading() {
           ))}
         </div>
       </div>
-    </main>
+    </div>
   )
 }

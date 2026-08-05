@@ -249,7 +249,7 @@ export default async function HomePreviewPage() {
         </Link>
       </div>
 
-      <main>
+      <div>
         {/* Clean, cream, text-led hero — same fast top as today */}
         <section className="pt-10 text-center md:pt-14">
           <div className="mx-auto max-w-7xl px-6 pb-8">
@@ -361,7 +361,7 @@ export default async function HomePreviewPage() {
             </div>
           </div>
         </section>
-      </main>
+      </div>
     </div>
   )
 }

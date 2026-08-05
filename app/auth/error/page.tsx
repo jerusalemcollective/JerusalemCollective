@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 export default function AuthErrorPage() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#F8F5F2] px-5 py-12">
+    <div className="flex min-h-screen items-center justify-center bg-[#F8F5F2] px-5 py-12">
       <section className="w-full max-w-md rounded-3xl border border-stone-200 bg-white p-8 text-center shadow-sm">
         <img
           src="/logos/JLM_Collective_Primary_Horizontal_Terracotta_UI.webp"
@@ -30,6 +30,6 @@ export default function AuthErrorPage() {
           </Link>
         </div>
       </section>
-    </main>
+    </div>
   )
 }

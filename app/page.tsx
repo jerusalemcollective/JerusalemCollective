@@ -222,7 +222,7 @@ export default async function JLMCollectiveHomePage() {
           }),
         }}
       />
-      <main>
+      <div>
         <section className="pt-8 text-center md:pt-10">
           <div className="mx-auto max-w-7xl px-6 pb-6">
             <h1 className="font-display mx-auto max-w-3xl text-3xl font-bold tracking-tight text-stone-950 md:text-4xl">
@@ -320,7 +320,7 @@ export default async function JLMCollectiveHomePage() {
             </div>
           </div>
         </section>
-      </main>
+      </div>
     </div>
   )
 }

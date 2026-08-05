@@ -118,7 +118,7 @@ export default async function ExplorePage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F8F5F2] px-5 py-10 text-[#252525] md:px-6">
+    <div className="min-h-screen bg-[#F8F5F2] px-5 py-10 text-[#252525] md:px-6">
       <section className="mx-auto max-w-7xl">
         <div className="max-w-3xl">
           <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Explore</p>
@@ -232,7 +232,7 @@ export default async function ExplorePage() {
           )}
         </section>
       </section>
-    </main>
+    </div>
   )
 }
 

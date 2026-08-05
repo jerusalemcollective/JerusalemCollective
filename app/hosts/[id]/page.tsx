@@ -188,7 +188,7 @@ export default async function HostProfilePage({ params }: HostPageProps) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-12">
+      <div className="mx-auto max-w-6xl px-4 py-12">
         <div className="mb-12 flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left">
           <div className="mb-6 h-32 w-32 shrink-0 overflow-hidden rounded-full bg-stone-200 sm:mb-0 sm:mr-8">
             {host.profile_photo_url ? (
@@ -301,7 +301,7 @@ export default async function HostProfilePage({ params }: HostPageProps) {
             </div>
           )}
         </section>
-      </main>
+      </div>
     </div>
   )
 }

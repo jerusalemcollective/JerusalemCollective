@@ -1849,7 +1849,7 @@ async function handleSubmit() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F8F5F2] text-[#252525]">
+    <div className="min-h-screen bg-[#F8F5F2] text-[#252525]">
       {agencyGateReady && !agencyAccepted && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-stone-950/60 px-4 py-6">
           <div className="flex max-h-[88vh] w-full max-w-lg flex-col rounded-3xl bg-white shadow-2xl">
@@ -3052,7 +3052,7 @@ async function handleSubmit() {
         </div>
         )}
       </section>
-    </main>
+    </div>
   )
 }
 

@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 export default function SavedPage() {
   return (
-    <main className="min-h-screen bg-[#F8F5F2] px-5 py-12 text-[#252525]">
+    <div className="min-h-screen bg-[#F8F5F2] px-5 py-12 text-[#252525]">
       <section className="mx-auto max-w-2xl rounded-3xl border border-stone-200 bg-white p-8 text-center shadow-sm">
         <img
           src="/icons/yemin-moshe-save-ui-large.webp"
@@ -31,6 +31,6 @@ export default function SavedPage() {
           </Link>
         </div>
       </section>
-    </main>
+    </div>
   )
 }

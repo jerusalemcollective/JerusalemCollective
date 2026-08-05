@@ -1,6 +1,6 @@
 export default function ListingLoading() {
   return (
-    <main className="min-h-screen bg-white px-4 py-8">
+    <div className="min-h-screen bg-white px-4 py-8">
       <div className="mx-auto max-w-6xl">
         <div className="aspect-[4/3] animate-pulse rounded-3xl bg-[#F8F5F2] ring-1 ring-stone-100" />
         <div className="mt-8 grid gap-8 md:grid-cols-[1fr_340px]">
@@ -20,6 +20,6 @@ export default function ListingLoading() {
           <aside className="h-64 animate-pulse rounded-3xl bg-white shadow-lg ring-1 ring-stone-100" />
         </div>
       </div>
-    </main>
+    </div>
   )
 }

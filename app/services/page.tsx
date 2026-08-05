@@ -28,7 +28,7 @@ export default async function ServicesPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F8F5F2] px-5 py-12 text-[#252525] md:px-6">
+    <div className="min-h-screen bg-[#F8F5F2] px-5 py-12 text-[#252525] md:px-6">
       <section className="mx-auto max-w-6xl">
         <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">For guests & hosts</p>
         <h1 className="font-display mt-3 text-4xl font-bold tracking-tight text-stone-950 md:text-5xl">JLM Services</h1>
@@ -62,7 +62,7 @@ export default async function ServicesPage() {
           </Link>
         </section>
       </section>
-    </main>
+    </div>
   )
 }
 

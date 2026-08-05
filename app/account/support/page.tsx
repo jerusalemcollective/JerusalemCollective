@@ -58,7 +58,7 @@ export default async function AccountSupportPage() {
   ])
 
   return (
-    <main className="min-h-screen bg-[#F8F5F2] px-5 py-10 text-[#252525] md:px-6">
+    <div className="min-h-screen bg-[#F8F5F2] px-5 py-10 text-[#252525] md:px-6">
       <section className="mx-auto max-w-5xl">
         <Breadcrumb items={[{ label: 'Account', href: '/account' }, { label: 'Support' }]} />
 
@@ -77,7 +77,7 @@ export default async function AccountSupportPage() {
           />
         </Suspense>
       </section>
-    </main>
+    </div>
   )
 }
 

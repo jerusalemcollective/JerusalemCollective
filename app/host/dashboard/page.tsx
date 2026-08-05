@@ -136,7 +136,7 @@ export default async function HostDashboardPage() {
   const hasActions = awaitingResponses > 0 || openSupportCases.length > 0 || Boolean(pendingApplication)
 
   return (
-    <main className="min-h-screen bg-[#F8F5F2] px-5 py-8 text-[#252525] md:px-6">
+    <div className="min-h-screen bg-[#F8F5F2] px-5 py-8 text-[#252525] md:px-6">
       <section className="mx-auto max-w-6xl">
         <HostDashboardNav />
 
@@ -361,7 +361,7 @@ export default async function HostDashboardPage() {
           </aside>
         </div>
       </section>
-    </main>
+    </div>
   )
 }
 
