@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { getClientIp, rateLimit } from '@/lib/rate-limit'
 
 type TranslateRequest = {
   text?: string
@@ -28,6 +29,10 @@ const KIND_GUIDANCE: Record<NonNullable<TranslateRequest['kind']>, string> = {
 }
 
 export async function POST(request: Request) {
+  if (!rateLimit(`translate-listing:${getClientIp(request)}`, 15, 60_000)) {
+    return NextResponse.json({ error: 'Too many requests. Please wait a moment and try again.' }, { status: 429 })
+  }
+
   const apiKey = process.env.ANTHROPIC_API_KEY
 
   if (!apiKey) {

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { getClientIp, rateLimit } from '@/lib/rate-limit'
 
 type ListingAssistantRequest = {
   apartment_title?: string
@@ -27,6 +28,10 @@ type ListingCopy = {
 }
 
 export async function POST(request: Request) {
+  if (!rateLimit(`listing-assistant:${getClientIp(request)}`, 15, 60_000)) {
+    return NextResponse.json({ error: 'Too many requests. Please wait a moment and try again.' }, { status: 429 })
+  }
+
   const apiKey = process.env.ANTHROPIC_API_KEY
 
   if (!apiKey) {

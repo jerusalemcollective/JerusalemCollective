@@ -1,4 +1,5 @@
 ﻿import { NextResponse } from 'next/server'
+import { getClientIp, rateLimit } from '@/lib/rate-limit'
 
 type NominatimResult = {
   place_id: number
@@ -44,6 +45,10 @@ function cleanAddressLabel(label: string) {
 }
 
 export async function GET(request: Request) {
+  if (!rateLimit(`address-suggestions:${getClientIp(request)}`, 120, 60_000)) {
+    return NextResponse.json({ error: 'Too many requests.' }, { status: 429 })
+  }
+
   const { searchParams } = new URL(request.url)
   const query = searchParams.get('q')?.trim()
 

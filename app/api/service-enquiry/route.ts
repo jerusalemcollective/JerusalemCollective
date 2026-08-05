@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { getClientIp, rateLimit } from '@/lib/rate-limit'
 
 type ServiceEnquiryBody = Record<string, unknown> & {
   serviceType?: unknown
@@ -7,6 +8,10 @@ type ServiceEnquiryBody = Record<string, unknown> & {
 }
 
 export async function POST(request: Request) {
+  if (!rateLimit(`service-enquiry:${getClientIp(request)}`, 5, 60_000)) {
+    return NextResponse.json({ error: 'Too many requests. Please wait a moment and try again.' }, { status: 429 })
+  }
+
   const body = (await request.json().catch(() => ({}))) as ServiceEnquiryBody
   const serviceType = typeof body.serviceType === 'string' ? body.serviceType : ''
   const name = typeof body.name === 'string' ? body.name.trim() : ''

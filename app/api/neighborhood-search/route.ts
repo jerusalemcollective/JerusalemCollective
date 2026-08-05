@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { getClientIp, rateLimit } from '@/lib/rate-limit'
 import { createClient } from '@/lib/supabase/server'
 import { allNeighborhoods } from '@/lib/neighborhoods'
 
@@ -8,6 +9,10 @@ type NeighborhoodSearchBody = {
 }
 
 export async function POST(request: Request) {
+  if (!rateLimit(`neighborhood-search:${getClientIp(request)}`, 60, 60_000)) {
+    return NextResponse.json({ error: 'Too many requests.' }, { status: 429 })
+  }
+
   try {
     const body = (await request.json()) as NeighborhoodSearchBody
     const neighborhood = body.neighborhood?.trim()
