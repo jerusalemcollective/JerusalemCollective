@@ -22,10 +22,12 @@ export default async function AccountPage() {
     redirect('/login?redirect=/account')
   }
 
-  const [{ data: profile }, { data: host }] = await Promise.all([
+  const [{ data: profileBase }, { data: host }, { data: myContact }] = await Promise.all([
     supabase
       .from('profiles')
-      .select('id, full_name, phone, avatar_url, is_host, is_admin')
+      // phone is no longer readable via a user-scoped table select (migration
+      // 083); the definer below returns the caller's own phone.
+      .select('id, full_name, avatar_url, is_host, is_admin')
       .eq('id', user.id)
       .maybeSingle(),
     supabase
@@ -34,7 +36,13 @@ export default async function AccountPage() {
       .or(`id.eq.${user.id},user_id.eq.${user.id}`)
       .limit(1)
       .maybeSingle(),
+    supabase
+      .rpc('get_my_profile_contact')
+      .maybeSingle<{ profile_id: string; phone: string | null }>(),
   ])
+  const profile = profileBase
+    ? { ...profileBase, phone: myContact?.phone ?? null }
+    : null
 
   // host.id may differ from user.id when the host record has its own PK.
   // We query by both to cover direct ownership and delegated host accounts.

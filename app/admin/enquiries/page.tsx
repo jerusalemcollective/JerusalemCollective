@@ -23,7 +23,6 @@ type EnquiryRow = {
   } | null
   guest?: {
     full_name: string | null
-    phone: string | null
   } | null
   hosts?: {
     name: string
@@ -71,7 +70,7 @@ export default async function AdminEnquiriesPage({
       guests, message, conversation_id, created_at,
       listings(title, area),
       hosts(name),
-      guest:profiles!booking_requests_guest_id_fkey(full_name, phone)
+      guest:profiles!booking_requests_guest_id_fkey(full_name)
     `)
     .order('created_at', { ascending: false })
   let countQuery = supabase.from('booking_requests').select('*', { count: 'exact', head: true })
