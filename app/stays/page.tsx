@@ -11,6 +11,9 @@ import { StaysFilterBar } from '@/components/stays-filter-bar'
 import { StaysMapView } from '@/components/stays-map-view'
 import { StaysNeighborhoodNav } from '@/components/stays-neighborhood-nav'
 import { RecentlyViewed } from '@/components/recently-viewed'
+import { Pagination, normalizePaginationSearchParams } from '@/components/pagination'
+
+const STAYS_PAGE_SIZE = 24
 
 export const metadata = {
   title: 'Jerusalem Stays',
@@ -118,7 +121,8 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
   const minPrice = parsePositiveNumber(params.minPrice)
   const maxPrice = parsePositiveNumber(params.maxPrice)
   const amenityLabels = parseAmenityLabels(params.amenities)
-  const [listings, featuredNeighborhoods, totalPublished] = await Promise.all([
+  const page = Math.max(1, Number(params.page) || 1)
+  const [listingsResult, featuredNeighborhoods, totalPublished] = await Promise.all([
     loadListings({
       selectedArea,
       checkIn,
@@ -133,10 +137,15 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
       sukkahBalcony: Boolean(params.sukkahBalcony),
       nearSynagogue: Boolean(params.nearSynagogue),
       maxWalkToKotel: params.maxWalkToKotel,
+      // Paginate the list view; the map wants every marker, so it loads all.
+      page: view === 'list' ? page : undefined,
     }),
     loadFeaturedNeighborhoods(),
     loadPublishedCount(),
   ])
+  const listings = listingsResult.listings
+  const totalMatching = listingsResult.total
+  const totalPages = Math.max(1, Math.ceil(totalMatching / STAYS_PAGE_SIZE))
 
   return (
     <div className="min-h-screen">
@@ -258,6 +267,14 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
                   <ListingCard key={listing.id} listing={listing} />
                 ))}
               </div>
+              {totalPages > 1 && (
+                <Pagination
+                  page={page}
+                  totalPages={totalPages}
+                  basePath="/stays"
+                  searchParams={normalizePaginationSearchParams(params)}
+                />
+              )}
               <Suspense fallback={null}>
                 <RecentlyViewed />
               </Suspense>
@@ -345,6 +362,7 @@ async function loadListings({
   sukkahBalcony,
   nearSynagogue,
   maxWalkToKotel,
+  page,
 }: {
   selectedArea: string
   checkIn?: string
@@ -353,6 +371,7 @@ async function loadListings({
   minPrice: number | null
   maxPrice: number | null
   amenityLabels: string[]
+  page?: number
   kosherKitchen: boolean
   shabbatElevator: boolean
   physicalKey: boolean
@@ -385,7 +404,10 @@ async function loadListings({
 
   let listingsQuery = supabase
     .from('listings')
-    .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, is_featured, latitude, longitude, amenities')
+    .select(
+      'id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, is_featured, latitude, longitude, amenities',
+      { count: 'exact' },
+    )
     .eq('is_published', true)
     .order('is_featured', { ascending: false })
     .order('created_at', { ascending: false })
@@ -446,7 +468,13 @@ async function loadListings({
     listingsQuery = listingsQuery.not('id', 'in', `(${blockedListingIds.join(',')})`)
   }
 
-  const { data: listingsData } = await listingsQuery
+  // List view is paginated; map view (page undefined) fetches every match.
+  if (typeof page === 'number') {
+    const from = (page - 1) * STAYS_PAGE_SIZE
+    listingsQuery = listingsQuery.range(from, from + STAYS_PAGE_SIZE - 1)
+  }
+
+  const { data: listingsData, count } = await listingsQuery
   const listingRows = z.array(listingSchema).parse(listingsData ?? [])
   const listingIds = listingRows.map((listing) => listing.id)
   const { data: photosData } = listingIds.length
@@ -465,10 +493,13 @@ async function loadListings({
     }
   }
 
-  return listingRows.map((listing) => ({
-    ...listing,
-    cover_photo_url: photoMap.get(listing.id) || null,
-  }))
+  return {
+    listings: listingRows.map((listing) => ({
+      ...listing,
+      cover_photo_url: photoMap.get(listing.id) || null,
+    })),
+    total: count ?? listingRows.length,
+  }
 }
 
 function ListingCard({
