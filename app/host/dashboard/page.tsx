@@ -190,7 +190,7 @@ export default async function HostDashboardPage() {
           <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
             <div>
               <h2 className="text-xl font-bold text-stone-950">Action queue</h2>
-              <p className="mt-1 text-sm text-stone-600">Start here when you open your dashboard.</p>
+              <p className="mt-1 text-sm text-stone-600">What needs your attention right now.</p>
             </div>
             <p className="text-sm font-semibold text-stone-500">
               {activeListings} active {activeListings === 1 ? 'listing' : 'listings'}
