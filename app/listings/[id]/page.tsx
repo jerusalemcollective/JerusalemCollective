@@ -580,19 +580,32 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
     })),
   }
   const cleanJsonLd: unknown = JSON.parse(JSON.stringify(jsonLd))
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://jlmcollective.co' },
+      { '@type': 'ListItem', position: 2, name: 'Stays', item: 'https://jlmcollective.co/stays' },
+      { '@type': 'ListItem', position: 3, name: displayTitle },
+    ],
+  }
+  const escapeJsonLd = (value: unknown) =>
+    JSON.stringify(value)
+      .replace(/</g, '\\u003c')
+      .replace(/>/g, '\\u003e')
+      .replace(/&/g, '\\u0026')
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          // Escape so host/review text containing </script> or < can't break
-          // out of the JSON-LD block (stored XSS on a public, indexed page).
-          __html: JSON.stringify(cleanJsonLd)
-            .replace(/</g, '\\u003c')
-            .replace(/>/g, '\\u003e')
-            .replace(/&/g, '\\u0026'),
-        }}
+        // Escape so host/review text containing </script> or < can't break out
+        // of the JSON-LD block (stored XSS on a public, indexed page).
+        dangerouslySetInnerHTML={{ __html: escapeJsonLd(cleanJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: escapeJsonLd(breadcrumbJsonLd) }}
       />
       {paymentCancelled && (
         <div role="status" className="mx-auto max-w-6xl px-4 pt-4">
