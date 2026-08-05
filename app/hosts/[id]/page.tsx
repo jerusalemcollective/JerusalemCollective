@@ -2,7 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createPublicClient } from '@/lib/supabase/public'
 
 type HostRow = {
   id: string
@@ -61,7 +61,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>
 }): Promise<Metadata> {
   const { id } = await params
-  const supabase = await createClient()
+  const supabase = createPublicClient()
   const { data: host } = await supabase
     .from('hosts')
     .select('name, display_name, show_full_name, profile_photo_url')
@@ -102,7 +102,7 @@ export async function generateMetadata({
 
 export default async function HostProfilePage({ params }: HostPageProps) {
   const { id: hostId } = await params
-  const supabase = await createClient()
+  const supabase = createPublicClient()
   const [{ data: hostData }, { data: listingsData }, { data: reviewsData }] =
     await Promise.all([
       supabase

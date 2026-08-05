@@ -15,14 +15,17 @@ import {
   Tent,
   Trees,
 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
+import { createPublicClient } from '@/lib/supabase/public'
 import { sampleListings } from '@/lib/sample-listings'
 import { defaultExploreNeighborhoods } from '@/lib/neighborhoods'
 import { slugifyNeighborhood } from '@/lib/neighborhood-pages'
 import { HomeSearchForm } from '@/components/home-search-form'
 import { RecentlyViewed } from '@/components/recently-viewed-home'
 
-export const dynamic = 'force-dynamic'
+// Public, global content only (featured listings + neighbourhoods; the
+// recently-viewed strip is client-side). Cache it via ISR instead of
+// re-rendering on every visit — see createPublicClient (cookieless) below.
+export const revalidate = 300
 
 type ListingRow = {
   id: string
@@ -131,7 +134,7 @@ function buildCategoryChips(popularNeighborhoods: string[]): CategoryChip[] {
 
 async function getHomepageData() {
   try {
-    const supabase = await createClient()
+    const supabase = createPublicClient()
     const [{ data: listingsData }, { data: neighborhoodsData }] = await Promise.all([
       supabase
         .from('listings')

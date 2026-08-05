@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { z } from 'zod'
-import { createClient } from '@/lib/supabase/server'
+import { createPublicClient } from '@/lib/supabase/public'
 import { allNeighborhoods } from '@/lib/neighborhoods'
 import { slugifyNeighborhood } from '@/lib/neighborhood-pages'
 import { getAmenityLabel } from '@/lib/stay-amenities'
@@ -289,7 +289,7 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
 
 async function loadPublishedCount() {
   try {
-    const supabase = await createClient()
+    const supabase = createPublicClient()
     const { count } = await supabase
       .from('listings')
       .select('id', { count: 'exact', head: true })
@@ -303,7 +303,7 @@ async function loadPublishedCount() {
 
 async function loadFeaturedNeighborhoods() {
   try {
-    const supabase = await createClient()
+    const supabase = createPublicClient()
     const { count } = await supabase
       .from('listings')
       .select('id', { count: 'exact', head: true })
@@ -360,7 +360,7 @@ async function loadListings({
   nearSynagogue: boolean
   maxWalkToKotel?: string
 }) {
-  const supabase = await createClient()
+  const supabase = createPublicClient()
   let blockedListingIds: string[] = []
 
   if (checkIn && checkOut) {

@@ -2,7 +2,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
-import { createClient } from '@/lib/supabase/server'
+import { createPublicClient } from '@/lib/supabase/public'
 import {
   findNeighborhoodBySlug,
   neighborhoodDescriptions,
@@ -80,7 +80,7 @@ export default async function NeighbourhoodPage({
 
   if (!name) notFound()
 
-  const supabase = await createClient()
+  const supabase = createPublicClient()
   const { data: listingsData } = await supabase
     .from('listings')
     .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, is_featured')
