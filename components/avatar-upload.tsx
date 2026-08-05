@@ -50,8 +50,9 @@ export function AvatarUpload({
       const supabase = createClient()
       
       const fileExt = file.name.split('.').pop()
-      const fileName = `${userId}-${Date.now()}.${fileExt}`
-      const filePath = `${fileName}`
+      // Store under the user's own folder so the storage policy can scope writes
+      // to the owner: (storage.foldername(name))[1] = auth.uid().
+      const filePath = `${userId}/avatar-${Date.now()}.${fileExt}`
 
       // Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage
