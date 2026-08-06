@@ -1,4 +1,5 @@
 import { PaymentUpdateForm } from '@/components/payment-update-form'
+import { DirectPaymentScheduleFields } from '@/components/direct-payment-schedule-fields'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { getPaymentRouteSettings } from '@/lib/platform-settings'
 import { updateHostPaymentPreferences } from './actions'
@@ -318,16 +319,10 @@ export default async function HostPaymentsPage({
                 </p>
               </div>
 
-              <label className="block">
-                <span className="text-sm font-semibold text-stone-800">Direct payment instructions</span>
-                <textarea
-                  name="instructions"
-                  defaultValue={profile?.direct_payment_instructions || ''}
-                  rows={7}
-                  placeholder="Explain how guests should pay you directly once a booking is approved."
-                  className={`${inputClass} resize-y`}
-                />
-              </label>
+              <DirectPaymentScheduleFields
+                defaultValue={profile?.direct_payment_instructions}
+                currency={profile?.preferred_currency || 'USD'}
+              />
 
               <div className="flex justify-end">
                 <button className="rounded-full bg-[#252525] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#111111]">
