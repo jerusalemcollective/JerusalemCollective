@@ -48,7 +48,7 @@ begin
     raise exception 'Deposit must be greater than zero.';
   end if;
   if p_deposit_type = 'percent' and p_deposit_value > 100 then
-    raise exception 'A percentage deposit cannot be more than 100%.';
+    raise exception 'A percentage deposit cannot be more than 100%%.';
   end if;
   if p_balance_due_days is null or p_balance_due_days < 0 or p_balance_due_days > 365 then
     raise exception 'Balance due days must be between 0 and 365.';
