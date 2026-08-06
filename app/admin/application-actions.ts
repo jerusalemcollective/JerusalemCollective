@@ -549,6 +549,81 @@ export async function unrejectApplicationAndReturn(formData: FormData) {
   redirect(`/admin/applications/${applicationId}`)
 }
 
+export async function markApplicationInReviewOnOpen(applicationId: string) {
+  if (!applicationId) return
+
+  const { supabase } = await requireAdminPermission('applications')
+
+  const { data: current } = await supabase
+    .from('host_applications')
+    .select('status')
+    .eq('id', applicationId)
+    .maybeSingle()
+
+  const status = current?.status
+  // Only auto-transition a freshly submitted application; never override a
+  // decision an admin has already made (in_review/approved/rejected/changes).
+  if (!status || ['in_review', 'approved', 'rejected', 'changes_requested'].includes(status)) {
+    return
+  }
+
+  const { error } = await supabase
+    .from('host_applications')
+    .update({ status: 'in_review', verification_status: 'pending' })
+    .eq('id', applicationId)
+
+  if (error && isMissingOptionalApplicationColumnError(error)) {
+    await supabase.from('host_applications').update({ status: 'in_review' }).eq('id', applicationId)
+  } else if (error) {
+    // Non-fatal: opening the page should not hard-fail on an auto-transition.
+    console.error('Auto in-review transition failed', error)
+    return
+  }
+
+  await logAdminAction(supabase, 'set_status_in_review', 'application', applicationId)
+
+  revalidatePath('/admin')
+  revalidatePath('/admin/applications')
+  revalidatePath(`/admin/applications/${applicationId}`)
+}
+
+export async function setApplicationIdVerified(formData: FormData) {
+  const applicationId = String(formData.get('applicationId') || '')
+  const verified = String(formData.get('verified') || '') === 'true'
+
+  if (!applicationId) {
+    throw new Error('Missing application id.')
+  }
+
+  const { supabase } = await requireAdminPermission('applications')
+
+  const { data, error } = await supabase
+    .from('host_applications')
+    .update({ id_verified: verified })
+    .eq('id', applicationId)
+    .select('id')
+    .maybeSingle()
+
+  if (error && isMissingColumnError(error, 'id_verified')) {
+    throw new Error('ID verification is not available yet (the id_verified column is missing on the database).')
+  }
+  if (error) throw error
+  if (!data?.id) {
+    throw new Error('No application was updated. Check that this application still exists.')
+  }
+
+  await logAdminAction(
+    supabase,
+    verified ? 'verify_id' : 'unverify_id',
+    'application',
+    applicationId,
+  )
+
+  revalidatePath('/admin')
+  revalidatePath('/admin/applications')
+  revalidatePath(`/admin/applications/${applicationId}`)
+}
+
 function isApplicationReviewStatus(status: string): status is Extract<ApplicationStatus, 'in_review' | 'rejected'> {
   return (APPLICATION_STATUSES as readonly string[]).includes(status) &&
     (status === 'in_review' || status === 'rejected')

@@ -5,12 +5,11 @@ import { StatusBadge } from '@/components/status-badge'
 import {
   approveAndPublishApplication,
   rejectApplicationAndReturn,
+  setApplicationIdVerified,
   unrejectApplicationAndReturn,
-  updateAdminApplicationDetails,
 } from '@/app/admin/application-actions'
 import { AdminRequestChangesForm } from '@/components/admin-request-changes-form'
-import { AdminApplicationStatusForm } from '@/components/admin-application-status-form'
-import { AmenitySelector } from '@/components/amenity-selector'
+import { MarkApplicationInReview } from '@/components/mark-application-in-review'
 
 type ApplicationPhoto = {
   id: string
@@ -75,6 +74,7 @@ export default async function AdminApplicationPage({
 
   return (
     <div>
+        <MarkApplicationInReview applicationId={adminApplication.id} status={adminApplication.status} />
         <div className="mb-6 flex items-center gap-2 text-sm text-stone-500">
           <Link href="/admin" className="hover:text-[#c76f55]">Applications</Link>
           <span>/</span>
@@ -110,50 +110,6 @@ export default async function AdminApplicationPage({
               <InfoRow label="Pricing" value={`ILS ${adminApplication.price_ils || '-'} / USD ${adminApplication.price_usd || '-'}`} />
               <InfoRow label="Amenities" value={(adminApplication.amenities || []).join(', ') || 'None selected'} />
               <InfoRow label="Description" value={adminApplication.description || 'Not provided'} />
-            </InfoSection>
-
-            <InfoSection title="Edit listing details">
-              <form action={updateAdminApplicationDetails} className="grid gap-4">
-                <input type="hidden" name="applicationId" value={adminApplication.id} />
-                <div className="grid gap-4 md:grid-cols-2">
-                  <EditField label="Title" name="apartment_title" defaultValue={adminApplication.apartment_title} required />
-                  <EditField label="Neighbourhood" name="area" defaultValue={adminApplication.area} required />
-                  <div className="md:col-span-2">
-                    <EditField label="Exact address" name="exact_address" defaultValue={adminApplication.exact_address || ''} />
-                  </div>
-                  <EditField label="Bedrooms" name="bedrooms" type="number" defaultValue={String(adminApplication.bedrooms || '')} />
-                  <EditField label="Bathrooms" name="bathrooms" type="number" step="0.5" defaultValue={String(adminApplication.bathrooms || '')} />
-                  <EditField label="Sleeps" name="sleeps" type="number" defaultValue={String(adminApplication.sleeps || '')} />
-                  <EditField label="Price ILS" name="price_ils" type="number" defaultValue={String(adminApplication.price_ils || '')} />
-                  <EditField label="Price USD" name="price_usd" type="number" defaultValue={String(adminApplication.price_usd || '')} />
-                </div>
-                <label className="block">
-                  <span className="text-xs font-bold uppercase tracking-widest text-stone-500">Sleeping setup</span>
-                  <textarea
-                    name="sleeping_setup"
-                    defaultValue={adminApplication.sleeping_setup || ''}
-                    rows={5}
-                    className="mt-2 min-h-28 w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
-                  />
-                </label>
-                <div>
-                  <span className="text-xs font-bold uppercase tracking-widest text-stone-500">Amenities</span>
-                  <div className="mt-2">
-                    <AmenitySelector defaultSelectedAmenities={adminApplication.amenities || []} />
-                  </div>
-                </div>
-                <label className="block">
-                  <span className="text-xs font-bold uppercase tracking-widest text-stone-500">Description</span>
-                  <textarea
-                    name="description"
-                    defaultValue={adminApplication.description || ''}
-                    className="mt-2 min-h-36 w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
-                  />
-                </label>
-                <button className="rounded-2xl bg-stone-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-stone-800">
-                  Save admin edits
-                </button>
-              </form>
             </InfoSection>
 
             <InfoSection title="Photos">
@@ -201,7 +157,29 @@ export default async function AdminApplicationPage({
               <DocumentLink href={identityDocumentUrl} label="Open ID document" fallback="No ID document file available." />
               <InfoRow label="Verification status" value={adminApplication.verification_status || 'pending'} />
               <InfoRow label="ID verified" value={adminApplication.id_verified ? 'Yes' : 'No'} />
+              <form action={setApplicationIdVerified}>
+                <input type="hidden" name="applicationId" value={adminApplication.id} />
+                <input type="hidden" name="verified" value={adminApplication.id_verified ? 'false' : 'true'} />
+                <button
+                  className={`w-full rounded-2xl border px-4 py-3 text-sm font-bold transition ${
+                    adminApplication.id_verified
+                      ? 'border-stone-200 text-stone-700 hover:border-stone-300'
+                      : 'border-green-200 text-green-700 hover:bg-green-50'
+                  }`}
+                >
+                  {adminApplication.id_verified ? 'Mark ID as not verified' : 'Mark ID as verified'}
+                </button>
+              </form>
             </InfoSection>
+
+            <div className="rounded-3xl bg-white p-6 shadow-sm">
+              <form action={approveAndPublishApplication}>
+                <input type="hidden" name="applicationId" value={adminApplication.id} />
+                <button className="w-full rounded-2xl bg-[#252525] px-5 py-4 text-base font-bold text-white transition hover:bg-[#111111]">
+                  Approve and publish
+                </button>
+              </form>
+            </div>
           </div>
 
           <aside className="space-y-4">
@@ -216,20 +194,6 @@ export default async function AdminApplicationPage({
                     </button>
                   </form>
                 )}
-
-                <form action={approveAndPublishApplication}>
-                  <input type="hidden" name="applicationId" value={adminApplication.id} />
-                  <button className="w-full rounded-2xl bg-[#252525] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#111111]">
-                    Approve and publish
-                  </button>
-                </form>
-
-                <AdminApplicationStatusForm
-                  applicationId={adminApplication.id}
-                  status="in_review"
-                  label="Start review"
-                  tone="neutral"
-                />
 
                 <AdminRequestChangesForm applicationId={adminApplication.id} />
 
@@ -298,36 +262,6 @@ function InfoRow({ label, value }: { label: string; value: string }) {
       <p className="text-xs font-bold uppercase tracking-widest text-stone-500">{label}</p>
       <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-stone-800">{value}</p>
     </div>
-  )
-}
-
-function EditField({
-  label,
-  name,
-  defaultValue,
-  type = 'text',
-  step,
-  required = false,
-}: {
-  label: string
-  name: string
-  defaultValue: string
-  type?: string
-  step?: string
-  required?: boolean
-}) {
-  return (
-    <label className="block">
-      <span className="text-xs font-bold uppercase tracking-widest text-stone-500">{label}</span>
-      <input
-        name={name}
-        type={type}
-        step={step}
-        required={required}
-        defaultValue={defaultValue}
-        className="mt-2 w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
-      />
-    </label>
   )
 }
 
