@@ -182,19 +182,19 @@ export default async function HostListingEditPage({
               </div>
               <div className="mt-5 grid gap-3 md:grid-cols-2">
                 <CheckboxField name="shabbatElevator" defaultChecked={Boolean(listing.shabbat_elevator)}>
-                  Building has a Shabbat elevator
+                  Building has a Shabbos elevator
                 </CheckboxField>
                 <CheckboxField name="physicalKeyEntry" defaultChecked={Boolean(listing.physical_key_entry)}>
                   Property uses a physical key (no digital keypad or smartlock)
                 </CheckboxField>
                 <CheckboxField name="shabbatClock" defaultChecked={Boolean(listing.shabbat_clock)}>
-                  Apartment has a Shabbat clock or timer for lights
+                  Apartment has a Shabbos clock or timer for lights
                 </CheckboxField>
                 <CheckboxField name="sukkahBalcony" defaultChecked={Boolean(listing.sukkah_balcony)}>
                   Has a balcony suitable for a sukkah
                 </CheckboxField>
                 <CheckboxField name="nearSynagogue" defaultChecked={Boolean(listing.near_synagogue)}>
-                  Within 5 minutes walk of a synagogue
+                  Within 5 minutes walk of a shul
                 </CheckboxField>
               </div>
             </EditorSection>
@@ -256,7 +256,7 @@ export default async function HostListingEditPage({
                   name="houseRules"
                   rows={4}
                   defaultValue={listing.house_rules || ''}
-                  placeholder="e.g. No smoking. Shabbat-observant property. Please remove shoes at the entrance."
+                  placeholder="e.g. No smoking. Shabbos-observant property. Please remove shoes at the entrance."
                   className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 placeholder:text-stone-500"
                 />
               </label>

@@ -442,7 +442,7 @@ export function MessageHostDialog({
                     onChange={(event) => setMessage(event.target.value)}
                     placeholder={
                       quickQuestion
-                        ? 'e.g. Is there a Shabbat lift? Is the kitchen kosher?'
+                        ? 'e.g. Is there a Shabbos lift? Is the kitchen kosher?'
                         : isRequest
                         ? 'Add anything the host should know about your stay...'
                         : 'Hi, is this stay available for my dates?'

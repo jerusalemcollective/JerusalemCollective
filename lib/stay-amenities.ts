@@ -51,8 +51,8 @@ export const STAY_AMENITY_GROUPS = [
     ],
   },
   {
-    title: 'Shabbat and Jewish stay',
-    description: 'Details that matter for Shabbat and yom tov stays.',
+    title: 'Shabbos and Jewish stay',
+    description: 'Details that matter for Shabbos and yom tov stays.',
     amenities: [
       'Hot plate',
       'Hot water urn',

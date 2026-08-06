@@ -51,7 +51,7 @@ const collectionCards = [
     href: '/stays?sukkahBalcony=1',
   },
   {
-    title: 'Near synagogues',
+    title: 'Near shuls',
     description: 'Useful choices for guests who want easy local access.',
     href: '/stays?nearSynagogue=1',
   },

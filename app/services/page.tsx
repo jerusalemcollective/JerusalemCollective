@@ -5,13 +5,13 @@ import { getServicesBarEnabled } from '@/lib/platform-settings'
 
 export const metadata = {
   title: 'Guest Services',
-  description: 'Enhance your Jerusalem stay with custom catering, Shabbat meal packages, and housekeeping arranged by JLM Collective.',
+  description: 'Enhance your Jerusalem stay with custom catering, Shabbos meal packages, and housekeeping arranged by JLM Collective.',
   alternates: {
     canonical: '/services',
   },
   openGraph: {
     title: 'Guest Services | JLM Collective',
-    description: 'Enhance your Jerusalem stay with custom catering, Shabbat meal packages, and housekeeping arranged by JLM Collective.',
+    description: 'Enhance your Jerusalem stay with custom catering, Shabbos meal packages, and housekeeping arranged by JLM Collective.',
     url: '/services',
     type: 'website',
   },
@@ -39,8 +39,8 @@ export default async function ServicesPage() {
         <div className="mt-10 grid gap-5 md:grid-cols-2">
           <ServiceCard
             href="/services/catering"
-            title="Custom Menus & Shabbat Packages"
-            description="Kosher meals, Shabbat packages, and Yom Tov menus delivered to your property. Tell us your dates and we arrange the rest."
+            title="Custom Menus & Shabbos Packages"
+            description="Kosher meals, Shabbos packages, and Yom Tov menus delivered to your property. Tell us your dates and we arrange the rest."
             buttonLabel="Order food"
             icon={<ForkKnifeIcon />}
           />

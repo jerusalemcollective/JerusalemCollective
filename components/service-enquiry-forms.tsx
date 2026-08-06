@@ -17,7 +17,7 @@ export function CateringEnquiryForm() {
   const [checkIn, setCheckIn] = useState('')
   const [checkOut, setCheckOut] = useState('')
   const [guestCount, setGuestCount] = useState('1')
-  const [occasion, setOccasion] = useState('Shabbat dinner')
+  const [occasion, setOccasion] = useState('Shabbos dinner')
   const [kashrut, setKashrut] = useState('Glatt kosher')
   const [dietaryNotes, setDietaryNotes] = useState('')
   const [status, setStatus] = useState<FormStatus>('idle')
@@ -75,7 +75,7 @@ export function CateringEnquiryForm() {
         </Field>
         <Field label="Occasion">
           <select required value={occasion} onChange={(event) => setOccasion(event.target.value)} className={inputClass}>
-            <option>Shabbat dinner</option>
+            <option>Shabbos dinner</option>
             <option>Weekday meals</option>
             <option>Yom Tov package</option>
             <option>Full week package</option>

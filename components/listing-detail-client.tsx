@@ -679,19 +679,19 @@ export function ListingDetailClient({
                         />
                       )}
                     {listing.shabbat_elevator && (
-                      <FeaturePill label="Shabbat elevator" icon="elevator" />
+                      <FeaturePill label="Shabbos elevator" icon="elevator" />
                     )}
                     {listing.physical_key_entry && (
                       <FeaturePill label="Physical key entry" icon="key" />
                     )}
                     {listing.shabbat_clock && (
-                      <FeaturePill label="Shabbat clock" icon="clock" />
+                      <FeaturePill label="Shabbos clock" icon="clock" />
                     )}
                     {listing.sukkah_balcony && (
                       <FeaturePill label="Sukkah balcony" icon="sukkah" />
                     )}
                     {listing.near_synagogue && (
-                      <FeaturePill label="Near synagogue" icon="synagogue" />
+                      <FeaturePill label="Near shul" icon="synagogue" />
                     )}
                     {comfortFeatures.map((feature) => (
                       <FeaturePill key={feature} label={feature} icon="comfort" />
@@ -805,7 +805,7 @@ export function ListingDetailClient({
                       </svg>
                       <div>
                         <p className="text-sm font-bold text-stone-950">Catering & meals</p>
-                        <p className="text-xs text-stone-500">Shabbat packages, custom menus</p>
+                        <p className="text-xs text-stone-500">Shabbos packages, custom menus</p>
                       </div>
                     </Link>
 

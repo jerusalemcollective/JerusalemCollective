@@ -1888,12 +1888,6 @@ async function handleSubmit() {
       <section className="mx-auto max-w-6xl px-6 py-10 md:py-16">
         <div className="mb-10 grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
           <div>
-            <img
-              src="/logos/JLM_Collective_Primary_Horizontal_Terracotta_UI.webp"
-              alt="JLM Collective"
-              className="h-14 w-auto"
-            />
-
             <h1 className="font-display mt-8 max-w-2xl text-4xl font-bold tracking-tight text-stone-950 md:text-6xl">
               Create your listing
             </h1>
@@ -1950,20 +1944,6 @@ async function handleSubmit() {
                 Go to homepage
               </Link>
             </div>
-          </div>
-        )}
-
-        {!success && restoredDraft && (
-          <div
-            role="status"
-            className="mb-6 rounded-3xl border border-amber-300 bg-amber-100 p-5 text-sm text-amber-900"
-          >
-            <p className="font-bold">We restored your saved draft</p>
-            <p className="mt-1">
-              Your typed details are back — but for your security, uploaded{' '}
-              <strong>photos and documents are never saved in a draft</strong>. Please re-add your
-              photos and your ID/verification documents before submitting.
-            </p>
           </div>
         )}
 
@@ -2481,7 +2461,7 @@ async function handleSubmit() {
                   <div className="mt-5 grid gap-3 md:grid-cols-2">
                     <LifestyleCheckbox
                       checked={form.shabbat_elevator}
-                      label="Building has a Shabbat elevator"
+                      label="Building has a Shabbos elevator"
                       onChange={(checked) => updateField('shabbat_elevator', checked)}
                     />
                     <LifestyleCheckbox
@@ -2491,7 +2471,7 @@ async function handleSubmit() {
                     />
                     <LifestyleCheckbox
                       checked={form.shabbat_clock}
-                      label="Apartment has a Shabbat clock or timer for lights"
+                      label="Apartment has a Shabbos clock or timer for lights"
                       onChange={(checked) => updateField('shabbat_clock', checked)}
                     />
                     <LifestyleCheckbox
@@ -2501,7 +2481,7 @@ async function handleSubmit() {
                     />
                     <LifestyleCheckbox
                       checked={form.near_synagogue}
-                      label="Within 5 minutes walk of a synagogue"
+                      label="Within 5 minutes walk of a shul"
                       onChange={(checked) => updateField('near_synagogue', checked)}
                     />
                   </div>
