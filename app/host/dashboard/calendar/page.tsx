@@ -1,32 +1,40 @@
-import { HostAvailabilityCalendar } from '@/components/host-availability-calendar'
-import { BlockRangeForm } from '@/components/block-range-form'
+import {
+  HostCalendarBoard,
+  type CalendarBooking,
+  type CalendarRange,
+} from '@/components/host-calendar-board'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
-import { addUnavailableRange } from './actions'
+import { saveCalendarEntry } from './actions'
 import { RemoveBlockedDateButton } from '@/components/remove-blocked-date-button'
 
-type HostListing = {
-  id: string
-  title: string
+type HostListing = { id: string; title: string }
+
+type BookingRow = {
+  listing_id: string
+  check_in: string
+  check_out: string
+  status: string
+  profiles?: { full_name: string | null } | { full_name: string | null }[] | null
 }
 
-type UnavailableRange = {
+type RangeRow = {
   id: string
   listing_id: string
   start_date: string
   end_date: string
   reason: string | null
-  listings?: {
-    title: string
-  } | null
+  source: string
+  listings?: { title: string } | { title: string }[] | null
 }
 
-type UnavailableRangeRow = Omit<UnavailableRange, 'listings'> & {
-  listings?: UnavailableRange['listings'] | NonNullable<UnavailableRange['listings']>[] | null
+function oneOrNull<T>(rel: T | T[] | null | undefined): T | null {
+  if (Array.isArray(rel)) return rel[0] ?? null
+  return rel ?? null
 }
 
 export default async function HostCalendarPage() {
   const { supabase, hostIds } = await requireHostDashboardAccess()
-  const [{ data: listings }, { data: ranges }] = await Promise.all([
+  const [{ data: listings }, { data: ranges }, { data: bookingsData }] = await Promise.all([
     supabase
       .from('listings')
       .select('id, title')
@@ -34,28 +42,52 @@ export default async function HostCalendarPage() {
       .order('created_at', { ascending: false }),
     supabase
       .from('listing_unavailable_ranges')
-      .select('id, listing_id, start_date, end_date, reason, listings(title)')
+      .select('id, listing_id, start_date, end_date, reason, source, listings(title)')
       .in('host_id', hostIds)
       .order('start_date', { ascending: true }),
+    supabase
+      .from('bookings')
+      .select('listing_id, check_in, check_out, status, profiles!bookings_user_id_fkey(full_name)')
+      .in('host_id', hostIds)
+      .in('status', ['confirmed', 'pending', 'completed']),
   ])
 
   const hostListings: HostListing[] = (listings || []).map((listing: HostListing) => ({
     id: listing.id,
     title: listing.title,
   }))
-  const unavailableRanges: UnavailableRange[] = (ranges || []).map((range: UnavailableRangeRow) => ({
-    id: range.id,
+
+  const bookings: CalendarBooking[] = ((bookingsData || []) as BookingRow[]).map((booking) => ({
+    listing_id: booking.listing_id,
+    check_in: booking.check_in,
+    check_out: booking.check_out,
+    status: booking.status,
+    guest_name: oneOrNull(booking.profiles)?.full_name ?? null,
+  }))
+
+  const rangeRows = (ranges || []) as RangeRow[]
+  const calendarRanges: CalendarRange[] = rangeRows.map((range) => ({
     listing_id: range.listing_id,
     start_date: range.start_date,
     end_date: range.end_date,
     reason: range.reason,
-    listings: Array.isArray(range.listings) ? range.listings[0] || null : range.listings || null,
+    source: range.source,
   }))
+
+  const manualEntries = rangeRows
+    .filter((range) => range.source === 'manual' || range.source === 'manual_booking')
+    .map((range) => ({
+      id: range.id,
+      start_date: range.start_date,
+      end_date: range.end_date,
+      reason: range.reason,
+      source: range.source,
+      title: oneOrNull(range.listings)?.title || 'Stay',
+    }))
 
   return (
     <div className="min-h-screen bg-[#F8F5F2] px-5 py-10 text-[#252525] md:px-6">
       <section className="mx-auto max-w-6xl">
-
         <div className="mb-8">
           <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Host dashboard</p>
           <h1 className="font-display mt-2 text-3xl font-bold tracking-tight text-stone-950">Calendar</h1>
@@ -67,32 +99,41 @@ export default async function HostCalendarPage() {
           </div>
         ) : (
           <>
-            <div className="mb-6 max-w-2xl">
-              <BlockRangeForm listingId={hostListings[0].id} listings={hostListings} />
-            </div>
-
-            <HostAvailabilityCalendar
+            <HostCalendarBoard
               listings={hostListings}
-              addUnavailableRangeAction={addUnavailableRange}
+              bookings={bookings}
+              ranges={calendarRanges}
+              saveAction={saveCalendarEntry}
             />
 
             <section className="mt-6 overflow-hidden rounded-3xl bg-white shadow-sm">
               <div className="border-b border-stone-100 px-6 py-4">
-                <h2 className="text-lg font-bold text-stone-950">Blocked dates</h2>
+                <h2 className="text-lg font-bold text-stone-950">Blocks and manual bookings</h2>
               </div>
 
-              {unavailableRanges.length === 0 ? (
-                <div className="px-6 py-10 text-center text-stone-500">No blocked dates yet.</div>
+              {manualEntries.length === 0 ? (
+                <div className="px-6 py-10 text-center text-stone-500">
+                  No blocks or manual bookings yet.
+                </div>
               ) : (
                 <div className="divide-y divide-stone-100">
-                  {unavailableRanges.map((range) => (
+                  {manualEntries.map((range) => (
                     <div
                       key={range.id}
                       className="grid gap-4 px-6 py-5 md:grid-cols-[1fr_0.8fr_auto] md:items-center"
                     >
                       <div>
-                        <p className="font-bold text-stone-950">{range.listings?.title || 'Stay'}</p>
+                        <p className="font-bold text-stone-950">{range.title}</p>
                         <p className="mt-1 text-sm text-stone-500">
+                          <span
+                            className={`mr-2 inline-flex rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                              range.source === 'manual_booking'
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-stone-100 text-stone-600'
+                            }`}
+                          >
+                            {range.source === 'manual_booking' ? 'Booking' : 'Blocked'}
+                          </span>
                           {range.reason || 'Unavailable'}
                         </p>
                       </div>
