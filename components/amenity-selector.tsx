@@ -16,7 +16,7 @@ export function AmenitySelector({
 }: AmenitySelectorProps) {
   const selected = selectedAmenities ?? defaultSelectedAmenities
   const selectedSet = new Set(selected)
-  const knownAmenities = new Set(STAY_AMENITY_GROUPS.flatMap((group) => group.amenities))
+  const knownAmenities = new Set<string>(STAY_AMENITY_GROUPS.flatMap((group) => group.amenities))
   const customAmenities = selected.filter((amenity) => !knownAmenities.has(amenity)).join(', ')
 
   return (
