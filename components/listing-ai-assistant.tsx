@@ -185,9 +185,9 @@ export function ListingAiAssistant({
             type="button"
             onClick={() => void translateToEnglish()}
             disabled={translateLoading}
-            className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-bold text-stone-800 transition hover:border-stone-500 disabled:cursor-not-allowed disabled:opacity-60"
+            className="whitespace-nowrap rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-bold text-stone-800 transition hover:border-stone-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {translateLoading ? 'Translating...' : 'Translate Hebrew → English'}
+            {translateLoading ? 'Translating...' : 'Translate to English'}
           </button>
         </div>
       </div>
