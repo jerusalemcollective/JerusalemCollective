@@ -1,4 +1,3 @@
-import { HostDashboardNav } from '@/components/host-dashboard-nav'
 import { HostAvailabilityCalendar } from '@/components/host-availability-calendar'
 import { BlockRangeForm } from '@/components/block-range-form'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
@@ -56,7 +55,6 @@ export default async function HostCalendarPage() {
   return (
     <div className="min-h-screen bg-[#F8F5F2] px-5 py-10 text-[#252525] md:px-6">
       <section className="mx-auto max-w-6xl">
-        <HostDashboardNav />
 
         <div className="mb-8">
           <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Host dashboard</p>

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { HostDashboardNav } from '@/components/host-dashboard-nav'
 
 export const metadata: Metadata = {
   robots: {
@@ -26,5 +27,14 @@ export default async function HostDashboardLayout({
     redirect('/login?redirect=/host/dashboard')
   }
 
-  return children
+  return (
+    <div className="min-h-screen bg-[#F8F5F2] text-[#252525]">
+      <div className="mx-auto grid max-w-[96rem] gap-6 px-4 py-6 md:grid-cols-[240px_1fr] md:px-6">
+        <div className="md:sticky md:top-6 md:self-start">
+          <HostDashboardNav />
+        </div>
+        <div className="min-w-0">{children}</div>
+      </div>
+    </div>
+  )
 }

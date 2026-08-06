@@ -1,7 +1,6 @@
 ﻿import Link from 'next/link'
 import Image from 'next/image'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
-import { HostDashboardNav } from '@/components/host-dashboard-nav'
 import { ListingQualityScore } from '@/components/listing-quality-score'
 import { ConfirmSubmitButton } from '@/components/confirm-submit-button'
 import { calculateListingScore } from '@/lib/marketplace-rules'
@@ -222,7 +221,6 @@ export default async function HostListingsPage() {
   return (
     <div className="min-h-screen bg-[#F8F5F2] px-5 py-8 text-[#252525] md:px-6">
       <section className="mx-auto max-w-6xl">
-        <HostDashboardNav />
 
         <header className="flex flex-col gap-4 border-b border-stone-200 pb-6 md:flex-row md:items-end md:justify-between">
           <div>

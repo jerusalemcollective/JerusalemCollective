@@ -1,4 +1,3 @@
-import { HostDashboardNav } from '@/components/host-dashboard-nav'
 import { PaymentUpdateForm } from '@/components/payment-update-form'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { getPaymentRouteSettings } from '@/lib/platform-settings'
@@ -108,7 +107,6 @@ export default async function HostPaymentsPage({
   return (
     <div className="min-h-screen bg-[#F8F5F2] px-5 py-10 text-[#252525] md:px-6">
       <section className="mx-auto max-w-6xl">
-        <HostDashboardNav />
 
         <div className="mb-8">
           <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Host dashboard</p>

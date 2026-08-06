@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { HostDashboardNav } from '@/components/host-dashboard-nav'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { updateHostApplication } from '../../listings/actions'
 import { ApplicationPhotoManager } from '@/components/application-photo-manager'
@@ -91,7 +90,6 @@ export default async function HostApplicationEditPage({
   return (
     <div className="min-h-screen bg-[#F8F5F2] px-5 py-10 text-[#252525] md:px-6">
       <section className="mx-auto max-w-6xl">
-        <HostDashboardNav />
 
         <div className="mb-6 flex items-center gap-2 text-sm text-stone-500">
           <Link href="/host/dashboard/listings" className="hover:text-[#c76f55]">

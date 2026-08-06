@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
-import { HostDashboardNav } from '@/components/host-dashboard-nav'
 import { CopyCalendarUrlButton } from '@/components/copy-calendar-url-button'
 import { DraftListingCard } from '@/components/draft-listing-card'
 
@@ -138,7 +137,6 @@ export default async function HostDashboardPage() {
   return (
     <div className="min-h-screen bg-[#F8F5F2] px-5 py-8 text-[#252525] md:px-6">
       <section className="mx-auto max-w-6xl">
-        <HostDashboardNav />
 
         <header className="flex flex-col gap-4 border-b border-stone-200 pb-6 md:flex-row md:items-end md:justify-between">
           <div>

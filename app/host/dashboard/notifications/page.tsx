@@ -1,4 +1,3 @@
-import { HostDashboardNav } from '@/components/host-dashboard-nav'
 import { NotificationPreferencesForm } from '@/components/notification-preferences-form'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 
@@ -28,7 +27,6 @@ export default async function HostNotificationsPage() {
   return (
     <div className="min-h-screen bg-[#F8F5F2] px-5 py-10 md:px-6">
       <section className="mx-auto max-w-2xl">
-        <HostDashboardNav />
         <h1 className="font-display mt-6 text-3xl font-bold text-stone-950">
           Notification preferences
         </h1>
