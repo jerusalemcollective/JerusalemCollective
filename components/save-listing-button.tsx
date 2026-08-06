@@ -84,8 +84,21 @@ export function SaveListingButton({ listingId }: { listingId: string }) {
       type="button"
       onClick={toggleSaved}
       disabled={loading}
-      className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 shadow-sm transition hover:border-[#c76f55] hover:text-[#c76f55] disabled:cursor-not-allowed disabled:opacity-60"
+      className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
+        optimisticSaved
+          ? 'border-[#c76f55] bg-white text-[#c76f55]'
+          : 'border-stone-200 bg-white text-stone-700 hover:border-[#c76f55] hover:text-[#c76f55]'
+      }`}
     >
+      <svg
+        className="h-4 w-4"
+        viewBox="0 0 24 24"
+        fill={optimisticSaved ? 'currentColor' : 'none'}
+        stroke="currentColor"
+        strokeWidth="2"
+      >
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+      </svg>
       <span aria-hidden="true">{optimisticSaved ? 'Saved' : 'Save'}</span>
     </button>
   )
