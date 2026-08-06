@@ -1,3 +1,5 @@
+import { ogImages, ogTwitterImages } from '@/lib/og'
+
 export const metadata = {
   title: 'Privacy Policy',
   description: 'Privacy Policy for JLM Collective - how we collect, use, and protect your information.',
@@ -10,9 +12,11 @@ export const metadata = {
     url: '/privacy',
     siteName: 'JLM Collective',
     type: 'website',
+    ...ogImages('Privacy Policy'),
   },
   twitter: {
     card: 'summary_large_image',
+    images: ogTwitterImages('Privacy Policy'),
     title: 'Privacy Policy | JLM Collective',
     description: 'How JLM Collective collects, uses, stores, and protects personal information.',
   },

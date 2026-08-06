@@ -3,6 +3,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { z } from 'zod'
 import { createPublicClient } from '@/lib/supabase/public'
+import { ogImages, ogTwitterImages } from '@/lib/og'
 import { allNeighborhoods } from '@/lib/neighborhoods'
 import { slugifyNeighborhood } from '@/lib/neighborhood-pages'
 import { getAmenityLabel } from '@/lib/stay-amenities'
@@ -26,9 +27,11 @@ export const metadata = {
     description: 'Find curated short-term stays in Jerusalem.',
     url: '/stays',
     type: 'website',
+    ...ogImages('Curated short-term stays in Jerusalem'),
   },
   twitter: {
     card: 'summary_large_image',
+    images: ogTwitterImages('Curated short-term stays in Jerusalem'),
   },
 }
 

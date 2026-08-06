@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { ogImages, ogTwitterImages } from '@/lib/og'
 
 export const revalidate = 86400
 
@@ -15,9 +16,11 @@ export const metadata = {
       'How to find and book a verified Jerusalem stay through JLM Collective \u2014 simple, personal, and transparent.',
     url: '/how-it-works',
     type: 'website',
+    ...ogImages('How JLM Collective works'),
   },
   twitter: {
     card: 'summary_large_image',
+    images: ogTwitterImages('How JLM Collective works'),
   },
 }
 

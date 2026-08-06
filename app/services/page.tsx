@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { notFound } from 'next/navigation'
 import { getServicesBarEnabled } from '@/lib/platform-settings'
+import { ogImages, ogTwitterImages } from '@/lib/og'
 
 export const metadata = {
   title: 'Guest Services',
@@ -14,9 +15,11 @@ export const metadata = {
     description: 'Enhance your Jerusalem stay with custom catering, Shabbos meal packages, and housekeeping arranged by JLM Collective.',
     url: '/services',
     type: 'website',
+    ...ogImages('Guest services in Jerusalem'),
   },
   twitter: {
     card: 'summary_large_image',
+    images: ogTwitterImages('Guest services in Jerusalem'),
   },
 }
 

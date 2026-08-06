@@ -5,6 +5,7 @@ import {
   defaultPopularNeighborhoods,
 } from '@/lib/neighborhoods'
 import { slugifyNeighborhood } from '@/lib/neighborhood-pages'
+import { ogImages, ogTwitterImages } from '@/lib/og'
 
 export const metadata = {
   title: 'Explore Jerusalem stays',
@@ -19,9 +20,11 @@ export const metadata = {
       'Discover Jerusalem neighbourhoods, practical stay collections, and featured places before searching all stays.',
     url: '/explore',
     type: 'website',
+    ...ogImages('Explore Jerusalem stays'),
   },
   twitter: {
     card: 'summary_large_image',
+    images: ogTwitterImages('Explore Jerusalem stays'),
   },
 }
 

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { HOST_TERMS, HOST_TERMS_LAST_UPDATED } from '@/lib/host-terms'
+import { ogImages, ogTwitterImages } from '@/lib/og'
 
 export const metadata = {
   title: 'Terms of Service',
@@ -13,9 +14,11 @@ export const metadata = {
     url: '/terms',
     siteName: 'JLM Collective',
     type: 'website',
+    ...ogImages('Terms of Service'),
   },
   twitter: {
     card: 'summary_large_image',
+    images: ogTwitterImages('Terms of Service'),
     title: 'Terms of Service | JLM Collective',
     description: 'Terms for guests and hosts using JLM Collective.',
   },

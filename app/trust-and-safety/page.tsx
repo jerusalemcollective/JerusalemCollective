@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { ogImages, ogTwitterImages } from '@/lib/og'
 
 export const metadata = {
   title: 'Trust & Safety Policy',
@@ -12,9 +13,11 @@ export const metadata = {
     url: '/trust-and-safety',
     siteName: 'JLM Collective',
     type: 'website',
+    ...ogImages('Trust & Safety'),
   },
   twitter: {
     card: 'summary_large_image',
+    images: ogTwitterImages('Trust & Safety'),
     title: 'Trust & Safety Policy | JLM Collective',
     description: 'JLM Collective standards, review process, and user protection policies.',
   },

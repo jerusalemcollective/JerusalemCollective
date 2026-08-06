@@ -45,10 +45,10 @@ export const metadata: Metadata = {
     siteName: 'JLM Collective',
     images: [
       {
-        url: '/logos/JLM_Collective_Primary_Horizontal_Terracotta_UI.webp',
+        url: '/api/og',
         width: 1200,
         height: 630,
-        alt: 'JLM Collective',
+        alt: 'JLM Collective — curated short-term stays in Jerusalem',
       },
     ],
     locale: 'en_GB',
@@ -56,7 +56,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    images: ['/logos/JLM_Collective_Primary_Horizontal_Terracotta_UI.webp'],
+    images: ['/api/og'],
   },
 }
 

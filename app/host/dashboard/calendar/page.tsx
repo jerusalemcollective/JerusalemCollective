@@ -8,6 +8,7 @@ import { saveCalendarEntry, updateBookingAsHost, updateRequestAsHost } from './a
 import { RemoveBlockedDateButton } from '@/components/remove-blocked-date-button'
 import { HostBookingEditor, type EditableBooking } from '@/components/host-booking-editor'
 import { ExternalCalendarSyncForm } from '@/components/external-calendar-sync-form'
+import { CopyCalendarUrlButton } from '@/components/copy-calendar-url-button'
 
 type HostListing = {
   id: string
@@ -55,7 +56,13 @@ function oneOrNull<T>(rel: T | T[] | null | undefined): T | null {
 
 export default async function HostCalendarPage() {
   const { supabase, hostIds } = await requireHostDashboardAccess()
-  const [{ data: listings }, { data: ranges }, { data: bookingsData }, { data: requestsData }] = await Promise.all([
+  const [
+    { data: listings },
+    { data: ranges },
+    { data: bookingsData },
+    { data: requestsData },
+    { data: hostContact },
+  ] = await Promise.all([
     supabase
       .from('listings')
       .select('id, title, external_calendar_url, calendar_last_synced_at')
@@ -77,6 +84,10 @@ export default async function HostCalendarPage() {
       .in('host_id', hostIds)
       .in('status', ['new', 'host_replied', 'accepted'])
       .order('check_in', { ascending: true }),
+    // calendar_token is only readable through this definer (migration 074).
+    supabase
+      .rpc('get_my_host_contact')
+      .maybeSingle<{ host_id: string; email: string | null; calendar_token: string | null }>(),
   ])
 
   const hostListings: HostListing[] = (listings || []).map((listing: HostListing) => ({
@@ -137,6 +148,10 @@ export default async function HostCalendarPage() {
       source: range.source,
       title: oneOrNull(range.listings)?.title || 'Stay',
     }))
+
+  const calendarUrl = hostContact?.calendar_token
+    ? `https://jlmcollective.co/api/host-calendar/${hostContact.calendar_token}.ics`
+    : null
 
   return (
     <div className="min-h-screen bg-[#F8F5F2] px-5 py-10 text-[#252525] md:px-6">
@@ -213,6 +228,48 @@ export default async function HostCalendarPage() {
                     </div>
                   ))}
                 </div>
+              )}
+            </section>
+
+            <section className="mt-6 rounded-3xl bg-white p-6 shadow-sm">
+              <h2 className="text-lg font-bold text-stone-950">Subscribe to your bookings</h2>
+              <p className="mt-2 text-sm leading-6 text-stone-600">
+                Add this link to Google Calendar or Apple Calendar to see all your JLM Collective bookings
+                automatically.
+              </p>
+              {calendarUrl ? (
+                <>
+                  <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center">
+                    <input
+                      readOnly
+                      value={calendarUrl}
+                      className="flex-1 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 font-mono text-sm text-stone-700"
+                    />
+                    <CopyCalendarUrlButton value={calendarUrl} />
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-3">
+                    <a
+                      href="https://calendar.google.com/calendar/r/settings/addbyurl"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-semibold text-[#c76f55] hover:underline"
+                    >
+                      Add to Google Calendar -&gt;
+                    </a>
+                    <a
+                      href="https://support.apple.com/guide/icloud/set-up-icloud-calendar-mm6902b8ad/icloud"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-semibold text-stone-500 hover:underline"
+                    >
+                      Add to Apple Calendar -&gt;
+                    </a>
+                  </div>
+                </>
+              ) : (
+                <p className="mt-4 rounded-2xl bg-[#F8F5F2] p-4 text-sm text-stone-600">
+                  Your private calendar link will appear after the calendar token migration has been run.
+                </p>
               )}
             </section>
 

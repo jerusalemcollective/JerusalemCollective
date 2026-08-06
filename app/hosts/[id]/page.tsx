@@ -90,7 +90,7 @@ export async function generateMetadata({
         ? [{ url: host.profile_photo_url, alt: displayName }]
         : [
             {
-              url: '/logos/JLM_Collective_Primary_Horizontal_Terracotta_UI.webp',
+              url: '/api/og',
               width: 1200,
               height: 630,
               alt: 'JLM Collective',

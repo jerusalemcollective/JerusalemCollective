@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient as createServiceRoleClient } from '@supabase/supabase-js'
 import { sendGuestBalanceReminderEmail } from '@/lib/transactional-email'
+import { pingCronHeartbeat } from '@/lib/cron-heartbeat'
+
+const HEARTBEAT_SLUG = 'balance-reminders'
 
 export const runtime = 'nodejs'
 
@@ -43,6 +46,7 @@ export async function GET(request: Request) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!supabaseUrl || !serviceRoleKey) {
+    await pingCronHeartbeat(HEARTBEAT_SLUG, false)
     return NextResponse.json({ error: 'Not configured.' }, { status: 500 })
   }
   const supabase = createServiceRoleClient(supabaseUrl, serviceRoleKey)
@@ -64,6 +68,7 @@ export async function GET(request: Request) {
     .limit(200)
 
   if (error) {
+    await pingCronHeartbeat(HEARTBEAT_SLUG, false)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
@@ -98,6 +103,10 @@ export async function GET(request: Request) {
       sent += 1
     }
   }
+
+  // Job completed successfully — ping the dead-man's switch so the external
+  // monitor knows the cron is alive. If this stops arriving, it alerts.
+  await pingCronHeartbeat(HEARTBEAT_SLUG)
 
   return NextResponse.json({ ok: true, checked: (due || []).length, sent })
 }

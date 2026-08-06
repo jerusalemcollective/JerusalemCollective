@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { neighborhoodDescriptions, slugifyNeighborhood } from '@/lib/neighborhood-pages'
+import { ogImages, ogTwitterImages } from '@/lib/og'
 
 export const revalidate = 86400
 
@@ -14,8 +15,9 @@ export const metadata: Metadata = {
     description: 'Find the right Jerusalem neighbourhood for your stay — community, shuls, and walking distance to the Kotel.',
     url: '/neighbourhoods',
     type: 'website',
+    ...ogImages('Jerusalem neighbourhoods for your stay'),
   },
-  twitter: { card: 'summary_large_image' },
+  twitter: { card: 'summary_large_image', images: ogTwitterImages('Jerusalem neighbourhoods for your stay') },
 }
 
 function firstSentence(text: string): string {

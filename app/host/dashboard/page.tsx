@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
-import { CopyCalendarUrlButton } from '@/components/copy-calendar-url-button'
 import { DraftListingCard } from '@/components/draft-listing-card'
 
 type UpcomingBooking = {
@@ -27,13 +26,8 @@ type PendingApplication = {
   status: string
 }
 
-type HostCalendar = {
-  name: string
-  calendar_token: string | null
-}
-
 export default async function HostDashboardPage() {
-  const { supabase, hostIds, host } = await requireHostDashboardAccess()
+  const { supabase, hostIds } = await requireHostDashboardAccess()
   const today = new Date().toISOString().slice(0, 10)
 
   const [
@@ -45,7 +39,6 @@ export default async function HostDashboardPage() {
     { count: totalListingsCount },
     { count: totalApplicationsCount },
     { data: pendingApplicationData },
-    { data: hostCalendarData },
   ] = await Promise.all([
     supabase
       .from('booking_requests')
@@ -93,11 +86,6 @@ export default async function HostDashboardPage() {
         .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
-    // calendar_token is no longer readable via a user-scoped table select
-    // (migration 074); this definer returns only the caller's own token.
-    supabase
-      .rpc('get_my_host_contact')
-      .maybeSingle<{ host_id: string; email: string | null; calendar_token: string | null }>(),
   ])
 
   const newEnquiries = newEnquiryCount || 0
@@ -121,15 +109,6 @@ export default async function HostDashboardPage() {
         id: pendingApplicationData.id,
         status: pendingApplicationData.status,
       }
-    : null
-  const hostCalendar: HostCalendar | null = hostCalendarData
-    ? {
-        name: host.name,
-        calendar_token: hostCalendarData.calendar_token,
-      }
-    : null
-  const calendarUrl = hostCalendar?.calendar_token
-    ? `https://jlmcollective.co/api/host-calendar/${hostCalendar.calendar_token}.ics`
     : null
   const isNewHost = totalListings === 0 && totalApplications === 0
   const hasActions = awaitingResponses > 0 || openSupportCases.length > 0 || Boolean(pendingApplication)
@@ -201,114 +180,40 @@ export default async function HostDashboardPage() {
           </section>
         )}
 
-        <section className="border-b border-stone-200 py-6">
-          <div className="rounded-3xl bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-stone-950">Sync bookings to your calendar</h2>
-            <p className="mt-2 text-sm leading-6 text-stone-600">
-              Subscribe to this link in Google Calendar or Apple Calendar to see all your bookings automatically.
-            </p>
-            {calendarUrl ? (
-              <>
-                <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center">
-                  <input
-                    readOnly
-                    value={calendarUrl}
-                    className="flex-1 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 font-mono text-sm text-stone-700"
-                  />
-                  <CopyCalendarUrlButton value={calendarUrl} />
-                </div>
-                <div className="mt-3 flex flex-wrap gap-3">
-                  <a
-                    href="https://calendar.google.com/calendar/r/settings/addbyurl"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs font-semibold text-[#c76f55] hover:underline"
-                  >
-                    Add to Google Calendar -&gt;
-                  </a>
-                  <a
-                    href="https://support.apple.com/guide/icloud/set-up-icloud-calendar-mm6902b8ad/icloud"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs font-semibold text-stone-500 hover:underline"
-                  >
-                    Add to Apple Calendar -&gt;
-                  </a>
-                </div>
-              </>
+        <section className="py-8">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-xl font-bold text-stone-950">Upcoming stays</h2>
+            <Link
+              href="/host/dashboard/calendar"
+              className="text-sm font-bold text-[#c76f55] transition hover:text-[#a95b45]"
+            >
+              Open calendar
+            </Link>
+          </div>
+
+          <div className="mt-4 overflow-hidden rounded-3xl bg-white shadow-sm">
+            {upcomingBookings.length === 0 ? (
+              <div className="px-6 py-12 text-center text-stone-500">No upcoming bookings yet</div>
             ) : (
-              <p className="mt-4 rounded-2xl bg-[#F8F5F2] p-4 text-sm text-stone-600">
-                Your private calendar link will appear after the calendar token migration has been run.
-              </p>
+              <div className="divide-y divide-stone-100">
+                {upcomingBookings.map((booking) => (
+                  <article
+                    key={booking.id}
+                    className="grid gap-3 px-6 py-5 md:grid-cols-[1fr_auto] md:items-center"
+                  >
+                    <div>
+                      <p className="font-bold text-stone-950">{booking.listings?.title || 'Stay'}</p>
+                      <p className="mt-1 text-sm text-stone-500">Confirmed booking</p>
+                    </div>
+                    <p className="text-sm font-semibold text-stone-700">
+                      {formatDate(booking.check_in)} - {formatDate(booking.check_out)}
+                    </p>
+                  </article>
+                ))}
+              </div>
             )}
           </div>
         </section>
-
-        <div className="grid gap-8 py-8 lg:grid-cols-[1.2fr_0.8fr]">
-          <section>
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-bold text-stone-950">Upcoming stays</h2>
-              </div>
-              <Link
-                href="/host/dashboard/calendar"
-                className="text-sm font-bold text-[#c76f55] transition hover:text-[#a95b45]"
-              >
-                Open calendar
-              </Link>
-            </div>
-
-            <div className="mt-4 overflow-hidden rounded-3xl bg-white shadow-sm">
-              {upcomingBookings.length === 0 ? (
-                <div className="px-6 py-12 text-center text-stone-500">No upcoming bookings yet</div>
-              ) : (
-                <div className="divide-y divide-stone-100">
-                  {upcomingBookings.map((booking) => (
-                    <article
-                      key={booking.id}
-                      className="grid gap-3 px-6 py-5 md:grid-cols-[1fr_auto] md:items-center"
-                    >
-                      <div>
-                        <p className="font-bold text-stone-950">{booking.listings?.title || 'Stay'}</p>
-                        <p className="mt-1 text-sm text-stone-500">Confirmed booking</p>
-                      </div>
-                      <p className="text-sm font-semibold text-stone-700">
-                        {formatDate(booking.check_in)} - {formatDate(booking.check_out)}
-                      </p>
-                    </article>
-                  ))}
-                </div>
-              )}
-            </div>
-          </section>
-
-          <aside>
-            <h2 className="text-xl font-bold text-stone-950">Quick links</h2>
-
-            <div className="mt-4 grid gap-3">
-              <QuickLinkCard
-                href="/host/dashboard/listings"
-                title="Listings"
-                detail="Manage live and submitted stays."
-              />
-              <QuickLinkCard
-                href="/host/dashboard/calendar"
-                title="Calendar"
-                detail="Block dates and keep availability accurate."
-              />
-              <QuickLinkCard
-                href="/host/dashboard/messages"
-                title="Messages"
-                detail="Reply to guests and manage enquiries."
-              />
-              <QuickLinkCard
-                href="/host/dashboard/payments"
-                title="Payments"
-                detail="Set your payout and direct payment preferences."
-              />
-            </div>
-          </aside>
-        </div>
       </section>
     </div>
   )
@@ -339,33 +244,6 @@ function ActionCard({
     >
       <p className="text-lg font-bold text-stone-950">{title}</p>
       <p className="mt-2 text-sm leading-6 text-stone-600">{detail}</p>
-    </Link>
-  )
-}
-
-function QuickLinkCard({
-  href,
-  title,
-  detail,
-}: {
-  href: string
-  title: string
-  detail: string
-}) {
-  return (
-    <Link
-      href={href}
-      className="block rounded-3xl bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-    >
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="font-bold text-stone-950">{title}</p>
-          <p className="mt-1 text-sm leading-6 text-stone-600">{detail}</p>
-        </div>
-        <span className="text-sm font-bold text-[#c76f55]" aria-hidden="true">
-          -&gt;
-        </span>
-      </div>
     </Link>
   )
 }
