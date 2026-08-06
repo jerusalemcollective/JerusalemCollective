@@ -264,8 +264,8 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
           ) : (
             <>
               <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
-                {listings.map((listing) => (
-                  <ListingCard key={listing.id} listing={listing} />
+                {listings.map((listing, index) => (
+                  <ListingCard key={listing.id} listing={listing} priority={index < 4} />
                 ))}
               </div>
               {totalPages > 1 && (
@@ -500,10 +500,12 @@ async function loadListings({
 
 function ListingCard({
   listing,
+  priority = false,
 }: {
   listing: Listing & {
     cover_photo_url?: string | null
   }
+  priority?: boolean
 }) {
   return (
     <div className="group">
@@ -519,7 +521,7 @@ function ListingCard({
               fill
               className="object-cover"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              loading="lazy"
+              {...(priority ? { priority: true } : { loading: 'lazy' as const })}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-[#F8F5F2]">

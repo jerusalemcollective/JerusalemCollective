@@ -173,6 +173,14 @@ export function MessageHostDialog({
         return
       }
 
+      // The host identifies the guest by their profile name (via the conversation
+      // join), so persist an edited "Your name" there instead of silently
+      // dropping it.
+      const trimmedName = senderName.trim()
+      if (trimmedName) {
+        await supabase.from('profiles').update({ full_name: trimmedName }).eq('id', user.id)
+      }
+
       if (isRequest && !quickQuestion && (!checkIn || !checkOut)) {
         setError('Please choose check-in and check-out dates first.')
         return
