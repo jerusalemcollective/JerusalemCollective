@@ -58,7 +58,7 @@ export default async function AdminUsersPage({
       <section className="mt-8">
         <h3 className="text-xl font-bold text-stone-950">Current admins</h3>
         <div className="mt-4 overflow-hidden border-y border-stone-200">
-          <div className="grid gap-4 border-b border-stone-200 py-4 text-xs font-bold uppercase tracking-widest text-stone-400 md:grid-cols-[1fr_1fr_0.7fr_0.8fr]">
+          <div className="grid gap-4 border-b border-stone-200 py-4 text-xs font-bold uppercase tracking-widest text-stone-500 md:grid-cols-[1fr_1fr_0.7fr_0.8fr]">
             <span>Email</span>
             <span>Name</span>
             <span>Role</span>

@@ -177,7 +177,7 @@ export default async function AdminPaymentsPage() {
         </div>
 
         <div className="mt-5 overflow-hidden rounded-2xl border border-stone-100">
-          <div className="grid gap-4 border-b border-stone-100 bg-stone-50 px-4 py-3 text-xs font-bold uppercase tracking-widest text-stone-400 md:grid-cols-[1fr_0.8fr_0.8fr_0.8fr_0.8fr_0.8fr]">
+          <div className="grid gap-4 border-b border-stone-100 bg-stone-50 px-4 py-3 text-xs font-bold uppercase tracking-widest text-stone-500 md:grid-cols-[1fr_0.8fr_0.8fr_0.8fr_0.8fr_0.8fr]">
             <span>Payment</span>
             <span>Host</span>
             <span>Guest</span>
@@ -202,7 +202,7 @@ export default async function AdminPaymentsPage() {
                       {new Date(payment.created_at).toLocaleDateString('en-GB')}
                     </p>
                     {payment.stripe_checkout_session_id && (
-                      <p className="mt-1 truncate text-xs text-stone-400">
+                      <p className="mt-1 truncate text-xs text-stone-500">
                         {payment.stripe_checkout_session_id}
                       </p>
                     )}
@@ -230,7 +230,7 @@ export default async function AdminPaymentsPage() {
           )}
         </div>
 
-        <p className="mt-4 text-xs text-stone-400">
+        <p className="mt-4 text-xs text-stone-500">
           Paid JLM fee total: {formatMoney(totalJlmFee)}. Mixed-currency totals are indicative only; use per-payment currency rows for reconciliation.
         </p>
       </section>

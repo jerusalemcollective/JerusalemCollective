@@ -155,7 +155,7 @@ function SummaryCard({ label, value }: { label: string; value: number }) {
 function Metric({ label, value }: { label: string; value: number }) {
   return (
     <div>
-      <p className="text-xs font-bold uppercase tracking-widest text-stone-400">{label}</p>
+      <p className="text-xs font-bold uppercase tracking-widest text-stone-500">{label}</p>
       <p className="mt-1 text-sm font-semibold text-stone-900">{value}</p>
     </div>
   )

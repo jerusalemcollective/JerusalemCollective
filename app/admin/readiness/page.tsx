@@ -399,7 +399,7 @@ export default async function AdminReadinessPage() {
               <span>
                 <span className="block font-bold text-stone-950">{listing.title}</span>
                 <span className="mt-1 block text-sm text-stone-500">{listing.area || 'Jerusalem'}</span>
-                <span className="mt-1 block text-xs font-bold uppercase tracking-widest text-stone-400">
+                <span className="mt-1 block text-xs font-bold uppercase tracking-widest text-stone-500">
                   {adminStatusLabel(getAdminStatus(listing))}
                 </span>
               </span>

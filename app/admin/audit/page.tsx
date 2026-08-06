@@ -38,7 +38,7 @@ export default async function AdminAuditPage() {
       </div>
 
       <div className="overflow-hidden rounded-3xl bg-white shadow-sm">
-        <div className="grid gap-4 border-b border-stone-100 px-6 py-4 text-xs font-bold uppercase tracking-widest text-stone-400 md:grid-cols-[1fr_1fr_0.8fr_1fr_1fr]">
+        <div className="grid gap-4 border-b border-stone-100 px-6 py-4 text-xs font-bold uppercase tracking-widest text-stone-500 md:grid-cols-[1fr_1fr_0.8fr_1fr_1fr]">
           <span>Timestamp</span>
           <span>Action</span>
           <span>Target type</span>

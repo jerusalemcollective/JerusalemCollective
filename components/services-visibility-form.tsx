@@ -25,7 +25,7 @@ export function ServicesVisibilityForm({
       </label>
 
       <div className="mt-3 flex items-center justify-between gap-3">
-        <p className="text-xs text-stone-400">
+        <p className="text-xs text-stone-500">
           Current status: {enabled ? 'visible' : 'hidden'}
         </p>
         <button

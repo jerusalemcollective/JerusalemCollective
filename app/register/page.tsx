@@ -124,7 +124,7 @@ function RegisterForm() {
 
           <div className="my-6 flex items-center gap-3">
             <span className="h-px flex-1 bg-stone-200" />
-            <span className="text-xs font-medium uppercase tracking-widest text-stone-400">or</span>
+            <span className="text-xs font-medium uppercase tracking-widest text-stone-500">or</span>
             <span className="h-px flex-1 bg-stone-200" />
           </div>
 

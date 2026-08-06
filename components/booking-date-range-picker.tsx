@@ -130,7 +130,7 @@ export function BookingDateRangePicker({
                 months: 'flex w-full flex-col',
                 month: 'w-full gap-5',
                 month_caption: 'min-h-12',
-                weekday: 'text-[10px] font-bold uppercase tracking-wider text-stone-400',
+                weekday: 'text-[10px] font-bold uppercase tracking-wider text-stone-500',
                 week: 'mt-2 flex w-full gap-2',
                 weekdays: 'flex gap-2',
                 day: 'aspect-square flex-1 rounded-2xl',
@@ -159,7 +159,7 @@ export function BookingDateRangePicker({
             <button
               type="button"
               onClick={() => setDateRange({ from: undefined, to: undefined })}
-              className="text-xs font-semibold text-stone-400 transition hover:text-stone-700"
+              className="text-xs font-semibold text-stone-500 transition hover:text-stone-700"
             >
               Clear
             </button>
@@ -181,7 +181,7 @@ function DateCell({
 }) {
   return (
     <div className={`${noBorder ? '' : 'border-r border-stone-100'} p-4 text-left md:p-5`}>
-      <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">{label}</p>
+      <p className="text-[10px] font-bold uppercase tracking-widest text-stone-500">{label}</p>
       <p className="mt-1 text-sm font-bold text-stone-950">
         {date ? formatCompactDate(date) : 'Choose date'}
       </p>
@@ -197,7 +197,7 @@ function DateCell({
 function SummaryCard({ label, date }: { label: string; date?: Date }) {
   return (
     <div className="rounded-xl bg-white px-4 py-3 ring-1 ring-stone-200">
-      <p className="text-[9px] font-semibold uppercase tracking-wider text-stone-400">{label}</p>
+      <p className="text-[9px] font-semibold uppercase tracking-wider text-stone-500">{label}</p>
       <p className="mt-0.5 text-sm font-semibold text-stone-800">
         {date ? formatCompactDate(date) : 'Select'}
       </p>

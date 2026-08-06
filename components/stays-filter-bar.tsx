@@ -242,7 +242,7 @@ export function StaysFilterBar() {
                 classNames={{
                   months: 'flex flex-col gap-6 md:flex-row md:gap-8',
                   month: 'flex w-full flex-col gap-3',
-                  weekday: 'flex-1 text-[10px] font-bold uppercase tracking-wider text-stone-400',
+                  weekday: 'flex-1 text-[10px] font-bold uppercase tracking-wider text-stone-500',
                   week: 'mt-1.5 flex w-full',
                 }}
               />

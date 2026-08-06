@@ -34,7 +34,7 @@ export function AdminRequestChangesForm({ applicationId }: { applicationId: stri
         </p>
       </div>
       <div className="rounded-2xl bg-[#F8F5F2] p-3">
-        <p className="text-xs font-bold uppercase tracking-widest text-stone-400">Parts to fix</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-stone-500">Parts to fix</p>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           {reviewSections.map((section) => (
             <label key={section.value} className="flex items-center gap-2 text-xs font-semibold text-stone-700">

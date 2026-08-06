@@ -87,7 +87,7 @@ export default async function SavedPage() {
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-stone-50">
-                        <p className="text-xs text-stone-400">
+                        <p className="text-xs text-stone-500">
                           Photo coming soon
                         </p>
                       </div>

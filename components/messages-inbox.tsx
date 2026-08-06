@@ -986,7 +986,7 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
                             {conversation.listing?.title || 'Listing conversation'}
                           </span>
                         </span>
-                        <span className="shrink-0 text-[11px] font-medium text-stone-400">
+                        <span className="shrink-0 text-[11px] font-medium text-stone-500">
                           {formatTimestamp(conversation.updated_at)}
                         </span>
                       </span>
@@ -1033,14 +1033,14 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
               <div className="mt-4 rounded-3xl border border-stone-200 bg-[#fbfaf8] p-4">
                 <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-center">
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">Dates</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-stone-500">Dates</p>
                     <p className="mt-1 text-sm font-bold text-stone-950">
                       {formatRequestDate(selectedConversation.request.check_in)} to{' '}
                       {formatRequestDate(selectedConversation.request.check_out)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">Guests</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-stone-500">Guests</p>
                     <p className="mt-1 text-sm font-bold text-stone-950">
                       {selectedConversation.request.guests} guest{selectedConversation.request.guests === 1 ? '' : 's'}
                     </p>
@@ -1133,7 +1133,7 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
                     }`}
                   >
                     <p className="whitespace-pre-wrap leading-6">{message.content}</p>
-                    <p className={`mt-2 text-[11px] ${isMine ? 'text-white/75' : 'text-stone-400'}`}>
+                    <p className={`mt-2 text-[11px] ${isMine ? 'text-white/75' : 'text-stone-500'}`}>
                       {formatTimestamp(message.created_at)}
                     </p>
                   </div>
@@ -1217,7 +1217,7 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
                 )}
               </button>
             </div>
-            <p className="mt-2 px-2 text-[11px] text-stone-400">
+            <p className="mt-2 px-2 text-[11px] text-stone-500">
               Enter to send · Shift + Enter for a new line
             </p>
           </div>

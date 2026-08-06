@@ -70,7 +70,7 @@ export default async function AdminSettingsPage() {
         <UpdateCommissionForm currentValue={currentCommission} />
 
         {commissionSetting?.updated_at && (
-          <p className="mt-3 text-xs text-stone-400">
+          <p className="mt-3 text-xs text-stone-500">
             Last updated:{' '}
             {new Date(commissionSetting.updated_at).toLocaleDateString('en-GB', {
               day: 'numeric',
@@ -114,7 +114,7 @@ export default async function AdminSettingsPage() {
           <p>
             <strong>Optional future revenue:</strong> Featured listings or other paid visibility can be added separately without making every booking feel expensive.
           </p>
-          <p className="border-t border-stone-200 pt-3 text-xs text-stone-400">
+          <p className="border-t border-stone-200 pt-3 text-xs text-stone-500">
             Changing commission affects only new bookings from that point. Existing bookings keep the rate that was locked when they were created.
           </p>
         </div>

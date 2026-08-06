@@ -128,7 +128,7 @@ export default async function AdminApplicationPage({
                   <EditField label="Price USD" name="price_usd" type="number" defaultValue={String(adminApplication.price_usd || '')} />
                 </div>
                 <label className="block">
-                  <span className="text-xs font-bold uppercase tracking-widest text-stone-400">Sleeping setup</span>
+                  <span className="text-xs font-bold uppercase tracking-widest text-stone-500">Sleeping setup</span>
                   <textarea
                     name="sleeping_setup"
                     defaultValue={adminApplication.sleeping_setup || ''}
@@ -137,13 +137,13 @@ export default async function AdminApplicationPage({
                   />
                 </label>
                 <div>
-                  <span className="text-xs font-bold uppercase tracking-widest text-stone-400">Amenities</span>
+                  <span className="text-xs font-bold uppercase tracking-widest text-stone-500">Amenities</span>
                   <div className="mt-2">
                     <AmenitySelector defaultSelectedAmenities={adminApplication.amenities || []} />
                   </div>
                 </div>
                 <label className="block">
-                  <span className="text-xs font-bold uppercase tracking-widest text-stone-400">Description</span>
+                  <span className="text-xs font-bold uppercase tracking-widest text-stone-500">Description</span>
                   <textarea
                     name="description"
                     defaultValue={adminApplication.description || ''}
@@ -296,7 +296,7 @@ function InfoSection({
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs font-bold uppercase tracking-widest text-stone-400">{label}</p>
+      <p className="text-xs font-bold uppercase tracking-widest text-stone-500">{label}</p>
       <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-stone-800">{value}</p>
     </div>
   )
@@ -319,7 +319,7 @@ function EditField({
 }) {
   return (
     <label className="block">
-      <span className="text-xs font-bold uppercase tracking-widest text-stone-400">{label}</span>
+      <span className="text-xs font-bold uppercase tracking-widest text-stone-500">{label}</span>
       <input
         name={name}
         type={type}

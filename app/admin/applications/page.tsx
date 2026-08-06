@@ -112,7 +112,7 @@ export default async function AdminApplicationsPage({
       </div>
 
       <div className="overflow-hidden rounded-3xl bg-white shadow-sm">
-        <div className="grid grid-cols-[1.3fr_1fr_0.8fr_0.7fr] gap-4 border-b border-stone-100 px-6 py-4 text-xs font-bold uppercase tracking-widest text-stone-400">
+        <div className="grid grid-cols-[1.3fr_1fr_0.8fr_0.7fr] gap-4 border-b border-stone-100 px-6 py-4 text-xs font-bold uppercase tracking-widest text-stone-500">
           <span>Application</span>
           <span>Area</span>
           <span>Status</span>

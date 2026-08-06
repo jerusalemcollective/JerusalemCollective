@@ -50,7 +50,7 @@ export function AvailabilityCalendar({ blockedRanges }: AvailabilityCalendarProp
           <h2 className="text-lg font-bold text-stone-900">Availability</h2>
           <p className="mt-1 text-sm text-stone-500">Greyed dates are unavailable</p>
         </div>
-        <p className="text-xs font-semibold text-stone-400">Hebrew dates shown inside each day</p>
+        <p className="text-xs font-semibold text-stone-500">Hebrew dates shown inside each day</p>
       </div>
       <div className="rounded-3xl bg-[#faf8f6] p-3 sm:p-6">
         <div className="mx-auto max-w-[460px] rounded-2xl bg-white p-3 sm:p-5">
@@ -64,7 +64,7 @@ export function AvailabilityCalendar({ blockedRanges }: AvailabilityCalendarProp
               months: 'flex w-full flex-col',
               month: 'w-full gap-5',
               month_caption: 'min-h-12',
-              weekday: 'text-[11px] font-bold uppercase tracking-wider text-stone-400',
+              weekday: 'text-[11px] font-bold uppercase tracking-wider text-stone-500',
               week: 'mt-2 flex w-full gap-1.5',
               weekdays: 'flex gap-1.5',
               day: 'aspect-square flex-1 rounded-2xl',

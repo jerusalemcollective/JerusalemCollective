@@ -325,7 +325,7 @@ export function MessageHostDialog({
                 </div>
 
                 <div className="w-full space-y-3 rounded-2xl bg-[#F8F5F2] p-4 text-left">
-                  <p className="text-xs font-bold uppercase tracking-widest text-stone-400">
+                  <p className="text-xs font-bold uppercase tracking-widest text-stone-500">
                     What happens next
                   </p>
                   <div className="space-y-2">
@@ -413,7 +413,7 @@ export function MessageHostDialog({
                   <button
                     type="button"
                     onClick={closeDialog}
-                    className="rounded-full p-2 text-stone-400 transition hover:bg-stone-100 hover:text-stone-600"
+                    className="rounded-full p-2 text-stone-500 transition hover:bg-stone-100 hover:text-stone-600"
                     aria-label="Close"
                   >
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

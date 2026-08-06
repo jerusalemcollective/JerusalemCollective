@@ -346,7 +346,7 @@ function HomeListingCard({ listing }: { listing: FeaturedStay }) {
             <div className="flex h-full w-full items-center justify-center bg-[#F8F5F2]">
               <div className="text-center">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-[#c76f55]">JLM Collective</p>
-                <p className="mt-1 text-xs text-stone-400">Photo coming soon</p>
+                <p className="mt-1 text-xs text-stone-600">Photo coming soon</p>
               </div>
             </div>
           )}

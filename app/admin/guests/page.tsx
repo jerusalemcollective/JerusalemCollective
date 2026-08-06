@@ -59,7 +59,7 @@ export default async function AdminGuestsPage({
       </div>
 
       <div className="overflow-hidden border-y border-stone-200">
-        <div className="grid gap-4 border-b border-stone-200 py-4 text-xs font-bold uppercase tracking-widest text-stone-400 md:grid-cols-[1.1fr_1fr_0.8fr_0.65fr_0.65fr_0.8fr]">
+        <div className="grid gap-4 border-b border-stone-200 py-4 text-xs font-bold uppercase tracking-widest text-stone-500 md:grid-cols-[1.1fr_1fr_0.8fr_0.65fr_0.65fr_0.8fr]">
           <span>Name</span>
           <span>Email</span>
           <span>Phone</span>

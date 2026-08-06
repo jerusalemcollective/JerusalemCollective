@@ -151,7 +151,7 @@ export default async function HostPaymentsPage({
               {payoutSummary.map(([currency, totals]) => (
                 <div key={currency} className="mt-5">
                   {payoutSummary.length > 1 && (
-                    <p className="mb-2 text-xs font-bold uppercase tracking-widest text-stone-400">
+                    <p className="mb-2 text-xs font-bold uppercase tracking-widest text-stone-500">
                       {currency}
                     </p>
                   )}
@@ -180,7 +180,7 @@ export default async function HostPaymentsPage({
               ))}
 
               <div className="mt-6 overflow-hidden rounded-2xl border border-stone-200">
-                <div className="hidden gap-4 border-b border-stone-200 bg-[#fbfaf8] px-4 py-3 text-xs font-bold uppercase tracking-widest text-stone-400 md:grid md:grid-cols-[1fr_1fr_1fr_1.2fr]">
+                <div className="hidden gap-4 border-b border-stone-200 bg-[#fbfaf8] px-4 py-3 text-xs font-bold uppercase tracking-widest text-stone-500 md:grid md:grid-cols-[1fr_1fr_1fr_1.2fr]">
                   <span>Guest paid</span>
                   <span>JLM fee</span>
                   <span>Your payout</span>

@@ -82,7 +82,7 @@ export function HostAvailabilityCalendar({
           </label>
 
           <div className="mt-4 rounded-2xl bg-[#F8F5F2] p-4">
-            <p className="text-xs font-bold uppercase tracking-widest text-stone-400">Selected range</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-stone-500">Selected range</p>
             <p className="mt-2 text-sm font-semibold text-stone-900">
               {dateRange.from ? formatDisplayDate(dateRange.from) : 'Choose a start date'}
               {' - '}

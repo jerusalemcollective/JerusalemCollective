@@ -108,7 +108,7 @@ export function MapPageClient({ listings }: { listings: MapListing[] }) {
               <div className="grid gap-3">
                 {STAY_AMENITY_GROUPS.map((group) => (
                   <section key={group.title}>
-                    <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-widest text-stone-400">
+                    <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-widest text-stone-500">
                       {group.title}
                     </p>
                     <div className="flex flex-wrap gap-2">
@@ -164,7 +164,7 @@ export function MapPageClient({ listings }: { listings: MapListing[] }) {
                 <div className="flex h-full w-full items-center justify-center">
                   <div className="text-center">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-[#c76f55]">JLM Collective</p>
-                    <p className="mt-1 text-xs text-stone-400">Photo coming soon</p>
+                    <p className="mt-1 text-xs text-stone-600">Photo coming soon</p>
                   </div>
                 </div>
               )}

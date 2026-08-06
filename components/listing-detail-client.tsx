@@ -698,7 +698,7 @@ export function ListingDetailClient({
                   </div>
                   {shulDistances.length > 0 && (
                     <div className="mt-3 space-y-1.5">
-                      <p className="text-xs font-bold uppercase tracking-widest text-stone-400">
+                      <p className="text-xs font-bold uppercase tracking-widest text-stone-500">
                         Walking distance to shuls
                       </p>
                       {shulDistances.map((shul) => (
@@ -1033,7 +1033,7 @@ export function ListingDetailClient({
                 <button
                   type="button"
                   onClick={() => setShowMobileBooking(false)}
-                  className="rounded-full p-2 text-stone-400 transition hover:bg-stone-100 hover:text-stone-600"
+                  className="rounded-full p-2 text-stone-500 transition hover:bg-stone-100 hover:text-stone-600"
                 >
                   <CloseIcon />
                 </button>
@@ -1104,7 +1104,7 @@ function PaymentClarityNote({ allowsOnlinePayment }: { allowsOnlinePayment: bool
           <p className="text-xs leading-5 text-stone-500">
             You will review the payment step before anything is charged.
           </p>
-          <p className="mt-1 text-xs leading-5 text-stone-400">
+          <p className="mt-1 text-xs leading-5 text-stone-500">
             Your stay is confirmed once payment is complete.
           </p>
         </>
@@ -1113,7 +1113,7 @@ function PaymentClarityNote({ allowsOnlinePayment }: { allowsOnlinePayment: bool
           <p className="text-xs leading-5 text-stone-500">
             No payment is taken when you send a request.
           </p>
-          <p className="mt-1 text-xs leading-5 text-stone-400">
+          <p className="mt-1 text-xs leading-5 text-stone-500">
             Your stay is confirmed only after the host accepts your dates and the agreed payment step is complete.
           </p>
         </>
@@ -1417,7 +1417,7 @@ function GuestConfidencePanel() {
 
   return (
     <div className="mt-5 rounded-2xl bg-[#F8F5F2] p-4">
-      <p className="mb-3 text-xs font-bold uppercase tracking-widest text-stone-400">
+      <p className="mb-3 text-xs font-bold uppercase tracking-widest text-stone-500">
         Book with confidence
       </p>
       <div className="space-y-2.5">

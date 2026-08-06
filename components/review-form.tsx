@@ -193,7 +193,7 @@ export function ReviewForm({
             className={`${inputClass} resize-y`}
             placeholder="Share what future guests should know."
           />
-          <span className="mt-2 block text-right text-xs text-stone-400">{content.length}/500</span>
+          <span className="mt-2 block text-right text-xs text-stone-500">{content.length}/500</span>
         </label>
 
         {error && <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}

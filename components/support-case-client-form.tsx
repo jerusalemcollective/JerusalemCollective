@@ -268,7 +268,7 @@ export function SupportCaseClientForm({
             <article key={supportCase.id} className="px-6 py-5">
               <div className="flex flex-wrap items-center gap-2">
                 <StatusBadge status={supportCase.status} scheme="support" />
-                <span className="text-xs font-bold uppercase tracking-widest text-stone-400">
+                <span className="text-xs font-bold uppercase tracking-widest text-stone-500">
                   {supportCase.case_type.replaceAll('_', ' ')}
                 </span>
               </div>

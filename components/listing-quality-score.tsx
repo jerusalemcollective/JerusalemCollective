@@ -14,7 +14,7 @@ export function ListingQualityScore({
   return (
     <div>
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-bold uppercase tracking-widest text-stone-400">{label}</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-stone-500">{label}</p>
         <p className="text-xs font-bold text-stone-700">{score}/100</p>
       </div>
       <div className="mt-2 h-2 overflow-hidden rounded-full bg-stone-100">

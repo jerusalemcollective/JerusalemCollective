@@ -44,7 +44,7 @@ export function PaymentRouteControlsForm({
       </label>
 
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs text-stone-400">
+        <p className="text-xs text-stone-500">
           JLM payments: {jlmPaymentsEnabled ? 'enabled' : 'off'} / direct payments:{' '}
           {directPaymentsEnabled ? 'enabled' : 'off'}
         </p>

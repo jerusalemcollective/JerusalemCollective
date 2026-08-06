@@ -47,7 +47,7 @@ export function WelcomeBanner() {
           type="button"
           onClick={dismiss}
           aria-label="Dismiss"
-          className="shrink-0 rounded-full p-1 text-stone-400 transition hover:text-stone-700"
+          className="shrink-0 rounded-full p-1 text-stone-500 transition hover:text-stone-700"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M18 6L6 18M6 6l12 12" />

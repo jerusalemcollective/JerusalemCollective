@@ -108,7 +108,7 @@ export default async function AdminListingDetailPage({
           </div>
           {listing.sleeping_setup && (
             <div className="mt-4 rounded-2xl bg-[#F8F5F2] p-4">
-              <p className="text-xs font-bold uppercase tracking-widest text-stone-400">Sleeping setup</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-stone-500">Sleeping setup</p>
               <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-stone-800">
                 {listing.sleeping_setup}
               </p>
@@ -138,7 +138,7 @@ export default async function AdminListingDetailPage({
                 <EditField label="Price USD" name="priceUsd" type="number" min="0" defaultValue={String(listing.price_usd ?? '')} />
               </div>
               <label className="block">
-                <span className="text-xs font-bold uppercase tracking-widest text-stone-400">Booking type</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-stone-500">Booking type</span>
                 <select
                   name="bookingType"
                   defaultValue={listing.booking_type || 'request'}
@@ -164,7 +164,7 @@ export default async function AdminListingDetailPage({
                 </span>
               </label>
               <label className="block">
-                <span className="text-xs font-bold uppercase tracking-widest text-stone-400">Launch status</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-stone-500">Launch status</span>
                 <select
                   name="adminStatus"
                   defaultValue={adminStatus}
@@ -192,7 +192,7 @@ export default async function AdminListingDetailPage({
                 </label>
               </div>
               <label className="block">
-                <span className="text-xs font-bold uppercase tracking-widest text-stone-400">Sleeping setup</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-stone-500">Sleeping setup</span>
                 <textarea
                   name="sleepingSetup"
                   defaultValue={listing.sleeping_setup || ''}
@@ -201,13 +201,13 @@ export default async function AdminListingDetailPage({
                 />
               </label>
               <div>
-                <span className="text-xs font-bold uppercase tracking-widest text-stone-400">Amenities</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-stone-500">Amenities</span>
                 <div className="mt-2">
                   <AmenitySelector defaultSelectedAmenities={listing.amenities || []} />
                 </div>
               </div>
               <label className="block">
-                <span className="text-xs font-bold uppercase tracking-widest text-stone-400">Description</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-stone-500">Description</span>
                 <textarea
                   name="description"
                   defaultValue={listing.description || ''}
@@ -231,7 +231,7 @@ export default async function AdminListingDetailPage({
               )}
               {(messages || []).map((message) => (
                 <article key={message.id} className="rounded-2xl bg-[#F8F5F2] p-4">
-                  <p className="text-xs font-bold uppercase tracking-widest text-stone-400">
+                  <p className="text-xs font-bold uppercase tracking-widest text-stone-500">
                     Message from JLM Collective
                   </p>
                   <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-stone-800">{message.body}</p>
@@ -305,7 +305,7 @@ export default async function AdminListingDetailPage({
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl bg-[#F8F5F2] p-4">
-      <p className="text-xs font-bold uppercase tracking-widest text-stone-400">{label}</p>
+      <p className="text-xs font-bold uppercase tracking-widest text-stone-500">{label}</p>
       <p className="mt-1 text-sm font-semibold text-stone-900">{value}</p>
     </div>
   )
@@ -330,7 +330,7 @@ function EditField({
 }) {
   return (
     <label className="block">
-      <span className="text-xs font-bold uppercase tracking-widest text-stone-400">
+      <span className="text-xs font-bold uppercase tracking-widest text-stone-500">
         {label}
       </span>
       <input

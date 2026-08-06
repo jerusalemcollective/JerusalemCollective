@@ -70,7 +70,7 @@ export default async function HostCasesPage() {
         </div>
 
         <div className="overflow-hidden rounded-3xl bg-white shadow-sm">
-          <div className="grid gap-4 border-b border-stone-100 px-6 py-4 text-xs font-bold uppercase tracking-widest text-stone-400 md:grid-cols-[1.2fr_0.9fr_0.8fr_0.8fr]">
+          <div className="grid gap-4 border-b border-stone-100 px-6 py-4 text-xs font-bold uppercase tracking-widest text-stone-500 md:grid-cols-[1.2fr_0.9fr_0.8fr_0.8fr]">
             <span>Case</span>
             <span>Guest</span>
             <span>Status</span>

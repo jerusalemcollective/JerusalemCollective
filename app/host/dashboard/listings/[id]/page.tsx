@@ -249,7 +249,7 @@ export default async function HostListingEditPage({
 
               <label className="mt-5 block text-sm font-semibold text-stone-700">
                 House rules
-                <span className="ml-2 text-xs font-normal text-stone-400">
+                <span className="ml-2 text-xs font-normal text-stone-500">
                   Shown to guests before they enquire
                 </span>
                 <textarea
@@ -263,7 +263,7 @@ export default async function HostListingEditPage({
 
               <label className="mt-4 block text-sm font-semibold text-stone-700">
                 Welcome message
-                <span className="ml-2 text-xs font-normal text-stone-400">
+                <span className="ml-2 text-xs font-normal text-stone-500">
                   Sent when a booking is confirmed
                 </span>
                 <textarea
@@ -277,7 +277,7 @@ export default async function HostListingEditPage({
 
               <label className="mt-4 block text-sm font-semibold text-stone-700">
                 Check-in instructions
-                <span className="ml-2 text-xs font-normal text-stone-400">
+                <span className="ml-2 text-xs font-normal text-stone-500">
                   Shared once booking is confirmed
                 </span>
                 <textarea

@@ -1906,7 +1906,7 @@ async function handleSubmit() {
           <div className="rounded-[2rem] bg-white p-5 shadow-sm ring-1 ring-stone-200">
             <div className="flex items-center justify-between text-sm font-semibold">
               <span>{steps[step]}</span>
-              <span className="text-stone-400">
+              <span className="text-stone-500">
                 Step {step + 1} of {steps.length}
               </span>
             </div>
@@ -2000,7 +2000,7 @@ async function handleSubmit() {
                         ? 'bg-[#c76f55] text-white'
                         : index < step
                           ? 'text-stone-900 hover:bg-stone-50'
-                          : 'text-stone-400 hover:bg-stone-50'
+                          : 'text-stone-500 hover:bg-stone-50'
                     }`}
                   >
                     <span
@@ -2742,7 +2742,7 @@ async function handleSubmit() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                         <span className="text-sm font-medium text-stone-600">Click to upload document</span>
-                        <span className="mt-1 text-xs text-stone-400">PDF, JPG, or PNG up to 10MB</span>
+                        <span className="mt-1 text-xs text-stone-500">PDF, JPG, or PNG up to 10MB</span>
                         <input
                           type="file"
                           accept="application/pdf,image/jpeg,image/png,image/webp"
@@ -2781,7 +2781,7 @@ async function handleSubmit() {
                             setVerificationDocError('')
                             updateField('verification_doc', null)
                           }}
-                          className="rounded-full p-2 text-stone-400 transition hover:bg-stone-100 hover:text-red-600"
+                          className="rounded-full p-2 text-stone-500 transition hover:bg-stone-100 hover:text-red-600"
                         >
                           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -2827,7 +2827,7 @@ async function handleSubmit() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
                           </svg>
                           <span className="text-sm font-medium text-stone-600">Click to upload ID</span>
-                          <span className="mt-1 text-xs text-stone-400">JPG or PNG up to 10MB</span>
+                          <span className="mt-1 text-xs text-stone-500">JPG or PNG up to 10MB</span>
                           <input
                             type="file"
                             accept="image/jpeg,image/png,image/webp"
@@ -2864,7 +2864,7 @@ async function handleSubmit() {
                               setIdDocError('')
                               updateField('id_doc', null)
                             }}
-                            className="rounded-full p-2 text-stone-400 transition hover:bg-stone-100 hover:text-red-600"
+                            className="rounded-full p-2 text-stone-500 transition hover:bg-stone-100 hover:text-red-600"
                           >
                             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -3225,7 +3225,7 @@ function ChoiceCard({
 function ReviewItem({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="rounded-2xl bg-[#F8F5F2] p-4">
-      <p className="text-xs font-bold uppercase tracking-widest text-stone-400">
+      <p className="text-xs font-bold uppercase tracking-widest text-stone-500">
         {label}
       </p>
       <p className="mt-1 text-sm font-semibold text-stone-900">{value}</p>

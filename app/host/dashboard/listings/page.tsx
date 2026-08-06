@@ -471,7 +471,7 @@ function PerformanceInsightCard({ performance }: { performance: PerformanceInsig
     <div className="mt-4 max-w-xl rounded-2xl bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-stone-400">
+          <p className="text-xs font-bold uppercase tracking-widest text-stone-500">
             Demand, last 30 days
           </p>
           <p className="mt-1 text-sm font-semibold text-stone-950">
@@ -514,7 +514,7 @@ function PerformanceInsightCard({ performance }: { performance: PerformanceInsig
 function InsightMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl bg-[#F8F5F2] px-3 py-2">
-      <p className="font-bold uppercase tracking-widest text-stone-400">{label}</p>
+      <p className="font-bold uppercase tracking-widest text-stone-500">{label}</p>
       <p className="mt-1 font-semibold text-stone-900">{value}</p>
     </div>
   )
@@ -576,7 +576,7 @@ function PriceInsight({
     <div className="mt-4 max-w-xl rounded-2xl bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-stone-400">
+          <p className="text-xs font-bold uppercase tracking-widest text-stone-500">
             Price position
           </p>
           <p className="mt-1 text-sm font-semibold text-stone-950">

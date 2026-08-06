@@ -92,7 +92,7 @@ export default async function EnquiriesPage() {
                     <div className="mt-2 flex items-center gap-2 text-sm text-stone-600">
                       {enquiry.check_in && (
                         <span>
-                          <span className="text-xs font-semibold uppercase tracking-wider text-stone-400">
+                          <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">
                             In
                           </span>{' '}
                           {formatDateDisplay(new Date(enquiry.check_in))}
@@ -103,7 +103,7 @@ export default async function EnquiriesPage() {
                       )}
                       {enquiry.check_out && (
                         <span>
-                          <span className="text-xs font-semibold uppercase tracking-wider text-stone-400">
+                          <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">
                             Out
                           </span>{' '}
                           {formatDateDisplay(new Date(enquiry.check_out))}
