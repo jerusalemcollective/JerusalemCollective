@@ -1,5 +1,17 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import { slugifyNeighborhood } from '@/lib/neighborhood-pages'
+
+const POPULAR_NEIGHBOURHOODS = [
+  'Rechavia',
+  'German Colony',
+  'Katamon',
+  'Baka',
+  'Nachlaot',
+  'Ramat Eshkol',
+  'Har Nof',
+  'City Center',
+]
 
 const JLMLogo = ({ variant = 'terracotta', className = '' }: { variant?: 'terracotta' | 'black', className?: string }) => {
   const src = variant === 'black' 
@@ -35,6 +47,7 @@ export function Footer() {
             <Link href="/how-it-works" className="text-stone-600 transition hover:text-[#c76f55]">How it works</Link>
             <Link href="/stays" className="text-stone-600 transition hover:text-[#c76f55]">Browse stays</Link>
             <Link href="/explore" className="text-stone-600 transition hover:text-[#c76f55]">Explore</Link>
+            <Link href="/neighbourhoods" className="text-stone-600 transition hover:text-[#c76f55]">Neighbourhoods</Link>
             <Link href="/host/login" className="text-stone-600 transition hover:text-[#c76f55]">Host login</Link>
             <Link href="/trust-and-safety" className="text-stone-600 transition hover:text-[#c76f55]">
               Trust & Safety
@@ -45,6 +58,24 @@ export function Footer() {
             </Link>
             <Link href="/terms" className="text-stone-600 transition hover:text-[#c76f55]">Terms</Link>
           </nav>
+        </div>
+
+        <div className="border-t border-stone-200/70">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4 text-xs text-stone-500 md:px-6">
+            <span className="font-bold uppercase tracking-widest text-stone-500">Neighbourhoods</span>
+            {POPULAR_NEIGHBOURHOODS.map((name) => (
+              <Link
+                key={name}
+                href={`/neighbourhoods/${slugifyNeighborhood(name)}`}
+                className="transition hover:text-[#c76f55]"
+              >
+                {name}
+              </Link>
+            ))}
+            <Link href="/neighbourhoods" className="font-semibold text-[#c76f55] hover:underline">
+              All neighbourhoods {'→'}
+            </Link>
+          </div>
         </div>
       </footer>
     </>

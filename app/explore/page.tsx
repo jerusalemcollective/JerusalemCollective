@@ -4,6 +4,7 @@ import {
   defaultExploreNeighborhoods,
   defaultPopularNeighborhoods,
 } from '@/lib/neighborhoods'
+import { slugifyNeighborhood } from '@/lib/neighborhood-pages'
 
 export const metadata = {
   title: 'Explore Jerusalem stays',
@@ -47,8 +48,8 @@ const collectionCards = [
   },
   {
     title: 'Sukkah',
-    description: 'Browse stays with a sukkah option for the right season.',
-    href: '/stays?sukkahBalcony=1',
+    description: 'Browse stays with a balcony suitable for a sukkah.',
+    href: '/stays/sukkot',
   },
   {
     title: 'Near shuls',
@@ -60,18 +61,18 @@ const collectionCards = [
 const seasonalCards = [
   {
     title: 'Pesach stays',
-    description: 'Start with suitable homes for busy holiday periods.',
-    href: '/stays?kosherKitchen=1',
+    description: 'Verified Jerusalem apartments for Pesach — book early.',
+    href: '/stays/pesach',
   },
   {
     title: 'Sukkot stays',
-    description: 'Look for homes with useful outdoor space and location fit.',
-    href: '/stays?sukkahBalcony=1',
+    description: 'Apartments with a balcony suitable for a sukkah.',
+    href: '/stays/sukkot',
   },
   {
-    title: 'Longer visits',
-    description: 'Homes that suit family trips and extended stays.',
-    href: '/stays',
+    title: 'Kosher kitchen',
+    description: 'Stays with a kosher kitchen you can rely on.',
+    href: '/stays/kosher-kitchen',
   },
 ]
 
@@ -148,7 +149,7 @@ export default async function ExplorePage() {
             {popularNeighborhoods.map((neighborhood) => (
               <Link
                 key={neighborhood}
-                href={`/stays?neighborhood=${encodeURIComponent(neighborhood)}`}
+                href={`/neighbourhoods/${slugifyNeighborhood(neighborhood)}`}
                 className="rounded-3xl bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
               >
                 <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
