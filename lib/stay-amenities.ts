@@ -16,7 +16,6 @@ export const STAY_AMENITIES = [
   'Microwave',
   'Dishwasher',
   'Coffee maker',
-  'Shabbat-friendly',
   'Hot plate',
   'Hot water urn',
   'In eruv',
@@ -55,7 +54,6 @@ export const STAY_AMENITY_GROUPS = [
     title: 'Shabbat and Jewish stay',
     description: 'Details that matter for Shabbat and yom tov stays.',
     amenities: [
-      'Shabbat-friendly',
       'Hot plate',
       'Hot water urn',
       'In eruv',
