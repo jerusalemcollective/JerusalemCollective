@@ -16,6 +16,8 @@ export function AmenitySelector({
 }: AmenitySelectorProps) {
   const selected = selectedAmenities ?? defaultSelectedAmenities
   const selectedSet = new Set(selected)
+  const knownAmenities = new Set(STAY_AMENITY_GROUPS.flatMap((group) => group.amenities))
+  const customAmenities = selected.filter((amenity) => !knownAmenities.has(amenity)).join(', ')
 
   return (
     <div className="space-y-5">
@@ -77,6 +79,22 @@ export function AmenitySelector({
           </div>
         </section>
       ))}
+
+      {!onToggle && (
+        <section className="rounded-3xl border border-stone-200 bg-white p-4">
+          <h3 className="text-sm font-bold text-stone-950">Other amenities</h3>
+          <p className="mt-1 text-xs leading-5 text-stone-500">
+            Add anything not listed above, separated by commas.
+          </p>
+          <input
+            type="text"
+            name={name}
+            defaultValue={customAmenities}
+            placeholder="e.g. Rooftop terrace, Nespresso machine, Piano"
+            className="mt-3 w-full rounded-2xl border border-stone-200 bg-[#F8F5F2] px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
+          />
+        </section>
+      )}
     </div>
   )
 }
