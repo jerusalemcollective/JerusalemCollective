@@ -826,13 +826,10 @@ const verificationDocTypes = [
 const steps = [
   'Contact details',
   'Stay details',
-  'Location',
-  'Guests & rooms',
-  'Pricing',
-  'Amenities',
   'Photos',
+  'Amenities',
+  'Pricing',
   'Verification',
-  'Confirm',
 ]
 
 const minimumPhotoCount = 5
@@ -1424,6 +1421,7 @@ export default function BecomeAHostPage() {
   function getStepIssues(stepIndex: number) {
     const issues: string[] = []
 
+    // Step 0 — Contact details
     if (stepIndex === 0) {
       if (!form.display_name.trim()) {
         issues.push('Add the public display name guests should see.')
@@ -1436,6 +1434,7 @@ export default function BecomeAHostPage() {
       }
     }
 
+    // Step 1 — Stay details (name, description, location, guests & rooms)
     if (stepIndex === 1) {
       if (!form.apartment_title.trim()) {
         issues.push('Add a name for the stay.')
@@ -1443,18 +1442,12 @@ export default function BecomeAHostPage() {
       if (!form.description.trim()) {
         issues.push('Add a description for guests.')
       }
-    }
-
-    if (stepIndex === 2) {
       if (!form.area.trim()) {
         issues.push('Add the neighbourhood.')
       }
       if (!form.exact_address.trim()) {
         issues.push('Add the exact address manually or choose it from Google suggestions.')
       }
-    }
-
-    if (stepIndex === 3) {
       if (!form.bedrooms || Number(form.bedrooms) < 0) {
         issues.push('Add the number of bedrooms.')
       }
@@ -1469,6 +1462,21 @@ export default function BecomeAHostPage() {
       }
     }
 
+    // Step 2 — Photos
+    if (stepIndex === 2 && form.photos.length < minimumPhotoCount) {
+      issues.push(
+        restoredDraft && form.photos.length === 0
+          ? `Upload at least ${minimumPhotoCount} photos again. Uploaded files cannot be restored after signing out.`
+          : `Upload at least ${minimumPhotoCount} photos.`,
+      )
+    }
+
+    // Step 3 — Amenities
+    if (stepIndex === 3 && form.amenities.length === 0) {
+      issues.push('Select at least one amenity.')
+    }
+
+    // Step 4 — Pricing
     if (stepIndex === 4) {
       if (
         (!form.price_ils || Number(form.price_ils) <= 0) &&
@@ -1478,19 +1486,8 @@ export default function BecomeAHostPage() {
       }
     }
 
-    if (stepIndex === 5 && form.amenities.length === 0) {
-      issues.push('Select at least one amenity.')
-    }
-
-    if (stepIndex === 6 && form.photos.length < minimumPhotoCount) {
-      issues.push(
-        restoredDraft && form.photos.length === 0
-          ? `Upload at least ${minimumPhotoCount} photos again. Uploaded files cannot be restored after signing out.`
-          : `Upload at least ${minimumPhotoCount} photos.`,
-      )
-    }
-
-    if (stepIndex === 7) {
+    // Step 5 — Verification (documents + final confirmation)
+    if (stepIndex === 5) {
       if (!form.verification_doc_type) {
         issues.push('Select a property verification document type.')
       }
@@ -1511,9 +1508,6 @@ export default function BecomeAHostPage() {
             : 'Upload your ID document.',
         )
       }
-    }
-
-    if (stepIndex === 8) {
       if (!form.confirmation) {
         issues.push('Confirm that the listing details are accurate.')
       }
@@ -2296,102 +2290,91 @@ async function handleSubmit() {
                     className={inputClass}
                   />
                 </Field>
-              </StepShell>
-            )}
 
-            {step === 2 && (
-              <StepShell
-                eyebrow="Location"
-                title="Where is it located?"
-                description="The exact address is saved privately and is not shown publicly before booking."
-              >
-<div className="grid gap-5 md:grid-cols-2">
-                  <Field label="Neighbourhood" required>
-                    <NeighbourhoodAutocomplete
-                      value={form.area}
-                      onChange={(val) => updateField('area', val)}
-                      placeholder="Start typing a neighbourhood..."
-                      className={inputClass}
-                    />
-                  </Field>
-
-<Field label="Exact address" required>
-                    <GoogleAddressField
-                      value={form.exact_address}
-                      onAddressChange={(val) => {
-                        updateField('exact_address', val)
-                        updateField('address_latitude', null)
-                        updateField('address_longitude', null)
-                      }}
-                      onCoordinatesChange={(latitude, longitude) => {
-                        updateField('address_latitude', latitude)
-                        updateField('address_longitude', longitude)
-                      }}
-                      placeholder="Start typing an address in Jerusalem..."
-                      className={inputClass}
-                      required
-                    />
-                  </Field>
-                </div>
-
-                <div className="mt-6 rounded-3xl bg-[#F8F5F2] p-5 text-sm leading-6 text-stone-600">
-                  <p className="mb-2">Location details help place the stay correctly on the map.</p>
-                  <p>You can choose an address from Google Maps or type it manually. Public listings show an approximate area rather than the full address.</p>
-                </div>
-              </StepShell>
-            )}
-
-            {step === 3 && (
-              <StepShell
-                eyebrow="Guests & rooms"
-                title="How many people can it comfortably host?"
-                description="Accurate capacity helps guests find suitable stays and avoids unnecessary enquiries."
-              >
-                <div className="grid gap-5 md:grid-cols-3">
-                  <Field label="Bedrooms">
-                    <input
-                      value={form.bedrooms}
-                      onChange={(e) => updateField('bedrooms', e.target.value)}
-                      type="number"
-                      min="0"
-                      className={inputClass}
-                    />
-                  </Field>
-
-                  <Field label="Bathrooms">
-                    <input
-                      value={form.bathrooms}
-                      onChange={(e) => updateField('bathrooms', e.target.value)}
-                      type="number"
-                      min="0"
-                      step="0.5"
-                      className={inputClass}
-                    />
-                  </Field>
-
-                  <Field label="Sleeps">
-                    <input
-                      value={form.sleeps}
-                      onChange={(e) => updateField('sleeps', e.target.value)}
-                      type="number"
-                      min="1"
-                      className={inputClass}
-                    />
-                  </Field>
-                </div>
-                <div className="mt-5">
-                  <Field label="Sleeping setup">
-                    <textarea
-                      value={form.sleeping_setup}
-                      onChange={(e) => updateField('sleeping_setup', e.target.value)}
-                      rows={5}
-                      placeholder={`Example:\nBedroom 1: king bed\nBedroom 2: two single beds\nLiving room: sofa bed`}
-                      className={`${inputClass} resize-y`}
-                    />
-                  </Field>
-                  <p className="mt-2 text-xs leading-5 text-stone-500">
-                    Help guests understand exactly where everyone will sleep.
+                <div className="mt-8 border-t border-stone-100 pt-8">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-stone-500">
+                    Location
+                  </h3>
+                  <p className="mt-1 text-xs text-stone-500">
+                    The exact address is saved privately and is not shown publicly before booking.
                   </p>
+                  <div className="mt-4 grid gap-5 md:grid-cols-2">
+                    <Field label="Neighbourhood" required>
+                      <NeighbourhoodAutocomplete
+                        value={form.area}
+                        onChange={(val) => updateField('area', val)}
+                        placeholder="Start typing a neighbourhood..."
+                        className={inputClass}
+                      />
+                    </Field>
+
+                    <Field label="Exact address" required>
+                      <GoogleAddressField
+                        value={form.exact_address}
+                        onAddressChange={(val) => {
+                          updateField('exact_address', val)
+                          updateField('address_latitude', null)
+                          updateField('address_longitude', null)
+                        }}
+                        onCoordinatesChange={(latitude, longitude) => {
+                          updateField('address_latitude', latitude)
+                          updateField('address_longitude', longitude)
+                        }}
+                        placeholder="Start typing an address in Jerusalem..."
+                        className={inputClass}
+                        required
+                      />
+                    </Field>
+                  </div>
+                </div>
+
+                <div className="mt-8 border-t border-stone-100 pt-8">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-stone-500">
+                    Guests &amp; rooms
+                  </h3>
+                  <div className="mt-4 grid gap-5 md:grid-cols-3">
+                    <Field label="Bedrooms">
+                      <input
+                        value={form.bedrooms}
+                        onChange={(e) => updateField('bedrooms', e.target.value)}
+                        type="number"
+                        min="0"
+                        className={inputClass}
+                      />
+                    </Field>
+
+                    <Field label="Bathrooms">
+                      <input
+                        value={form.bathrooms}
+                        onChange={(e) => updateField('bathrooms', e.target.value)}
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        className={inputClass}
+                      />
+                    </Field>
+
+                    <Field label="Sleeps">
+                      <input
+                        value={form.sleeps}
+                        onChange={(e) => updateField('sleeps', e.target.value)}
+                        type="number"
+                        min="1"
+                        className={inputClass}
+                      />
+                    </Field>
+                  </div>
+                  <div className="mt-5">
+                    <Field label="Sleeping setup">
+                      <textarea
+                        value={form.sleeping_setup}
+                        onChange={(e) => updateField('sleeping_setup', e.target.value)}
+                        rows={5}
+                        placeholder={`Example:\nBedroom 1: king bed\nBedroom 2: two single beds\nLiving room: sofa bed`}
+                        className={`${inputClass} resize-y`}
+                      />
+                    </Field>
+                  </div>
                 </div>
               </StepShell>
             )}
@@ -2443,7 +2426,7 @@ async function handleSubmit() {
               </StepShell>
             )}
 
-            {step === 5 && (
+            {step === 3 && (
               <StepShell
                 eyebrow="Amenities"
                 title="What does the stay include?"
@@ -2538,7 +2521,7 @@ async function handleSubmit() {
               </StepShell>
             )}
 
-{step === 6 && (
+{step === 2 && (
               <StepShell
                 eyebrow="Photos"
                 title="Add photos of your stay"
@@ -2679,7 +2662,7 @@ async function handleSubmit() {
               </StepShell>
             )}
 
-{step === 7 && (
+{step === 5 && (
               <StepShell
                 eyebrow="Verification"
                 title="Verify your right to host"
@@ -2884,16 +2867,15 @@ async function handleSubmit() {
                   <p className="font-medium">Your documents will be reviewed privately</p>
                   <p className="mt-1 text-amber-700">These documents are only visible to our verification team and will not be shared publicly or with guests.</p>
                 </div>
-              </StepShell>
-            )}
 
-            {step === 8 && (
-              <StepShell
-                eyebrow="Confirm"
-                title="Confirm your listing details"
-                description="Check the details below before submitting your listing."
-              >
-                <div className="grid gap-4">
+                <div className="mt-8 border-t border-stone-100 pt-8">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-stone-500">
+                    Confirm your details
+                  </h3>
+                  <p className="mt-1 text-xs text-stone-500">
+                    Check everything below before submitting your listing.
+                  </p>
+                  <div className="mt-4 grid gap-4">
                   <ReviewItem
                     label="Contact"
                     value={`${form.host_name || '—'} · ${form.email || '—'}`}
@@ -3006,6 +2988,7 @@ async function handleSubmit() {
                     </span>
                   </label>
                 )}
+                </div>
               </StepShell>
             )}
 
