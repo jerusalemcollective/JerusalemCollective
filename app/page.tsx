@@ -16,7 +16,6 @@ import {
   Trees,
 } from 'lucide-react'
 import { createPublicClient } from '@/lib/supabase/public'
-import { sampleListings } from '@/lib/sample-listings'
 import { defaultExploreNeighborhoods } from '@/lib/neighborhoods'
 import { slugifyNeighborhood } from '@/lib/neighborhood-pages'
 import { HomeSearchForm } from '@/components/home-search-form'
@@ -113,8 +112,6 @@ function toFeaturedStay(listing: ListingRow & { cover_photo_url?: string | null 
   }
 }
 
-const defaultFeatured = sampleListings.map((listing) => toFeaturedStay(listing))
-
 const neighbourhoodIcons: LucideIcon[] = [Building2, Trees, Home, Landmark, MapPin]
 
 function buildCategoryChips(popularNeighborhoods: string[]): CategoryChip[] {
@@ -182,7 +179,7 @@ async function getHomepageData() {
             cover_photo_url: coverPhotoByListingId.get(listing.id) || null,
           }),
         )
-      : defaultFeatured
+      : []
     const liveNeighborhoods = ((neighborhoodsData || []) as PopularNeighborhoodRow[])
       .map((row) => row.neighborhood)
       .filter((item): item is string => Boolean(item))
@@ -196,7 +193,7 @@ async function getHomepageData() {
     console.error('Failed to load homepage data', error)
 
     return {
-      featuredStays: defaultFeatured,
+      featuredStays: [],
       popularNeighborhoods: defaultExploreNeighborhoods.slice(0, 6),
     }
   }
@@ -271,11 +268,21 @@ export default async function JLMCollectiveHomePage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4">
-            {featuredStays.map((stay) => (
-              <HomeListingCard key={stay.id} listing={stay} />
-            ))}
-          </div>
+          {featuredStays.length > 0 ? (
+            <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4">
+              {featuredStays.map((stay) => (
+                <HomeListingCard key={stay.id} listing={stay} />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-3xl border border-stone-200 bg-white/60 px-6 py-16 text-center">
+              <p className="font-display text-xl font-bold text-stone-950">New stays coming soon</p>
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-stone-600">
+                We&apos;re adding beautiful Jerusalem stays. Check back shortly, or send an enquiry
+                and our local team will help you find the right place.
+              </p>
+            </div>
+          )}
 
           <div className="pt-10">
             <RecentlyViewed />

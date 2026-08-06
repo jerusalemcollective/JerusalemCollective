@@ -1,6 +1,5 @@
 ﻿import { createPublicClient } from '@/lib/supabase/public'
 import { z } from 'zod'
-import { sampleListings } from '@/lib/sample-listings'
 import { MapPageClient, type MapListing } from '@/components/map-page-client'
 import { formatDualCurrencyPrice } from '@/lib/utils/currency'
 
@@ -65,7 +64,7 @@ export default async function MapPage() {
     .order('is_featured', { ascending: false })
     .limit(MAP_MAX_LISTINGS)
 
-  const listingRows = z.array(listingRowSchema).parse(data?.length ? data : sampleListings)
+  const listingRows = z.array(listingRowSchema).parse(data ?? [])
   const listingIds = listingRows.map((listing) => listing.id)
   const { data: photoData } =
     listingIds.length > 0
