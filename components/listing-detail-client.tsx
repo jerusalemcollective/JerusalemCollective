@@ -1049,6 +1049,36 @@ export function ListingDetailClient({
                 mobile
               />
               <PaymentClarityNote allowsOnlinePayment={allowsOnlinePayment} />
+              <div className="mt-5 space-y-2.5 border-t border-stone-100 pt-5">
+                {[
+                  'Personally reviewed by JLM Collective',
+                  'All hosts are identity verified',
+                  'Support available throughout your stay',
+                ].map((point) => (
+                  <div key={point} className="flex items-center gap-2.5">
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#c76f55"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="shrink-0"
+                    >
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                    <p className="text-xs text-stone-600">{point}</p>
+                  </div>
+                ))}
+              </div>
+              {avgResponseHours !== null && (
+                <p className="mt-4 text-center text-xs text-stone-500">
+                  {formatResponseTime(avgResponseHours)}
+                </p>
+              )}
+              <HostCard host={host} publicHostName={publicHostName} />
             </div>
           </div>
         </div>
@@ -1110,6 +1140,9 @@ function PaymentClarityNote({ allowsOnlinePayment }: { allowsOnlinePayment: bool
           </p>
         </>
       )}
+      <p className="mt-1 text-xs leading-5 text-stone-500">
+        Cancellation and refund terms are agreed with the host before you pay.
+      </p>
     </div>
   )
 }

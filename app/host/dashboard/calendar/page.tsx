@@ -7,8 +7,14 @@ import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { saveCalendarEntry, updateBookingAsHost, updateRequestAsHost } from './actions'
 import { RemoveBlockedDateButton } from '@/components/remove-blocked-date-button'
 import { HostBookingEditor, type EditableBooking } from '@/components/host-booking-editor'
+import { ExternalCalendarSyncForm } from '@/components/external-calendar-sync-form'
 
-type HostListing = { id: string; title: string }
+type HostListing = {
+  id: string
+  title: string
+  external_calendar_url: string | null
+  calendar_last_synced_at: string | null
+}
 
 type BookingRow = {
   id: string
@@ -52,7 +58,7 @@ export default async function HostCalendarPage() {
   const [{ data: listings }, { data: ranges }, { data: bookingsData }, { data: requestsData }] = await Promise.all([
     supabase
       .from('listings')
-      .select('id, title')
+      .select('id, title, external_calendar_url, calendar_last_synced_at')
       .in('host_id', hostIds)
       .order('created_at', { ascending: false }),
     supabase
@@ -76,6 +82,8 @@ export default async function HostCalendarPage() {
   const hostListings: HostListing[] = (listings || []).map((listing: HostListing) => ({
     id: listing.id,
     title: listing.title,
+    external_calendar_url: listing.external_calendar_url,
+    calendar_last_synced_at: listing.calendar_last_synced_at,
   }))
 
   const bookingRows = (bookingsData || []) as BookingRow[]
@@ -207,6 +215,28 @@ export default async function HostCalendarPage() {
                 </div>
               )}
             </section>
+
+            <div className="mt-6">
+              <h2 className="text-lg font-bold text-stone-950">Sync an external calendar</h2>
+              <p className="mt-1 text-sm text-stone-600">
+                Import an iCal link so bookings from Airbnb, Booking.com, or another calendar block these dates
+                automatically.
+              </p>
+              <div className="mt-4 space-y-4">
+                {hostListings.map((listing) => (
+                  <div key={listing.id}>
+                    {hostListings.length > 1 && (
+                      <p className="mb-2 text-sm font-bold text-stone-700">{listing.title}</p>
+                    )}
+                    <ExternalCalendarSyncForm
+                      listingId={listing.id}
+                      externalCalendarUrl={listing.external_calendar_url}
+                      calendarLastSyncedAt={listing.calendar_last_synced_at}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
           </>
         )}
       </section>

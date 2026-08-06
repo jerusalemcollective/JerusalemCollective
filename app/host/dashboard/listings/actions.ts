@@ -198,6 +198,37 @@ export async function updateHostListing(formData: FormData) {
     throw communicationError
   }
 
+  // Deposit and payment schedule now live in the Pricing section of this same
+  // form (they used to be a separate form). Persist them via the same RPC that
+  // the standalone deposit form used. Guard the values so a stray entry can't
+  // block the rest of the save.
+  const depositType = String(formData.get('depositType') || '')
+  if (depositType === 'percent' || depositType === 'fixed') {
+    const depositValue = Number(formData.get('depositValue') || '')
+    const balanceDueDaysRaw = Number(formData.get('balanceDueDays') || '0')
+    const balanceDueDays = Number.isFinite(balanceDueDaysRaw)
+      ? Math.min(Math.max(Math.trunc(balanceDueDaysRaw), 0), 365)
+      : 0
+
+    const depositValid =
+      Number.isFinite(depositValue) &&
+      depositValue > 0 &&
+      (depositType === 'fixed' || depositValue <= 100)
+
+    if (depositValid) {
+      const { error: depositError } = await supabase.rpc('update_listing_deposit_settings', {
+        listing_uuid: listingId,
+        p_deposit_type: depositType,
+        p_deposit_value: depositValue,
+        p_balance_due_days: balanceDueDays,
+      })
+
+      if (depositError) {
+        throw depositError
+      }
+    }
+  }
+
   const { data: listingForDistances } = await supabase
     .from('listings')
     .select('id, latitude, longitude, area')
