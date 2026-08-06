@@ -60,7 +60,7 @@ export default async function HostPaymentsPage({
     supabase
       .from('booking_payments')
       .select(
-        'id, booking_id, amount, currency, platform_fee_amount, host_payout_amount, host_payout_currency, status, payout_status, paid_at, payout_released_at, created_at',
+        'id, booking_id, amount, currency, platform_fee_amount, host_payout_amount, host_payout_currency, status, payout_status, paid_at, payout_released_at, created_at, balance_amount, balance_status',
       )
       .in('host_id', hostIds)
       // A row is created before the guest reaches Stripe, so every abandoned
@@ -186,6 +186,11 @@ export default async function HostPaymentsPage({
                   {payouts.map((payment) => {
                     const currency = (payment.currency || 'USD').toUpperCase()
                     const payoutCurrency = (payment.host_payout_currency || currency).toUpperCase()
+                    // "Guest paid" is the total collected: the deposit plus the
+                    // balance once it has been paid, so it reconciles to payout + fee.
+                    const guestPaid =
+                      Number(payment.amount || 0) +
+                      (payment.balance_status === 'paid' ? Number(payment.balance_amount || 0) : 0)
 
                     return (
                       <div
@@ -194,7 +199,7 @@ export default async function HostPaymentsPage({
                       >
                         <div>
                           <span className="font-semibold text-stone-950">
-                            {formatMoney(Number(payment.amount || 0), currency)}
+                            {formatMoney(guestPaid, currency)}
                           </span>
                           <span className="block text-xs text-stone-500">
                             {formatDate(payment.paid_at || payment.created_at)}
@@ -501,6 +506,8 @@ type HostPayout = {
   paid_at: string | null
   payout_released_at: string | null
   created_at: string
+  balance_amount: number | null
+  balance_status: string | null
 }
 
 type PayoutTotals = {

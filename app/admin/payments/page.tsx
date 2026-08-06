@@ -27,6 +27,8 @@ type PaymentRow = {
   refunded_at?: string | null
   stripe_refund_id?: string | null
   created_at: string
+  balance_amount?: number | null
+  balance_status?: string | null
   hosts?: { name: string | null } | null
   profiles?: { full_name: string | null; email: string | null } | null
 }
@@ -44,7 +46,7 @@ export default async function AdminPaymentsPage() {
   }
 
   const selectColumns =
-    'id, booking_id, host_id, guest_id, payment_mode, payment_method, currency, amount, platform_fee_amount, processor_fee_amount, host_payout_amount, host_payout_currency, fx_rate_used, status, payout_status, stripe_checkout_session_id, stripe_payment_intent_id, needs_manual_review, manual_review_reason, failure_reason, refunded_at, stripe_refund_id, created_at, hosts(name), profiles(full_name, email)'
+    'id, booking_id, host_id, guest_id, payment_mode, payment_method, currency, amount, platform_fee_amount, processor_fee_amount, host_payout_amount, host_payout_currency, fx_rate_used, status, payout_status, stripe_checkout_session_id, stripe_payment_intent_id, needs_manual_review, manual_review_reason, failure_reason, refunded_at, stripe_refund_id, created_at, balance_amount, balance_status, hosts(name), profiles(full_name, email)'
 
   const normalize = (payment: PaymentQueryRow): PaymentRow => ({
     ...payment,
@@ -73,7 +75,12 @@ export default async function AdminPaymentsPage() {
   const exceptions: PaymentRow[] = (exceptionData || []).map(normalize)
 
   const paidPayments = payments.filter((payment) => payment.status === 'paid')
-  const totalGross = paidPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
+  // Total collected = deposit + the balance once it has been paid, so gross
+  // reconciles to host payout + JLM fee.
+  const grossCollected = (payment: PaymentRow) =>
+    Number(payment.amount || 0) +
+    (payment.balance_status === 'paid' ? Number(payment.balance_amount || 0) : 0)
+  const totalGross = paidPayments.reduce((sum, payment) => sum + grossCollected(payment), 0)
   const totalHostPayout = paidPayments.reduce((sum, payment) => sum + Number(payment.host_payout_amount || 0), 0)
   const totalJlmFee = paidPayments.reduce((sum, payment) => sum + Number(payment.platform_fee_amount || 0), 0)
 
@@ -210,7 +217,7 @@ export default async function AdminPaymentsPage() {
                   <p className="text-stone-700">{payment.hosts?.name || 'Host'}</p>
                   <p className="text-stone-700">{payment.profiles?.full_name || payment.profiles?.email || 'Guest'}</p>
                   <p className="font-semibold text-stone-950">
-                    {formatCurrency(payment.amount, payment.currency)}
+                    {formatCurrency(grossCollected(payment), payment.currency)}
                   </p>
                   <p className="font-semibold text-stone-950">
                     {formatCurrency(payment.host_payout_amount, payment.host_payout_currency || payment.currency)}
