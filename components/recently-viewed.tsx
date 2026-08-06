@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 
 type RecentListing = {
   id: string
@@ -39,7 +40,31 @@ export function RecentlyViewed() {
   const [listings, setListings] = useState<RecentListing[]>([])
 
   useEffect(() => {
-    setListings(getRecentlyViewed())
+    const stored = getRecentlyViewed()
+    // Only keep real listings that are still published — never show hidden,
+    // removed, or sample listings just because they're in browser history.
+    const realIds = stored.map((item) => item.id).filter((id) => !id.startsWith('sample-'))
+    if (realIds.length === 0) {
+      setListings([])
+      return
+    }
+
+    let active = true
+    const supabase = createClient()
+    void supabase
+      .from('listings')
+      .select('id')
+      .in('id', realIds)
+      .eq('is_published', true)
+      .then(({ data }) => {
+        if (!active) return
+        const visible = new Set((data || []).map((row) => row.id as string))
+        setListings(stored.filter((item) => visible.has(item.id)))
+      })
+
+    return () => {
+      active = false
+    }
   }, [])
 
   if (listings.length === 0) return null
