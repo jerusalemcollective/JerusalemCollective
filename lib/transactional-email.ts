@@ -12,6 +12,39 @@ function hostReader(fallback: SupabaseClient): SupabaseClient {
   return createServiceRoleClient(url, key)
 }
 
+// Build a one-time magic-link that signs the recipient in and lands them on
+// `path`, so an emailed link works without a manual sign-in. The link points at
+// our own /auth/callback (which verifies the token_hash and sets the session),
+// so no Supabase redirect-allowlist entry is needed. Falls back to a plain link
+// (which prompts for login) if a link can't be generated.
+async function recipientMagicLink(email: string, path: string): Promise<string> {
+  const fallback = `${siteUrl}${path}`
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) return fallback
+
+  try {
+    const admin = createServiceRoleClient(url, key, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+    const { data, error } = await admin.auth.admin.generateLink({
+      type: 'magiclink',
+      email,
+    })
+
+    const hashedToken = data?.properties?.hashed_token
+    if (error || !hashedToken) {
+      console.error('Magic link generation failed; using plain link', error)
+      return fallback
+    }
+
+    return `${siteUrl}/auth/callback?token_hash=${encodeURIComponent(hashedToken)}&type=magiclink&next=${encodeURIComponent(path)}`
+  } catch (error) {
+    console.error('Magic link generation threw; using plain link', error)
+    return fallback
+  }
+}
+
 type HostEmailRow = {
   id: string
   name: string | null
@@ -93,6 +126,7 @@ export async function sendHostAdminUpdateEmail({
 
     if (!host?.email) return
 
+    const ctaUrl = await recipientMagicLink(host.email, ctaPath)
     await sendEmail({
       to: host.email,
       subject,
@@ -100,7 +134,8 @@ export async function sendHostAdminUpdateEmail({
         greeting: `Hi ${escapeHtml(host.name || 'there')},`,
         intro,
         ctaLabel,
-        ctaUrl: `${siteUrl}${ctaPath}`,
+        ctaUrl,
+        showSignInHint: false,
       }),
     })
   } catch (error) {
@@ -133,6 +168,7 @@ export async function sendListingHostAdminUpdateEmail({
     const email = listing?.hosts?.email
     if (!email) return
 
+    const ctaUrl = await recipientMagicLink(email, ctaPath)
     await sendEmail({
       to: email,
       subject,
@@ -140,7 +176,8 @@ export async function sendListingHostAdminUpdateEmail({
         greeting: `Hi ${escapeHtml(listing.hosts?.name || 'there')},`,
         intro,
         ctaLabel,
-        ctaUrl: `${siteUrl}${ctaPath}`,
+        ctaUrl,
+        showSignInHint: false,
       }),
     })
   } catch (error) {
@@ -634,11 +671,13 @@ function baseEmailHtml({
   intro,
   ctaUrl,
   ctaLabel,
+  showSignInHint = true,
 }: {
   greeting: string
   intro: string
   ctaUrl: string
   ctaLabel: string
+  showSignInHint?: boolean
 }) {
   return `
     <div style="font-family:Arial,sans-serif;line-height:1.6;color:#292524">
@@ -649,7 +688,7 @@ function baseEmailHtml({
           ${escapeHtml(ctaLabel)}
         </a>
       </p>
-      <p style="color:#78716c;font-size:13px">You may need to sign in before viewing the update.</p>
+      ${showSignInHint ? '<p style="color:#78716c;font-size:13px">You may need to sign in before viewing the update.</p>' : ''}
       <p>JLM Collective</p>
       <p style="color:#a8a29e;font-size:11px;margin:8px 0 0;line-height:1.5">
         JLM Collective acts as letting agent for Jerusalem property owners. Bookings are between guests and hosts. JLM Collective is not a party to any booking agreement.
