@@ -89,7 +89,6 @@ export default async function NewAdminListingPage() {
             <span className="text-sm font-semibold text-stone-800">Booking type</span>
             <select name="bookingType" defaultValue="request" className={inputClass}>
               <option value="request">Booking request</option>
-              <option value="enquiry">Enquiry only</option>
               <option value="instant">Instant book</option>
             </select>
           </label>

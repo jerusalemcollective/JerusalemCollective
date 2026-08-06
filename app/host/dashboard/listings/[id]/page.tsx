@@ -176,7 +176,6 @@ export default async function HostListingEditPage({
                 <Field label="Booking style">
                   <select name="bookingType" defaultValue={listing.booking_type} className={inputClass}>
                     <option value="request">Request to book</option>
-                    <option value="enquiry">Enquiry only</option>
                     <option value="instant">Instant book</option>
                   </select>
                 </Field>
