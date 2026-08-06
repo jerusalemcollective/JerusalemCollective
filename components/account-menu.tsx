@@ -21,7 +21,6 @@ import { createClient } from '@/lib/supabase/client'
 export function AccountMenu({ hasStay, isAdmin }: { hasStay: boolean; isAdmin: boolean }) {
   const pathname = usePathname()
   const [guestUnreadCount, setGuestUnreadCount] = useState(0)
-  const [hostUnreadCount, setHostUnreadCount] = useState(0)
 
   useEffect(() => {
     let isActive = true
@@ -43,51 +42,19 @@ export function AccountMenu({ hasStay, isAdmin }: { hasStay: boolean; isAdmin: b
         .map((conversation: { id: string }) => conversation.id)
         .filter(Boolean)
 
-      let hostConversationIds: string[] = []
-      if (hasStay) {
-        const { data: hostRows } = await supabase
-          .from('hosts')
-          .select('id')
-          .or(`id.eq.${user.id},user_id.eq.${user.id}`)
-
-        const hostIds = Array.from(
-          new Set([user.id, ...(hostRows || []).map((host: { id: string }) => host.id)].filter(Boolean)),
-        )
-
-        if (hostIds.length > 0) {
-          const { data: hostConversations } = await supabase
-            .from('conversations')
-            .select('id')
-            .in('participant_2', hostIds)
-
-          hostConversationIds = (hostConversations || [])
-            .map((conversation: { id: string }) => conversation.id)
-            .filter(Boolean)
-        }
+      if (guestConversationIds.length === 0) {
+        if (isActive) setGuestUnreadCount(0)
+        return
       }
 
-      const countUnread = async (conversationIds: string[]) => {
-        if (conversationIds.length === 0) return 0
+      const { count } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .in('conversation_id', guestConversationIds)
+        .eq('read', false)
+        .neq('sender_id', user.id)
 
-        const { count } = await supabase
-          .from('messages')
-          .select('*', { count: 'exact', head: true })
-          .in('conversation_id', conversationIds)
-          .eq('read', false)
-          .neq('sender_id', user.id)
-
-        return count || 0
-      }
-
-      const [guestUnread, hostUnread] = await Promise.all([
-        countUnread(guestConversationIds),
-        countUnread(hostConversationIds),
-      ])
-
-      if (isActive) {
-        setGuestUnreadCount(guestUnread)
-        setHostUnreadCount(hostUnread)
-      }
+      if (isActive) setGuestUnreadCount(count || 0)
     }
 
     void loadUnreadCount()
@@ -105,7 +72,7 @@ export function AccountMenu({ hasStay, isAdmin }: { hasStay: boolean; isAdmin: b
       window.removeEventListener('focus', handleFocus)
       window.removeEventListener('messages-read', handleMessagesRead)
     }
-  }, [hasStay])
+  }, [])
 
   return (
     <nav className="space-y-1">
@@ -121,15 +88,6 @@ export function AccountMenu({ hasStay, isAdmin }: { hasStay: boolean; isAdmin: b
         active={pathname === '/account/messages'}
         badge={guestUnreadCount}
       />
-      {hasStay && (
-        <MenuLink
-          href="/host/dashboard/messages"
-          label="Host messages"
-          icon={<MessageCircle className="h-5 w-5" />}
-          active={pathname === '/host/dashboard/messages'}
-          badge={hostUnreadCount}
-        />
-      )}
       <MenuLink href="/account/support" label="Support" icon={<LifeBuoy className="h-5 w-5" />} active={pathname === '/account/support'} />
 
       <div className="mt-3 space-y-2 border-t border-stone-200 pt-4">

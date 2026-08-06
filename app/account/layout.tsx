@@ -45,7 +45,7 @@ export default async function AccountLayout({
   const isAdmin = Boolean((profile as { is_admin?: boolean | null } | null)?.is_admin)
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 md:px-6">
+    <div className="mx-auto max-w-7xl px-4 py-6 md:px-6">
       <div className="grid gap-6 md:grid-cols-[240px_1fr]">
         <div className="md:sticky md:top-6 md:self-start">
           <AccountMenu hasStay={hasStay} isAdmin={isAdmin} />
