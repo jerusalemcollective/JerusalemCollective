@@ -95,7 +95,7 @@ export function AccountMenu({ hasStay, isAdmin }: { hasStay: boolean; isAdmin: b
         {hasStay ? (
           <>
             <MenuLink href="/host/dashboard" label="Host dashboard" icon={<Home className="h-5 w-5" />} accent />
-            <MenuLink href="/choose-dashboard?switch=1" label="Switch dashboard" icon={<ArrowLeftRight className="h-5 w-5" />} accent />
+            <MenuLink href="/choose-dashboard" label="Switch dashboard" icon={<ArrowLeftRight className="h-5 w-5" />} accent />
           </>
         ) : (
           <MenuLink href="/become-a-host" label="Become a host" icon={<Plus className="h-5 w-5" />} accent />

@@ -40,7 +40,11 @@ export async function requireHostDashboardAccess() {
       .maybeSingle(),
   ])
 
-  if (!host && !application && !listing) {
+  // A hosts row is created for EVERY signup by a DB trigger (see migration 079),
+  // so `host` is truthy for essentially everyone and cannot gate access. Require
+  // a real host signal — a submitted application or an owned listing — matching
+  // the /choose-dashboard eligibility check and the account layout's hasStay.
+  if (!application && !listing) {
     redirect('/become-a-host')
   }
 

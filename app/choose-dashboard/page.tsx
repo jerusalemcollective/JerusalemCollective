@@ -6,16 +6,7 @@ export const metadata = {
   title: 'Choose your dashboard | JLM Collective',
 }
 
-export default async function ChooseDashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ switch?: string }>
-}) {
-  const { switch: switchParam } = await searchParams
-  // ?switch=1 forces the chooser to show even when a choice is remembered, so a
-  // host can move between dashboards (and change/clear their remembered choice).
-  const forceChooser = switchParam === '1'
-
+export default async function ChooseDashboardPage() {
   const supabase = await createClient()
   const {
     data: { user },
@@ -53,31 +44,11 @@ export default async function ChooseDashboardPage({
     redirect('/account')
   }
 
-  // Read the remembered choice separately and tolerantly: if the 093 migration
-  // hasn't run yet the column won't exist and this select errors — treat that as
-  // "no preference" rather than crashing login.
-  let preferred: 'host' | 'guest' | null = null
-  const { data: pref, error: prefError } = await supabase
-    .from('profiles')
-    .select('preferred_dashboard')
-    .eq('id', user.id)
-    .maybeSingle()
-  if (!prefError && pref) {
-    const value = (pref as { preferred_dashboard?: string | null }).preferred_dashboard
-    preferred = value === 'host' ? 'host' : value === 'guest' ? 'guest' : null
-  }
-
-  // Honor a remembered choice unless the user explicitly asked to switch.
-  if (!forceChooser) {
-    if (preferred === 'host') redirect('/host/dashboard')
-    if (preferred === 'guest') redirect('/account')
-  }
-
   const displayName =
     host?.display_name ||
     (profile?.full_name ? String(profile.full_name).split(' ')[0] : null) ||
     host?.name ||
     null
 
-  return <DashboardChooser displayName={displayName} currentPreference={preferred} />
+  return <DashboardChooser displayName={displayName} />
 }
