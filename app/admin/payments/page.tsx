@@ -238,7 +238,7 @@ export default async function AdminPaymentsPage() {
         </div>
 
         <p className="mt-4 text-xs text-stone-500">
-          Paid JLM fee total: {formatMoney(totalJlmFee)}. Mixed-currency totals are indicative only; use per-payment currency rows for reconciliation.
+          Paid host net total: {formatMoney(totalHostPayout)}. Paid JLM fee total: {formatMoney(totalJlmFee)}. Gross ({formatMoney(totalGross)}) = host net + JLM fee. Mixed-currency totals are indicative only; use per-payment currency rows for reconciliation.
         </p>
       </section>
     </div>

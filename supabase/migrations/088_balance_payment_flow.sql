@@ -9,7 +9,7 @@ alter table public.booking_payments
   add column if not exists balance_reminder_sent_at timestamptz;
 
 comment on column public.booking_payments.balance_reminder_sent_at is
-  'When the guest was last emailed a balance-due reminder (nulled/updated by the reminder job).';
+  'When the single balance-due reminder was sent; set once by the reminder job (one reminder per balance).';
 
 -- Attach a balance Checkout session to a booking_payment the caller owns.
 -- Guest-scoped, mirrors attach_checkout_session_to_payment (071).
