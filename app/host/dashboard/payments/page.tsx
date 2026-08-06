@@ -237,7 +237,7 @@ export default async function HostPaymentsPage({
           )}
         </section>
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+        <div>
           <form action={updateHostPaymentPreferences} className="rounded-3xl bg-white p-6 shadow-sm">
             <div className="space-y-5">
               {paymentRoutes.jlmPaymentsEnabled && (
@@ -337,20 +337,6 @@ export default async function HostPaymentsPage({
             </div>
           </form>
 
-          <aside className="space-y-4">
-            <div className="rounded-3xl bg-white p-5 shadow-sm">
-              <h2 className="text-lg font-bold text-stone-950">Payout setup</h2>
-              <p className="mt-2 text-sm leading-6 text-stone-600">
-                Add your legal and bank details here when payout setup opens. This is not part of the stay listing form.
-              </p>
-              <div className="mt-4 space-y-3 text-sm">
-                <TextStatusRow label="Status" value={formatPayoutStatus(profile?.payout_setup_status)} />
-                <StatusRow label="Payout profile created" value={Boolean(profile?.stripe_account_id)} />
-                <StatusRow label="Charges enabled" value={profile?.stripe_charges_enabled || false} />
-                <StatusRow label="Payouts enabled" value={profile?.stripe_payouts_enabled || false} />
-              </div>
-            </div>
-          </aside>
         </div>
 
         <section className="mt-8 overflow-hidden rounded-3xl bg-white shadow-sm">
@@ -444,39 +430,6 @@ function formatDate(value: string) {
     month: 'short',
     year: 'numeric',
   })
-}
-
-function StatusRow({ label, value }: { label: string; value: boolean }) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-stone-600">{label}</span>
-      <span
-        className={`rounded-full px-3 py-1 text-xs font-bold ${
-          value ? 'bg-green-100 text-green-700' : 'bg-stone-100 text-stone-700'
-        }`}
-      >
-        {value ? 'Yes' : 'Not yet'}
-      </span>
-    </div>
-  )
-}
-
-function TextStatusRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-stone-600">{label}</span>
-      <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-bold text-stone-700">
-        {value}
-      </span>
-    </div>
-  )
-}
-
-function formatPayoutStatus(status?: string | null) {
-  if (status === 'ready') return 'Ready'
-  if (status === 'pending') return 'Pending'
-  if (status === 'restricted') return 'Needs attention'
-  return 'Not started'
 }
 
 type HostPayout = {
