@@ -1,4 +1,4 @@
-﻿import { createClient } from '@/lib/supabase/server'
+﻿import { createPublicClient } from '@/lib/supabase/public'
 import { z } from 'zod'
 import { sampleListings } from '@/lib/sample-listings'
 import { MapPageClient, type MapListing } from '@/components/map-page-client'
@@ -24,6 +24,12 @@ const listingPhotoRowSchema = z.object({
 })
 
 type ListingRow = z.infer<typeof listingRowSchema>
+
+// Cookieless public reads keep this page cacheable (ISR). A generous upper
+// bound protects the map from an unbounded listings fetch as inventory grows;
+// the curated catalogue is far below this today, so no pins are hidden.
+export const revalidate = 1800
+const MAP_MAX_LISTINGS = 500
 
 export const metadata = {
   title: 'Jerusalem Map',
@@ -51,12 +57,13 @@ function toMapListing(listing: ListingRow, coverPhotoUrl: string | null): MapLis
 }
 
 export default async function MapPage() {
-  const supabase = await createClient()
+  const supabase = createPublicClient()
   const { data } = await supabase
     .from('listings')
     .select('id, title, area, price_ils, price_usd, bedrooms, max_guests, latitude, longitude, amenities')
     .eq('is_published', true)
     .order('is_featured', { ascending: false })
+    .limit(MAP_MAX_LISTINGS)
 
   const listingRows = z.array(listingRowSchema).parse(data?.length ? data : sampleListings)
   const listingIds = listingRows.map((listing) => listing.id)
@@ -65,8 +72,8 @@ export default async function MapPage() {
       ? await supabase
           .from('listing_photos')
           .select('listing_id, photo_url, is_cover')
+          .eq('is_cover', true)
           .in('listing_id', listingIds)
-          .order('is_cover', { ascending: false })
       : { data: [] }
   const coverPhotoByListing = new Map<string, string>()
 

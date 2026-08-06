@@ -15,3 +15,14 @@ node_modules
 .DS_Store
 .vercel
 .env*
+
+# Code-export dumps and build logs — never deploy (audit L-cq4)
+build-output.txt
+typecheck-output.txt
+all-code*.txt
+full-code-export*.txt
+latest-code-export.txt
+latest-design-changes-code.txt
+WEBSITE_CODE_EXPORT.txt
+WEBSITE_OVERVIEW.txt
+*.zip

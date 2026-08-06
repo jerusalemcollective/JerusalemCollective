@@ -1,7 +1,7 @@
 ﻿import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { z } from 'zod'
-import { createClient } from '@/lib/supabase/server'
+import { createPublicClient } from '@/lib/supabase/public'
 import { getSampleListing } from '@/lib/sample-listings'
 import { getPaymentRouteSettings, getServicesBarEnabled } from '@/lib/platform-settings'
 import {
@@ -232,7 +232,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>
 }): Promise<Metadata> {
   const { id } = await params
-  const supabase = await createClient()
+  const supabase = createPublicClient()
   const [{ data: listing }, { data: coverPhoto }] = await Promise.all([
     supabase
       .from('listings')
@@ -317,7 +317,7 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
     getServicesBarEnabled(),
     getPaymentRouteSettings(),
   ])
-  const supabase = await createClient()
+  const supabase = createPublicClient()
 
   const { data: listingData } = await supabase
     .from('listings')

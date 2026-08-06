@@ -56,6 +56,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
+    images: ['/logos/JLM_Collective_Primary_Horizontal_Terracotta_UI.webp'],
   },
 }
 

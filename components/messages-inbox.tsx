@@ -403,7 +403,9 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
           ...conversation,
           listing: conversation.listing_id ? listingMap.get(conversation.listing_id) || null : null,
           other_participant:
-            profileMap.get(mode === 'host' ? conversation.participant_1 : conversation.participant_2) || null,
+            profileMap.get(mode === 'host' ? conversation.participant_1 : conversation.participant_2) ||
+            hostParticipantMap.get(mode === 'host' ? conversation.participant_1 : conversation.participant_2) ||
+            null,
           last_message: latestByConversation.get(conversation.id) || conversation.last_message || null,
           request: requestByConversation.get(conversation.id) || null,
         }))

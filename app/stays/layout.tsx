@@ -1,14 +1,6 @@
-import type { Metadata } from 'next'
-
-export const metadata: Metadata = {
-  title: 'Jerusalem Stays',
-  description:
-    'Browse verified short-term stays in Jerusalem by neighbourhood, bedrooms, and amenities including sukkah and kosher kitchen.',
-  alternates: {
-    canonical: '/stays',
-  },
-}
-
+// Metadata for /stays lives in app/stays/page.tsx (a server component that
+// exports its own richer metadata incl. openGraph/twitter). This layout is a
+// pass-through; duplicating metadata here caused a redundant/conflicting tag.
 export default function StaysLayout({
   children,
 }: {

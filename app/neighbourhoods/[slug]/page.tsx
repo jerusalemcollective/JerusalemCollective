@@ -117,8 +117,32 @@ export default async function NeighbourhoodPage({
   )
   const description = neighborhoodDescriptions[name] || null
 
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://jlmcollective.co' },
+      { '@type': 'ListItem', position: 2, name: 'Stays', item: 'https://jlmcollective.co/stays' },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: `Stays in ${name}`,
+        item: `https://jlmcollective.co/neighbourhoods/${slug}`,
+      },
+    ],
+  }
+
   return (
     <div className="min-h-screen bg-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(breadcrumbJsonLd)
+            .replace(/</g, '\\u003c')
+            .replace(/>/g, '\\u003e')
+            .replace(/&/g, '\\u0026'),
+        }}
+      />
       <div className="mx-auto max-w-6xl px-5 py-10 md:px-8">
         <div className="mb-2 flex items-center gap-2 text-sm text-stone-500">
           <Link href="/stays" className="hover:text-[#c76f55]">

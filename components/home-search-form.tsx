@@ -290,7 +290,11 @@ export function HomeSearchForm() {
             <input
               id="home-neighbourhood"
               type="text"
+              role="combobox"
               aria-label="Search by neighbourhood"
+              aria-expanded={showNeighbourhoodSuggestions && (placePredictions.length > 0 || isLoadingPlaces)}
+              aria-controls="home-neighbourhood-listbox"
+              aria-autocomplete="list"
               value={neighbourhood}
               onChange={(event) => {
                 setNeighbourhood(event.target.value)
@@ -307,13 +311,19 @@ export function HomeSearchForm() {
           </div>
 
           {showNeighbourhoodSuggestions && (placePredictions.length > 0 || isLoadingPlaces) && (
-            <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-72 overflow-y-auto rounded-2xl border border-stone-200 bg-white py-2 shadow-xl md:left-2 md:right-auto md:w-80">
+            <div
+              id="home-neighbourhood-listbox"
+              role="listbox"
+              className="absolute left-0 right-0 top-full z-50 mt-1 max-h-72 overflow-y-auto rounded-2xl border border-stone-200 bg-white py-2 shadow-xl md:left-2 md:right-auto md:w-80"
+            >
               {isLoadingPlaces && placePredictions.length === 0 && (
                 <div className="px-4 py-3 text-sm text-stone-500">Searching...</div>
               )}
               {placePredictions.map((place, index) => (
                 <button
                   key={`${place.text}-${index}`}
+                  role="option"
+                  aria-selected={false}
                   onClick={() => {
                     setNeighbourhood(place.text)
                     setShowNeighbourhoodSuggestions(false)

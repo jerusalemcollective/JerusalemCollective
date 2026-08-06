@@ -1,14 +1,6 @@
-import type { Metadata } from 'next'
-
-export const metadata: Metadata = {
-  title: 'Jerusalem Stay Map',
-  description:
-    'Explore verified Jerusalem stays on a map and filter by bedrooms and practical amenities.',
-  alternates: {
-    canonical: '/map',
-  },
-}
-
+// Metadata for /map lives in app/map/page.tsx (a server component that exports
+// its own metadata). This layout is a pass-through; duplicating metadata here
+// caused a redundant and title-conflicting tag.
 export default function MapLayout({
   children,
 }: {

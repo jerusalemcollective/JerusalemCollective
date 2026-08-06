@@ -354,6 +354,13 @@ export function ListingDetailClient({
 
       <div className="pb-28 lg:pb-8">
         <div className="mx-auto max-w-6xl px-5 py-8 md:px-8">
+        <nav aria-label="Breadcrumb" className="mb-4 flex items-center gap-2 text-sm text-stone-500">
+          <Link href="/" className="transition hover:text-[#c76f55]">Home</Link>
+          <span aria-hidden="true">/</span>
+          <Link href="/stays" className="transition hover:text-[#c76f55]">Stays</Link>
+          <span aria-hidden="true">/</span>
+          <span aria-current="page" className="line-clamp-1 text-stone-900">{listing.title}</span>
+        </nav>
         {fromStays && (
           <Link href="/stays" className="mb-4 inline-flex text-sm font-medium text-stone-500 transition hover:text-stone-900">
             &larr; Back to search

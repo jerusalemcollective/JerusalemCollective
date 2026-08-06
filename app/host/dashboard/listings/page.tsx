@@ -1,4 +1,5 @@
 ﻿import Link from 'next/link'
+import Image from 'next/image'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { HostDashboardNav } from '@/components/host-dashboard-nav'
 import { ListingQualityScore } from '@/components/listing-quality-score'
@@ -661,7 +662,7 @@ function Thumb({ src, title }: { src?: string; title: string }) {
   return (
     <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-stone-200">
       {src ? (
-        <img src={src} alt={title} className="absolute inset-0 h-full w-full object-cover" />
+        <Image src={src} alt={title} fill className="object-cover" sizes="(max-width: 768px) 40vw, 220px" />
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-stone-100 via-stone-200 to-stone-300" />
       )}
