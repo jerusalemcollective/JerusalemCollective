@@ -350,13 +350,6 @@ export default async function HostPaymentsPage({
                 <StatusRow label="Payouts enabled" value={profile?.stripe_payouts_enabled || false} />
               </div>
             </div>
-
-            <div className="rounded-3xl bg-white p-5 shadow-sm">
-              <h2 className="text-lg font-bold text-stone-950">What comes next</h2>
-              <p className="mt-3 text-sm leading-6 text-stone-600">
-                Next, JLM Collective will add a simple guided setup here so hosts can enter the details needed to receive money without handling that during the listing process.
-              </p>
-            </div>
           </aside>
         </div>
 
