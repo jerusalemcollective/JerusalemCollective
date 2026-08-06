@@ -41,18 +41,51 @@ export async function blockDateRange(formData: FormData) {
   exclusiveEnd.setUTCDate(exclusiveEnd.getUTCDate() + 1)
   const endDateExclusive = exclusiveEnd.toISOString().slice(0, 10)
 
-  const { error } = await supabase
+  // Merge with any existing manual block that overlaps or touches this range so
+  // the same dates can't be blocked more than once (blocking is idempotent).
+  const { data: existingRanges } = await supabase
     .from('listing_unavailable_ranges')
-    .insert({
+    .select('id, start_date, end_date')
+    .eq('listing_id', listingId)
+    .eq('source', 'manual')
+    .lte('start_date', endDateExclusive)
+    .gte('end_date', startDate)
+
+  const overlapping = existingRanges || []
+  const alreadyBlocked = overlapping.some(
+    (range) => range.start_date <= startDate && range.end_date >= endDateExclusive,
+  )
+
+  if (!alreadyBlocked) {
+    let mergedStart = startDate
+    let mergedEnd = endDateExclusive
+    for (const range of overlapping) {
+      if (range.start_date < mergedStart) mergedStart = range.start_date
+      if (range.end_date > mergedEnd) mergedEnd = range.end_date
+    }
+
+    if (overlapping.length > 0) {
+      const { error: deleteError } = await supabase
+        .from('listing_unavailable_ranges')
+        .delete()
+        .in(
+          'id',
+          overlapping.map((range) => range.id),
+        )
+      if (deleteError) throw deleteError
+    }
+
+    const { error } = await supabase.from('listing_unavailable_ranges').insert({
       listing_id: listingId,
       host_id: host.id,
-      start_date: startDate,
-      end_date: endDateExclusive,
+      start_date: mergedStart,
+      end_date: mergedEnd,
       reason,
       source: 'manual',
     })
 
-  if (error) throw error
+    if (error) throw error
+  }
 
   revalidatePath('/host/dashboard/calendar')
   revalidatePath(`/host/dashboard/listings/${listingId}`)
