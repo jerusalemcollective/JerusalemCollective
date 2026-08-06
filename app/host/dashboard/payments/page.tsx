@@ -242,13 +242,6 @@ export default async function HostPaymentsPage({
             <div className="space-y-5">
               {paymentRoutes.jlmPaymentsEnabled && (
                 <>
-                  <div className="rounded-2xl bg-[#F8F5F2] p-4">
-                    <p className="font-bold text-stone-950">Receive online payments</p>
-                    <p className="mt-1 text-sm leading-6 text-stone-600">
-                      {jlmPaymentDescription}
-                    </p>
-                  </div>
-
                   <label className="flex items-start gap-3 rounded-2xl bg-[#F8F5F2] p-4">
                     <input
                       type="checkbox"
