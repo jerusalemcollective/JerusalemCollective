@@ -740,15 +740,6 @@ export function ListingDetailClient({
                     <h2 className="font-display text-xl font-bold text-stone-950">
                       About {listing.area}
                     </h2>
-                    <Link
-                      href={`/neighbourhoods/${listing.area
-                        .toLowerCase()
-                        .replace(/\s+/g, '-')
-                        .replace(/[^a-z0-9-]/g, '')}`}
-                      className="shrink-0 text-sm font-semibold text-[#c76f55] hover:underline"
-                    >
-                      Explore {listing.area} →
-                    </Link>
                   </div>
                   {neighbourhoodDescription ? (
                     <p className="mt-3 text-base leading-8 text-stone-600">
