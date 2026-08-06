@@ -171,12 +171,6 @@ export function ListingAiAssistant({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-sm font-bold text-stone-950">AI listing assistant</p>
-          <p className="mt-1 max-w-xl text-sm leading-6 text-stone-600">
-            Use the details already entered to create cleaner guest-facing wording. Review it before saving.
-          </p>
-          <p className="mt-1 max-w-xl text-sm leading-6 text-stone-600">
-            Writing in Hebrew? Enter the title and description in Hebrew, then translate them to polished English for guests.
-          </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <button

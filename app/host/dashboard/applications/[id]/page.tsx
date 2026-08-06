@@ -87,6 +87,41 @@ export default async function HostApplicationEditPage({
   const applicationPhotos = (photos || []) as ApplicationPhoto[]
   const sectionsToFix = hostApplication.admin_feedback_sections || []
 
+  // Once approved, the application became a live listing — don't show the
+  // "edit and resubmit" editor or any stale review feedback.
+  if (hostApplication.status === 'approved') {
+    return (
+      <div className="min-h-screen bg-[#F8F5F2] px-5 py-10 text-[#252525] md:px-6">
+        <section className="mx-auto max-w-3xl">
+          <div className="mb-6 flex items-center gap-2 text-sm text-stone-500">
+            <Link href="/host/dashboard/listings" className="hover:text-[#c76f55]">
+              Listings
+            </Link>
+            <span>/</span>
+            <span className="text-stone-900">{hostApplication.apartment_title}</span>
+          </div>
+          <div className="rounded-3xl bg-white p-8 text-center shadow-sm">
+            <span className="inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700">
+              Approved
+            </span>
+            <h1 className="font-display mt-4 text-3xl font-bold text-stone-950">
+              {hostApplication.apartment_title} is live
+            </h1>
+            <p className="mt-3 text-stone-600">
+              This stay has been approved and published. Manage it any time from your listings.
+            </p>
+            <Link
+              href="/host/dashboard/listings"
+              className="mt-6 inline-flex rounded-full bg-stone-950 px-6 py-3 text-sm font-bold text-white transition hover:bg-stone-800"
+            >
+              Go to my listings
+            </Link>
+          </div>
+        </section>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-[#F8F5F2] px-5 py-10 text-[#252525] md:px-6">
       <section className="mx-auto max-w-6xl">

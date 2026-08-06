@@ -538,6 +538,12 @@ function PriceInsight({
           ? `You are priced in line with similar ${bedroomLabel} homes in ${area}.`
           : comparison.recommendation
 
+  // Nothing useful to show until there are enough comparable listings — hide the
+  // card entirely rather than repeating "not enough data".
+  if (comparison.price_position === 'not_enough_data') {
+    return null
+  }
+
   return (
     <div className="mt-4 max-w-xl rounded-2xl bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
