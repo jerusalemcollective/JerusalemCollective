@@ -280,10 +280,10 @@ export default async function HostDashboardPage() {
                 <h2 className="text-xl font-bold text-stone-950">Upcoming stays</h2>
               </div>
               <Link
-                href="/host/dashboard/messages"
+                href="/host/dashboard/calendar"
                 className="text-sm font-bold text-[#c76f55] transition hover:text-[#a95b45]"
               >
-                View all trips
+                Open calendar
               </Link>
             </div>
 
