@@ -195,7 +195,7 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
             </h1>
             {totalPublished > 0 && (
               <p className="mt-2 text-stone-500">
-                {listings.length} verified apartment{listings.length === 1 ? '' : 's'} available
+                {listings.length} apartment{listings.length === 1 ? '' : 's'} available
               </p>
             )}
             {activeFeature && (
