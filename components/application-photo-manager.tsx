@@ -269,7 +269,7 @@ export function ApplicationPhotoManager({
       {photos.length > 0 && (
         <div className="mt-5">
           <p className="mb-3 text-xs font-semibold text-stone-500">
-            Swipe a photo left or right to reorder. Tap &ldquo;Make cover&rdquo; to choose the photo shown on your listing card.
+            Drag a photo to the front to make it your cover — it&rsquo;s the photo shown on your listing card.
           </p>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {photos.map((photo, index) => (
@@ -301,13 +301,9 @@ export function ApplicationPhotoManager({
                     Cover
                   </span>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => void reorderPhotos(index, 0)}
-                    className="absolute bottom-3 left-3 rounded-full bg-white/90 px-3 py-1 text-xs font-bold text-[#c76f55] shadow-sm transition hover:bg-white"
-                  >
-                    Make cover
-                  </button>
+                  <span className="pointer-events-none absolute bottom-3 left-3 rounded-full bg-white/90 px-3 py-1 text-xs font-bold text-stone-700 opacity-0 shadow-sm transition group-hover:opacity-100">
+                    Drag to front to make cover
+                  </span>
                 )}
               </div>
               <div className="space-y-2 p-3">
