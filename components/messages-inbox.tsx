@@ -1010,7 +1010,7 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
           </div>
         </aside>
 
-        <section className="flex min-h-0 flex-col bg-[#fcfaf8]">
+        <section className="flex min-h-0 min-w-0 flex-col bg-[#fcfaf8]">
           <div className="border-b border-stone-200 bg-white px-5 py-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="flex min-w-0 items-center gap-3">
@@ -1128,7 +1128,7 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
                     </span>
                   )}
                   <div
-                    className={`max-w-[min(78%,34rem)] rounded-[1.35rem] px-4 py-3 text-sm shadow-sm ${
+                    className={`max-w-[min(78%,34rem)] whitespace-pre-wrap break-words rounded-[1.35rem] px-4 py-3 text-sm shadow-sm ${
                       isMine
                         ? 'rounded-br-md bg-[#c76f55] text-white shadow-[#e6b09f]/40'
                         : 'rounded-bl-md bg-white text-stone-800 ring-1 ring-stone-100'
