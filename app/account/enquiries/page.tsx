@@ -58,7 +58,6 @@ export default async function EnquiriesPage() {
 
         <header className="mb-8 border-b border-stone-200 pb-6">
           <h1 className="font-display text-3xl font-bold tracking-tight text-stone-950">Enquiries</h1>
-          <p className="mt-2 text-stone-600">Your stay requests and host replies in one place.</p>
         </header>
 
         {enquiries.length === 0 ? (

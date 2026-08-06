@@ -78,7 +78,6 @@ export default async function ReviewsPage({
 
         <header className="mb-8 border-b border-stone-200 pb-6">
           <h1 className="font-display text-3xl font-bold tracking-tight text-stone-950">Reviews</h1>
-          <p className="mt-2 text-stone-600">Share feedback after a completed stay.</p>
         </header>
 
         <ReviewForm

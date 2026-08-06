@@ -183,7 +183,6 @@ export default async function BookingsPage({
 
         <header className="mb-8 border-b border-stone-200 pb-6">
           <h1 className="font-display text-3xl font-bold tracking-tight text-stone-950">My trips</h1>
-          <p className="mt-2 text-stone-600">Upcoming and past stays in one place.</p>
         </header>
 
         {bookings.length === 0 ? (

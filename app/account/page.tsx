@@ -76,7 +76,6 @@ export default async function AccountPage() {
       <div className="mx-auto max-w-5xl px-5 py-6 md:px-6">
         <header className="mb-5 border-b border-stone-200 pb-4">
           <h1 className="font-display text-2xl font-bold tracking-tight text-stone-950">Account</h1>
-          <p className="mt-1.5 text-sm text-stone-600">Profile, trips, saved stays, messages, and support.</p>
         </header>
 
         <div>
