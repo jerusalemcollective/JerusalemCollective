@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { allNeighborhoods } from '@/lib/neighborhoods'
 import { slugifyNeighborhood, neighborhoodDescriptions } from '@/lib/neighborhood-pages'
+import { stayCollectionSlugs } from '@/lib/stay-collections'
 
 const siteUrl = 'https://jlmcollective.co'
 
@@ -19,6 +20,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'daily',
       priority: 0.9,
     },
+    ...stayCollectionSlugs.map((slug) => ({
+      url: `${siteUrl}/stays/${slug}`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly' as const,
+      priority: 0.75,
+    })),
     {
       url: `${siteUrl}/explore`,
       lastModified: new Date(),
