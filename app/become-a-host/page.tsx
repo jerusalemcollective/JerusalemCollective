@@ -1561,6 +1561,28 @@ export default function BecomeAHostPage() {
     }
   }
 
+  function goToStep(index: number) {
+    setError('')
+
+    // Going back (or staying) is always allowed. Jumping forward requires every
+    // step in between to be complete, so you can't skip mandatory fields.
+    if (index > step) {
+      for (let i = step; i < index; i += 1) {
+        const issues = getStepIssues(i)
+        if (issues.length > 0) {
+          setShowMissingStepWarnings(true)
+          setStep(i)
+          setError(`${steps[i]} needs attention: ${issues[0]}`)
+          window.scrollTo({ top: 0, behavior: 'smooth' })
+          return
+        }
+      }
+    }
+
+    setStep(index)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
 async function handleSubmit() {
     setLoading(true)
     setError('')
@@ -1974,7 +1996,7 @@ async function handleSubmit() {
                   <button
                     key={item}
                     type="button"
-                    onClick={() => setStep(index)}
+                    onClick={() => goToStep(index)}
                     className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold transition ${
                       index === step
                         ? 'bg-[#c76f55] text-white'
