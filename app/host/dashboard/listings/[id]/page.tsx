@@ -3,7 +3,8 @@ import { notFound } from 'next/navigation'
 import { ExternalCalendarSyncForm } from '@/components/external-calendar-sync-form'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { getPaymentRouteSettings } from '@/lib/platform-settings'
-import { updateHostListing } from '../actions'
+import { updateHostListing, setHostListingVisibility, deleteHostListing } from '../actions'
+import { ConfirmSubmitButton } from '@/components/confirm-submit-button'
 import { DepositSettingsForm } from '@/components/deposit-settings-form'
 import { ListingAiAssistant } from '@/components/listing-ai-assistant'
 import { AmenitySelector } from '@/components/amenity-selector'
@@ -58,6 +59,52 @@ export default async function HostListingEditPage({
           </Link>
           <span>/</span>
           <span className="text-stone-900">{listing.title}</span>
+        </div>
+
+        <div className="mb-6 flex flex-wrap items-center gap-2">
+          <Link
+            href={`/listings/${listing.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-bold text-stone-700 transition hover:border-stone-300"
+          >
+            View live ↗
+          </Link>
+          <Link
+            href="/host/dashboard/calendar"
+            className="rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-bold text-stone-700 transition hover:border-stone-300"
+          >
+            Block dates
+          </Link>
+          <Link
+            href="/host/dashboard/messages"
+            className="rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-bold text-stone-700 transition hover:border-stone-300"
+          >
+            Messages
+          </Link>
+          <form action={setHostListingVisibility}>
+            <input type="hidden" name="listingId" value={listing.id} />
+            <input type="hidden" name="value" value={String(!listing.is_published)} />
+            <ConfirmSubmitButton
+              message={
+                listing.is_published
+                  ? 'Hide this stay? It comes off the site straight away and guests can no longer find it. You can publish it again whenever you like.'
+                  : 'Publish this stay so guests can find and book it?'
+              }
+              className="rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-bold text-stone-700 transition hover:border-stone-300"
+            >
+              {listing.is_published ? 'Hide from site' : 'Publish'}
+            </ConfirmSubmitButton>
+          </form>
+          <form action={deleteHostListing}>
+            <input type="hidden" name="listingId" value={listing.id} />
+            <ConfirmSubmitButton
+              message="Delete this stay permanently? This cannot be undone. If it already has bookings you will be asked to hide it instead, so your records stay intact."
+              className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-bold text-rose-700 transition hover:bg-rose-100"
+            >
+              Delete
+            </ConfirmSubmitButton>
+          </form>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">

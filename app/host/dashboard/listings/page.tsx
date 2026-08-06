@@ -2,9 +2,7 @@
 import Image from 'next/image'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { ListingQualityScore } from '@/components/listing-quality-score'
-import { ConfirmSubmitButton } from '@/components/confirm-submit-button'
 import { calculateListingScore } from '@/lib/marketplace-rules'
-import { deleteHostListing, setHostListingVisibility } from '@/app/host/dashboard/listings/actions'
 
 type HostApplication = {
   id: string
@@ -382,18 +380,19 @@ function ListingRow({
           americanComfort={americanComfort}
         />
         <PerformanceInsightCard performance={performance} />
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span
+            className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
+              isPublished ? 'bg-green-100 text-green-700' : 'bg-stone-100 text-stone-600'
+            }`}
+          >
+            {isPublished ? 'Live' : 'Hidden'}
+          </span>
           <Link
             href={`/host/dashboard/listings/${id}`}
-            className="rounded-full border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-300"
+            className="rounded-full bg-stone-950 px-4 py-1.5 text-xs font-bold text-white transition hover:bg-stone-800"
           >
-            Edit listing
-          </Link>
-          <Link
-            href="/host/dashboard/calendar"
-            className="rounded-full border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-300"
-          >
-            Block dates
+            Manage property
           </Link>
           <Link
             href={`/listings/${id}`}
@@ -403,35 +402,6 @@ function ListingRow({
           >
             View live ↗
           </Link>
-          <Link
-            href="/host/dashboard/messages"
-            className="rounded-full border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-300"
-          >
-            Messages
-          </Link>
-          <form action={setHostListingVisibility}>
-            <input type="hidden" name="listingId" value={id} />
-            <input type="hidden" name="value" value={String(!isPublished)} />
-            <ConfirmSubmitButton
-              message={
-                isPublished
-                  ? 'Hide this stay? It comes off the site straight away and guests can no longer find it. You can publish it again whenever you like.'
-                  : 'Publish this stay so guests can find and book it?'
-              }
-              className="rounded-full border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-300"
-            >
-              {isPublished ? 'Hide from site' : 'Publish'}
-            </ConfirmSubmitButton>
-          </form>
-          <form action={deleteHostListing}>
-            <input type="hidden" name="listingId" value={id} />
-            <ConfirmSubmitButton
-              message="Delete this stay permanently? This cannot be undone. If it already has bookings you will be asked to hide it instead, so your records stay intact."
-              className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 transition hover:bg-rose-100"
-            >
-              Delete
-            </ConfirmSubmitButton>
-          </form>
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2 md:justify-end">
