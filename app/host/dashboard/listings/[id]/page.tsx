@@ -199,7 +199,7 @@ export default async function HostListingEditPage({
               </div>
             </EditorSection>
 
-            <EditorSection title="American comfort">
+            <EditorSection title="Comfort">
               <p className="text-sm text-stone-600">
                 North American guests often specifically look for these features. Check all that apply.
               </p>

@@ -2488,7 +2488,7 @@ async function handleSubmit() {
                 </div>
                 <div className="mt-8 border-t border-stone-100 pt-8">
                   <h3 className="text-sm font-bold uppercase tracking-widest text-stone-500">
-                    American comfort
+                    Comfort
                   </h3>
                   <p className="mt-1 text-xs text-stone-500">
                     North American guests often specifically look for these features. Check all that apply.
