@@ -4,17 +4,32 @@ import {
   type CalendarRange,
 } from '@/components/host-calendar-board'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
-import { saveCalendarEntry } from './actions'
+import { saveCalendarEntry, updateBookingAsHost, updateRequestAsHost } from './actions'
 import { RemoveBlockedDateButton } from '@/components/remove-blocked-date-button'
+import { HostBookingEditor, type EditableBooking } from '@/components/host-booking-editor'
 
 type HostListing = { id: string; title: string }
 
 type BookingRow = {
+  id: string
   listing_id: string
   check_in: string
   check_out: string
+  guests: number | null
   status: string
+  listings?: { title: string } | { title: string }[] | null
   profiles?: { full_name: string | null } | { full_name: string | null }[] | null
+}
+
+type RequestRow = {
+  id: string
+  listing_id: string
+  check_in: string | null
+  check_out: string | null
+  guests: number | null
+  status: string
+  listings?: { title: string } | { title: string }[] | null
+  guest?: { full_name: string | null } | { full_name: string | null }[] | null
 }
 
 type RangeRow = {
@@ -34,7 +49,7 @@ function oneOrNull<T>(rel: T | T[] | null | undefined): T | null {
 
 export default async function HostCalendarPage() {
   const { supabase, hostIds } = await requireHostDashboardAccess()
-  const [{ data: listings }, { data: ranges }, { data: bookingsData }] = await Promise.all([
+  const [{ data: listings }, { data: ranges }, { data: bookingsData }, { data: requestsData }] = await Promise.all([
     supabase
       .from('listings')
       .select('id, title')
@@ -47,9 +62,15 @@ export default async function HostCalendarPage() {
       .order('start_date', { ascending: true }),
     supabase
       .from('bookings')
-      .select('listing_id, check_in, check_out, status, profiles!bookings_user_id_fkey(full_name)')
+      .select('id, listing_id, check_in, check_out, guests, status, listings(title), profiles!bookings_user_id_fkey(full_name)')
       .in('host_id', hostIds)
       .in('status', ['confirmed', 'pending', 'completed']),
+    supabase
+      .from('booking_requests')
+      .select('id, listing_id, check_in, check_out, guests, status, listings(title), guest:profiles!booking_requests_guest_id_fkey(full_name)')
+      .in('host_id', hostIds)
+      .in('status', ['new', 'host_replied', 'accepted'])
+      .order('check_in', { ascending: true }),
   ])
 
   const hostListings: HostListing[] = (listings || []).map((listing: HostListing) => ({
@@ -57,12 +78,36 @@ export default async function HostCalendarPage() {
     title: listing.title,
   }))
 
-  const bookings: CalendarBooking[] = ((bookingsData || []) as BookingRow[]).map((booking) => ({
+  const bookingRows = (bookingsData || []) as BookingRow[]
+  const bookings: CalendarBooking[] = bookingRows.map((booking) => ({
     listing_id: booking.listing_id,
     check_in: booking.check_in,
     check_out: booking.check_out,
     status: booking.status,
     guest_name: oneOrNull(booking.profiles)?.full_name ?? null,
+  }))
+
+  const today = new Date().toISOString().slice(0, 10)
+  const editableBookings: EditableBooking[] = bookingRows
+    .filter((booking) => booking.check_out >= today)
+    .map((booking) => ({
+      id: booking.id,
+      listingTitle: oneOrNull(booking.listings)?.title || 'Stay',
+      guestName: oneOrNull(booking.profiles)?.full_name ?? null,
+      checkIn: booking.check_in,
+      checkOut: booking.check_out,
+      guests: booking.guests ?? 1,
+      status: booking.status,
+    }))
+
+  const editableRequests: EditableBooking[] = ((requestsData || []) as RequestRow[]).map((request) => ({
+    id: request.id,
+    listingTitle: oneOrNull(request.listings)?.title || 'Stay',
+    guestName: oneOrNull(request.guest)?.full_name ?? null,
+    checkIn: request.check_in || '',
+    checkOut: request.check_out || '',
+    guests: request.guests ?? 1,
+    status: request.status,
   }))
 
   const rangeRows = (ranges || []) as RangeRow[]
@@ -105,6 +150,22 @@ export default async function HostCalendarPage() {
               ranges={calendarRanges}
               saveAction={saveCalendarEntry}
             />
+
+            <section className="mt-6 overflow-hidden rounded-3xl bg-white shadow-sm">
+              <div className="border-b border-stone-100 px-6 py-4">
+                <h2 className="text-lg font-bold text-stone-950">Bookings and requests</h2>
+                <p className="mt-1 text-sm text-stone-600">
+                  Edit the dates, guests, or status. Changing a paid booking&rsquo;s dates does not re-price the
+                  deposit or balance.
+                </p>
+              </div>
+              <HostBookingEditor
+                bookings={editableBookings}
+                requests={editableRequests}
+                updateBookingAction={updateBookingAsHost}
+                updateRequestAction={updateRequestAsHost}
+              />
+            </section>
 
             <section className="mt-6 overflow-hidden rounded-3xl bg-white shadow-sm">
               <div className="border-b border-stone-100 px-6 py-4">

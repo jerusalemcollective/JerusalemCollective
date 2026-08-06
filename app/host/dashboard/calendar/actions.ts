@@ -163,3 +163,68 @@ export async function saveCalendarEntry(formData: FormData) {
   }
   return blockDateRange(formData)
 }
+
+type EditState = { ok?: boolean; error?: string }
+
+function editErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message
+  return 'Could not save the change. Please try again.'
+}
+
+// Edit an existing confirmed/pending booking (dates, guests, status).
+export async function updateBookingAsHost(_prev: EditState, formData: FormData): Promise<EditState> {
+  const bookingId = String(formData.get('bookingId') || '')
+  const checkIn = String(formData.get('checkIn') || '')
+  const checkOut = String(formData.get('checkOut') || '')
+  const guests = Number(formData.get('guests') || 1)
+  const status = String(formData.get('status') || '')
+
+  if (!bookingId || !checkIn || !checkOut) {
+    return { error: 'Enter the dates for this booking.' }
+  }
+
+  try {
+    const { supabase } = await requireHostDashboardAccess()
+    const { error } = await supabase.rpc('host_update_booking', {
+      p_booking_id: bookingId,
+      p_check_in: checkIn,
+      p_check_out: checkOut,
+      p_guests: guests,
+      p_status: status,
+    })
+    if (error) return { error: error.message }
+    revalidatePath('/host/dashboard/calendar')
+    return { ok: true }
+  } catch (error) {
+    return { error: editErrorMessage(error) }
+  }
+}
+
+// Edit a booking request / enquiry (dates, guests, status).
+export async function updateRequestAsHost(_prev: EditState, formData: FormData): Promise<EditState> {
+  const requestId = String(formData.get('requestId') || '')
+  const checkIn = String(formData.get('checkIn') || '')
+  const checkOut = String(formData.get('checkOut') || '')
+  const guests = Number(formData.get('guests') || 1)
+  const status = String(formData.get('status') || '')
+
+  if (!requestId || !checkIn || !checkOut) {
+    return { error: 'Enter the dates for this request.' }
+  }
+
+  try {
+    const { supabase } = await requireHostDashboardAccess()
+    const { error } = await supabase.rpc('host_update_booking_request', {
+      p_request_id: requestId,
+      p_check_in: checkIn,
+      p_check_out: checkOut,
+      p_guests: guests,
+      p_status: status,
+    })
+    if (error) return { error: error.message }
+    revalidatePath('/host/dashboard/calendar')
+    return { ok: true }
+  } catch (error) {
+    return { error: editErrorMessage(error) }
+  }
+}
