@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Link2 } from 'lucide-react'
+import { CheckCircle2, Link2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { BookingDateRangePicker } from '@/components/booking-date-range-picker'
 import { GalleryOverlay } from '@/components/gallery-overlay'
@@ -693,12 +693,6 @@ export function ListingDetailClient({
                     {listing.near_synagogue && (
                       <FeaturePill label="Near synagogue" icon="synagogue" />
                     )}
-                    {listing.walking_minutes_to_kotel && (
-                      <FeaturePill
-                        label={`${listing.walking_minutes_to_kotel} min walk to Kotel`}
-                        icon="kotel"
-                      />
-                    )}
                     {comfortFeatures.map((feature) => (
                       <FeaturePill key={feature} label={feature} icon="comfort" />
                     ))}
@@ -1165,8 +1159,9 @@ function FeaturePill({
   icon: string
 }) {
   return (
-    <div className="flex items-center gap-2 rounded-2xl border border-stone-200 bg-white px-3 py-2.5">
-      <p className="text-sm font-medium text-stone-800">{label}</p>
+    <div className="flex min-h-12 items-center gap-3 rounded-2xl bg-[#F8F5F2] px-4 py-3 text-sm font-semibold text-stone-700">
+      <CheckCircle2 className="h-4 w-4 shrink-0 text-[#c76f55]" />
+      <span>{label}</span>
     </div>
   )
 }
