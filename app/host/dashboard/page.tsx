@@ -170,31 +170,9 @@ export default async function HostDashboardPage() {
           </section>
         )}
 
-        <section className="border-b border-stone-200 py-6">
-          <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-stone-950">Action queue</h2>
-            </div>
-            <p className="text-sm font-semibold text-stone-500">
-              {activeListings} active {activeListings === 1 ? 'listing' : 'listings'}
-            </p>
-          </div>
-
-          {isNewHost ? (
-            <div className="mt-4 rounded-3xl bg-white p-6 shadow-sm">
-              <p className="text-lg font-bold text-stone-950">Welcome to your host dashboard</p>
-              <p className="mt-2 text-sm leading-6 text-stone-600">
-                You don't have a listing yet. Submit your first stay and we'll review it within a few days.
-              </p>
-              <Link
-                href="/become-a-host"
-                className="mt-5 inline-flex rounded-full bg-[#252525] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#111111]"
-              >
-                Submit a stay
-              </Link>
-            </div>
-          ) : hasActions ? (
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
+        {hasActions && (
+          <section className="border-b border-stone-200 py-6">
+            <div className="grid gap-4 md:grid-cols-2">
               {awaitingResponses > 0 ? (
                 <ActionCard
                   href="/host/dashboard/messages"
@@ -220,15 +198,8 @@ export default async function HostDashboardPage() {
                 />
               ) : null}
             </div>
-          ) : (
-            <div className="mt-4 rounded-3xl border-l-4 border-green-500 bg-white p-6 shadow-sm">
-              <p className="text-lg font-bold text-stone-950">All caught up</p>
-              <p className="mt-2 text-sm leading-6 text-stone-600">
-                No urgent enquiries, cases, or applications need your attention right now.
-              </p>
-            </div>
-          )}
-        </section>
+          </section>
+        )}
 
         <section className="border-b border-stone-200 py-6">
           <div className="rounded-3xl bg-white p-6 shadow-sm">
