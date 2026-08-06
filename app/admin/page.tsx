@@ -125,9 +125,6 @@ export default async function AdminOverviewPage() {
     <div>
       <header className="border-b border-stone-200 pb-6">
         <h2 className="text-3xl font-bold tracking-tight text-stone-950">Overview</h2>
-        <p className="mt-2 text-stone-600">
-          A quick read on what needs review and what is already live.
-        </p>
       </header>
 
       <div className="grid gap-4 border-b border-stone-200 py-5 sm:grid-cols-2 xl:grid-cols-6">
@@ -144,9 +141,6 @@ export default async function AdminOverviewPage() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <h3 className="text-xl font-bold text-stone-950">Recent applications</h3>
-              <p className="mt-1 text-sm text-stone-600">
-                The newest host submissions, ready to review in order.
-              </p>
             </div>
             <Link href="/admin/applications" className="text-sm font-semibold text-[#c76f55] hover:underline">
               View all
