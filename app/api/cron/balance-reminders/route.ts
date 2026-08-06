@@ -56,6 +56,8 @@ export async function GET(request: Request) {
     .from('booking_payments')
     .select('id, guest_id, currency, balance_amount, balance_due_date, booking_id')
     .eq('balance_status', 'due')
+    .eq('status', 'paid') // deposit settled + booking finalised only
+    .not('booking_id', 'is', null)
     .gt('balance_amount', 0)
     .is('balance_reminder_sent_at', null)
     .lte('balance_due_date', cutoffDate)

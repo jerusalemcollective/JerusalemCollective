@@ -1236,7 +1236,7 @@ function BookNowButton({
       )}
       {!paymentError && (
         <p className="mt-2 text-center text-xs text-stone-500">
-          {disabled ? 'Choose dates to continue' : '10% deposit due at checkout'}
+          {disabled ? 'Choose dates to continue' : 'Deposit due at checkout'}
         </p>
       )}
     </div>

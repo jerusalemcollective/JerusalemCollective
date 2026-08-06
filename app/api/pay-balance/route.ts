@@ -48,7 +48,7 @@ export async function POST(request: Request) {
   // and authorizes. Every monetary value comes from the row, never the client.
   const { data: payment } = await supabase
     .from('booking_payments')
-    .select('id, currency, balance_amount, balance_status, booking_id')
+    .select('id, currency, balance_amount, balance_status, booking_id, status')
     .eq('id', bookingPaymentId)
     .eq('guest_id', user.id)
     .maybeSingle<{
@@ -57,6 +57,7 @@ export async function POST(request: Request) {
       balance_amount: number | null
       balance_status: string | null
       booking_id: string | null
+      status: string | null
     }>()
 
   if (!payment) {
@@ -68,23 +69,32 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'There is no balance due on this booking.' }, { status: 400 })
   }
 
+  // The balance is only payable after the deposit has settled and the booking is
+  // confirmed (finalize sets status='paid' + booking_id).
+  if (payment.status !== 'paid' || !payment.booking_id) {
+    return NextResponse.json({ error: 'This booking is not ready for a balance payment yet.' }, { status: 400 })
+  }
+
   const currency = String(payment.currency || '').toLowerCase()
   if (!currency) {
     return NextResponse.json({ error: 'This booking has no payment currency.' }, { status: 400 })
   }
 
+  const { data: booking } = await supabase
+    .from('bookings')
+    .select('status, listings(title)')
+    .eq('id', payment.booking_id)
+    .maybeSingle<{ status: string | null; listings: { title: string } | { title: string }[] | null }>()
+
+  if (booking?.status === 'cancelled' || booking?.status === 'completed') {
+    return NextResponse.json({ error: 'This booking is cancelled, so no balance is due.' }, { status: 400 })
+  }
+
   let listingTitle = 'your stay'
-  if (payment.booking_id) {
-    const { data: booking } = await supabase
-      .from('bookings')
-      .select('listings(title)')
-      .eq('id', payment.booking_id)
-      .maybeSingle<{ listings: { title: string } | { title: string }[] | null }>()
-    const listings = booking?.listings
-    const title = Array.isArray(listings) ? listings[0]?.title : listings?.title
-    if (typeof title === 'string' && title.trim()) {
-      listingTitle = title
-    }
+  const listings = booking?.listings
+  const bookingTitle = Array.isArray(listings) ? listings[0]?.title : listings?.title
+  if (typeof bookingTitle === 'string' && bookingTitle.trim()) {
+    listingTitle = bookingTitle
   }
 
   const balanceAmount = Math.round(balanceMajor * 100)

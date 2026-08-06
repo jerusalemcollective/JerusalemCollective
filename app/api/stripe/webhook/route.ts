@@ -171,16 +171,60 @@ export async function POST(request: Request) {
     const balanceStatus =
       typeof session.payment_status === 'string' ? session.payment_status : null
     const balanceSettled = balanceStatus === 'paid' || balanceStatus === 'no_payment_required'
+    const balancePaymentId =
+      typeof sessionMetadata.booking_payment_id === 'string' ? sessionMetadata.booking_payment_id : null
+    const amountMinor = typeof session.amount_total === 'number' ? session.amount_total : null
+    const sessionCurrency = typeof session.currency === 'string' ? session.currency : null
+
     if (
       balanceSettled &&
       (eventType === 'checkout.session.completed' ||
         eventType === 'checkout.session.async_payment_succeeded')
     ) {
-      const { error } = await supabase.rpc('mark_balance_paid', { p_session_id: sessionId })
+      // Settlement is scoped to ONE payment id and the paid amount+currency must
+      // match the row (mark_balance_paid enforces this in the DB), so one session
+      // can never settle another booking or the wrong amount.
+      const { data: settled, error } = await supabase.rpc('mark_balance_paid', {
+        p_payment_id: balancePaymentId,
+        p_session_id: sessionId,
+        p_amount_minor: amountMinor,
+        p_currency: sessionCurrency,
+      })
       if (error) {
-        // Settled money we could not record — let Stripe retry. mark_balance_paid
-        // is idempotent (acts only while balance_status='due'), so retry is safe.
+        // Transient DB error — do not record, let Stripe retry.
         return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+      if (!isRecord(settled) || typeof settled.id !== 'string') {
+        // Money settled but matched no payable balance (amount/currency mismatch,
+        // already paid, cancelled, unsettled deposit, or a stale/duplicate
+        // session). Flag for manual review + alert an admin, then record so
+        // Stripe stops retrying a case that will not self-heal.
+        if (balancePaymentId) {
+          await supabase
+            .from('booking_payments')
+            .update({
+              needs_manual_review: true,
+              manual_review_reason:
+                'A balance payment settled but matched no payable balance (amount/currency mismatch, already paid, cancelled, or unsettled deposit). Reconcile or refund manually.',
+              admin_alerted_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', balancePaymentId)
+        }
+        await sendPaymentFailureAdminAlert({
+          supabase,
+          sessionId,
+          paymentIntentId,
+          listingId: null,
+          guestId: typeof sessionMetadata.guest_id === 'string' ? sessionMetadata.guest_id : null,
+          checkIn: null,
+          checkOut: null,
+          amount: amountMinor != null ? amountMinor / 100 : null,
+          currency: sessionCurrency,
+          failureReason: 'Balance payment settled but matched no payable balance.',
+        })
+        await recordEvent()
+        return NextResponse.json({ ok: true, balance: 'unmatched_review' })
       }
       await recordEvent()
       return NextResponse.json({ ok: true, balance: 'paid' })

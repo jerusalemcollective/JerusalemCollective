@@ -245,7 +245,10 @@ export default async function BookingsPage({
                     <span className={`w-fit rounded-full px-3 py-1 text-xs font-bold ${badge.className}`}>
                       {badge.label}
                     </span>
-                    {bookingPayment?.balance_status === 'due' && Number(bookingPayment.balance_amount) > 0 && (
+                    {bookingPayment?.balance_status === 'due' &&
+                      Number(bookingPayment.balance_amount) > 0 &&
+                      status !== 'cancelled' &&
+                      status !== 'completed' && (
                       <div className="flex flex-col items-start gap-1 md:items-end">
                         <p className="text-xs text-stone-600">
                           Balance {formatMoney(bookingPayment.currency, bookingPayment.balance_amount)} due by{' '}
