@@ -239,11 +239,6 @@ export default async function HostListingsPage() {
           </Link>
         </header>
 
-        <div className="grid gap-4 border-b border-stone-200 py-5 sm:grid-cols-3">
-          <Metric label="Live stays" value={publishedCount} />
-          <Metric label="In review" value={inReviewCount} />
-          <Metric label="Needs attention" value={needsActionCount} />
-        </div>
 
         <section className="py-8">
           <SectionHeading
