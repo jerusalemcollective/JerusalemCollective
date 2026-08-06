@@ -112,7 +112,7 @@ export default async function HostPaymentsPage({
           <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Host dashboard</p>
           <h1 className="font-display mt-2 text-3xl font-bold tracking-tight text-stone-950">Payment setup</h1>
           <p className="mt-2 max-w-2xl text-stone-600">
-            This is separate from listing your stay. Add your payment details here so you can receive payouts from bookings, and choose whether to also offer direct-to-host payment.
+            Choose how you receive payment for your bookings.
           </p>
         </div>
 
