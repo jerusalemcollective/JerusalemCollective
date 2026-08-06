@@ -1,13 +1,23 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { ArrowRight, Home, Luggage } from 'lucide-react'
+import { ChooserSignOut } from '@/components/chooser-sign-out'
 
 export function DashboardChooser({ displayName }: { displayName: string | null }) {
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-[#F8F5F2] p-6">
       <div className="w-full max-w-3xl">
         <div className="mb-8 text-center">
-          <h1 className="font-display text-3xl font-bold text-stone-950 md:text-4xl">
+          <Image
+            src="/logos/JLM_Collective_Primary_Horizontal_Terracotta_UI.webp"
+            alt="JLM Collective"
+            width={512}
+            height={128}
+            priority
+            className="mx-auto h-9 w-auto"
+          />
+          <h1 className="font-display mt-8 text-3xl font-bold text-stone-950 md:text-4xl">
             {displayName ? `Welcome back, ${displayName}` : 'Welcome back'}
           </h1>
           <p className="mt-3 text-stone-600">Where would you like to go?</p>
@@ -32,9 +42,10 @@ export function DashboardChooser({ displayName }: { displayName: string | null }
           />
         </div>
 
-        <p className="mt-6 text-center text-xs text-stone-500">
-          You can switch anytime from the menu in either dashboard.
-        </p>
+        <div className="mt-8 flex flex-col items-center gap-3 text-xs text-stone-500">
+          <p>You can switch anytime from the menu in either dashboard.</p>
+          <ChooserSignOut />
+        </div>
       </div>
     </div>
   )
