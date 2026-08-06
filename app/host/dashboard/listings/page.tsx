@@ -591,9 +591,11 @@ function PriceInsight({
       <p className="mt-2 text-sm font-semibold leading-6 text-stone-800">
         {intelligence}
       </p>
-      <p className="mt-1 text-xs leading-5 text-stone-500">
-        {comparison.recommendation}
-      </p>
+      {intelligence !== comparison.recommendation && (
+        <p className="mt-1 text-xs leading-5 text-stone-500">
+          {comparison.recommendation}
+        </p>
+      )}
     </div>
   )
 }
