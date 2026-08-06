@@ -242,7 +242,7 @@ export default async function HostPaymentsPage({
             <div className="space-y-5">
               {paymentRoutes.jlmPaymentsEnabled && (
                 <>
-                  <label className="flex items-start gap-3 rounded-2xl bg-[#F8F5F2] p-4">
+                  <label className="flex items-start gap-3">
                     <input
                       type="checkbox"
                       name="acceptsJlm"
@@ -263,7 +263,7 @@ export default async function HostPaymentsPage({
                 <input type="hidden" name="acceptsJlm" value="" />
               )}
 
-              <label className="flex items-start gap-3 rounded-2xl bg-[#F8F5F2] p-4">
+              <label className="flex items-start gap-3">
                 <input
                   type="checkbox"
                   name="acceptsDirect"
