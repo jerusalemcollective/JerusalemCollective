@@ -54,6 +54,7 @@ function protectRoute(
   // outside these prefixes, so there is no redirect loop.
   if (
     (pathname === '/become-a-host' ||
+      pathname === '/choose-dashboard' ||
       pathname.startsWith('/admin') ||
       pathname.startsWith('/account')) &&
     !isAuthenticated
@@ -70,6 +71,7 @@ function protectRoute(
 export const config = {
   matcher: [
     '/become-a-host',
+    '/choose-dashboard',
     '/host/dashboard/:path*',
     '/admin/:path*',
     '/account/:path*',

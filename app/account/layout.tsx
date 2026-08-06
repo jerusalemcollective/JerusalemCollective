@@ -41,7 +41,11 @@ export default async function AccountLayout({
     supabase.from('listings').select('id').in('host_id', hostIds).limit(1).maybeSingle(),
   ])
 
-  const hasStay = Boolean(host || ownedApplication || ownedListing)
+  // A `hosts` row exists for EVERY user (created by the signup trigger), so it is
+  // NOT a reliable "is a host" signal — see migration 079. Treat someone as a host
+  // only once they have a submitted application or an owned listing, matching the
+  // /choose-dashboard eligibility check. `host` is still used above for hostIds.
+  const hasStay = Boolean(ownedApplication || ownedListing)
   const isAdmin = Boolean((profile as { is_admin?: boolean | null } | null)?.is_admin)
 
   return (

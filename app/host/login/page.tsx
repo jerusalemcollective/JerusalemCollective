@@ -17,7 +17,7 @@ function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirect = searchParams.get('redirect') || '/become-a-host'
+  const redirect = searchParams.get('redirect') || '/choose-dashboard'
   const sessionExpiredAt = Number(searchParams.get('at'))
   const sessionExpired =
     searchParams.get('reason') === 'session-expired' &&

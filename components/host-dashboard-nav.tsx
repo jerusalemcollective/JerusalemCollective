@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
+  ArrowLeftRight,
   Bell,
   CalendarDays,
   CreditCard,
@@ -49,6 +50,16 @@ export function HostDashboardNav() {
           </Link>
         )
       })}
+
+      <div className="mt-3 border-t border-stone-200 pt-3">
+        <Link
+          href="/choose-dashboard?switch=1"
+          className="flex items-center gap-3 rounded-lg border border-[#c76f55] px-3.5 py-2.5 text-sm font-medium text-[#c76f55] transition hover:bg-[#fff4ef]"
+        >
+          <ArrowLeftRight className="h-5 w-5" />
+          <span>Switch dashboard</span>
+        </Link>
+      </div>
     </nav>
   )
 }

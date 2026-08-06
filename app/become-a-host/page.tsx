@@ -1950,14 +1950,14 @@ async function handleSubmit() {
               Thank you for your listing
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-stone-600">
-              We have received your stay and JLM Collective will review it carefully. You can follow the status from your host dashboard.
+              We have received your stay and JLM Collective will review it carefully. You can follow the status from your host dashboard. Your account now has both a guest and a host side — choose where you&apos;d like to go.
             </p>
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <Link
-                href="/host/dashboard"
+                href="/choose-dashboard"
                 className="rounded-full bg-[#252525] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#111111]"
               >
-                Open host dashboard
+                Choose where to go
               </Link>
               <Link
                 href="/"

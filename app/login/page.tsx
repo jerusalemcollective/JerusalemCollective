@@ -14,7 +14,7 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const searchParams = useSearchParams()
-  const redirect = searchParams.get('redirect') || '/account'
+  const redirect = searchParams.get('redirect') || '/choose-dashboard'
   const sessionExpiredAt = Number(searchParams.get('at'))
   const sessionExpired =
     searchParams.get('reason') === 'session-expired' &&
