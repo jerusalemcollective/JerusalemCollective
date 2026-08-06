@@ -2,10 +2,11 @@ import { PaymentUpdateForm } from '@/components/payment-update-form'
 import { DirectPaymentScheduleFields } from '@/components/direct-payment-schedule-fields'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { getPaymentRouteSettings } from '@/lib/platform-settings'
-import { updateHostPaymentPreferences } from './actions'
+import { updateHostPaymentPreferences, confirmBookingDepositReceived } from './actions'
 
 type PaymentBooking = {
   id: string
+  status: string | null
   check_in: string
   check_out: string
   payment_status: string | null
@@ -53,7 +54,7 @@ export default async function HostPaymentsPage({
     supabase
       .from('bookings')
       .select(
-        'id, check_in, check_out, payment_status, payment_notes, payment_updated_at, commission_percent, listings(title), profiles!bookings_user_id_fkey(full_name)',
+        'id, status, check_in, check_out, payment_status, payment_notes, payment_updated_at, commission_percent, listings(title), profiles!bookings_user_id_fkey(full_name)',
       )
       .in('host_id', hostIds)
       .order('check_in', { ascending: false }),
@@ -73,6 +74,7 @@ export default async function HostPaymentsPage({
   ])
   const bookings: PaymentBooking[] = (bookingsData || []).map((booking: PaymentBookingRow) => ({
     id: booking.id,
+    status: booking.status,
     check_in: booking.check_in,
     check_out: booking.check_out,
     payment_status: booking.payment_status,
@@ -365,6 +367,17 @@ export default async function HostPaymentsPage({
                     </div>
                     <PaymentStatusBadge status={booking.payment_status || 'unpaid'} />
                   </div>
+                  {booking.status === 'pending' && (
+                    <form action={confirmBookingDepositReceived} className="mt-4 rounded-2xl bg-amber-50 p-4">
+                      <p className="text-sm font-semibold text-amber-800">
+                        Awaiting deposit — the dates aren&apos;t blocked until you confirm.
+                      </p>
+                      <input type="hidden" name="bookingId" value={booking.id} />
+                      <button className="mt-3 rounded-full bg-[#252525] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#111111]">
+                        Mark deposit received &amp; confirm booking
+                      </button>
+                    </form>
+                  )}
                   <PaymentUpdateForm
                     bookingId={booking.id}
                     currentStatus={booking.payment_status || 'unpaid'}
