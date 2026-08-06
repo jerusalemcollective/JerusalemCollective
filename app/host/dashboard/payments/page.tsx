@@ -136,13 +136,11 @@ export default async function HostPaymentsPage({
         <section className="mb-8 rounded-3xl bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="font-display text-xl font-bold text-stone-950">Your payouts</h2>
-            <p className="text-sm text-stone-500">What you have earned, and what has already been paid.</p>
           </div>
 
           {payouts.length === 0 ? (
             <p className="mt-5 rounded-2xl bg-[#F8F5F2] p-4 text-sm leading-6 text-stone-600">
-              No payments yet. Once a guest pays for a stay, the amount due to you will appear
-              here with its payout status and the date it was paid.
+              No payments yet.
             </p>
           ) : (
             <>

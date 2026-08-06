@@ -30,9 +30,6 @@ export default async function HostNotificationsPage() {
         <h1 className="font-display mt-6 text-3xl font-bold text-stone-950">
           Notification preferences
         </h1>
-        <p className="mt-2 text-stone-600">
-          Choose how you want to be notified about activity on your listings.
-        </p>
         <NotificationPreferencesForm
           initialPreferences={hostPreferences}
         />

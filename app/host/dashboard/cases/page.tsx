@@ -62,9 +62,6 @@ export default async function HostCasesPage() {
         <div className="mb-8">
           <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Host dashboard</p>
           <h1 className="font-display mt-2 text-3xl font-bold tracking-tight text-stone-950">Cases</h1>
-          <p className="mt-2 max-w-2xl text-stone-600">
-            View dispute or refund cases connected to your stays.
-          </p>
         </div>
 
         <div className="overflow-hidden rounded-3xl bg-white shadow-sm">

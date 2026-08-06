@@ -59,9 +59,6 @@ export default async function HostCalendarPage() {
         <div className="mb-8">
           <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Host dashboard</p>
           <h1 className="font-display mt-2 text-3xl font-bold tracking-tight text-stone-950">Calendar</h1>
-          <p className="mt-2 max-w-2xl text-stone-600">
-            Keep availability accurate by blocking dates when a stay cannot be booked.
-          </p>
         </div>
 
         {hostListings.length === 0 ? (

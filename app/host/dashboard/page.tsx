@@ -174,7 +174,6 @@ export default async function HostDashboardPage() {
           <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
             <div>
               <h2 className="text-xl font-bold text-stone-950">Action queue</h2>
-              <p className="mt-1 text-sm text-stone-600">What needs your attention right now.</p>
             </div>
             <p className="text-sm font-semibold text-stone-500">
               {activeListings} active {activeListings === 1 ? 'listing' : 'listings'}
@@ -279,7 +278,6 @@ export default async function HostDashboardPage() {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-xl font-bold text-stone-950">Upcoming stays</h2>
-                <p className="mt-1 text-sm text-stone-600">The next confirmed stays on your calendar.</p>
               </div>
               <Link
                 href="/host/dashboard/messages"
@@ -315,7 +313,6 @@ export default async function HostDashboardPage() {
 
           <aside>
             <h2 className="text-xl font-bold text-stone-950">Quick links</h2>
-            <p className="mt-1 text-sm text-stone-600">Jump straight into the work.</p>
 
             <div className="mt-4 grid gap-3">
               <QuickLinkCard
