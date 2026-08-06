@@ -44,9 +44,28 @@ export async function generateMetadata({
 
   const description = `Browse verified short-term stays in ${name}, Jerusalem. Curated by JLM Collective.`
 
+  // Don't index a neighbourhood page with neither editorial content nor live
+  // listings — it reads as thin/near-duplicate and drags site-quality signals.
+  const hasEditorial = Boolean(neighborhoodDescriptions[name])
+  let indexable = hasEditorial
+  if (!hasEditorial) {
+    try {
+      const supabase = createPublicClient()
+      const { count } = await supabase
+        .from('listings')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_published', true)
+        .eq('area', name)
+      indexable = (count || 0) > 0
+    } catch {
+      indexable = false
+    }
+  }
+
   return {
     title: `Stays in ${name}, Jerusalem`,
     description,
+    robots: { index: indexable, follow: true },
     alternates: { canonical: `/neighbourhoods/${slug}` },
     openGraph: {
       title: `Stays in ${name}, Jerusalem | JLM Collective`,

@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { allNeighborhoods } from '@/lib/neighborhoods'
-import { slugifyNeighborhood } from '@/lib/neighborhood-pages'
+import { slugifyNeighborhood, neighborhoodDescriptions } from '@/lib/neighborhood-pages'
 
 const siteUrl = 'https://jlmcollective.co'
 
@@ -80,25 +80,32 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.3,
     },
   ]
-  const neighborhoodPages: MetadataRoute.Sitemap = allNeighborhoods.map((name) => ({
+  // Only list neighbourhood pages with editorial content OR live inventory —
+  // empty ones are thin pages that waste crawl budget.
+  const neighborhoodEntry = (name: string): MetadataRoute.Sitemap[number] => ({
     url: `${siteUrl}/neighbourhoods/${slugifyNeighborhood(name)}`,
     lastModified: new Date(),
     changeFrequency: 'weekly',
     priority: 0.6,
-  }))
+  })
 
   try {
     const supabase = await createClient()
     const [{ data: listings }, { data: hosts }] = await Promise.all([
       supabase
         .from('listings')
-        .select('id, updated_at')
+        .select('id, area, updated_at')
         .eq('is_published', true),
       supabase
         .from('hosts')
         .select('id, updated_at')
         .eq('is_verified', true),
     ])
+
+    const areasWithListings = new Set((listings || []).map((listing) => listing.area))
+    const neighborhoodPages: MetadataRoute.Sitemap = allNeighborhoods
+      .filter((name) => Boolean(neighborhoodDescriptions[name]) || areasWithListings.has(name))
+      .map(neighborhoodEntry)
 
     const listingPages: MetadataRoute.Sitemap = (listings || []).map((listing) => ({
       url: `${siteUrl}/listings/${listing.id}`,
@@ -116,6 +123,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     return [...staticPages, ...neighborhoodPages, ...listingPages, ...hostPages]
   } catch {
+    const neighborhoodPages: MetadataRoute.Sitemap = allNeighborhoods
+      .filter((name) => Boolean(neighborhoodDescriptions[name]))
+      .map(neighborhoodEntry)
     return [...staticPages, ...neighborhoodPages]
   }
 }
