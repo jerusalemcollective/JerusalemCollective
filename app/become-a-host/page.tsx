@@ -34,6 +34,7 @@ type FormState = {
   email: string
   phone: string
   whatsapp_number: string
+  host_address: string
   host_type: HostType
   host_role: string
   has_permission: boolean
@@ -757,6 +758,7 @@ const initialForm: FormState = {
   email: '',
   phone: '',
   whatsapp_number: '',
+  host_address: '',
   host_type: 'owner',
   host_role: '',
   has_permission: false,
@@ -1429,6 +1431,9 @@ export default function BecomeAHostPage() {
       if (!form.phone.trim() && !form.whatsapp_number.trim()) {
         issues.push('Add either a phone number or WhatsApp number.')
       }
+      if (!form.host_address.trim()) {
+        issues.push('Add your address.')
+      }
       if (form.host_type === 'representative' && !form.has_permission) {
         issues.push('Confirm that you have permission to submit this stay.')
       }
@@ -1654,6 +1659,7 @@ async function handleSubmit() {
       email: form.email,
       phone: form.phone || null,
       whatsapp_number: form.whatsapp_number || null,
+      host_address: form.host_address.trim() || null,
       host_type: form.host_type,
 
       apartment_title: form.apartment_title,
@@ -2100,6 +2106,18 @@ async function handleSubmit() {
                       className={inputClass}
                     />
                   </Field>
+
+                  <div className="md:col-span-2">
+                    <Field label="Your address" required>
+                      <input
+                        value={form.host_address}
+                        onChange={(e) => updateField('host_address', e.target.value)}
+                        type="text"
+                        placeholder="Street, city, country"
+                        className={inputClass}
+                      />
+                    </Field>
+                  </div>
 
                   <div className="md:col-span-2">
                     <p className="text-xs text-stone-500">* At least one contact number (Phone or WhatsApp) is required</p>
