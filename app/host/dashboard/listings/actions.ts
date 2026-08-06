@@ -370,3 +370,52 @@ export async function saveExternalCalendarUrl(
     message: url ? 'Calendar connected and synced.' : 'Calendar disconnected.',
   }
 }
+
+type DepositSettingsState = {
+  status: string
+  message: string
+}
+
+export async function updateListingDepositSettings(
+  _prev: DepositSettingsState,
+  formData: FormData,
+): Promise<DepositSettingsState> {
+  const listingId = String(formData.get('listingId') || '')
+  const depositType = String(formData.get('depositType') || 'percent')
+  const depositValue = Number(formData.get('depositValue') || '')
+  const balanceDueDays = Number(formData.get('balanceDueDays') || '0')
+
+  if (!listingId) {
+    return { status: 'error', message: 'Missing listing.' }
+  }
+  if (!['percent', 'fixed'].includes(depositType)) {
+    return { status: 'error', message: 'Choose a percentage or a fixed deposit.' }
+  }
+  if (!Number.isFinite(depositValue) || depositValue <= 0) {
+    return { status: 'error', message: 'Enter a deposit greater than zero.' }
+  }
+  if (depositType === 'percent' && depositValue > 100) {
+    return { status: 'error', message: 'A percentage deposit cannot be more than 100%.' }
+  }
+  if (!Number.isFinite(balanceDueDays) || balanceDueDays < 0 || balanceDueDays > 365) {
+    return { status: 'error', message: 'Balance due days must be between 0 and 365.' }
+  }
+
+  const { supabase } = await requireHostDashboardAccess()
+  const { error } = await supabase.rpc('update_listing_deposit_settings', {
+    listing_uuid: listingId,
+    p_deposit_type: depositType,
+    p_deposit_value: depositValue,
+    p_balance_due_days: balanceDueDays,
+  })
+
+  if (error) {
+    return { status: 'error', message: error.message }
+  }
+
+  revalidatePath('/host/dashboard/listings')
+  revalidatePath(`/host/dashboard/listings/${listingId}`)
+  revalidatePath(`/listings/${listingId}`)
+
+  return { status: 'success', message: 'Deposit and payment schedule saved.' }
+}

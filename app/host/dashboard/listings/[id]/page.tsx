@@ -5,6 +5,7 @@ import { ExternalCalendarSyncForm } from '@/components/external-calendar-sync-fo
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { getPaymentRouteSettings } from '@/lib/platform-settings'
 import { updateHostListing } from '../actions'
+import { DepositSettingsForm } from '@/components/deposit-settings-form'
 import { ListingAiAssistant } from '@/components/listing-ai-assistant'
 import { AmenitySelector } from '@/components/amenity-selector'
 
@@ -23,7 +24,7 @@ export default async function HostListingEditPage({
     supabase
       .from('listings')
       .select(
-        'id, title, area, bedrooms, bathrooms, max_guests, sleeping_setup, price_ils, price_usd, booking_type, online_payment_enabled, amenities, description, house_rules, welcome_message, check_in_instructions, is_published, external_calendar_url, calendar_last_synced_at, shabbat_elevator, physical_key_entry, shabbat_clock, kosher_kitchen_level, walking_minutes_to_kotel, near_synagogue, sukkah_balcony, american_comfort, central_ac, american_washer_dryer, american_mattress, powerful_water_heater',
+        'id, title, area, bedrooms, bathrooms, max_guests, sleeping_setup, price_ils, price_usd, booking_type, online_payment_enabled, amenities, description, house_rules, welcome_message, check_in_instructions, is_published, external_calendar_url, calendar_last_synced_at, shabbat_elevator, physical_key_entry, shabbat_clock, kosher_kitchen_level, walking_minutes_to_kotel, near_synagogue, sukkah_balcony, american_comfort, central_ac, american_washer_dryer, american_mattress, powerful_water_heater, deposit_type, deposit_value, balance_due_days_before_checkin',
       )
       .eq('id', id)
       .in('host_id', hostIds)
@@ -44,6 +45,7 @@ export default async function HostListingEditPage({
 
   if (!listing) notFound()
 
+  const depositCurrency = listing.price_usd != null ? 'USD' : 'ILS'
   const effectiveCommissionPercent = paymentProfile?.commission_percent_override ?? paymentRoutes.commissionPercent
   const jlmPaymentDescription = getJlmPaymentDescription(effectiveCommissionPercent)
 
@@ -318,6 +320,14 @@ export default async function HostListingEditPage({
               listingId={listing.id}
               externalCalendarUrl={listing.external_calendar_url || null}
               calendarLastSyncedAt={listing.calendar_last_synced_at || null}
+            />
+
+            <DepositSettingsForm
+              listingId={listing.id}
+              depositType={listing.deposit_type || 'percent'}
+              depositValue={Number(listing.deposit_value ?? 10)}
+              balanceDueDays={Number(listing.balance_due_days_before_checkin ?? 0)}
+              currency={depositCurrency}
             />
           </div>
 

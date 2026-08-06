@@ -187,7 +187,7 @@ export async function POST(request: Request) {
   checkoutParams.set('success_url', `${siteUrl}/account/bookings?payment=success`)
   checkoutParams.set('cancel_url', `${siteUrl}/listings/${listingId}?payment=cancelled`)
   checkoutParams.set('line_items[0][price_data][currency]', currency)
-  checkoutParams.set('line_items[0][price_data][product_data][name]', `10% deposit - ${listing.title}`)
+  checkoutParams.set('line_items[0][price_data][product_data][name]', `Deposit - ${listing.title}`)
   checkoutParams.set('line_items[0][price_data][unit_amount]', String(depositAmount))
   checkoutParams.set('line_items[0][quantity]', '1')
   checkoutParams.set('metadata[listing_id]', listingId)
