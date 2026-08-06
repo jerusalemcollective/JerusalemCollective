@@ -484,6 +484,35 @@ function paymentAlertHtml(rows: [string, string][]) {
   `
 }
 
+export async function sendGuestBalanceReminderEmail({
+  guestId,
+  listingTitle,
+  balanceLabel,
+  dueDateLabel,
+}: {
+  guestId: string
+  listingTitle: string
+  balanceLabel: string
+  dueDateLabel: string
+}) {
+  const guestEmail = await getAuthUserEmail(guestId)
+  if (!guestEmail) {
+    console.error('Skipping balance reminder: guest email not found', { guestId })
+    return false
+  }
+
+  return await sendEmail({
+    to: guestEmail,
+    subject: `Balance due for ${listingTitle}`,
+    html: baseEmailHtml({
+      greeting: 'Hi there,',
+      intro: `The remaining balance of ${balanceLabel} for your stay at ${listingTitle} is due by ${dueDateLabel}. You can pay it securely through the site from your trips.`,
+      ctaUrl: `${siteUrl}/account/bookings`,
+      ctaLabel: 'Pay your balance',
+    }),
+  })
+}
+
 async function sendEmail({
   to,
   subject,

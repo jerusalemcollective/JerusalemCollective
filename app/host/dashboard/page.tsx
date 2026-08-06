@@ -142,9 +142,6 @@ export default async function HostDashboardPage() {
           <div>
             <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Host dashboard</p>
             <h1 className="font-display mt-2 text-3xl font-bold tracking-tight text-stone-950">Overview</h1>
-            <p className="mt-2 max-w-2xl text-stone-600">
-              The main things that need attention, your next stays, and the tools you use most.
-            </p>
           </div>
           <Link
             href="/become-a-host"
@@ -156,8 +153,8 @@ export default async function HostDashboardPage() {
 
         <DraftListingCard />
 
-        <section className="border-b border-stone-200 py-6">
-          {newEnquiries > 0 ? (
+        {newEnquiries > 0 && (
+          <section className="border-b border-stone-200 py-6">
             <Link
               href="/host/dashboard/messages"
               className="block rounded-3xl bg-[#252525] p-6 text-white shadow-sm transition hover:bg-[#111111]"
@@ -170,22 +167,8 @@ export default async function HostDashboardPage() {
               </p>
               <p className="mt-1 text-sm text-white/80">Tap to open messages →</p>
             </Link>
-          ) : (
-            <div className="rounded-3xl bg-white p-6 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5">
-                    <path d="M20 6L9 17l-5-5" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="font-bold text-stone-950">All caught up</p>
-                  <p className="text-sm text-stone-500">No new enquiries waiting</p>
-                </div>
-              </div>
-            </div>
-          )}
-        </section>
+          </section>
+        )}
 
         <section className="border-b border-stone-200 py-6">
           <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">

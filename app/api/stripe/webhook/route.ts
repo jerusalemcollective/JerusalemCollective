@@ -163,6 +163,34 @@ export async function POST(request: Request) {
     }
   }
 
+  // --- Balance payment for an EXISTING booking (guest paid the remainder). ---
+  // Balance sessions carry metadata.payment_kind='balance' and are settled by
+  // mark_balance_paid, not the booking-finalise path.
+  const sessionMetadata = getNestedRecord(session, 'metadata') ?? {}
+  if (sessionMetadata.payment_kind === 'balance') {
+    const balanceStatus =
+      typeof session.payment_status === 'string' ? session.payment_status : null
+    const balanceSettled = balanceStatus === 'paid' || balanceStatus === 'no_payment_required'
+    if (
+      balanceSettled &&
+      (eventType === 'checkout.session.completed' ||
+        eventType === 'checkout.session.async_payment_succeeded')
+    ) {
+      const { error } = await supabase.rpc('mark_balance_paid', { p_session_id: sessionId })
+      if (error) {
+        // Settled money we could not record — let Stripe retry. mark_balance_paid
+        // is idempotent (acts only while balance_status='due'), so retry is safe.
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+      await recordEvent()
+      return NextResponse.json({ ok: true, balance: 'paid' })
+    }
+    // Unsettled / failed / expired balance session: the balance stays 'due' so
+    // the guest can try again. Nothing to finalise; acknowledge.
+    await recordEvent()
+    return NextResponse.json({ ok: true, balance: 'unsettled' })
+  }
+
   // --- Async charge rejected: no money settled, no booking exists. -----------
   if (eventType === 'checkout.session.async_payment_failed') {
     const { error } = await supabase

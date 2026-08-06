@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Breadcrumb } from '@/components/breadcrumb'
 import { formatDateDisplay } from '@/lib/utils/date'
 import { CancelBookingButton } from './cancel-booking-button'
+import { PayBalanceButton } from '@/components/pay-balance-button'
 
 const bookingRowSchema = z.object({
   id: z.string(),
@@ -52,6 +53,29 @@ export default async function BookingsPage({
 
   const bookings = z.array(bookingRowSchema).parse(data ?? [])
   const today = new Date().toISOString().slice(0, 10)
+
+  // Balance owed per booking (the deposit's booking_payments row also carries
+  // the balance amount, due date and status).
+  type BalancePaymentRow = {
+    booking_id: string | null
+    id: string
+    currency: string | null
+    balance_amount: number | null
+    balance_due_date: string | null
+    balance_status: string | null
+  }
+  const bookingIds = bookings.map((booking) => booking.id)
+  const { data: paymentsData } = bookingIds.length
+    ? await supabase
+        .from('booking_payments')
+        .select('booking_id, id, currency, balance_amount, balance_due_date, balance_status')
+        .eq('guest_id', user.id)
+        .in('booking_id', bookingIds)
+    : { data: [] }
+  const paymentByBooking = new Map<string, BalancePaymentRow>()
+  for (const paymentRow of (paymentsData || []) as BalancePaymentRow[]) {
+    if (paymentRow.booking_id) paymentByBooking.set(paymentRow.booking_id, paymentRow)
+  }
 
   // After Stripe checkout the guest is redirected here immediately, before the
   // webhook has necessarily finished. Derive the banner from the actual latest
@@ -135,6 +159,28 @@ export default async function BookingsPage({
           </div>
         )}
 
+        {payment === 'balance_success' && (
+          <div
+            role="status"
+            className="mb-6 rounded-2xl border border-green-200 bg-green-50 p-4 text-sm text-green-800"
+          >
+            <p className="font-semibold">Balance paid — thank you.</p>
+            <p className="mt-1 text-green-700">Your stay is now paid in full.</p>
+          </div>
+        )}
+
+        {payment === 'balance_cancelled' && (
+          <div
+            role="status"
+            className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+          >
+            <p className="font-semibold">Balance payment not completed.</p>
+            <p className="mt-1 text-amber-800">
+              No charge was made. You can pay your balance any time from the booking below.
+            </p>
+          </div>
+        )}
+
         <header className="mb-8 border-b border-stone-200 pb-6">
           <h1 className="font-display text-3xl font-bold tracking-tight text-stone-950">My trips</h1>
           <p className="mt-2 text-stone-600">Upcoming and past stays in one place.</p>
@@ -147,6 +193,7 @@ export default async function BookingsPage({
             {bookings.map((booking) => {
               const status = booking.status || 'pending'
               const badge = statusBadge[status] || statusBadge.pending
+              const bookingPayment = paymentByBooking.get(booking.id)
               const isCancellable =
                 status !== 'cancelled' &&
                 status !== 'completed' &&
@@ -198,6 +245,21 @@ export default async function BookingsPage({
                     <span className={`w-fit rounded-full px-3 py-1 text-xs font-bold ${badge.className}`}>
                       {badge.label}
                     </span>
+                    {bookingPayment?.balance_status === 'due' && Number(bookingPayment.balance_amount) > 0 && (
+                      <div className="flex flex-col items-start gap-1 md:items-end">
+                        <p className="text-xs text-stone-600">
+                          Balance {formatMoney(bookingPayment.currency, bookingPayment.balance_amount)} due by{' '}
+                          {formatDateDisplay(bookingPayment.balance_due_date)}
+                        </p>
+                        <PayBalanceButton
+                          bookingPaymentId={bookingPayment.id}
+                          label={`Pay balance ${formatMoney(bookingPayment.currency, bookingPayment.balance_amount)}`}
+                        />
+                      </div>
+                    )}
+                    {bookingPayment?.balance_status === 'paid' && (
+                      <p className="text-xs font-semibold text-green-700">Paid in full</p>
+                    )}
                     {isCancellable && <CancelBookingButton bookingId={booking.id} />}
                   </div>
                 </div>
@@ -208,6 +270,12 @@ export default async function BookingsPage({
       </div>
     </div>
   )
+}
+
+function formatMoney(currency: string | null, amount: number | null) {
+  const value = Number(amount || 0)
+  const symbol = currency === 'USD' ? '$' : currency === 'ILS' ? '₪' : ''
+  return `${symbol}${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
 }
 
 function EmptyState() {
