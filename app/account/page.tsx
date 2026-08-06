@@ -7,6 +7,7 @@ type Profile = {
   id: string
   full_name: string | null
   phone: string | null
+  address: string | null
   avatar_url: string | null
   is_host: boolean | null
   is_admin: boolean | null
@@ -22,11 +23,11 @@ export default async function AccountPage() {
     redirect('/login?redirect=/account')
   }
 
-  const [{ data: profileBase }, { data: host }, { data: myContact }] = await Promise.all([
+  const [{ data: profileBase }, { data: host }, { data: myContact }, { data: myAddress }] = await Promise.all([
     supabase
       .from('profiles')
-      // phone is no longer readable via a user-scoped table select (migration
-      // 083); the definer below returns the caller's own phone.
+      // phone and address are no longer readable via a user-scoped table select
+      // (migrations 083 and 096); the definers below return the caller's own.
       .select('id, full_name, avatar_url, is_host, is_admin')
       .eq('id', user.id)
       .maybeSingle(),
@@ -39,9 +40,12 @@ export default async function AccountPage() {
     supabase
       .rpc('get_my_profile_contact')
       .maybeSingle<{ profile_id: string; phone: string | null }>(),
+    supabase
+      .rpc('get_my_profile_address')
+      .maybeSingle<{ profile_id: string; address: string | null }>(),
   ])
   const profile = profileBase
-    ? { ...profileBase, phone: myContact?.phone ?? null }
+    ? { ...profileBase, phone: myContact?.phone ?? null, address: myAddress?.address ?? null }
     : null
 
   // host.id may differ from user.id when the host record has its own PK.

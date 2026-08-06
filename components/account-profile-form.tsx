@@ -15,6 +15,7 @@ type AccountProfileFormProps = {
   profile: {
     full_name: string | null
     phone: string | null
+    address: string | null
     avatar_url: string | null
   } | null
   hasStay: boolean
@@ -24,6 +25,7 @@ export function AccountProfileForm({ user, profile, hasStay }: AccountProfileFor
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || null)
   const [fullName, setFullName] = useState(profile?.full_name || '')
   const [phone, setPhone] = useState(profile?.phone || '')
+  const [address, setAddress] = useState(profile?.address || '')
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -41,6 +43,7 @@ export function AccountProfileForm({ user, profile, hasStay }: AccountProfileFor
         .update({
           full_name: fullName,
           phone,
+          address: address.trim() || null,
         })
         .eq('id', user.id)
 
@@ -115,6 +118,17 @@ export function AccountProfileForm({ user, profile, hasStay }: AccountProfileFor
               className="h-10 rounded-xl border-stone-200 bg-[#F8F5F2] px-4"
             />
           </div>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-stone-700">Address</label>
+          <Input
+            type="text"
+            value={address}
+            onChange={(event) => setAddress(event.target.value)}
+            placeholder="Street, city, country"
+            className="h-10 rounded-xl border-stone-200 bg-[#F8F5F2] px-4"
+          />
         </div>
 
         {error && <div role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>}

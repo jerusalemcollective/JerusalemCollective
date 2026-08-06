@@ -1059,6 +1059,18 @@ export default function BecomeAHostPage() {
             '',
           host_terms_accepted: Boolean(hostProfile.host_terms_accepted_at),
         }))
+
+        // Address lives on the shared account profile (serves guest + host).
+        // Pre-fill it here; a draft value already typed takes precedence.
+        const { data: addressRow } = await supabase
+          .rpc('get_my_profile_address')
+          .maybeSingle<{ profile_id: string; address: string | null }>()
+        if (addressRow?.address) {
+          setForm((current) => ({
+            ...current,
+            host_address: current.host_address || addressRow.address || '',
+          }))
+        }
       } catch (profileError) {
         console.error('Could not load host profile:', profileError)
         setError('We could not load your host profile. Please sign in again and retry.')
@@ -1650,6 +1662,15 @@ async function handleSubmit() {
       setRequiresHostTermsAcceptance(false)
     }
 
+    // Save the account-holder address back to the shared profile (it serves both
+    // the guest and host sides), so it stays the single source of truth.
+    if (accountUser?.id) {
+      await supabase
+        .from('profiles')
+        .update({ address: form.host_address.trim() || null })
+        .eq('id', accountUser.id)
+    }
+
     // First, create the host application to get an ID
     const payload = {
       host_id: hostId,
@@ -1659,7 +1680,6 @@ async function handleSubmit() {
       email: form.email,
       phone: form.phone || null,
       whatsapp_number: form.whatsapp_number || null,
-      host_address: form.host_address.trim() || null,
       host_type: form.host_type,
 
       apartment_title: form.apartment_title,
