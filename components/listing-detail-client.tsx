@@ -1144,10 +1144,12 @@ function StarRating({ rating }: { rating: number }) {
 
 function kosherLabel(level: string): string {
   const labels: Record<string, string> = {
-    kosher_friendly: 'Kosher-friendly kitchen',
     kosher: 'Kosher kitchen',
+    mehadrin: 'Mehadrin kitchen',
+    // Legacy values kept so existing listings still display correctly:
+    kosher_friendly: 'Kosher-friendly kitchen',
     glatt_kosher: 'Glatt kosher kitchen',
-    chalav_yisrael: 'Chalav Yisrael kitchen',
+    chalav_yisrael: 'Mehadrin kitchen',
   }
   return labels[level] || 'Kosher kitchen'
 }

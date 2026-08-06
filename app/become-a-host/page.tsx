@@ -2440,11 +2440,8 @@ async function handleSubmit() {
                         className={inputClass}
                       >
                         <option value="">Select level</option>
-                        <option value="not_kosher">Not kosher</option>
-                        <option value="kosher_friendly">Kosher-friendly</option>
                         <option value="kosher">Kosher</option>
-                        <option value="glatt_kosher">Glatt kosher</option>
-                        <option value="chalav_yisrael">Chalav Yisrael / Mehadrin</option>
+                        <option value="mehadrin">Mehadrin</option>
                       </select>
                     </Field>
                     <Field label="Approximate walking time to the Kotel (minutes)">
