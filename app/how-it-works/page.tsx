@@ -54,9 +54,60 @@ const steps = [
   },
 ]
 
+const faqs: { q: string; a: string }[] = [
+  {
+    q: 'Are the apartments kosher?',
+    a: 'Many of our Jerusalem stays have kosher kitchens, and each listing shows its kosher level so you can filter for exactly what you keep.',
+  },
+  {
+    q: 'How close are the stays to the Kotel?',
+    a: 'Listings show an approximate walking time to the Kotel and to nearby shuls, so you can choose a stay within comfortable walking distance for Shabbat and Yom Tov.',
+  },
+  {
+    q: 'Do you have stays with a sukkah balcony?',
+    a: 'Yes. You can filter for apartments with a balcony suitable for a sukkah, which are in high demand around Sukkot — book early.',
+  },
+  {
+    q: 'Is there availability for Pesach and the chagim?',
+    a: 'Jerusalem fills up fast around Pesach, Sukkot and the Yamim Noraim. Browse available stays for your dates and message the host to confirm before the peak season sells out.',
+  },
+  {
+    q: 'Can I message a host before I book?',
+    a: 'Yes — messaging a host is free and there is no commitment. Ask about availability, the neighbourhood, or anything about the stay, and most hosts reply within a few hours.',
+  },
+  {
+    q: 'How does payment work, and is my deposit refundable?',
+    a: 'Where online payment is available, JLM Collective collects the deposit as agent for the host and you pay the balance securely through the site on the host\u2019s schedule; some hosts arrange payment directly. Cancellation and refund terms are set per booking, so check with the host before you pay.',
+  },
+  {
+    q: 'Are the hosts verified?',
+    a: 'Every property is personally reviewed before we agree to represent it, and hosts are identity-verified, so you can book with confidence.',
+  },
+]
+
+function escapeJsonLd(value: string) {
+  return value.replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026')
+}
+
 export default function HowItWorksPage() {
   return (
     <div className="bg-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: escapeJsonLd(
+            JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'FAQPage',
+              mainEntity: faqs.map((faq) => ({
+                '@type': 'Question',
+                name: faq.q,
+                acceptedAnswer: { '@type': 'Answer', text: faq.a },
+              })),
+            }),
+          ),
+        }}
+      />
       <div className="mx-auto max-w-3xl px-5 pt-8 md:px-8">
         <Link
           href="/"
@@ -104,6 +155,27 @@ export default function HowItWorksPage() {
           ))}
         </div>
       </div>
+
+      <section className="py-16">
+        <div className="mx-auto max-w-3xl px-5 md:px-8">
+          <h2 className="font-display text-2xl font-bold text-stone-950">
+            Frequently asked questions
+          </h2>
+          <div className="mt-6 divide-y divide-stone-200 border-y border-stone-200">
+            {faqs.map((faq) => (
+              <details key={faq.q} className="group py-4">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-semibold text-stone-900">
+                  {faq.q}
+                  <span className="text-stone-500 transition group-open:rotate-180" aria-hidden="true">
+                    ⌄
+                  </span>
+                </summary>
+                <p className="mt-2 text-sm leading-6 text-stone-600">{faq.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
 
       <section className="bg-[#F8F5F2] py-16">
         <div className="mx-auto max-w-3xl px-5 md:px-8">
