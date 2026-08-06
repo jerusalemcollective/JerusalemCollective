@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { ExternalCalendarSyncForm } from '@/components/external-calendar-sync-form'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { getPaymentRouteSettings } from '@/lib/platform-settings'
+import { allNeighborhoods } from '@/lib/neighborhoods'
 import { updateHostListing, setHostListingVisibility, deleteHostListing } from '../actions'
 import { ConfirmSubmitButton } from '@/components/confirm-submit-button'
 import { DepositSettingsForm } from '@/components/deposit-settings-form'
@@ -115,8 +116,7 @@ export default async function HostListingEditPage({
               <section className="rounded-3xl bg-white p-6 shadow-sm">
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Listing editor</p>
-                    <h1 className="font-display mt-2 text-3xl font-bold text-stone-950">Edit stay details</h1>
+                    <h1 className="font-display text-3xl font-bold text-stone-950">Edit stay details</h1>
                   </div>
                   <span className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-bold ${
                     listing.is_published ? 'bg-green-100 text-green-700' : 'bg-stone-100 text-stone-700'
@@ -132,7 +132,18 @@ export default async function HostListingEditPage({
                   <input name="title" defaultValue={listing.title} required dir="auto" className={inputClass} />
                 </Field>
                 <Field label="Neighbourhood">
-                  <input name="area" defaultValue={listing.area} required className={inputClass} />
+                  <input
+                    name="area"
+                    defaultValue={listing.area}
+                    required
+                    list="neighbourhood-options"
+                    className={inputClass}
+                  />
+                  <datalist id="neighbourhood-options">
+                    {allNeighborhoods.map((neighbourhood) => (
+                      <option key={neighbourhood} value={neighbourhood} />
+                    ))}
+                  </datalist>
                 </Field>
               </div>
             </EditorSection>
