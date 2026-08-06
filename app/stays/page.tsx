@@ -122,7 +122,7 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
   const maxPrice = parsePositiveNumber(params.maxPrice)
   const amenityLabels = parseAmenityLabels(params.amenities)
   const page = Math.max(1, Number(params.page) || 1)
-  const [listingsResult, featuredNeighborhoods, totalPublished] = await Promise.all([
+  const [listingsResult, totalPublished] = await Promise.all([
     loadListings({
       selectedArea,
       checkIn,
@@ -140,9 +140,10 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
       // Paginate the list view; the map wants every marker, so it loads all.
       page: view === 'list' ? page : undefined,
     }),
-    loadFeaturedNeighborhoods(),
     loadPublishedCount(),
   ])
+  // Reuse the published count instead of re-running the identical COUNT query.
+  const featuredNeighborhoods = await loadFeaturedNeighborhoods(totalPublished)
   const listings = listingsResult.listings
   const totalMatching = listingsResult.total
   const totalPages = Math.max(1, Math.ceil(totalMatching / STAYS_PAGE_SIZE))
@@ -318,18 +319,13 @@ async function loadPublishedCount() {
   }
 }
 
-async function loadFeaturedNeighborhoods() {
+async function loadFeaturedNeighborhoods(publishedCount: number) {
   try {
-    const supabase = createPublicClient()
-    const { count } = await supabase
-      .from('listings')
-      .select('id', { count: 'exact', head: true })
-      .eq('is_published', true)
-
-    if ((count || 0) < 50) {
+    if (publishedCount < 50) {
       return defaultFeaturedNeighborhoods
     }
 
+    const supabase = createPublicClient()
     const { data } = await supabase.rpc('popular_neighborhoods', {
       result_limit: 3,
       lookback_days: 30,
