@@ -243,9 +243,9 @@ export function MessageHostDialog({
 
       const nextConversationId = convData?.id || createdConversationId || null
       setConversationId(nextConversationId)
-      if (nextConversationId) {
-        onConversationCreated?.(nextConversationId)
-      }
+      // Defer notifying the parent until the dialog closes, otherwise the parent
+      // swaps out the button and unmounts this dialog before the guest sees the
+      // "Request sent" confirmation.
       setSubmitted(true)
     } catch (err) {
       setError(getErrorMessage(err))
@@ -255,6 +255,9 @@ export function MessageHostDialog({
   }
 
   const closeDialog = () => {
+    if (conversationId) {
+      onConversationCreated?.(conversationId)
+    }
     setDialogOpen(false)
     setSubmitted(false)
     setConversationId(null)
