@@ -198,7 +198,7 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
   const [error, setError] = useState<string | null>(null)
   const [guestProfile, setGuestProfile] = useState<GuestProfile | null>(null)
   const [listingFilter, setListingFilter] = useState<string>('all')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [statusFilter] = useState<string>('all')
   const router = useRouter()
   const searchParams = useSearchParams()
   const participantIdsKey = participantIds.join('|')
@@ -689,9 +689,6 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
   const selectedListingTitle = selectedConversation?.listing?.title || 'Conversation'
   const selectedListingArea = selectedConversation?.listing?.area || 'Jerusalem'
   const newRequestCount = conversations.filter((conversation) => conversation.request?.status === 'new').length
-  const activeRequestCount = conversations.filter((conversation) =>
-    conversation.request ? ['new', 'host_replied'].includes(conversation.request.status) : false,
-  ).length
 
   const listingOptions = useMemo(() => {
     const seen = new Map<string, string>()
@@ -909,53 +906,21 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
               )}
             </div>
 
-            {mode === 'host' && (
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setStatusFilter('new')}
-                  className="rounded-2xl bg-[#fff4ef] px-3 py-3 text-left transition hover:bg-[#fde8df]"
-                >
-                  <span className="block text-xl font-bold text-[#c76f55]">{newRequestCount}</span>
-                  <span className="text-xs font-semibold text-stone-600">New requests</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setStatusFilter('all')}
-                  className="rounded-2xl bg-stone-100 px-3 py-3 text-left transition hover:bg-stone-200"
-                >
-                  <span className="block text-xl font-bold text-stone-950">{activeRequestCount}</span>
-                  <span className="text-xs font-semibold text-stone-600">Active chats</span>
-                </button>
-              </div>
-            )}
           </div>
 
-          {mode === 'host' && (
-            <div className="space-y-2 border-b border-stone-200 px-4 py-4">
-              {listingOptions.length > 1 && (
-                <select
-                  value={listingFilter}
-                  onChange={(event) => setListingFilter(event.target.value)}
-                  className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm font-semibold text-stone-700 outline-none transition focus:border-[#c76f55]"
-                >
-                  <option value="all">All listings</option>
-                  {listingOptions.map(([id, title]) => (
-                    <option key={id} value={id}>
-                      {title}
-                    </option>
-                  ))}
-                </select>
-              )}
+          {mode === 'host' && listingOptions.length > 1 && (
+            <div className="border-b border-stone-200 px-4 py-4">
               <select
-                value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value)}
+                value={listingFilter}
+                onChange={(event) => setListingFilter(event.target.value)}
                 className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm font-semibold text-stone-700 outline-none transition focus:border-[#c76f55]"
               >
-                <option value="all">All messages</option>
-                <option value="new">New enquiries</option>
-                <option value="replied">Awaiting reply</option>
-                <option value="accepted">Accepted</option>
+                <option value="all">All listings</option>
+                {listingOptions.map(([id, title]) => (
+                  <option key={id} value={id}>
+                    {title}
+                  </option>
+                ))}
               </select>
             </div>
           )}
