@@ -2102,7 +2102,6 @@ async function handleSubmit() {
                       placeholder="First name or company name"
                       className={inputClass}
                     />
-                    <p className="mt-1 text-xs text-stone-500">This is what guests will see (e.g. "David" or "Jerusalem Stays Ltd")</p>
                   </Field>
 
                   <Field label="Phone">
@@ -2137,10 +2136,6 @@ async function handleSubmit() {
                         className={inputClass}
                       />
                     </Field>
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <p className="text-xs text-stone-500">* At least one contact number (Phone or WhatsApp) is required</p>
                   </div>
 
                   <div className="md:col-span-2 rounded-2xl bg-[#F8F5F2] p-4 text-sm text-stone-600">
@@ -2217,12 +2212,6 @@ async function handleSubmit() {
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <p className="text-sm font-bold text-stone-950">AI listing assistant</p>
-                        <p className="mt-1 max-w-xl text-sm leading-6 text-stone-600">
-                          Add the facts first, then generate polished wording you can review and edit before submitting.
-                        </p>
-                        <p className="mt-1 max-w-xl text-sm leading-6 text-stone-600">
-                          Writing in Hebrew? Fill in the name and description below in Hebrew, then translate them to polished English for guests.
-                        </p>
                       </div>
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                         <button
