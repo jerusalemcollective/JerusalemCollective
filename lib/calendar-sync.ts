@@ -94,12 +94,18 @@ export async function syncExternalCalendar(
         source: 'external_calendar',
       }))
 
-      const { error: insertError } = await supabase
-        .from('listing_unavailable_ranges')
-        .insert(rows)
+      // Insert one at a time so an imported range that overlaps an existing hold
+      // (a JLM booking, a manual block, or a duplicate in the feed) is skipped
+      // rather than failing the whole import. 23P01 = exclusion_violation, which
+      // is exactly the no-double-booking rule doing its job.
+      for (const row of rows) {
+        const { error: insertError } = await supabase
+          .from('listing_unavailable_ranges')
+          .insert(row)
 
-      if (insertError) {
-        throw insertError
+        if (insertError && insertError.code !== '23P01') {
+          throw insertError
+        }
       }
     }
 
