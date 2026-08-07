@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useTransition } from 'react'
+import { useActionState, useEffect, useRef, useTransition } from 'react'
 import type { CalendarEvent } from './host-calendar-board'
 
 type EditState = { ok?: boolean; error?: string }
@@ -64,10 +64,21 @@ export function HostCalendarEventDialog({
   const editAction = event.kind === 'request' ? updateRequestAction : updateBookingAction
   const [state, formAction, pending] = useActionState(editAction, {})
   const [removePending, startRemove] = useTransition()
+  const dialogRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (state.ok) onClose()
   }, [state.ok, onClose])
+
+  // Keyboard support: focus the dialog on open and close it on Escape.
+  useEffect(() => {
+    dialogRef.current?.focus()
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [onClose])
 
   const nights = nightsBetween(event.start, event.endExclusive)
 
@@ -86,7 +97,12 @@ export function HostCalendarEventDialog({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl"
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${KIND_LABEL[event.kind]} details`}
+        tabIndex={-1}
+        className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl outline-none"
         onClick={(clickEvent) => clickEvent.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4">
