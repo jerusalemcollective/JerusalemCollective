@@ -174,42 +174,40 @@ export function HostCalendarBoard({
         )}
       </div>
 
-      <div className="mt-4 overflow-x-auto rounded-3xl bg-[#faf8f6] p-3 md:p-4">
-        <div className="rounded-2xl bg-white p-3 md:p-4">
-          <Calendar
-            mode="range"
-            selected={selectedRange}
-            onDayClick={(day) => {
-              const event = eventByDay.get(formatDateISO(day))
-              if (event) {
-                suppressSelectRef.current = true
-                setActiveEvent(event)
-              }
-            }}
-            onSelect={(range) => {
-              if (suppressSelectRef.current) {
-                suppressSelectRef.current = false
-                return
-              }
-              if (range?.from && range?.to && range.from.getTime() === range.to.getTime()) {
-                setDateRange({ from: range.from, to: undefined })
-                return
-              }
-              setDateRange(range || {})
-            }}
-            numberOfMonths={2}
-            disabled={{ before: new Date() }}
-            showOutsideDays={false}
-            className="mx-auto w-full [--cell-size:2.5rem] md:[--cell-size:2.9rem]"
-            modifiers={{ booked: bookedDays, pending: pendingDays, blocked: blockedDays, request: requestDays }}
-            modifiersClassNames={{
-              booked: '[&_button]:bg-green-100 [&_button]:text-green-900',
-              pending: '[&_button]:bg-amber-100 [&_button]:text-amber-900',
-              blocked: '[&_button]:bg-stone-200 [&_button]:text-stone-500',
-              request: '[&_button]:bg-sky-100 [&_button]:text-sky-900',
-            }}
-          />
-        </div>
+      <div className="mt-4">
+        <Calendar
+          mode="range"
+          selected={selectedRange}
+          onDayClick={(day) => {
+            const event = eventByDay.get(formatDateISO(day))
+            if (event) {
+              suppressSelectRef.current = true
+              setActiveEvent(event)
+            }
+          }}
+          onSelect={(range) => {
+            if (suppressSelectRef.current) {
+              suppressSelectRef.current = false
+              return
+            }
+            if (range?.from && range?.to && range.from.getTime() === range.to.getTime()) {
+              setDateRange({ from: range.from, to: undefined })
+              return
+            }
+            setDateRange(range || {})
+          }}
+          numberOfMonths={1}
+          disabled={{ before: new Date() }}
+          showOutsideDays={false}
+          className="w-full max-w-md [--cell-size:2.7rem]"
+          modifiers={{ booked: bookedDays, pending: pendingDays, blocked: blockedDays, request: requestDays }}
+          modifiersClassNames={{
+            booked: '[&_button]:bg-green-100 [&_button]:text-green-900',
+            pending: '[&_button]:bg-amber-100 [&_button]:text-amber-900',
+            blocked: '[&_button]:bg-stone-200 [&_button]:text-stone-500',
+            request: '[&_button]:bg-sky-100 [&_button]:text-sky-900',
+          }}
+        />
       </div>
 
       {hasRange && (

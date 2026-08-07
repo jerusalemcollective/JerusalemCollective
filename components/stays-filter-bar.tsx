@@ -33,26 +33,58 @@ function setOrDelete(params: URLSearchParams, key: string, value: string) {
   else params.delete(key)
 }
 
+const FEATURE_TOGGLES = [
+  { key: 'shabbatElevator', label: 'Shabbat elevator' },
+  { key: 'physicalKey', label: 'Keyless entry for Shabbos' },
+  { key: 'sukkahBalcony', label: 'Sukkah / sukkah balcony' },
+  { key: 'centralAc', label: 'Air conditioning' },
+] as const
+
+type FeatureKey = (typeof FEATURE_TOGGLES)[number]['key']
+
 export function StaysFilterBar() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [showCalendar, setShowCalendar] = useState(false)
+  const [showFilters, setShowFilters] = useState(false)
   const [checkInValue, setCheckInValue] = useState(searchParams.get('checkIn') || '')
   const [checkOutValue, setCheckOutValue] = useState(searchParams.get('checkOut') || '')
   const [guests, setGuests] = useState(Number(searchParams.get('guests')) || 0)
+  const [bedrooms, setBedrooms] = useState(Number(searchParams.get('bedrooms')) || 0)
+  const [minPrice, setMinPrice] = useState(searchParams.get('minPrice') || '')
+  const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') || '')
+  const [features, setFeatures] = useState<Record<FeatureKey, boolean>>({
+    shabbatElevator: Boolean(searchParams.get('shabbatElevator')),
+    physicalKey: Boolean(searchParams.get('physicalKey')),
+    sukkahBalcony: Boolean(searchParams.get('sukkahBalcony')),
+    centralAc: Boolean(searchParams.get('centralAc')),
+  })
 
   useEffect(() => {
     setCheckInValue(searchParams.get('checkIn') || '')
     setCheckOutValue(searchParams.get('checkOut') || '')
     setGuests(Number(searchParams.get('guests')) || 0)
+    setBedrooms(Number(searchParams.get('bedrooms')) || 0)
+    setMinPrice(searchParams.get('minPrice') || '')
+    setMaxPrice(searchParams.get('maxPrice') || '')
+    setFeatures({
+      shabbatElevator: Boolean(searchParams.get('shabbatElevator')),
+      physicalKey: Boolean(searchParams.get('physicalKey')),
+      sukkahBalcony: Boolean(searchParams.get('sukkahBalcony')),
+      centralAc: Boolean(searchParams.get('centralAc')),
+    })
     setShowCalendar(false)
+    setShowFilters(false)
   }, [searchParams])
 
   useEffect(() => {
-    if (!showCalendar) return
+    if (!showCalendar && !showFilters) return
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setShowCalendar(false)
+      if (event.key === 'Escape') {
+        setShowCalendar(false)
+        setShowFilters(false)
+      }
     }
 
     const previousOverflow = document.body.style.overflow
@@ -63,7 +95,7 @@ export function StaysFilterBar() {
       document.body.style.overflow = previousOverflow
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [showCalendar])
+  }, [showCalendar, showFilters])
 
   const checkInDate = parseLocalDate(checkInValue)
   const checkOutDate = parseLocalDate(checkOutValue)
@@ -71,10 +103,19 @@ export function StaysFilterBar() {
     ? { from: checkInDate, to: checkOutDate }
     : undefined
 
+  const activeFeatureCount =
+    FEATURE_TOGGLES.filter((toggle) => features[toggle.key]).length +
+    (bedrooms > 0 ? 1 : 0) +
+    (minPrice || maxPrice ? 1 : 0)
+
   const hasFilters = Boolean(
     searchParams.get('checkIn') ||
       searchParams.get('checkOut') ||
       searchParams.get('guests') ||
+      searchParams.get('bedrooms') ||
+      searchParams.get('minPrice') ||
+      searchParams.get('maxPrice') ||
+      FEATURE_TOGGLES.some((toggle) => searchParams.get(toggle.key)) ||
       ((searchParams.get('neighborhood') || searchParams.get('area')) !== null &&
         (searchParams.get('neighborhood') || searchParams.get('area')) !== 'All'),
   )
@@ -91,6 +132,11 @@ export function StaysFilterBar() {
     setOrDelete(next, 'checkIn', checkInValue)
     setOrDelete(next, 'checkOut', checkOutValue)
     setOrDelete(next, 'guests', guests > 0 ? String(guests) : '')
+    setOrDelete(next, 'bedrooms', bedrooms > 0 ? String(bedrooms) : '')
+    setOrDelete(next, 'minPrice', minPrice.trim())
+    setOrDelete(next, 'maxPrice', maxPrice.trim())
+    FEATURE_TOGGLES.forEach((toggle) => setOrDelete(next, toggle.key, features[toggle.key] ? '1' : ''))
+    next.delete('page')
 
     const neighborhood = next.get('neighborhood') || next.get('area')
     if (neighborhood && neighborhood !== 'All') {
@@ -104,13 +150,19 @@ export function StaysFilterBar() {
     const nextQuery = next.toString()
     router.push(nextQuery ? `/stays?${nextQuery}` : '/stays')
     setShowCalendar(false)
+    setShowFilters(false)
   }
 
   const handleClear = () => {
     setCheckInValue('')
     setCheckOutValue('')
     setGuests(0)
+    setBedrooms(0)
+    setMinPrice('')
+    setMaxPrice('')
+    setFeatures({ shabbatElevator: false, physicalKey: false, sukkahBalcony: false, centralAc: false })
     setShowCalendar(false)
+    setShowFilters(false)
     router.push('/stays')
   }
 
@@ -128,7 +180,7 @@ export function StaysFilterBar() {
           </span>
         </button>
 
-        <div className="rounded-2xl px-4 py-2 sm:w-56">
+        <div className="rounded-2xl px-4 py-2 sm:w-44">
           <label
             htmlFor="stays-guests"
             className="block text-[11px] font-bold uppercase tracking-widest text-stone-900"
@@ -154,6 +206,20 @@ export function StaysFilterBar() {
           </div>
         </div>
 
+        <button
+          type="button"
+          onClick={() => setShowFilters(true)}
+          className="flex items-center justify-between gap-2 rounded-2xl px-4 py-2.5 text-left transition hover:bg-stone-50 sm:w-40"
+        >
+          <span className="flex flex-col">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-stone-900">Filters</span>
+            <span className={`mt-0.5 text-sm ${activeFeatureCount ? 'text-stone-900' : 'text-stone-500'}`}>
+              {activeFeatureCount ? `${activeFeatureCount} selected` : 'Any'}
+            </span>
+          </span>
+          <ChevronIcon className="h-4 w-4 text-stone-400" />
+        </button>
+
         <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
@@ -174,6 +240,121 @@ export function StaysFilterBar() {
         </div>
       </div>
 
+      {showFilters && (
+        <div
+          role="presentation"
+          onClick={() => setShowFilters(false)}
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-3 sm:items-center sm:p-6"
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Filters"
+            onClick={(event) => event.stopPropagation()}
+            className="flex max-h-[88vh] w-full max-w-[420px] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl"
+          >
+            <div className="flex items-center justify-between border-b border-stone-100 bg-[#fbf8f5] px-5 py-3">
+              <p className="text-sm font-bold text-stone-900">Filters</p>
+              <button
+                type="button"
+                onClick={() => setShowFilters(false)}
+                aria-label="Close filters"
+                className="rounded-full p-1.5 text-stone-500 transition hover:bg-stone-100 hover:text-stone-900"
+              >
+                <CloseIcon />
+              </button>
+            </div>
+
+            <div className="flex-1 space-y-5 overflow-y-auto p-5">
+              <label className="block">
+                <span className="text-sm font-semibold text-stone-900">Bedrooms</span>
+                <select
+                  value={bedrooms}
+                  onChange={(event) => setBedrooms(Number(event.target.value))}
+                  className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900"
+                >
+                  <option value={0}>Any</option>
+                  {[1, 2, 3, 4, 5].map((count) => (
+                    <option key={count} value={count}>
+                      {count}+ bedroom{count === 1 ? '' : 's'}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div>
+                <span className="text-sm font-semibold text-stone-900">Price per night (USD)</span>
+                <div className="mt-2 flex items-center gap-3">
+                  <input
+                    type="number"
+                    min="0"
+                    inputMode="numeric"
+                    value={minPrice}
+                    onChange={(event) => setMinPrice(event.target.value)}
+                    placeholder="Min"
+                    className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900"
+                  />
+                  <span className="text-stone-400">–</span>
+                  <input
+                    type="number"
+                    min="0"
+                    inputMode="numeric"
+                    value={maxPrice}
+                    onChange={(event) => setMaxPrice(event.target.value)}
+                    placeholder="Max"
+                    className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <span className="text-sm font-semibold text-stone-900">Features</span>
+                <div className="mt-2 space-y-2">
+                  {FEATURE_TOGGLES.map((toggle) => (
+                    <label
+                      key={toggle.key}
+                      className="flex cursor-pointer items-center gap-3 rounded-2xl border border-stone-200 px-4 py-3 text-sm font-medium text-stone-700 transition hover:border-stone-300"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={features[toggle.key]}
+                        onChange={(event) =>
+                          setFeatures((current) => ({ ...current, [toggle.key]: event.target.checked }))
+                        }
+                        className="h-4 w-4 rounded border-stone-300 text-[#c76f55] focus:ring-[#c76f55]"
+                      />
+                      {toggle.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 border-t border-stone-100 bg-white px-5 py-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setBedrooms(0)
+                  setMinPrice('')
+                  setMaxPrice('')
+                  setFeatures({ shabbatElevator: false, physicalKey: false, sukkahBalcony: false, centralAc: false })
+                }}
+                className="text-xs font-bold text-stone-500 transition hover:text-stone-800"
+              >
+                Clear filters
+              </button>
+              <button
+                type="button"
+                onClick={applyFilters}
+                className="rounded-full bg-[#252525] px-6 py-2.5 text-sm font-bold text-white transition hover:bg-[#111111]"
+              >
+                Show stays
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showCalendar && (
         <div
           role="presentation"
@@ -185,7 +366,7 @@ export function StaysFilterBar() {
             aria-modal="true"
             aria-label="Select your dates"
             onClick={(event) => event.stopPropagation()}
-            className="flex max-h-[88vh] w-full max-w-[380px] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl sm:max-w-[720px]"
+            className="flex max-h-[88vh] w-full max-w-[380px] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl"
           >
             <div className="flex items-start justify-between gap-3 border-b border-stone-100 bg-[#fbf8f5] px-4 py-3">
               <div className="min-w-0">
@@ -229,7 +410,7 @@ export function StaysFilterBar() {
                   setCheckInValue(range?.from ? formatDateISO(range.from) : '')
                   setCheckOutValue(range?.to ? formatDateISO(range.to) : '')
                 }}
-                numberOfMonths={2}
+                numberOfMonths={1}
                 disabled={{ before: new Date() }}
                 modifiers={{
                   jewishHoliday: (date) => Boolean(getJewishHoliday(date)),
@@ -240,7 +421,6 @@ export function StaysFilterBar() {
                 showOutsideDays={false}
                 className="w-full p-0"
                 classNames={{
-                  months: 'flex flex-col gap-6 md:flex-row md:gap-8',
                   month: 'flex w-full flex-col gap-3',
                   weekday: 'flex-1 text-[10px] font-bold uppercase tracking-wider text-stone-500',
                   week: 'mt-1.5 flex w-full',

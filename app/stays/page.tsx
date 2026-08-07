@@ -133,6 +133,7 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
       checkIn,
       checkOut,
       guests,
+      bedrooms: parsePositiveNumber(params.bedrooms),
       minPrice,
       maxPrice,
       amenityLabels,
@@ -140,6 +141,7 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
       shabbatElevator: Boolean(params.shabbatElevator),
       physicalKey: Boolean(params.physicalKey),
       sukkahBalcony: Boolean(params.sukkahBalcony),
+      centralAc: Boolean(params.centralAc),
       nearSynagogue: Boolean(params.nearSynagogue),
       maxWalkToKotel: params.maxWalkToKotel,
       // Paginate the list view; the map wants every marker, so it loads all.
@@ -354,6 +356,7 @@ async function loadListings({
   checkIn,
   checkOut,
   guests,
+  bedrooms,
   minPrice,
   maxPrice,
   amenityLabels,
@@ -361,6 +364,7 @@ async function loadListings({
   shabbatElevator,
   physicalKey,
   sukkahBalcony,
+  centralAc,
   nearSynagogue,
   maxWalkToKotel,
   page,
@@ -369,6 +373,7 @@ async function loadListings({
   checkIn?: string
   checkOut?: string
   guests: number | null
+  bedrooms: number | null
   minPrice: number | null
   maxPrice: number | null
   amenityLabels: string[]
@@ -377,6 +382,7 @@ async function loadListings({
   shabbatElevator: boolean
   physicalKey: boolean
   sukkahBalcony: boolean
+  centralAc: boolean
   nearSynagogue: boolean
   maxWalkToKotel?: string
 }) {
@@ -421,6 +427,10 @@ async function loadListings({
     listingsQuery = listingsQuery.gte('max_guests', guests)
   }
 
+  if (bedrooms) {
+    listingsQuery = listingsQuery.gte('bedrooms', bedrooms)
+  }
+
   // The price filter is expressed in USD. ILS-only listings have a null
   // price_usd; include them rather than dropping them (null >= x is not true in
   // Postgres, which would silently hide every ILS-only stay).
@@ -452,6 +462,10 @@ async function loadListings({
 
   if (sukkahBalcony) {
     listingsQuery = listingsQuery.eq('sukkah_balcony', true)
+  }
+
+  if (centralAc) {
+    listingsQuery = listingsQuery.eq('central_ac', true)
   }
 
   if (nearSynagogue) {
