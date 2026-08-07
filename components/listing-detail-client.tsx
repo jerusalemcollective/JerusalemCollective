@@ -378,7 +378,7 @@ export function ListingDetailClient({
   }
 
   return (
-    <div className="min-h-screen bg-white pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-0">
+    <div className="min-h-screen bg-white pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-0">
       <header className="border-b border-stone-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <Link href="/" className="text-xl font-bold text-[#c76f55]">
@@ -996,7 +996,7 @@ export function ListingDetailClient({
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-stone-200 bg-white px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 shadow-lg md:hidden">
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-stone-200 bg-white px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 shadow-lg lg:hidden">
         <div className="flex items-center justify-between gap-4">
           <div>
             <p className="text-lg font-bold text-stone-950">

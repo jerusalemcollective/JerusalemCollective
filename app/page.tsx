@@ -130,8 +130,8 @@ function buildCategoryChips(popularNeighborhoods: string[]): CategoryChip[] {
   return [
     { label: 'All stays', href: '/stays', Icon: LayoutGrid },
     ...neighbourhoodChips,
-    { label: 'Lift access', href: `/stays?feature=${encodeURIComponent('Lift access')}`, Icon: ArrowUpDown },
-    { label: 'Sukkah option', href: `/stays?feature=${encodeURIComponent('Sukkah option')}`, Icon: Tent },
+    { label: 'Shabbos elevator', href: '/stays?shabbatElevator=1', Icon: ArrowUpDown },
+    { label: 'Sukkah option', href: '/stays?sukkahBalcony=1', Icon: Tent },
   ]
 }
 
@@ -265,7 +265,7 @@ export default async function JLMCollectiveHomePage() {
         <section id="stays" className="mx-auto max-w-7xl px-6 pt-9">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
             <h2 className="font-display text-2xl font-bold tracking-tight text-stone-950">
-              Stays in Jerusalem
+              Featured stays
             </h2>
             <Link
               href="/map"

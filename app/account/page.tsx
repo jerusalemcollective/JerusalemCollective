@@ -79,7 +79,7 @@ export default async function AccountPage() {
     <div className="min-h-screen">
       <div className="mx-auto max-w-5xl px-5 py-6 md:px-6">
         <header className="mb-5 border-b border-stone-200 pb-4">
-          <h1 className="font-display text-2xl font-bold tracking-tight text-stone-950">Account</h1>
+          <h1 className="font-display text-3xl font-bold tracking-tight text-stone-950">Account</h1>
         </header>
 
         <div>

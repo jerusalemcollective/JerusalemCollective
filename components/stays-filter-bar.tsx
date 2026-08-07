@@ -34,7 +34,7 @@ function setOrDelete(params: URLSearchParams, key: string, value: string) {
 }
 
 const FEATURE_TOGGLES = [
-  { key: 'shabbatElevator', label: 'Shabbat elevator' },
+  { key: 'shabbatElevator', label: 'Shabbos elevator' },
   { key: 'physicalKey', label: 'Keyless entry for Shabbos' },
   { key: 'sukkahBalcony', label: 'Sukkah / sukkah balcony' },
   { key: 'centralAc', label: 'Air conditioning' },

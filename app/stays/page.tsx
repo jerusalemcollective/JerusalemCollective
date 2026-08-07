@@ -119,7 +119,6 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
   const params = cleanSearchParams(await searchParams)
   const view = params.view === 'map' ? 'map' : 'list'
   const selectedArea = params.neighborhood || params.area || 'All'
-  const activeFeature = params.feature || params.type || params.season
   const checkIn = params.checkIn
   const checkOut = params.checkOut
   const guests = parsePositiveNumber(params.guests)
@@ -203,12 +202,7 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
             </h1>
             {totalPublished > 0 && (
               <p className="mt-2 text-stone-500">
-                {listings.length} apartment{listings.length === 1 ? '' : 's'} available
-              </p>
-            )}
-            {activeFeature && (
-              <p className="mt-1 text-sm text-stone-500">
-                Showing results related to {activeFeature}
+                {totalMatching} apartment{totalMatching === 1 ? '' : 's'} available
               </p>
             )}
           </div>

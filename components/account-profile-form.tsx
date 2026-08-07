@@ -105,7 +105,6 @@ export function AccountProfileForm({ user, profile, hasStay }: AccountProfileFor
               disabled
               className="h-10 rounded-xl border-stone-200 bg-stone-100 px-4 text-stone-500"
             />
-            <p className="mt-1 text-xs text-stone-500">Email cannot be changed</p>
           </div>
 
           <div>
