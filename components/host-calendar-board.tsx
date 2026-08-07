@@ -199,7 +199,7 @@ export function HostCalendarBoard({
           numberOfMonths={1}
           disabled={{ before: new Date() }}
           showOutsideDays={false}
-          className="w-full max-w-md [--cell-size:2.7rem]"
+          className="mx-auto [--cell-size:3.1rem]"
           modifiers={{ booked: bookedDays, pending: pendingDays, blocked: blockedDays, request: requestDays }}
           modifiersClassNames={{
             booked: '[&_button]:bg-green-100 [&_button]:text-green-900',
