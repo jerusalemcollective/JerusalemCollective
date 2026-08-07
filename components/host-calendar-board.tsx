@@ -67,6 +67,7 @@ export function HostCalendarBoard({
   const [showBooking, setShowBooking] = useState(false)
   const [guestName, setGuestName] = useState('')
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   // A day that belongs to an event opens its details; suppress the range-select
   // that the same click would otherwise trigger.
@@ -113,11 +114,23 @@ export function HostCalendarBoard({
     setDateRange({})
     setShowBooking(false)
     setGuestName('')
+    setError(null)
   }
 
   const submit = (kind: 'block' | 'booking') => {
     if (!hasRange) return
     if (kind === 'booking' && !guestName.trim()) return
+
+    // Immediate no-double-booking feedback: the DB rejects an overlap too, but
+    // that error is swallowed by the transition, so check here for a clear message.
+    const overlaps = events.some(
+      (event) => event.listingId === selectedListingId && event.start < endISO && event.endExclusive > startISO,
+    )
+    if (overlaps) {
+      setError('Those dates overlap an existing booking or block. Pick free dates.')
+      return
+    }
+    setError(null)
 
     const formData = new FormData()
     formData.set('mode', kind)
@@ -126,10 +139,14 @@ export function HostCalendarBoard({
     formData.set('endDate', endISO)
     if (kind === 'booking') formData.set('guestName', guestName.trim())
 
-    startTransition(() => {
-      saveAction(formData)
+    startTransition(async () => {
+      try {
+        await saveAction(formData)
+        clearSelection()
+      } catch {
+        setError('Could not save — those dates may already be taken.')
+      }
     })
-    clearSelection()
   }
 
   return (
@@ -228,6 +245,8 @@ export function HostCalendarBoard({
               </button>
             </div>
           </div>
+
+          {error && <p className="mt-2 text-sm font-semibold text-rose-600">{error}</p>}
 
           {showBooking && (
             <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-stone-200 pt-3">

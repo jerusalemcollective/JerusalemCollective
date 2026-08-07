@@ -187,68 +187,70 @@ export default async function HostCalendarPage() {
             />
 
             <section className="mt-6 rounded-3xl bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-stone-950">Subscribe to your bookings</h2>
-              <p className="mt-2 text-sm leading-6 text-stone-600">
-                Add this link to Google Calendar or Apple Calendar to see all your JLM Collective bookings
-                automatically.
-              </p>
-              {calendarUrl ? (
-                <>
-                  <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center">
-                    <input
-                      readOnly
-                      value={calendarUrl}
-                      className="flex-1 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 font-mono text-sm text-stone-700"
-                    />
-                    <CopyCalendarUrlButton value={calendarUrl} />
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-3">
-                    <a
-                      href="https://calendar.google.com/calendar/r/settings/addbyurl"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs font-semibold text-[#c76f55] hover:underline"
-                    >
-                      Add to Google Calendar -&gt;
-                    </a>
-                    <a
-                      href="https://support.apple.com/guide/icloud/set-up-icloud-calendar-mm6902b8ad/icloud"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs font-semibold text-stone-500 hover:underline"
-                    >
-                      Add to Apple Calendar -&gt;
-                    </a>
-                  </div>
-                </>
-              ) : (
-                <p className="mt-4 rounded-2xl bg-[#F8F5F2] p-4 text-sm text-stone-600">
-                  Your private calendar link will appear after the calendar token migration has been run.
-                </p>
-              )}
-            </section>
+              <h2 className="text-lg font-bold text-stone-950">Connect your calendar</h2>
 
-            <div className="mt-6">
-              <h2 className="text-lg font-bold text-stone-950">Sync an external calendar</h2>
-              <p className="mt-1 text-sm text-stone-600">
-                Import an iCal link so bookings from Airbnb, Booking.com, or another calendar block these dates
-                automatically.
-              </p>
-              <div className="mt-4 space-y-4">
-                {hostListings.map((listing) => (
-                  <div key={listing.id}>
-                    {hostListings.length > 1 && (
-                      <p className="mb-2 text-sm font-bold text-stone-700">{listing.title}</p>
-                    )}
-                    <ExternalCalendarSyncForm
-                      listingId={listing.id}
-                      externalCalendarUrl={listing.external_calendar_url}
-                      calendarLastSyncedAt={listing.calendar_last_synced_at}
-                    />
-                  </div>
-                ))}
+              <div className="mt-4">
+                <p className="text-sm font-semibold text-stone-900">
+                  Block dates from Airbnb, Booking.com or another calendar
+                </p>
+                <p className="mt-1 text-sm text-stone-600">
+                  Paste an iCal link — we check it hourly and block those dates automatically.
+                </p>
+                <div className="mt-3 space-y-4">
+                  {hostListings.map((listing) => (
+                    <div key={listing.id}>
+                      {hostListings.length > 1 && (
+                        <p className="mb-2 text-sm font-bold text-stone-700">{listing.title}</p>
+                      )}
+                      <ExternalCalendarSyncForm
+                        listingId={listing.id}
+                        externalCalendarUrl={listing.external_calendar_url}
+                        calendarLastSyncedAt={listing.calendar_last_synced_at}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+
+              <div className="mt-6 border-t border-stone-100 pt-6">
+                <p className="text-sm font-semibold text-stone-900">See your JLM bookings in your own calendar</p>
+                <p className="mt-1 text-sm text-stone-600">Add this private link to Google or Apple Calendar.</p>
+                {calendarUrl ? (
+                  <>
+                    <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-center">
+                      <input
+                        readOnly
+                        value={calendarUrl}
+                        className="flex-1 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 font-mono text-sm text-stone-700"
+                      />
+                      <CopyCalendarUrlButton value={calendarUrl} />
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-3">
+                      <a
+                        href="https://calendar.google.com/calendar/r/settings/addbyurl"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-semibold text-[#c76f55] hover:underline"
+                      >
+                        Add to Google Calendar -&gt;
+                      </a>
+                      <a
+                        href="https://support.apple.com/guide/icloud/set-up-icloud-calendar-mm6902b8ad/icloud"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-semibold text-stone-500 hover:underline"
+                      >
+                        Add to Apple Calendar -&gt;
+                      </a>
+                    </div>
+                  </>
+                ) : (
+                  <p className="mt-3 rounded-2xl bg-[#F8F5F2] p-4 text-sm text-stone-600">
+                    Your private calendar link will appear after the calendar token migration has been run.
+                  </p>
+                )}
+              </div>
+            </section>
           </>
         )}
       </section>
