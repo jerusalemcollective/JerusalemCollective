@@ -249,10 +249,10 @@ export default async function JLMCollectiveHomePage() {
               <Link
                 key={chip.label}
                 href={chip.href}
-                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition ${
                   index === 0
-                    ? 'bg-[#252525] text-white hover:bg-[#111111]'
-                    : 'bg-white text-stone-700 ring-1 ring-stone-200 hover:ring-stone-400'
+                    ? 'border-transparent bg-[#252525] text-white hover:bg-[#111111]'
+                    : 'border-stone-200 bg-white text-stone-700 hover:border-[#c76f55]'
                 }`}
               >
                 <chip.Icon className="h-4 w-4" aria-hidden="true" />

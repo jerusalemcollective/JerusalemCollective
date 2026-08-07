@@ -226,7 +226,7 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
                   </Link>
                   <Link
                     href="/become-a-host"
-                    className="rounded-full border border-stone-200 px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:border-stone-300"
+                    className="rounded-full border border-stone-200 px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:border-[#c76f55]"
                   >
                     List your stay
                   </Link>
@@ -249,13 +249,13 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
                   </Link>
                   <Link
                     href="/stays?neighborhood=Rechavia"
-                    className="rounded-full border border-stone-200 px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:border-stone-300"
+                    className="rounded-full border border-stone-200 px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:border-[#c76f55]"
                   >
                     Browse Rechavia
                   </Link>
                   <Link
                     href="/stays?neighborhood=German+Colony"
-                    className="rounded-full border border-stone-200 px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:border-stone-300"
+                    className="rounded-full border border-stone-200 px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:border-[#c76f55]"
                   >
                     Browse German Colony
                   </Link>

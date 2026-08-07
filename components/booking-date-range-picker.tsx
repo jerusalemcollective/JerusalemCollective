@@ -103,7 +103,7 @@ export function BookingDateRangePicker({
       </button>
 
       {showCalendar && (
-        <div className="absolute right-0 top-full z-50 mt-3 w-[min(92vw,460px)] overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-2xl shadow-stone-300/30">
+        <div className="relative z-50 mt-3 w-full overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-2xl shadow-stone-300/30 sm:absolute sm:right-0 sm:top-full sm:w-[min(92vw,460px)]">
           <div className="border-b border-stone-100 bg-[#fbfaf8] px-5 py-4">
             <div className="grid grid-cols-2 gap-3">
               <SummaryCard label="Arrival" date={dateRange.from} />

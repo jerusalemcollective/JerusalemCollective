@@ -170,7 +170,7 @@ export function MessageHostDialog({
       <button
         type="button"
         disabled
-        className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl border border-stone-200 bg-stone-50 py-3 text-sm font-semibold text-stone-400"
+        className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-full border border-stone-200 bg-stone-50 py-3 text-sm font-semibold text-stone-400"
       >
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -322,7 +322,7 @@ export function MessageHostDialog({
           }}
           className={
             buttonClassName ||
-            'flex w-full items-center justify-center gap-2 rounded-xl border border-stone-200 bg-white py-3 text-sm font-semibold text-stone-700 transition hover:border-stone-300 hover:bg-stone-50'
+            'flex w-full items-center justify-center gap-2 rounded-full border border-stone-200 bg-white py-3 text-sm font-semibold text-stone-700 transition hover:border-[#c76f55] hover:bg-stone-50'
           }
         >
           {showIcon && (

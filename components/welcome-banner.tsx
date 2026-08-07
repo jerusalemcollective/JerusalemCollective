@@ -37,7 +37,7 @@ export function WelcomeBanner() {
             <Link
               href="/stays?neighborhood=Rechavia"
               onClick={dismiss}
-              className="rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-300"
+              className="rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-[#c76f55]"
             >
               Popular areas
             </Link>
@@ -47,7 +47,7 @@ export function WelcomeBanner() {
           type="button"
           onClick={dismiss}
           aria-label="Dismiss"
-          className="shrink-0 rounded-full p-1 text-stone-500 transition hover:text-stone-700"
+          className="-m-1 shrink-0 rounded-full p-2.5 text-stone-500 transition hover:text-stone-700"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M18 6L6 18M6 6l12 12" />

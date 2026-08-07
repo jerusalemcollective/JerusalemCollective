@@ -61,7 +61,7 @@ export default async function SavedPage() {
         {savedListings.length === 0 ? (
           <EmptyState />
         ) : (
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {savedListings.map((listing) => {
               const coverPhotoUrl =
                 listing.listing_photos?.find((photo) => photo.is_cover)?.photo_url ||

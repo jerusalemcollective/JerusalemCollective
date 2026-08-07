@@ -481,16 +481,19 @@ export function ListingDetailClient({
                       <button
                         key={photo.id}
                         type="button"
+                        aria-label={`Go to photo ${i + 1}`}
                         onClick={(event) => {
                           event.stopPropagation()
                           setMobilePhotoIndex(i)
                         }}
-                        className={`h-1.5 rounded-full transition-all ${
-                          i === mobilePhotoIndex
-                            ? 'w-4 bg-white'
-                            : 'w-1.5 bg-white/60'
-                        }`}
-                      />
+                        className="flex h-6 items-center"
+                      >
+                        <span
+                          className={`block h-1.5 rounded-full transition-all ${
+                            i === mobilePhotoIndex ? 'w-4 bg-white' : 'w-1.5 bg-white/60'
+                          }`}
+                        />
+                      </button>
                     ))}
                   </div>
                 )}
@@ -563,7 +566,7 @@ export function ListingDetailClient({
                     setGalleryIndex(0)
                     setShowGallery(true)
                   }}
-                  className="absolute bottom-4 right-4 flex items-center gap-2 rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 shadow-sm transition hover:bg-stone-50 hover:shadow-md"
+                  className="absolute bottom-4 right-4 flex items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-900 shadow-sm transition hover:border-[#c76f55] hover:shadow-md"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <rect x="3" y="3" width="7" height="7" />
@@ -1002,9 +1005,13 @@ export function ListingDetailClient({
                 <button
                   type="button"
                   onClick={() => setShowMobileMessageHost(true)}
-                  className="flex min-h-11 flex-1 items-center justify-center rounded-full border border-stone-200 bg-white px-4 py-0 text-center text-sm font-semibold leading-none text-stone-700 transition hover:border-[#c76f55] hover:text-[#9f513f]"
+                  aria-label="Message host"
+                  className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-0 text-center text-sm font-semibold leading-none text-stone-700 transition hover:border-[#c76f55] hover:text-[#9f513f] sm:flex-1"
                 >
-                  Message host
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                  <span className="hidden sm:inline">Message host</span>
                 </button>
               )}
             </div>
