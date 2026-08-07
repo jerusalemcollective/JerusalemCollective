@@ -1,9 +1,8 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState, useTransition } from 'react'
 import type { DateRange as DayPickerDateRange } from 'react-day-picker'
 import { Calendar } from '@/components/ui/calendar'
-import { formatHebrewShortDate } from '@/lib/hebrew-date'
 import { formatDateISO } from '@/lib/utils/date'
 import { HostCalendarEventDialog } from '@/components/host-calendar-event-dialog'
 
@@ -64,13 +63,13 @@ export function HostCalendarBoard({
   removeRangeAction,
 }: HostCalendarBoardProps) {
   const [selectedListingId, setSelectedListingId] = useState(listings[0]?.id || '')
-  const [mode, setMode] = useState<'block' | 'booking'>('block')
   const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({})
-  const [reason, setReason] = useState('')
+  const [showBooking, setShowBooking] = useState(false)
   const [guestName, setGuestName] = useState('')
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
-  // When a day belonging to an event is clicked we open its details; suppress the
-  // range-selection that the same click would otherwise trigger.
+  const [pending, startTransition] = useTransition()
+  // A day that belongs to an event opens its details; suppress the range-select
+  // that the same click would otherwise trigger.
   const suppressSelectRef = useRef(false)
 
   const { bookedDays, pendingDays, blockedDays, requestDays, eventByDay } = useMemo(() => {
@@ -108,153 +107,155 @@ export function HostCalendarBoard({
 
   const startISO = dateRange.from ? formatDateISO(dateRange.from) : ''
   const endISO = dateRange.to ? formatDateISO(dateRange.to) : ''
-  const canSave = Boolean(selectedListingId && startISO && endISO)
+  const hasRange = Boolean(selectedListingId && startISO && endISO)
+
+  const clearSelection = () => {
+    setDateRange({})
+    setShowBooking(false)
+    setGuestName('')
+  }
+
+  const submit = (kind: 'block' | 'booking') => {
+    if (!hasRange) return
+    if (kind === 'booking' && !guestName.trim()) return
+
+    const formData = new FormData()
+    formData.set('mode', kind)
+    formData.set('listingId', selectedListingId)
+    formData.set('startDate', startISO)
+    formData.set('endDate', endISO)
+    if (kind === 'booking') formData.set('guestName', guestName.trim())
+
+    startTransition(() => {
+      saveAction(formData)
+    })
+    clearSelection()
+  }
 
   return (
     <div className="rounded-3xl bg-white p-5 shadow-sm md:p-6">
-      <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-        {/* Controls */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Availability</p>
-          <h2 className="mt-2 text-2xl font-bold text-stone-950">Manage the calendar</h2>
-          <p className="mt-2 text-sm leading-6 text-stone-600">
-            Click a booking to see its details, or select an empty range to block it off or record a booking.
-          </p>
-
-          <label className="mt-5 block text-sm font-semibold text-stone-700">
-            Stay
-            <select
-              value={selectedListingId}
-              onChange={(event) => setSelectedListingId(event.target.value)}
-              className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900"
-            >
-              {listings.map((listing) => (
-                <option key={listing.id} value={listing.id}>
-                  {listing.title}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl bg-[#F8F5F2] p-1">
-            {(['block', 'booking'] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setMode(m)}
-                className={`rounded-xl px-3 py-2 text-sm font-bold transition ${
-                  mode === m ? 'bg-white text-stone-950 shadow-sm' : 'text-stone-600 hover:text-stone-900'
-                }`}
-              >
-                {m === 'block' ? 'Block dates' : 'Add booking'}
-              </button>
+          <h2 className="mt-1 text-2xl font-bold text-stone-950">Calendar</h2>
+        </div>
+        {listings.length > 1 && (
+          <select
+            value={selectedListingId}
+            onChange={(event) => {
+              setSelectedListingId(event.target.value)
+              clearSelection()
+            }}
+            className="rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-semibold text-stone-900"
+          >
+            {listings.map((listing) => (
+              <option key={listing.id} value={listing.id}>
+                {listing.title}
+              </option>
             ))}
-          </div>
+          </select>
+        )}
+      </div>
 
-          <form action={saveAction} className="mt-4">
-            <input type="hidden" name="mode" value={mode} />
-            <input type="hidden" name="listingId" value={selectedListingId} />
-            <input type="hidden" name="startDate" value={startISO} />
-            <input type="hidden" name="endDate" value={endISO} />
+      <div className="mt-4 overflow-x-auto rounded-3xl bg-[#faf8f6] p-3 md:p-4">
+        <div className="rounded-2xl bg-white p-3 md:p-4">
+          <Calendar
+            mode="range"
+            selected={selectedRange}
+            onDayClick={(day) => {
+              const event = eventByDay.get(formatDateISO(day))
+              if (event) {
+                suppressSelectRef.current = true
+                setActiveEvent(event)
+              }
+            }}
+            onSelect={(range) => {
+              if (suppressSelectRef.current) {
+                suppressSelectRef.current = false
+                return
+              }
+              if (range?.from && range?.to && range.from.getTime() === range.to.getTime()) {
+                setDateRange({ from: range.from, to: undefined })
+                return
+              }
+              setDateRange(range || {})
+            }}
+            numberOfMonths={2}
+            disabled={{ before: new Date() }}
+            showOutsideDays={false}
+            className="mx-auto w-full [--cell-size:2.5rem] md:[--cell-size:2.9rem]"
+            modifiers={{ booked: bookedDays, pending: pendingDays, blocked: blockedDays, request: requestDays }}
+            modifiersClassNames={{
+              booked: '[&_button]:bg-green-100 [&_button]:text-green-900',
+              pending: '[&_button]:bg-amber-100 [&_button]:text-amber-900',
+              blocked: '[&_button]:bg-stone-200 [&_button]:text-stone-500',
+              request: '[&_button]:bg-sky-100 [&_button]:text-sky-900',
+            }}
+          />
+        </div>
+      </div>
 
-            {mode === 'booking' ? (
-              <label className="block text-sm font-semibold text-stone-700">
-                Guest name
-                <input
-                  name="guestName"
-                  value={guestName}
-                  onChange={(event) => setGuestName(event.target.value)}
-                  placeholder="Who is this booking for?"
-                  className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900"
-                />
-              </label>
-            ) : (
-              <label className="block text-sm font-semibold text-stone-700">
-                Reason
-                <input
-                  name="reason"
-                  value={reason}
-                  onChange={(event) => setReason(event.target.value)}
-                  placeholder="Optional note"
-                  className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900"
-                />
-              </label>
-            )}
-
-            <div className="mt-4 rounded-2xl bg-[#F8F5F2] p-4">
-              <p className="text-xs font-bold uppercase tracking-widest text-stone-500">
-                {mode === 'booking' ? 'Check-in — check-out' : 'Selected dates'}
-              </p>
-              <p className="mt-2 text-sm font-semibold text-stone-900">
-                {dateRange.from ? formatDisplayDate(dateRange.from) : 'Choose a start date'}
-                {' — '}
-                {dateRange.to ? formatDisplayDate(dateRange.to) : 'choose an end date'}
-              </p>
-              {(dateRange.from || dateRange.to) && (
-                <p className="mt-1 text-xs font-medium text-stone-500">
-                  {dateRange.from ? formatHebrewShortDate(dateRange.from) : 'Hebrew start'}
-                  {' — '}
-                  {dateRange.to ? formatHebrewShortDate(dateRange.to) : 'Hebrew end'}
-                </p>
+      {hasRange && (
+        <div className="mt-4 rounded-2xl bg-[#F8F5F2] p-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-sm font-semibold text-stone-900">
+              {formatDisplayDate(dateRange.from!)} — {formatDisplayDate(dateRange.to!)}
+            </p>
+            <div className="ml-auto flex items-center gap-2">
+              <button
+                type="button"
+                onClick={clearSelection}
+                className="rounded-full px-4 py-2 text-sm font-semibold text-stone-600 transition hover:text-stone-900"
+              >
+                Clear
+              </button>
+              {!showBooking && (
+                <button
+                  type="button"
+                  onClick={() => setShowBooking(true)}
+                  className="rounded-full border border-stone-300 px-4 py-2 text-sm font-semibold text-stone-700 transition hover:bg-white"
+                >
+                  Record a booking
+                </button>
               )}
+              <button
+                type="button"
+                onClick={() => submit('block')}
+                disabled={pending}
+                className="rounded-full bg-[#252525] px-5 py-2 text-sm font-bold text-white transition hover:bg-[#111111] disabled:opacity-60"
+              >
+                {pending ? 'Saving…' : 'Block these dates'}
+              </button>
             </div>
-
-            <button
-              type="submit"
-              disabled={!canSave}
-              className="mt-4 w-full rounded-full bg-[#252525] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#111111] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {mode === 'booking' ? 'Add booking' : 'Block these dates'}
-            </button>
-          </form>
-
-          <div className="mt-5 flex flex-wrap gap-3 text-xs font-medium text-stone-600">
-            <LegendDot className="bg-green-200" label="Confirmed / booked" />
-            <LegendDot className="bg-amber-200" label="Pending" />
-            <LegendDot className="bg-sky-200" label="Request" />
-            <LegendDot className="bg-stone-300" label="Blocked" />
-            <LegendDot className="bg-[#fff3df] ring-1 ring-[#efd28c]" label="Chag" />
           </div>
-        </div>
 
-        {/* Calendar */}
-        <div className="overflow-x-auto rounded-3xl bg-[#faf8f6] p-3 md:p-4">
-          <div className="rounded-2xl bg-white p-3 md:p-4">
-            <Calendar
-              mode="range"
-              selected={selectedRange}
-              onDayClick={(day) => {
-                const event = eventByDay.get(formatDateISO(day))
-                if (event) {
-                  suppressSelectRef.current = true
-                  setActiveEvent(event)
-                }
-              }}
-              onSelect={(range) => {
-                if (suppressSelectRef.current) {
-                  suppressSelectRef.current = false
-                  return
-                }
-                if (range?.from && range?.to && range.from.getTime() === range.to.getTime()) {
-                  setDateRange({ from: range.from, to: undefined })
-                  return
-                }
-                setDateRange(range || {})
-              }}
-              numberOfMonths={1}
-              disabled={{ before: new Date() }}
-              showOutsideDays={false}
-              className="mx-auto w-full [--cell-size:2.9rem] md:[--cell-size:3.1rem]"
-              modifiers={{ booked: bookedDays, pending: pendingDays, blocked: blockedDays, request: requestDays }}
-              modifiersClassNames={{
-                booked: '[&_button]:bg-green-100 [&_button]:text-green-900',
-                pending: '[&_button]:bg-amber-100 [&_button]:text-amber-900',
-                blocked: '[&_button]:bg-stone-200 [&_button]:text-stone-500',
-                request: '[&_button]:bg-sky-100 [&_button]:text-sky-900',
-              }}
-            />
-          </div>
+          {showBooking && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-stone-200 pt-3">
+              <input
+                value={guestName}
+                onChange={(event) => setGuestName(event.target.value)}
+                placeholder="Guest name"
+                className="min-w-[200px] flex-1 rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900"
+              />
+              <button
+                type="button"
+                onClick={() => submit('booking')}
+                disabled={pending || !guestName.trim()}
+                className="rounded-full bg-green-700 px-5 py-2 text-sm font-bold text-white transition hover:bg-green-800 disabled:opacity-60"
+              >
+                {pending ? 'Saving…' : 'Save booking'}
+              </button>
+            </div>
+          )}
         </div>
+      )}
+
+      <div className="mt-5 flex flex-wrap gap-3 text-xs font-medium text-stone-600">
+        <LegendDot className="bg-green-200" label="Confirmed / booked" />
+        <LegendDot className="bg-amber-200" label="Pending" />
+        <LegendDot className="bg-sky-200" label="Request" />
+        <LegendDot className="bg-stone-300" label="Blocked" />
+        <LegendDot className="bg-[#fff3df] ring-1 ring-[#efd28c]" label="Chag" />
       </div>
 
       {activeEvent && (
