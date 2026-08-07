@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import Image from 'next/image'
 import type { Metadata } from 'next'
 import type { LucideIcon } from 'lucide-react'
 import {
@@ -21,7 +20,7 @@ import { slugifyNeighborhood } from '@/lib/neighborhood-pages'
 import { HomeSearchForm } from '@/components/home-search-form'
 import { RecentlyViewed } from '@/components/recently-viewed-home'
 import { getListingRatings, type ListingRating } from '@/lib/reviews'
-import { ListingRatingBadge } from '@/components/listing-rating'
+import { ListingCard } from '@/components/listing-card'
 
 // Public, global content only (featured listings + neighbourhoods; the
 // recently-viewed strip is client-side). Cache it via ISR instead of
@@ -279,7 +278,20 @@ export default async function JLMCollectiveHomePage() {
           {featuredStays.length > 0 ? (
             <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4">
               {featuredStays.map((stay) => (
-                <HomeListingCard key={stay.id} listing={stay} />
+                <ListingCard
+                  key={stay.id}
+                  listing={{
+                    id: stay.id,
+                    title: stay.title,
+                    area: stay.area,
+                    bedrooms: stay.bedrooms,
+                    max_guests: stay.max_guests,
+                    coverPhotoUrl: stay.coverPhotoUrl ?? null,
+                    rating: stay.rating,
+                    priceLabel: formatFeaturedPrice(stay),
+                    hasPrice: Boolean(stay.price_ils || stay.price_usd),
+                  }}
+                />
               ))}
             </div>
           ) : (
@@ -338,61 +350,6 @@ export default async function JLMCollectiveHomePage() {
             </div>
           </div>
         </section>
-      </div>
-    </div>
-  )
-}
-
-function HomeListingCard({ listing }: { listing: FeaturedStay }) {
-  return (
-    <div className="group">
-      <Link href={`/listings/${listing.id}?from=stays`} className="block">
-        <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-stone-100 shadow-sm transition-shadow duration-200 group-hover:shadow-md">
-          {listing.coverPhotoUrl ? (
-            <Image
-              src={listing.coverPhotoUrl}
-              alt={listing.title}
-              fill
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              loading="lazy"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-[#F8F5F2]">
-              <div className="text-center">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#c76f55]">JLM Collective</p>
-                <p className="mt-1 text-xs text-stone-600">Photo coming soon</p>
-              </div>
-            </div>
-          )}
-        </div>
-      </Link>
-
-      <div className="mt-3 space-y-0.5">
-        <Link
-          href={`/neighbourhoods/${slugifyNeighborhood(listing.area)}`}
-          className="block text-[11px] font-bold uppercase tracking-widest text-[#c76f55] hover:underline"
-        >
-          {listing.area}
-        </Link>
-        <Link href={`/listings/${listing.id}?from=stays`} className="block space-y-0.5">
-          <p className="line-clamp-1 font-semibold leading-snug text-stone-950">{listing.title}</p>
-          <ListingRatingBadge rating={listing.rating} />
-          <p className="text-sm text-stone-500">
-            {[
-              listing.bedrooms ? `${listing.bedrooms} bed` : null,
-              listing.max_guests ? `sleeps ${listing.max_guests}` : null,
-            ]
-              .filter(Boolean)
-              .join(' · ')}
-          </p>
-          <p className="pt-1 text-sm font-semibold text-stone-950">
-            {formatFeaturedPrice(listing)}
-            {(listing.price_ils || listing.price_usd) && (
-              <span className="font-normal text-stone-500"> / night</span>
-            )}
-          </p>
-        </Link>
       </div>
     </div>
   )

@@ -1,11 +1,9 @@
 import { Suspense } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { z } from 'zod'
 import { createPublicClient } from '@/lib/supabase/public'
 import { ogImages, ogTwitterImages } from '@/lib/og'
 import { allNeighborhoods } from '@/lib/neighborhoods'
-import { slugifyNeighborhood } from '@/lib/neighborhood-pages'
 import { getAmenityLabel } from '@/lib/stay-amenities'
 import { formatDualCurrencyPrice } from '@/lib/utils/currency'
 import { StaysFilterBar } from '@/components/stays-filter-bar'
@@ -14,7 +12,7 @@ import { StaysNeighborhoodNav } from '@/components/stays-neighborhood-nav'
 import { RecentlyViewed } from '@/components/recently-viewed'
 import { Pagination, normalizePaginationSearchParams } from '@/components/pagination'
 import { getListingRatings, type ListingRating } from '@/lib/reviews'
-import { ListingRatingBadge } from '@/components/listing-rating'
+import { ListingCard } from '@/components/listing-card'
 
 const STAYS_PAGE_SIZE = 24
 
@@ -266,7 +264,21 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
             <>
               <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
                 {listings.map((listing, index) => (
-                  <ListingCard key={listing.id} listing={listing} priority={index < 4} />
+                  <ListingCard
+                    key={listing.id}
+                    priority={index < 4}
+                    listing={{
+                      id: listing.id,
+                      title: listing.title,
+                      area: listing.area,
+                      bedrooms: listing.bedrooms,
+                      max_guests: listing.max_guests,
+                      coverPhotoUrl: listing.cover_photo_url ?? null,
+                      rating: listing.rating,
+                      priceLabel: formatDualCurrencyPrice(listing),
+                      hasPrice: Boolean(listing.price_ils || listing.price_usd),
+                    }}
+                  />
                 ))}
               </div>
               {totalPages > 1 && (
@@ -514,74 +526,3 @@ async function loadListings({
   }
 }
 
-function ListingCard({
-  listing,
-  priority = false,
-}: {
-  listing: Listing & {
-    cover_photo_url?: string | null
-    rating?: ListingRating | null
-  }
-  priority?: boolean
-}) {
-  return (
-    <div className="group">
-      <Link
-        href={`/listings/${listing.id}?from=stays`}
-        className="block"
-      >
-        <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-stone-100 shadow-sm transition-shadow duration-200 group-hover:shadow-md">
-          {listing.cover_photo_url ? (
-            <Image
-              src={listing.cover_photo_url}
-              alt={listing.title}
-              fill
-              className="object-cover"
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              {...(priority ? { priority: true } : { loading: 'lazy' as const })}
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-[#F8F5F2]">
-              <div className="text-center">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#c76f55]">JLM Collective</p>
-                <p className="mt-1 text-xs text-stone-600">Photo coming soon</p>
-              </div>
-            </div>
-          )}
-        </div>
-      </Link>
-
-      <div className="mt-3 space-y-0.5">
-        <Link
-          href={`/neighbourhoods/${slugifyNeighborhood(listing.area)}`}
-          className="block text-[11px] font-bold uppercase tracking-widest text-[#c76f55] hover:underline"
-        >
-          {listing.area}
-        </Link>
-        <Link
-          href={`/listings/${listing.id}?from=stays`}
-          className="block space-y-0.5"
-        >
-          <p className="line-clamp-1 font-semibold leading-snug text-stone-950">
-            {listing.title}
-          </p>
-          <ListingRatingBadge rating={listing.rating} />
-          <p className="text-sm text-stone-500">
-            {[
-              listing.bedrooms ? `${listing.bedrooms} bed` : null,
-              listing.max_guests ? `sleeps ${listing.max_guests}` : null,
-            ]
-              .filter(Boolean)
-              .join(' \u00b7 ')}
-          </p>
-          <p className="pt-1 text-sm font-semibold text-stone-950">
-            {formatDualCurrencyPrice(listing)}
-            {(listing.price_ils || listing.price_usd) && (
-              <span className="font-normal text-stone-500"> / night</span>
-            )}
-          </p>
-        </Link>
-      </div>
-    </div>
-  )
-}

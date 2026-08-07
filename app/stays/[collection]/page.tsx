@@ -1,9 +1,9 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import Image from 'next/image'
 import { createPublicClient } from '@/lib/supabase/public'
 import { findStayCollection } from '@/lib/stay-collections'
+import { ListingCard } from '@/components/listing-card'
 
 type CollectionListing = {
   id: string
@@ -141,48 +141,27 @@ export default async function StayCollectionPage({
         {listings.length > 0 ? (
           <div className="mt-10 grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
             {listings.map((listing, index) => {
-              const coverPhotoUrl = photoMap.get(listing.id)
+              const priceLabel = listing.price_usd
+                ? `$${Number(listing.price_usd).toLocaleString()}`
+                : listing.price_ils
+                  ? `\u20aa${Number(listing.price_ils).toLocaleString()}`
+                  : 'Price on request'
               return (
-                <Link key={listing.id} href={`/listings/${listing.id}`} className="group block">
-                  <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-stone-100 shadow-sm transition-shadow duration-200 group-hover:shadow-md">
-                    {coverPhotoUrl ? (
-                      <Image
-                        src={coverPhotoUrl}
-                        alt={listing.title}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                        {...(index < 4 ? { priority: true } : { loading: 'lazy' as const })}
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-[#F8F5F2]">
-                        <p className="text-xs text-stone-600">Photo coming soon</p>
-                      </div>
-                    )}
-                  </div>
-                  <div className="mt-3 space-y-0.5">
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-[#c76f55]">{listing.area}</p>
-                    <p className="line-clamp-1 font-semibold leading-snug text-stone-950">{listing.title}</p>
-                    <p className="text-sm text-stone-500">
-                      {[
-                        listing.bedrooms ? `${listing.bedrooms} bed` : null,
-                        listing.max_guests ? `sleeps ${listing.max_guests}` : null,
-                      ]
-                        .filter(Boolean)
-                        .join(' \u00b7 ')}
-                    </p>
-                    <p className="pt-1 text-sm font-semibold text-stone-950">
-                      {listing.price_usd
-                        ? `$${Number(listing.price_usd).toLocaleString()}`
-                        : listing.price_ils
-                          ? `\u20aa${Number(listing.price_ils).toLocaleString()}`
-                          : 'Price on request'}
-                      {(listing.price_usd || listing.price_ils) && (
-                        <span className="font-normal text-stone-500"> / night</span>
-                      )}
-                    </p>
-                  </div>
-                </Link>
+                <ListingCard
+                  key={listing.id}
+                  priority={index < 4}
+                  listing={{
+                    id: listing.id,
+                    title: listing.title,
+                    area: listing.area,
+                    bedrooms: listing.bedrooms,
+                    max_guests: listing.max_guests,
+                    coverPhotoUrl: photoMap.get(listing.id) ?? null,
+                    rating: null,
+                    priceLabel,
+                    hasPrice: Boolean(listing.price_ils || listing.price_usd),
+                  }}
+                />
               )
             })}
           </div>
