@@ -51,6 +51,7 @@ export default async function AdminReadinessPage() {
     { count: pendingApplicationsCount },
     { data: paymentProfilesData },
     { data: settingsData },
+    { data: schemaGapsData },
   ] = await Promise.all([
     supabase
       .from('listings')
@@ -77,7 +78,17 @@ export default async function AdminReadinessPage() {
         'jlm_payments_enabled',
         'direct_payments_enabled',
       ]),
+    supabase.rpc('admin_schema_write_gaps'),
   ])
+
+  // Insert-required columns (NOT NULL, no default, non-PK) on the app's write
+  // tables, grouped by table. A review aid for spotting a newly added mandatory
+  // column the code may not populate — see migration 098.
+  const schemaGaps = (schemaGapsData || []) as Array<{ table_name: string; column_name: string }>
+  const schemaGapsByTable = schemaGaps.reduce<Record<string, string[]>>((acc, gap) => {
+    ;(acc[gap.table_name] ||= []).push(gap.column_name)
+    return acc
+  }, {})
 
   const listings: ListingReadinessRow[] = (listingsData || []).map((listing: ListingReadinessRow) => ({
     id: listing.id,
@@ -418,6 +429,42 @@ export default async function AdminReadinessPage() {
           {weakListings.length === 0 && (
             <p className="py-8 text-center text-sm text-stone-500">
               No weak live listings found.
+            </p>
+          )}
+        </div>
+      </section>
+
+      <section className="mt-6 rounded-3xl bg-white p-6 shadow-sm">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="text-lg font-bold text-stone-950">Schema audit — insert-required columns</h2>
+          <span className="text-sm text-stone-500">
+            {schemaGaps.length} column{schemaGaps.length === 1 ? '' : 's'}
+          </span>
+        </div>
+        <p className="mt-1 text-sm text-stone-600">
+          Columns an insert must provide (NOT NULL, no default) on the app&rsquo;s write tables. If any column
+          here isn&rsquo;t populated by the code that writes to its table, those inserts fail at runtime — this is
+          where a NOT NULL column added in the Supabase UI shows up. Scan it after any schema change.
+        </p>
+        <div className="mt-5 divide-y divide-stone-100">
+          {Object.entries(schemaGapsByTable).map(([table, columns]) => (
+            <div key={table} className="grid gap-3 py-4 md:grid-cols-[1fr_2fr]">
+              <span className="font-mono text-sm font-bold text-stone-950">{table}</span>
+              <span className="flex flex-wrap gap-2">
+                {columns.map((column) => (
+                  <span
+                    key={column}
+                    className="rounded-full bg-stone-100 px-3 py-1 font-mono text-xs font-semibold text-stone-700"
+                  >
+                    {column}
+                  </span>
+                ))}
+              </span>
+            </div>
+          ))}
+          {schemaGaps.length === 0 && (
+            <p className="py-8 text-center text-sm text-stone-500">
+              No insert-required columns detected (or migration 098 has not been run yet).
             </p>
           )}
         </div>
