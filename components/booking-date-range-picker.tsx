@@ -1,9 +1,22 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
 import type { DateRange as DayPickerDateRange } from 'react-day-picker'
-import { Calendar } from '@/components/ui/calendar'
 import { formatHebrewShortDate, getJewishHoliday } from '@/lib/hebrew-date'
+
+// react-day-picker is heavy and the calendar only opens on click, so load it
+// lazily. The skeleton fills the calendar body while its chunk fetches on first
+// open, avoiding a blank-panel flash inside the already-open popover.
+const Calendar = dynamic(
+  () => import('@/components/ui/calendar').then((mod) => mod.Calendar),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[22rem] w-full animate-pulse rounded-2xl bg-stone-100" />
+    ),
+  },
+)
 
 type DateRange = {
   from?: Date

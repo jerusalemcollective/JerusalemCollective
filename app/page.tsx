@@ -20,6 +20,8 @@ import { defaultExploreNeighborhoods } from '@/lib/neighborhoods'
 import { slugifyNeighborhood } from '@/lib/neighborhood-pages'
 import { HomeSearchForm } from '@/components/home-search-form'
 import { RecentlyViewed } from '@/components/recently-viewed-home'
+import { getListingRatings, type ListingRating } from '@/lib/reviews'
+import { ListingRatingBadge } from '@/components/listing-rating'
 
 // Public, global content only (featured listings + neighbourhoods; the
 // recently-viewed strip is client-side). Cache it via ISR instead of
@@ -58,6 +60,7 @@ type FeaturedStay = {
   price_usd: number | null
   is_featured?: boolean | null
   coverPhotoUrl: string | null
+  rating: ListingRating | null
 }
 
 type PopularNeighborhoodRow = {
@@ -98,7 +101,9 @@ export const metadata: Metadata = {
   },
 }
 
-function toFeaturedStay(listing: ListingRow & { cover_photo_url?: string | null }): FeaturedStay {
+function toFeaturedStay(
+  listing: ListingRow & { cover_photo_url?: string | null; rating?: ListingRating | null },
+): FeaturedStay {
   return {
     id: listing.id,
     title: listing.title,
@@ -109,6 +114,7 @@ function toFeaturedStay(listing: ListingRow & { cover_photo_url?: string | null 
     price_usd: listing.price_usd,
     is_featured: listing.is_featured ?? null,
     coverPhotoUrl: listing.cover_photo_url || null,
+    rating: listing.rating ?? null,
   }
 }
 
@@ -172,11 +178,13 @@ async function getHomepageData() {
       }
     })
 
+    const ratings = await getListingRatings(supabase, featuredIds)
     const featuredStays = featuredRows.length
       ? featuredRows.map((listing) =>
           toFeaturedStay({
             ...listing,
             cover_photo_url: coverPhotoByListingId.get(listing.id) || null,
+            rating: ratings.get(listing.id) ?? null,
           }),
         )
       : []
@@ -369,6 +377,7 @@ function HomeListingCard({ listing }: { listing: FeaturedStay }) {
         </Link>
         <Link href={`/listings/${listing.id}?from=stays`} className="block space-y-0.5">
           <p className="line-clamp-1 font-semibold leading-snug text-stone-950">{listing.title}</p>
+          <ListingRatingBadge rating={listing.rating} />
           <p className="text-sm text-stone-500">
             {[
               listing.bedrooms ? `${listing.bedrooms} bed` : null,

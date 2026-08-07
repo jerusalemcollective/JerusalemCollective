@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { CheckCircle2, Link2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { BookingDateRangePicker } from '@/components/booking-date-range-picker'
-import { GalleryOverlay } from '@/components/gallery-overlay'
 import { MessageHostDialog } from '@/components/message-host-dialog'
 import dynamic from 'next/dynamic'
 import { SaveListingButton } from '@/components/save-listing-button'
@@ -14,11 +14,19 @@ import { AmenityDisplay } from '@/components/amenity-display'
 import { recordListingView } from '@/components/recently-viewed'
 import { recordListingEngagement } from '@/lib/listing-engagement'
 import { formatListingPrice, formatPrice } from '@/lib/utils/currency'
+import { loadEnquiryDraft } from '@/lib/enquiry-draft'
 
 // Google Maps (@react-google-maps/api) is heavy; load it only in the browser,
 // on demand, so it doesn't ship in or block this high-traffic SEO page.
 const ListingNeighbourhoodMap = dynamic(
   () => import('@/components/listing-neighbourhood-map').then((mod) => mod.ListingNeighbourhoodMap),
+  { ssr: false },
+)
+
+// The full-screen gallery lightbox only opens on click — keep it out of the
+// initial bundle on this high-traffic SEO page.
+const GalleryOverlay = dynamic(
+  () => import('@/components/gallery-overlay').then((mod) => mod.GalleryOverlay),
   { ssr: false },
 )
 
@@ -106,7 +114,6 @@ type ListingDetailClientProps = {
   reviews: ListingDetailReview[]
   blockedRanges: ListingBlockedRange[]
   similarListings: SimilarListing[]
-  fromStays: boolean
   neighbourhoodDescription: string | null
   walkingMinutes: number | null
   shulDistances: Array<{
@@ -147,7 +154,6 @@ export function ListingDetailClient({
   reviews,
   blockedRanges,
   similarListings,
-  fromStays,
   neighbourhoodDescription,
   walkingMinutes,
   shulDistances,
@@ -163,10 +169,32 @@ export function ListingDetailClient({
   const [bookingDateRange, setBookingDateRange] = useState<DateRange>({})
   const [guestCount, setGuestCount] = useState(1)
   const [existingConversationId, setExistingConversationId] = useState<string | null>(null)
+  // Start from the server snapshot, then refresh on mount so an ISR-cached page
+  // never shows stale availability in the picker.
+  const [availability, setAvailability] = useState<ListingBlockedRange[]>(blockedRanges)
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const mobilePhotoDragStartRef = useRef<number | null>(null)
   const mobilePhotoDidSwipeRef = useRef(false)
   const shareUrl = typeof window !== 'undefined' ? window.location.href : ''
+
+  // Restore an enquiry draft saved before a login redirect. Dates + guests live
+  // in this parent (both desktop and mobile BookingControls read the same
+  // state), so a single restore here rehydrates every booking surface and
+  // re-enables the "Request to book" button. The dialog restores its own
+  // message/name text and clears the draft when the guest reopens it.
+  useEffect(() => {
+    const draft = loadEnquiryDraft(listing.id)
+    if (!draft) return
+    if (draft.checkIn && draft.checkOut) {
+      setBookingDateRange({
+        from: new Date(`${draft.checkIn}T12:00:00`),
+        to: new Date(`${draft.checkOut}T12:00:00`),
+      })
+    }
+    if (Number.isFinite(draft.guests) && draft.guests > 0) {
+      setGuestCount(draft.guests)
+    }
+  }, [listing.id])
 
   const nights =
     bookingDateRange.from && bookingDateRange.to
@@ -204,6 +232,16 @@ export function ListingDetailClient({
   useEffect(() => {
     const supabase = createClient()
     let isActive = true
+    // Refresh availability against the live table (the page may be served from
+    // the ISR cache). /api/book-now re-checks server-side before charging, so
+    // this is a freshness improvement for the picker, not the safety boundary.
+    void supabase
+      .from('listing_unavailable_ranges')
+      .select('start_date, end_date')
+      .eq('listing_id', listing.id)
+      .then(({ data }) => {
+        if (isActive && data) setAvailability(data)
+      })
     void recordListingEngagement(supabase, listing.id, 'view')
     recordListingView({
       id: listing.id,
@@ -361,11 +399,9 @@ export function ListingDetailClient({
           <span aria-hidden="true">/</span>
           <span aria-current="page" className="line-clamp-1 text-stone-900">{listing.title}</span>
         </nav>
-        {fromStays && (
-          <Link href="/stays" className="mb-4 inline-flex text-sm font-medium text-stone-500 transition hover:text-stone-900">
-            &larr; Back to search
-          </Link>
-        )}
+        <Suspense fallback={null}>
+          <BackToSearchLink />
+        </Suspense>
 
         <div className="mb-5 flex items-center justify-end">
           <div className="flex items-center justify-between gap-3 md:justify-end">
@@ -558,6 +594,20 @@ export function ListingDetailClient({
               <h1 className="font-display mt-2 text-3xl font-bold tracking-tight text-stone-950 md:text-4xl">
                 {listing.title}
               </h1>
+              {avgRating !== null && (
+                <a
+                  href="#reviews"
+                  className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-stone-950 transition hover:text-[#c76f55]"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="#c76f55" stroke="none" aria-hidden="true">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                  </svg>
+                  {avgRating.toFixed(1)}
+                  <span className="font-normal text-stone-500">
+                    · {reviews.length} review{reviews.length === 1 ? '' : 's'}
+                  </span>
+                </a>
+              )}
               <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-stone-500">
                 {listing.bedrooms !== null && (
                   <span>
@@ -818,7 +868,7 @@ export function ListingDetailClient({
             )}
 
             <hr className="border-stone-100" />
-            <div className="py-8">
+            <div id="reviews" className="scroll-mt-24 py-8">
               <h2 className="mb-3 text-lg font-bold text-stone-900">Reviews ({reviews.length})</h2>
               {reviews.length === 0 ? (
                 <p className="text-sm text-stone-500">No reviews yet.</p>
@@ -905,7 +955,7 @@ export function ListingDetailClient({
                   totalUSD={totalUSD}
                   existingConversationId={existingConversationId}
                   onConversationCreated={setExistingConversationId}
-                  blockedRanges={blockedRanges}
+                  blockedRanges={availability}
                 />
                 <PaymentClarityNote allowsOnlinePayment={allowsOnlinePayment} />
                 <div className="mt-5 space-y-2.5 border-t border-stone-100 pt-5">
@@ -1045,7 +1095,7 @@ export function ListingDetailClient({
                 totalUSD={totalUSD}
                 existingConversationId={existingConversationId}
                 onConversationCreated={setExistingConversationId}
-                blockedRanges={blockedRanges}
+                blockedRanges={availability}
                 mobile
               />
               <PaymentClarityNote allowsOnlinePayment={allowsOnlinePayment} />
@@ -1094,6 +1144,19 @@ export function ListingDetailClient({
         />
       )}
     </div>
+  )
+}
+
+function BackToSearchLink() {
+  const fromStays = useSearchParams().get('from') === 'stays'
+  if (!fromStays) return null
+  return (
+    <Link
+      href="/stays"
+      className="mb-4 inline-flex text-sm font-medium text-stone-500 transition hover:text-stone-900"
+    >
+      &larr; Back to search
+    </Link>
   )
 }
 

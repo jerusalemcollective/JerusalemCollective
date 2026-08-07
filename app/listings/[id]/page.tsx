@@ -1,4 +1,5 @@
 ﻿import { notFound } from 'next/navigation'
+import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import { z } from 'zod'
 import { createPublicClient } from '@/lib/supabase/public'
@@ -12,6 +13,7 @@ import {
   type ListingDetailReview,
 } from '@/components/listing-detail-client'
 import { neighborhoodDescriptions } from '@/lib/neighborhood-pages'
+import { PaymentCancelledBanner } from '@/components/payment-cancelled-banner'
 
 type HostRecord = {
   name: string
@@ -30,7 +32,6 @@ type ListingTitleInput = {
 
 type ListingPageProps = {
   params: Promise<{ id: string }>
-  searchParams?: Promise<Record<string, string | string[] | undefined>>
 }
 
 type SimilarListing = {
@@ -141,6 +142,10 @@ const paymentProfileSchema = z.object({
   payout_currencies: z.array(z.string()).nullable(),
 })
 
+// Every Dynamic API is removed below (no searchParams/cookies), and all data
+// sources are cookieless or unstable_cache-backed — so force-static makes the
+// hourly ISR caching deterministic instead of dependent on fetch defaults.
+export const dynamic = 'force-static'
 export const revalidate = 3600
 
 function getPublicName(host: HostRecord): string {
@@ -306,13 +311,8 @@ export async function generateMetadata({
   }
 }
 
-export default async function ListingDetailPage({ params, searchParams }: ListingPageProps) {
+export default async function ListingDetailPage({ params }: ListingPageProps) {
   const { id } = await params
-  const query = searchParams ? await searchParams : {}
-  const from = Array.isArray(query.from) ? query.from[0] : query.from
-  const fromStays = from === 'stays'
-  const paymentValue = Array.isArray(query.payment) ? query.payment[0] : query.payment
-  const paymentCancelled = paymentValue === 'cancelled'
   const [servicesBarEnabled, paymentRoutes] = await Promise.all([
     getServicesBarEnabled(),
     getPaymentRouteSettings(),
@@ -366,7 +366,6 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
           reviews={[]}
           blockedRanges={[]}
           similarListings={[]}
-          fromStays={fromStays}
           neighbourhoodDescription={null}
           walkingMinutes={null}
           shulDistances={[]}
@@ -607,13 +606,9 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: escapeJsonLd(breadcrumbJsonLd) }}
       />
-      {paymentCancelled && (
-        <div role="status" className="mx-auto max-w-6xl px-4 pt-4">
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-            Payment cancelled — you weren’t charged. Your dates are still available if you’d like to try again.
-          </div>
-        </div>
-      )}
+      <Suspense fallback={null}>
+        <PaymentCancelledBanner />
+      </Suspense>
       <ListingDetailClient
         listing={{
           ...listing,
@@ -629,7 +624,6 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
         reviews={reviews}
         blockedRanges={z.array(blockedRangeSchema).parse(blockedRangesData ?? [])}
         similarListings={similarListings}
-        fromStays={fromStays}
         neighbourhoodDescription={neighbourhoodDescription}
         walkingMinutes={walkingMinutes}
         shulDistances={shulDistances}

@@ -1,5 +1,5 @@
 import { PaymentUpdateForm } from '@/components/payment-update-form'
-import { DirectPaymentScheduleFields } from '@/components/direct-payment-schedule-fields'
+import { HostPaymentCurrencyAndSchedule } from '@/components/host-payment-currency-and-schedule'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { getPaymentRouteSettings } from '@/lib/platform-settings'
 import { updateHostPaymentPreferences, confirmBookingDepositReceived } from './actions'
@@ -287,20 +287,6 @@ export default async function HostPaymentsPage({
                 </span>
               </label>
 
-              <label className="block">
-                <span className="text-sm font-semibold text-stone-800">Preferred currency</span>
-                <select
-                  name="preferredCurrency"
-                  defaultValue={profile?.preferred_currency || 'USD'}
-                  className={inputClass}
-                >
-                  <option value="USD">USD</option>
-                  <option value="GBP">GBP</option>
-                  <option value="EUR">EUR</option>
-                  <option value="ILS">ILS</option>
-                </select>
-              </label>
-
               <div>
                 <p className="text-sm font-semibold text-stone-800">Currencies you can receive</p>
                 <div className="mt-2 grid gap-2 sm:grid-cols-4">
@@ -321,9 +307,9 @@ export default async function HostPaymentsPage({
                 </p>
               </div>
 
-              <DirectPaymentScheduleFields
-                defaultValue={profile?.direct_payment_instructions}
-                currency={profile?.preferred_currency || 'USD'}
+              <HostPaymentCurrencyAndSchedule
+                initialCurrency={profile?.preferred_currency || 'USD'}
+                scheduleDefault={profile?.direct_payment_instructions}
               />
 
               <div className="flex justify-end">
@@ -489,6 +475,3 @@ function payoutStatusTone(status?: string | null) {
   if (status === 'cancelled') return 'bg-stone-100 text-stone-500'
   return 'bg-stone-100 text-stone-700'
 }
-
-const inputClass =
-  'mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-stone-900 outline-none transition placeholder:text-stone-500 focus:border-[#c76f55]'

@@ -13,6 +13,8 @@ import { StaysMapView } from '@/components/stays-map-view'
 import { StaysNeighborhoodNav } from '@/components/stays-neighborhood-nav'
 import { RecentlyViewed } from '@/components/recently-viewed'
 import { Pagination, normalizePaginationSearchParams } from '@/components/pagination'
+import { getListingRatings, type ListingRating } from '@/lib/reviews'
+import { ListingRatingBadge } from '@/components/listing-rating'
 
 const STAYS_PAGE_SIZE = 24
 
@@ -492,10 +494,13 @@ async function loadListings({
     }
   }
 
+  const ratings = await getListingRatings(supabase, listingIds)
+
   return {
     listings: listingRows.map((listing) => ({
       ...listing,
       cover_photo_url: photoMap.get(listing.id) || null,
+      rating: ratings.get(listing.id) ?? null,
     })),
     total: count ?? listingRows.length,
   }
@@ -507,6 +512,7 @@ function ListingCard({
 }: {
   listing: Listing & {
     cover_photo_url?: string | null
+    rating?: ListingRating | null
   }
   priority?: boolean
 }) {
@@ -551,6 +557,7 @@ function ListingCard({
           <p className="line-clamp-1 font-semibold leading-snug text-stone-950">
             {listing.title}
           </p>
+          <ListingRatingBadge rating={listing.rating} />
           <p className="text-sm text-stone-500">
             {[
               listing.bedrooms ? `${listing.bedrooms} bed` : null,

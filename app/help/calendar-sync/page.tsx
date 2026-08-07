@@ -37,10 +37,10 @@ export default function CalendarSyncHelpPage() {
         </div>
 
         <Link
-          href="/host/dashboard/listings"
+          href="/host/dashboard/calendar"
           className="mt-8 inline-flex rounded-full bg-[#252525] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#111111]"
         >
-          Back to listings
+          Back to calendar
         </Link>
       </section>
     </div>

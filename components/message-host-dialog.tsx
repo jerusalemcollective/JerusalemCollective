@@ -11,6 +11,11 @@ import {
 } from '@/lib/messaging'
 import { recordListingEngagement } from '@/lib/listing-engagement'
 import { formatDateDisplay, formatDateISO } from '@/lib/utils/date'
+import {
+  saveEnquiryDraft,
+  loadEnquiryDraft,
+  clearEnquiryDraft,
+} from '@/lib/enquiry-draft'
 
 type MessageHostDialogProps = {
   listingId: string
@@ -115,6 +120,21 @@ export function MessageHostDialog({
 
     let isActive = true
 
+    // Restore a draft saved before a login redirect (same tab session).
+    // One-shot: consume + clear so reopening the dialog can't keep clobbering
+    // the guest's edits. Only a draft matching THIS dialog's intent is
+    // restored, so the "message" and "request" dialogs never cross-fill.
+    const draft = loadEnquiryDraft(listingId)
+    const restoredDraft =
+      draft && draft.intent === intent && draft.quickQuestion === quickQuestion
+        ? draft
+        : null
+    if (restoredDraft) {
+      setMessage(restoredDraft.message)
+      if (restoredDraft.senderName) setSenderName(restoredDraft.senderName)
+      clearEnquiryDraft(listingId)
+    }
+
     const loadSenderName = async () => {
       const supabase = createClient()
       const {
@@ -122,6 +142,10 @@ export function MessageHostDialog({
       } = await supabase.auth.getUser()
 
       if (!user) return
+
+      // A restored draft name is what the guest actually typed - don't
+      // overwrite it with the profile name.
+      if (restoredDraft?.senderName) return
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -139,7 +163,7 @@ export function MessageHostDialog({
     return () => {
       isActive = false
     }
-  }, [dialogOpen])
+  }, [dialogOpen, listingId, intent, quickQuestion])
 
   if (!hostId) {
     return controlledOpen === undefined ? (
@@ -169,6 +193,15 @@ export function MessageHostDialog({
       } = await supabase.auth.getUser()
 
       if (!user) {
+        saveEnquiryDraft(listingId, {
+          message,
+          senderName,
+          checkIn,
+          checkOut,
+          guests,
+          intent,
+          quickQuestion,
+        })
         router.push(`/login?redirect=${encodeURIComponent(`/listings/${listingId}`)}`)
         return
       }
