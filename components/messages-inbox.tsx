@@ -18,20 +18,12 @@ const HOST_QUICK_REPLIES = [
     text: 'Thank you for your enquiry. The property is available for your dates. Could you tell me a little more about your group and the purpose of your visit?',
   },
   {
-    label: 'Confirm details',
-    text: 'Thank you for getting in touch. I can confirm the property is available. Please let me know if you have any questions before we proceed.',
-  },
-  {
     label: 'Not available',
     text: 'Thank you for your enquiry. Unfortunately the property is not available for those dates. I would be happy to suggest alternative dates if that would help.',
   },
   {
     label: 'Need more info',
     text: 'Thank you for your message. Before I can confirm availability, could you let me know the purpose of your visit and a little about your group?',
-  },
-  {
-    label: 'Will reply shortly',
-    text: 'Thank you for your enquiry. I have received your message and will be in touch shortly to confirm availability.',
   },
   {
     label: 'Booking confirmed',
@@ -911,76 +903,11 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
     )
   }
 
-  return (
-    <>
-      <div className="overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm">
-        {mode === 'host' && listingOptions.length > 1 && (
-          <div className="border-b border-stone-200 px-4 py-4">
-            <select
-              value={listingFilter}
-              onChange={(event) => setListingFilter(event.target.value)}
-              className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm font-semibold text-stone-700 outline-none transition focus:border-[#c76f55]"
-            >
-              <option value="all">All listings</option>
-              {listingOptions.map(([id, title]) => (
-                <option key={id} value={id}>
-                  {title}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        <div className="divide-y divide-stone-100">
-          {filteredConversations.map((conversation) => {
-            const participantName = conversation.other_participant?.full_name || (mode === 'host' ? 'Guest' : 'Host')
-
-            return (
-              <button
-                key={conversation.id}
-                type="button"
-                onClick={() => setSelectedConversationId(conversation.id)}
-                className="flex w-full items-center gap-3 px-5 py-4 text-left transition hover:bg-stone-50"
-              >
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-stone-950 text-sm font-bold text-white">
-                  {getInitials(participantName)}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-bold text-stone-950">{participantName}</span>
-                  <span className="block truncate text-sm text-stone-500">
-                    {conversation.listing?.title || 'Listing conversation'}
-                  </span>
-                  <span className="mt-0.5 block truncate text-sm text-stone-400">
-                    {conversation.last_message?.content || conversation.request?.message || 'Open conversation'}
-                  </span>
-                </span>
-                {/* Fixed right column: the time stays pinned top-right and the
-                    status tag sits below it, so the date never shifts. */}
-                <span className="flex shrink-0 flex-col items-end gap-1.5 pl-2">
-                  <span className="text-[11px] font-medium text-stone-400">
-                    {formatTimestamp(conversation.updated_at)}
-                  </span>
-                  {conversation.request && (
-                    <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ring-1 ${requestStatusClass(conversation.request.status)}`}>
-                      {requestStatusLabel(conversation.request.status)}
-                    </span>
-                  )}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      {selectedConversation && (
-        <div
-          className="fixed inset-0 z-50 flex justify-center bg-stone-950/40 sm:items-center sm:p-6"
-          onClick={() => setSelectedConversationId(null)}
-        >
-          <div
-            className="flex h-full w-full flex-col bg-[#fcfaf8] shadow-2xl sm:h-[88vh] sm:max-w-2xl sm:overflow-hidden sm:rounded-[2rem]"
-            onClick={(event) => event.stopPropagation()}
-          >
+  // Full-page conversation view (opened from the contacts list). The header and
+  // request details stay pinned at the top; only the thread scrolls.
+  if (selectedConversation) {
+    return (
+      <div className="flex h-[calc(100vh-10rem)] min-h-[540px] flex-col overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm">
             <div className="border-b border-stone-200 bg-white px-4 py-4">
               <div className="flex items-center gap-3">
                 <button
@@ -1125,19 +1052,17 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
               </div>
             )}
             {mode === 'host' && (
-              <div className="mb-3">
-                <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-                  {HOST_QUICK_REPLIES.map((reply) => (
-                    <button
-                      key={reply.label}
-                      type="button"
-                      onClick={() => setDraft(reply.text)}
-                      className="shrink-0 whitespace-nowrap rounded-full border border-stone-200 bg-[#fbfaf8] px-3.5 py-2 text-xs font-semibold text-stone-700 transition hover:border-[#c76f55] hover:bg-[#fff4ef] hover:text-[#c76f55]"
-                    >
-                      {reply.label}
-                    </button>
-                  ))}
-                </div>
+              <div className="mb-3 flex flex-wrap gap-2">
+                {HOST_QUICK_REPLIES.map((reply) => (
+                  <button
+                    key={reply.label}
+                    type="button"
+                    onClick={() => setDraft(reply.text)}
+                    className="rounded-full border border-stone-200 bg-[#fbfaf8] px-3.5 py-2 text-xs font-semibold text-stone-700 transition hover:border-[#c76f55] hover:bg-[#fff4ef] hover:text-[#c76f55]"
+                  >
+                    {reply.label}
+                  </button>
+                ))}
               </div>
             )}
             <div className="flex items-end gap-3 rounded-[1.5rem] border border-stone-200 bg-[#fbfaf8] p-2 focus-within:border-[#c76f55]">
@@ -1182,10 +1107,69 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
               Enter to send · Shift + Enter for a new line
             </p>
           </div>
-          </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm">
+      {mode === 'host' && listingOptions.length > 1 && (
+        <div className="border-b border-stone-200 px-4 py-4">
+          <select
+            value={listingFilter}
+            onChange={(event) => setListingFilter(event.target.value)}
+            className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm font-semibold text-stone-700 outline-none transition focus:border-[#c76f55]"
+          >
+            <option value="all">All listings</option>
+            {listingOptions.map(([id, title]) => (
+              <option key={id} value={id}>
+                {title}
+              </option>
+            ))}
+          </select>
         </div>
       )}
-    </>
+
+      <div className="divide-y divide-stone-100">
+        {filteredConversations.map((conversation) => {
+          const participantName = conversation.other_participant?.full_name || (mode === 'host' ? 'Guest' : 'Host')
+
+          return (
+            <button
+              key={conversation.id}
+              type="button"
+              onClick={() => setSelectedConversationId(conversation.id)}
+              className="flex w-full items-center gap-3 px-5 py-4 text-left transition hover:bg-stone-50"
+            >
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-stone-950 text-sm font-bold text-white">
+                {getInitials(participantName)}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-bold text-stone-950">{participantName}</span>
+                <span className="block truncate text-sm text-stone-500">
+                  {conversation.listing?.title || 'Listing conversation'}
+                </span>
+                <span className="mt-0.5 block truncate text-sm text-stone-400">
+                  {conversation.last_message?.content || conversation.request?.message || 'Open conversation'}
+                </span>
+              </span>
+              {/* Fixed right column: the time stays pinned top-right and the
+                  status tag sits below it, so the date never shifts. */}
+              <span className="flex shrink-0 flex-col items-end gap-1.5 pl-2">
+                <span className="text-[11px] font-medium text-stone-400">
+                  {formatTimestamp(conversation.updated_at)}
+                </span>
+                {conversation.request && (
+                  <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ring-1 ${requestStatusClass(conversation.request.status)}`}>
+                    {requestStatusLabel(conversation.request.status)}
+                  </span>
+                )}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 
