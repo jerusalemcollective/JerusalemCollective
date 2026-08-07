@@ -20,6 +20,7 @@ type ApplicationPhoto = {
 
 type AdminApplication = {
   id: string
+  host_id: string
   apartment_title: string
   area: string
   host_name: string
@@ -67,9 +68,11 @@ export default async function AdminApplicationPage({
   const applicationPhotos = (photos || []) as ApplicationPhoto[]
   const canUnrejectApplication =
     adminApplication.status === 'rejected' && isWithinRejectionWindow(adminApplication.rejected_at)
-  const [propertyDocumentUrl, identityDocumentUrl] = await Promise.all([
+  const [propertyDocumentUrl, identityDocumentUrl, { data: hostAddress }] = await Promise.all([
     createDocumentUrl(supabase, adminApplication.verification_doc_path),
     createDocumentUrl(supabase, adminApplication.id_doc_path),
+    // The account-holder address is private; read it through the admin definer.
+    supabase.rpc('get_profile_address_for_admin', { target_user_id: adminApplication.host_id }),
   ])
 
   return (
@@ -99,6 +102,7 @@ export default async function AdminApplicationPage({
               <InfoRow label="Email" value={adminApplication.email} />
               <InfoRow label="Phone" value={adminApplication.phone || 'Not provided'} />
               <InfoRow label="WhatsApp" value={adminApplication.whatsapp_number || 'Not provided'} />
+              <InfoRow label="Home address" value={(hostAddress as string | null) || 'Not provided'} />
               <InfoRow label="Host type" value={adminApplication.host_type || 'Not provided'} />
             </InfoSection>
 
