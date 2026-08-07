@@ -1,5 +1,6 @@
 import { PaymentUpdateForm } from '@/components/payment-update-form'
 import { HostPaymentCurrencyAndSchedule } from '@/components/host-payment-currency-and-schedule'
+import { StripeConnectCard } from '@/components/stripe-connect-card'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { getPaymentRouteSettings } from '@/lib/platform-settings'
 import { updateHostPaymentPreferences } from './actions'
@@ -135,6 +136,12 @@ export default async function HostPaymentsPage({
             We couldn’t save your payment settings. Please try again.
           </div>
         )}
+
+        <StripeConnectCard
+          chargesEnabled={profile?.stripe_charges_enabled ?? false}
+          payoutsEnabled={profile?.stripe_payouts_enabled ?? false}
+          hasAccount={Boolean(profile?.stripe_account_id)}
+        />
 
         <section className="mb-8 rounded-3xl bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
