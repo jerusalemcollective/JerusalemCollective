@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 type StripeConnectCardProps = {
   chargesEnabled: boolean
@@ -11,8 +11,21 @@ type StripeConnectCardProps = {
 export function StripeConnectCard({ chargesEnabled, payoutsEnabled, hasAccount }: StripeConnectCardProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [syncing, setSyncing] = useState(false)
 
   const ready = chargesEnabled && payoutsEnabled
+
+  // Just returned from Stripe's onboarding (return_url adds ?connect=return):
+  // pull the latest account status, then reload cleanly so the card reflects it.
+  // This is what makes onboarding work without a webhook configured.
+  useEffect(() => {
+    const connect = new URLSearchParams(window.location.search).get('connect')
+    if (connect !== 'return' && connect !== 'refresh') return
+    setSyncing(true)
+    void fetch('/api/stripe/connect/refresh', { method: 'POST' })
+      .catch(() => {})
+      .finally(() => window.location.replace('/host/dashboard/payments'))
+  }, [])
 
   const start = async () => {
     setLoading(true)
@@ -35,7 +48,9 @@ export function StripeConnectCard({ chargesEnabled, payoutsEnabled, hasAccount }
   return (
     <section className="mb-8 rounded-3xl bg-white p-6 shadow-sm">
       <h2 className="font-display text-xl font-bold text-stone-950">Get paid by Stripe</h2>
-      {ready ? (
+      {syncing ? (
+        <p className="mt-2 text-sm text-stone-600">Checking your Stripe status…</p>
+      ) : ready ? (
         <p className="mt-2 text-sm text-green-700">Your Stripe payout account is connected and ready.</p>
       ) : (
         <p className="mt-2 text-sm text-stone-600">
@@ -44,7 +59,7 @@ export function StripeConnectCard({ chargesEnabled, payoutsEnabled, hasAccount }
             : 'Connect a Stripe account to receive payouts directly.'}
         </p>
       )}
-      {!ready && (
+      {!ready && !syncing && (
         <button
           type="button"
           onClick={start}
