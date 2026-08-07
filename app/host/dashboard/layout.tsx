@@ -10,6 +10,9 @@ export const metadata: Metadata = {
   },
 }
 
+// Auth-gated, user-specific data — render per request, never prerender at build.
+export const dynamic = 'force-dynamic'
+
 // Defense-in-depth: enforce authentication for the whole /host/dashboard segment
 // so a future page that forgets requireHostDashboardAccess() still can't render
 // for a signed-out visitor. Host-specific resolution stays in each page's call.

@@ -10,6 +10,9 @@ export const metadata: Metadata = {
   },
 }
 
+// Auth-gated, user-specific data — render per request, never prerender at build.
+export const dynamic = 'force-dynamic'
+
 export default async function AccountLayout({
   children,
 }: {

@@ -6,6 +6,9 @@ export const metadata = {
   title: 'Choose your dashboard | JLM Collective',
 }
 
+// Auth-gated, user-specific — render per request, never prerender at build.
+export const dynamic = 'force-dynamic'
+
 export default async function ChooseDashboardPage() {
   const supabase = await createClient()
   const {
