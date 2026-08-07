@@ -1366,6 +1366,13 @@ function BookingControls({
   const hasDates = Boolean(dateRange.from && dateRange.to)
   const dateRequiredMessage = 'Choose dates first.'
 
+  const perNightILS = totalILS && nights ? Math.round(totalILS / nights) : null
+  const perNightUSD = totalUSD && nights ? Math.round(totalUSD / nights) : null
+  const formatDual = (ils: number | null, usd: number | null) =>
+    [ils ? `₪${ils.toLocaleString()}` : null, usd ? `$${usd.toLocaleString()}` : null]
+      .filter(Boolean)
+      .join(' / ') || 'Price on request'
+
   return (
     <>
       <div className={`${mobile ? 'mb-6' : 'mb-4'} space-y-3`}>
@@ -1375,23 +1382,20 @@ function BookingControls({
           blockedRanges={blockedRanges}
         />
         {nights > 0 && (
-          <div className="mt-3 rounded-2xl border border-stone-200 bg-[#F8F5F2] px-4 py-3">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm text-stone-600">
-                {nights} night{nights === 1 ? '' : 's'}
-              </p>
-              <p className="text-sm font-bold text-stone-950">
-                {[
-                  totalILS
-                    ? `\u20aa${totalILS.toLocaleString()}`
-                    : null,
-                  totalUSD
-                    ? `$${totalUSD.toLocaleString()}`
-                    : null,
-                ]
-                  .filter(Boolean)
-                  .join(' / ') || 'Price on request'}
-              </p>
+          <div className="mt-3 space-y-2 rounded-2xl border border-stone-200 bg-[#F8F5F2] px-4 py-3">
+            <div className="flex items-center justify-between gap-3 text-sm text-stone-600">
+              <span>
+                {formatDual(perNightILS, perNightUSD)} \u00d7 {nights} night{nights === 1 ? '' : 's'}
+              </span>
+              <span className="text-stone-900">{formatDual(totalILS, totalUSD)}</span>
+            </div>
+            <div className="flex items-center justify-between gap-3 text-sm text-stone-500">
+              <span>Booking fees</span>
+              <span>None</span>
+            </div>
+            <div className="flex items-center justify-between gap-3 border-t border-stone-200 pt-2 text-sm font-bold text-stone-950">
+              <span>Total</span>
+              <span>{formatDual(totalILS, totalUSD)}</span>
             </div>
           </div>
         )}
