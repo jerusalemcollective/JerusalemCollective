@@ -983,9 +983,9 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
                   {getInitials(selectedParticipantName)}
                 </span>
                 <div className="min-w-0">
-                  <h3 className="truncate text-lg font-bold text-stone-950">{selectedListingTitle}</h3>
+                  <h3 className="truncate text-lg font-bold text-stone-950">{selectedParticipantName}</h3>
                   <p className="truncate text-sm text-stone-500">
-                    {selectedParticipantName} · {selectedListingArea}
+                    {selectedListingTitle} · {selectedListingArea}
                   </p>
                 </div>
               </div>
@@ -1038,44 +1038,24 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
           </div>
 
           {mode === 'host' && guestProfile && (
-            <div className="border-b border-stone-200 bg-white/80 px-5 py-4">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="flex min-w-0 items-center gap-3">
-                  {guestProfile.avatar_url ? (
-                    <img
-                      src={guestProfile.avatar_url}
-                      alt=""
-                      className="h-12 w-12 shrink-0 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-stone-200 text-base font-bold text-stone-600">
-                      {getInitials(guestProfile.full_name || 'Guest')}
-                    </div>
-                  )}
-                  <div className="min-w-0">
-                    <p className="truncate font-bold text-stone-950">{guestProfile.full_name || 'Guest'}</p>
-                    <p className="mt-0.5 text-xs text-stone-500">
-                      {guestProfile.booking_count === 0
-                        ? 'First stay with JLM Collective'
-                        : `${guestProfile.booking_count} previous stay${guestProfile.booking_count === 1 ? '' : 's'}`}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {guestProfile.visiting_from && (
-                    <span className="rounded-full bg-[#F8F5F2] px-3 py-1 text-xs font-semibold text-stone-600">
-                      From {guestProfile.visiting_from}
-                    </span>
-                  )}
-                  {guestProfile.visit_reason && (
-                    <span className="rounded-full bg-[#F8F5F2] px-3 py-1 text-xs font-semibold text-stone-600">
-                      {guestProfile.visit_reason}
-                    </span>
-                  )}
-                </div>
-              </div>
+            <div className="flex flex-wrap items-center gap-2 border-b border-stone-200 bg-white/80 px-5 py-3 text-xs">
+              <span className="font-semibold text-stone-600">
+                {guestProfile.booking_count === 0
+                  ? 'First stay with JLM Collective'
+                  : `${guestProfile.booking_count} previous stay${guestProfile.booking_count === 1 ? '' : 's'}`}
+              </span>
+              {guestProfile.visiting_from && (
+                <span className="rounded-full bg-[#F8F5F2] px-3 py-1 font-semibold text-stone-600">
+                  From {guestProfile.visiting_from}
+                </span>
+              )}
+              {guestProfile.visit_reason && (
+                <span className="rounded-full bg-[#F8F5F2] px-3 py-1 font-semibold text-stone-600">
+                  {guestProfile.visit_reason}
+                </span>
+              )}
               {guestProfile.about_me && (
-                <p className="mt-3 rounded-2xl bg-[#F8F5F2] px-4 py-3 text-sm leading-6 text-stone-600">
+                <p className="mt-2 w-full rounded-2xl bg-[#F8F5F2] px-4 py-3 text-sm leading-6 text-stone-600">
                   {guestProfile.about_me}
                 </p>
               )}

@@ -241,10 +241,10 @@ export function HostCalendarBoard({
                 }
                 setDateRange(range || {})
               }}
-              numberOfMonths={2}
+              numberOfMonths={1}
               disabled={{ before: new Date() }}
               showOutsideDays={false}
-              className="mx-auto w-full [--cell-size:2.6rem] md:[--cell-size:2.9rem]"
+              className="mx-auto w-full [--cell-size:2.9rem] md:[--cell-size:3.1rem]"
               modifiers={{ booked: bookedDays, pending: pendingDays, blocked: blockedDays, request: requestDays }}
               modifiersClassNames={{
                 booked: '[&_button]:bg-green-100 [&_button]:text-green-900',
