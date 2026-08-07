@@ -589,7 +589,9 @@ export function ListingDetailClient({
           <div className="space-y-8">
             <div>
               <p className="text-sm font-bold uppercase tracking-widest text-[#c76f55]">
-                {listing.area}, Jerusalem
+                {listing.title.toLowerCase().includes(listing.area.toLowerCase())
+                  ? 'Jerusalem'
+                  : `${listing.area}, Jerusalem`}
               </p>
               <h1 className="font-display mt-2 text-3xl font-bold tracking-tight text-stone-950 md:text-4xl">
                 {listing.title}
@@ -811,9 +813,6 @@ export function ListingDetailClient({
                   <h2 className="font-display text-xl font-bold text-stone-950">
                     Location
                   </h2>
-                  <p className="mt-2 text-sm leading-6 text-stone-600">
-                    A closer look at the stay's immediate neighbourhood.
-                  </p>
                   <div className="mt-4 overflow-hidden rounded-3xl border border-stone-200 bg-[#F8F5F2] shadow-sm">
                     <ListingNeighbourhoodMap
                       title={listing.title}
@@ -831,9 +830,6 @@ export function ListingDetailClient({
                 <hr className="border-stone-100" />
                 <div className="py-8">
                   <h2 className="text-lg font-bold text-stone-950">Enhance your stay</h2>
-                  <p className="mt-1 text-sm text-stone-600">
-                    Arranged by JLM Collective and delivered to this property.
-                  </p>
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
                     <Link
                       href="/services/catering"
@@ -958,30 +954,6 @@ export function ListingDetailClient({
                   blockedRanges={availability}
                 />
                 <PaymentClarityNote allowsOnlinePayment={allowsOnlinePayment} />
-                <div className="mt-5 space-y-2.5 border-t border-stone-100 pt-5">
-                  {[
-                    'Personally reviewed by JLM Collective',
-                    'All hosts are identity verified',
-                    'Support available throughout your stay',
-                  ].map((point) => (
-                    <div key={point} className="flex items-center gap-2.5">
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#c76f55"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="shrink-0"
-                      >
-                        <path d="M20 6L9 17l-5-5" />
-                      </svg>
-                      <p className="text-xs text-stone-600">{point}</p>
-                    </div>
-                  ))}
-                </div>
                 <GuestConfidencePanel />
                 {avgResponseHours !== null && (
                   <p className="mt-4 text-center text-xs text-stone-500">
@@ -1157,15 +1129,6 @@ function BackToSearchLink() {
     >
       &larr; Back to search
     </Link>
-  )
-}
-
-function Stat({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="rounded-xl bg-[#F8F5F2] px-4 py-2.5">
-      <p className="text-xs text-stone-500">{label}</p>
-      <p className="text-lg font-bold text-stone-900">{value}</p>
-    </div>
   )
 }
 
@@ -1605,26 +1568,10 @@ function HostCard({
   )
 }
 
-function StarIcon({ className }: { className: string }) {
-  return (
-    <svg className={className} fill="currentColor" viewBox="0 0 20 20">
-      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-    </svg>
-  )
-}
-
 function CheckCircleIcon() {
   return (
     <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-    </svg>
-  )
-}
-
-function MoneyIcon({ className }: { className: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   )
 }

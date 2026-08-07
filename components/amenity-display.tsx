@@ -16,10 +16,7 @@ export function AmenityDisplay({ amenities }: { amenities: string[] }) {
     <div className="space-y-4">
       {visibleGroups.map((group) => (
         <section key={group.title} className="rounded-3xl border border-stone-200 bg-white p-4 shadow-sm">
-          <div className="mb-3">
-            <h3 className="text-sm font-bold text-stone-950">{group.title}</h3>
-            <p className="mt-1 text-xs leading-5 text-stone-500">{group.description}</p>
-          </div>
+          <h3 className="mb-3 text-sm font-bold text-stone-950">{group.title}</h3>
           <div className="grid gap-2 sm:grid-cols-2">
             {group.amenities.map((amenity) => (
               <div
