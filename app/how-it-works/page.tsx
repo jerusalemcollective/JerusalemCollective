@@ -64,7 +64,7 @@ const faqs: { q: string; a: string }[] = [
   },
   {
     q: 'How close are the stays to the Kotel?',
-    a: 'Listings show an approximate walking time to the Kotel and to nearby shuls, so you can choose a stay within comfortable walking distance for Shabbat and Yom Tov.',
+    a: 'Listings show an approximate walking time to the Kotel and to nearby shuls, so you can choose a stay within comfortable walking distance for Shabbos and Yom Tov.',
   },
   {
     q: 'Do you have stays with a sukkah balcony?',

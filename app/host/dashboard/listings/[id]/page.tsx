@@ -36,7 +36,7 @@ export default async function HostListingEditPage({
       supabase
         .from('listings')
         .select(
-          'id, title, area, bedrooms, bathrooms, max_guests, sleeping_setup, price_ils, price_usd, booking_type, online_payment_enabled, amenities, description, house_rules, welcome_message, check_in_instructions, is_published, shabbat_elevator, physical_key_entry, shabbat_clock, kosher_kitchen_level, walking_minutes_to_kotel, near_synagogue, sukkah_balcony, american_comfort, central_ac, american_washer_dryer, american_mattress, powerful_water_heater, deposit_type, deposit_value, balance_due_days_before_checkin, confirm_requirement',
+          'id, title, area, bedrooms, bathrooms, max_guests, sleeping_setup, price_ils, price_usd, booking_type, online_payment_enabled, amenities, description, house_rules, welcome_message, check_in_instructions, is_published, shabbat_elevator, physical_key_entry, shabbat_clock, kosher_kitchen_level, walking_minutes_to_kotel, near_synagogue, sukkah_balcony, american_comfort, central_ac, american_washer_dryer, american_mattress, powerful_water_heater, deposit_type, deposit_value, balance_due_days_before_checkin',
         )
         .eq('id', id)
         .in('host_id', hostIds)
@@ -297,16 +297,6 @@ export default async function HostListingEditPage({
               currency={depositCurrency}
             />
 
-            <Field label="Confirm a booking">
-              <select
-                name="confirmRequirement"
-                defaultValue={listing.confirm_requirement === 'deposit' ? 'deposit' : 'on_accept'}
-                className={inputClass}
-              >
-                <option value="on_accept">As soon as I accept the request</option>
-                <option value="deposit">After I&apos;ve received the deposit</option>
-              </select>
-            </Field>
           </EditorSection>
 
           {/* 5. Guest info */}

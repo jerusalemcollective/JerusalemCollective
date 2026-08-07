@@ -2,7 +2,7 @@ import { PaymentUpdateForm } from '@/components/payment-update-form'
 import { HostPaymentCurrencyAndSchedule } from '@/components/host-payment-currency-and-schedule'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { getPaymentRouteSettings } from '@/lib/platform-settings'
-import { updateHostPaymentPreferences, confirmBookingDepositReceived } from './actions'
+import { updateHostPaymentPreferences } from './actions'
 
 type PaymentBooking = {
   id: string
@@ -353,17 +353,6 @@ export default async function HostPaymentsPage({
                     </div>
                     <PaymentStatusBadge status={booking.payment_status || 'unpaid'} />
                   </div>
-                  {booking.status === 'pending' && (
-                    <form action={confirmBookingDepositReceived} className="mt-4 rounded-2xl bg-amber-50 p-4">
-                      <p className="text-sm font-semibold text-amber-800">
-                        Awaiting deposit — the dates aren&apos;t blocked until you confirm.
-                      </p>
-                      <input type="hidden" name="bookingId" value={booking.id} />
-                      <button className="mt-3 rounded-full bg-[#252525] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#111111]">
-                        Mark deposit received &amp; confirm booking
-                      </button>
-                    </form>
-                  )}
                   <PaymentUpdateForm
                     bookingId={booking.id}
                     currentStatus={booking.payment_status || 'unpaid'}

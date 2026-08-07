@@ -142,7 +142,6 @@ export async function updateHostListing(formData: FormData) {
   const americanWasherDryer = formData.get('americanWasherDryer') === 'on'
   const americanMattress = formData.get('americanMattress') === 'on'
   const powerfulWaterHeater = formData.get('powerfulWaterHeater') === 'on'
-  const confirmRequirement = formData.get('confirmRequirement') === 'deposit' ? 'deposit' : 'on_accept'
 
   if (!listingId) {
     throw new Error('Missing listing id.')
@@ -191,7 +190,6 @@ export async function updateHostListing(formData: FormData) {
         americanMattress &&
         powerfulWaterHeater,
       online_payment_enabled: onlinePaymentEnabled,
-      confirm_requirement: confirmRequirement,
     })
     .eq('id', listingId)
     .in('host_id', hostIds)

@@ -30,7 +30,7 @@ export const sampleListings = [
     latitude: 31.7986,
     longitude: 35.2053,
     is_featured: true,
-    amenities: ['WiFi', 'Elevator', 'Parking', 'Shabbat-friendly'],
+    amenities: ['WiFi', 'Elevator', 'Parking', 'Shabbos-friendly'],
     description:
       'A calm, polished stay with practical amenities for longer family visits.',
     cover_photo_url: null,
@@ -48,7 +48,7 @@ export const sampleListings = [
     latitude: 31.7906,
     longitude: 35.2088,
     is_featured: true,
-    amenities: ['WiFi', 'Washer', 'Dryer', 'Near synagogues'],
+    amenities: ['WiFi', 'Washer', 'Dryer', 'Near shuls'],
     description:
       'A spacious apartment suited to guests who want room to gather and easy neighbourhood access.',
     cover_photo_url: null,

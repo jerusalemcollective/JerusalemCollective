@@ -7,6 +7,7 @@ import { Breadcrumb } from '@/components/breadcrumb'
 import { formatDateDisplay } from '@/lib/utils/date'
 import { CancelBookingButton } from './cancel-booking-button'
 import { PayBalanceButton } from '@/components/pay-balance-button'
+import { DirectPaymentScheduleSummary } from '@/components/direct-payment-schedule-summary'
 
 const bookingRowSchema = z.object({
   id: z.string(),
@@ -75,6 +76,18 @@ export default async function BookingsPage({
   const paymentByBooking = new Map<string, BalancePaymentRow>()
   for (const paymentRow of (paymentsData || []) as BalancePaymentRow[]) {
     if (paymentRow.booking_id) paymentByBooking.set(paymentRow.booking_id, paymentRow)
+  }
+
+  // Direct-payment schedule per booking (host's terms, readable only for the
+  // guest's own bookings via a definer function).
+  const { data: scheduleRows } = await supabase.rpc('get_my_booking_payment_schedules')
+  const scheduleByBooking = new Map<string, { accepts_direct: boolean; instructions: string | null }>()
+  for (const row of (scheduleRows || []) as {
+    booking_id: string
+    accepts_direct: boolean
+    instructions: string | null
+  }[]) {
+    scheduleByBooking.set(row.booking_id, { accepts_direct: row.accepts_direct, instructions: row.instructions })
   }
 
   // After Stripe checkout the guest is redirected here immediately, before the
@@ -193,6 +206,7 @@ export default async function BookingsPage({
               const status = booking.status || 'pending'
               const badge = statusBadge[status] || statusBadge.pending
               const bookingPayment = paymentByBooking.get(booking.id)
+              const sched = scheduleByBooking.get(booking.id)
               const isCancellable =
                 status !== 'cancelled' &&
                 status !== 'completed' &&
@@ -239,6 +253,9 @@ export default async function BookingsPage({
                       </svg>
                       Add to calendar
                     </a>
+                    {status === 'confirmed' && sched && sched.accepts_direct && sched.instructions && (
+                      <DirectPaymentScheduleSummary instructions={sched.instructions} checkIn={booking.check_in} />
+                    )}
                   </div>
                   <div className="flex flex-col items-start gap-2 md:items-end">
                     <span className={`w-fit rounded-full px-3 py-1 text-xs font-bold ${badge.className}`}>

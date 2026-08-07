@@ -70,26 +70,6 @@ export async function updateHostPaymentPreferences(formData: FormData) {
   redirect('/host/dashboard/payments?saved=1')
 }
 
-export async function confirmBookingDepositReceived(formData: FormData) {
-  const bookingId = String(formData.get('bookingId') || '')
-  if (!bookingId) {
-    redirect('/host/dashboard/payments?saved=error')
-  }
-
-  const { supabase } = await requireHostDashboardAccess()
-  const { error } = await supabase.rpc('confirm_booking_deposit_received', {
-    booking_uuid: bookingId,
-  })
-
-  revalidatePath('/host/dashboard/payments')
-
-  if (error) {
-    redirect('/host/dashboard/payments?saved=error')
-  }
-
-  redirect('/host/dashboard/payments?saved=1')
-}
-
 export async function updateBookingPayment(
   _prev: { status: string; message: string },
   formData: FormData,

@@ -24,7 +24,7 @@ export const stayCollections: Record<string, StayCollection> = {
       'Verified, personally reviewed apartments in Jerusalem for Pesach — kosher kitchens, walking distance to shuls and the Kotel. Book early.',
     intro: [
       'Spending Pesach in Jerusalem is one of the most sought-after times of the year, and the best apartments go months in advance. JLM Collective curates a hand-picked collection of stays across the city — Rechavia, the German Colony, Old Katamon, Nachlaot and more — each personally reviewed before we agree to represent it.',
-      'Every listing shows its kosher-kitchen level, its walking time to the Kotel and nearby shuls, and practical details that matter over Yom Tov, from a Shabbat elevator to a balcony that can take a sukkah later in the year. Message the host directly, with no commitment, to confirm availability for your dates.',
+      'Every listing shows its kosher-kitchen level, its walking time to the Kotel and nearby shuls, and practical details that matter over Yom Tov, from a Shabbos elevator to a balcony that can take a sukkah later in the year. Message the host directly, with no commitment, to confirm availability for your dates.',
       'Because Pesach demand is so concentrated, we recommend enquiring early — the apartments that suit a full family for the chag are the first to be taken.',
     ],
     faqs: [
@@ -80,7 +80,7 @@ export const stayCollections: Record<string, StayCollection> = {
     filter: 'kosher',
     intro: [
       'A kosher kitchen you can rely on is the difference between a relaxed stay and a stressful one. This collection features JLM Collective apartments with kosher kitchens across Jerusalem, from kosher to glatt and Chalav Yisrael, each personally reviewed before it goes live.',
-      'Every listing shows its kosher-kitchen level clearly, along with its walking time to the Kotel and nearby shuls and the practical details that matter — a Shabbat elevator, a Shabbat clock, and more. Message the host directly to confirm exactly what the kitchen includes.',
+      'Every listing shows its kosher-kitchen level clearly, along with its walking time to the Kotel and nearby shuls and the practical details that matter — a Shabbos elevator, a Shabbos clock, and more. Message the host directly to confirm exactly what the kitchen includes.',
       'Whether you are visiting for a simcha, a chag, or a longer stay, these are homes where you can cook and eat with confidence.',
     ],
     faqs: [
