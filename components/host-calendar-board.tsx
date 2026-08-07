@@ -1,34 +1,42 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { DateRange as DayPickerDateRange } from 'react-day-picker'
 import { Calendar } from '@/components/ui/calendar'
 import { formatHebrewShortDate } from '@/lib/hebrew-date'
 import { formatDateISO } from '@/lib/utils/date'
+import { HostCalendarEventDialog } from '@/components/host-calendar-event-dialog'
 
 type ListingOption = { id: string; title: string }
 
-export type CalendarBooking = {
-  listing_id: string
-  check_in: string
-  check_out: string
-  status: string
-  guest_name: string | null
-}
+type EditState = { ok?: boolean; error?: string }
+type EditAction = (prev: EditState, formData: FormData) => Promise<EditState>
+type RemoveAction = (formData: FormData) => void | Promise<void>
 
-export type CalendarRange = {
-  listing_id: string
-  start_date: string
-  end_date: string
+export type CalendarEventKind = 'booking' | 'request' | 'manual_booking' | 'block'
+
+export type CalendarEvent = {
+  id: string
+  kind: CalendarEventKind
+  listingId: string
+  listingTitle: string
+  start: string // inclusive check-in / block start
+  endExclusive: string // checkout / block end (exclusive)
+  guestName: string | null
+  guests: number | null
+  status: string | null
   reason: string | null
-  source: string
+  removable: boolean
+  external: boolean
 }
 
 type HostCalendarBoardProps = {
   listings: ListingOption[]
-  bookings: CalendarBooking[]
-  ranges: CalendarRange[]
+  events: CalendarEvent[]
   saveAction: (formData: FormData) => void
+  updateBookingAction: EditAction
+  updateRequestAction: EditAction
+  removeRangeAction: RemoveAction
 }
 
 // Expand a half-open [start, endExclusive) date range into one Date per day.
@@ -47,33 +55,52 @@ function formatDisplayDate(date: Date): string {
   return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-export function HostCalendarBoard({ listings, bookings, ranges, saveAction }: HostCalendarBoardProps) {
+export function HostCalendarBoard({
+  listings,
+  events,
+  saveAction,
+  updateBookingAction,
+  updateRequestAction,
+  removeRangeAction,
+}: HostCalendarBoardProps) {
   const [selectedListingId, setSelectedListingId] = useState(listings[0]?.id || '')
   const [mode, setMode] = useState<'block' | 'booking'>('block')
   const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({})
   const [reason, setReason] = useState('')
   const [guestName, setGuestName] = useState('')
+  const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
+  // When a day belonging to an event is clicked we open its details; suppress the
+  // range-selection that the same click would otherwise trigger.
+  const suppressSelectRef = useRef(false)
 
-  const { bookedDays, pendingDays, blockedDays } = useMemo(() => {
-    const forListing = (id: string) => id === selectedListingId
+  const { bookedDays, pendingDays, blockedDays, requestDays, eventByDay } = useMemo(() => {
     const booked: Date[] = []
     const pending: Date[] = []
     const blocked: Date[] = []
+    const request: Date[] = []
+    const map = new Map<string, CalendarEvent>()
 
-    for (const b of bookings) {
-      if (!forListing(b.listing_id)) continue
-      const days = expandDays(b.check_in, b.check_out)
-      if (b.status === 'pending') pending.push(...days)
-      else booked.push(...days)
+    for (const event of events) {
+      if (event.listingId !== selectedListingId) continue
+      const days = expandDays(event.start, event.endExclusive)
+      for (const day of days) {
+        const iso = formatDateISO(day)
+        if (!map.has(iso)) map.set(iso, event)
+      }
+      if (event.kind === 'booking') {
+        if (event.status === 'pending') pending.push(...days)
+        else booked.push(...days)
+      } else if (event.kind === 'manual_booking') {
+        booked.push(...days)
+      } else if (event.kind === 'request') {
+        request.push(...days)
+      } else {
+        blocked.push(...days)
+      }
     }
-    for (const r of ranges) {
-      if (!forListing(r.listing_id)) continue
-      const days = expandDays(r.start_date, r.end_date)
-      if (r.source === 'manual_booking') booked.push(...days)
-      else if (r.source !== 'booking') blocked.push(...days) // 'booking' already covered by bookings
-    }
-    return { bookedDays: booked, pendingDays: pending, blockedDays: blocked }
-  }, [bookings, ranges, selectedListingId])
+
+    return { bookedDays: booked, pendingDays: pending, blockedDays: blocked, requestDays: request, eventByDay: map }
+  }, [events, selectedListingId])
 
   const selectedRange: DayPickerDateRange | undefined = dateRange.from
     ? { from: dateRange.from, to: dateRange.to }
@@ -91,7 +118,7 @@ export function HostCalendarBoard({ listings, bookings, ranges, saveAction }: Ho
           <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Availability</p>
           <h2 className="mt-2 text-2xl font-bold text-stone-950">Manage the calendar</h2>
           <p className="mt-2 text-sm leading-6 text-stone-600">
-            Select a range on the calendar, then block it off or record a booking.
+            Click a booking to see its details, or select an empty range to block it off or record a booking.
           </p>
 
           <label className="mt-5 block text-sm font-semibold text-stone-700">
@@ -184,6 +211,7 @@ export function HostCalendarBoard({ listings, bookings, ranges, saveAction }: Ho
           <div className="mt-5 flex flex-wrap gap-3 text-xs font-medium text-stone-600">
             <LegendDot className="bg-green-200" label="Confirmed / booked" />
             <LegendDot className="bg-amber-200" label="Pending" />
+            <LegendDot className="bg-sky-200" label="Request" />
             <LegendDot className="bg-stone-300" label="Blocked" />
             <LegendDot className="bg-[#fff3df] ring-1 ring-[#efd28c]" label="Chag" />
           </div>
@@ -195,7 +223,18 @@ export function HostCalendarBoard({ listings, bookings, ranges, saveAction }: Ho
             <Calendar
               mode="range"
               selected={selectedRange}
+              onDayClick={(day) => {
+                const event = eventByDay.get(formatDateISO(day))
+                if (event) {
+                  suppressSelectRef.current = true
+                  setActiveEvent(event)
+                }
+              }}
               onSelect={(range) => {
+                if (suppressSelectRef.current) {
+                  suppressSelectRef.current = false
+                  return
+                }
                 if (range?.from && range?.to && range.from.getTime() === range.to.getTime()) {
                   setDateRange({ from: range.from, to: undefined })
                   return
@@ -206,16 +245,28 @@ export function HostCalendarBoard({ listings, bookings, ranges, saveAction }: Ho
               disabled={{ before: new Date() }}
               showOutsideDays={false}
               className="mx-auto w-full [--cell-size:2.6rem] md:[--cell-size:2.9rem]"
-              modifiers={{ booked: bookedDays, pending: pendingDays, blocked: blockedDays }}
+              modifiers={{ booked: bookedDays, pending: pendingDays, blocked: blockedDays, request: requestDays }}
               modifiersClassNames={{
                 booked: '[&_button]:bg-green-100 [&_button]:text-green-900',
                 pending: '[&_button]:bg-amber-100 [&_button]:text-amber-900',
                 blocked: '[&_button]:bg-stone-200 [&_button]:text-stone-500',
+                request: '[&_button]:bg-sky-100 [&_button]:text-sky-900',
               }}
             />
           </div>
         </div>
       </div>
+
+      {activeEvent && (
+        <HostCalendarEventDialog
+          key={activeEvent.id}
+          event={activeEvent}
+          onClose={() => setActiveEvent(null)}
+          updateBookingAction={updateBookingAction}
+          updateRequestAction={updateRequestAction}
+          removeRangeAction={removeRangeAction}
+        />
+      )}
     </div>
   )
 }

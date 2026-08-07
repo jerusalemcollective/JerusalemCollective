@@ -1,12 +1,14 @@
 import {
   HostCalendarBoard,
-  type CalendarBooking,
-  type CalendarRange,
+  type CalendarEvent,
 } from '@/components/host-calendar-board'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
-import { saveCalendarEntry, updateBookingAsHost, updateRequestAsHost } from './actions'
-import { RemoveBlockedDateButton } from '@/components/remove-blocked-date-button'
-import { HostBookingEditor, type EditableBooking } from '@/components/host-booking-editor'
+import {
+  saveCalendarEntry,
+  updateBookingAsHost,
+  updateRequestAsHost,
+  removeUnavailableRange,
+} from './actions'
 import { ExternalCalendarSyncForm } from '@/components/external-calendar-sync-form'
 import { CopyCalendarUrlButton } from '@/components/copy-calendar-url-button'
 
@@ -98,56 +100,64 @@ export default async function HostCalendarPage() {
   }))
 
   const bookingRows = (bookingsData || []) as BookingRow[]
-  const bookings: CalendarBooking[] = bookingRows.map((booking) => ({
-    listing_id: booking.listing_id,
-    check_in: booking.check_in,
-    check_out: booking.check_out,
-    status: booking.status,
-    guest_name: oneOrNull(booking.profiles)?.full_name ?? null,
-  }))
-
-  const today = new Date().toISOString().slice(0, 10)
-  const editableBookings: EditableBooking[] = bookingRows
-    .filter((booking) => booking.check_out >= today)
-    .map((booking) => ({
-      id: booking.id,
-      listingTitle: oneOrNull(booking.listings)?.title || 'Stay',
-      guestName: oneOrNull(booking.profiles)?.full_name ?? null,
-      checkIn: booking.check_in,
-      checkOut: booking.check_out,
-      guests: booking.guests ?? 1,
-      status: booking.status,
-    }))
-
-  const editableRequests: EditableBooking[] = ((requestsData || []) as RequestRow[]).map((request) => ({
-    id: request.id,
-    listingTitle: oneOrNull(request.listings)?.title || 'Stay',
-    guestName: oneOrNull(request.guest)?.full_name ?? null,
-    checkIn: request.check_in || '',
-    checkOut: request.check_out || '',
-    guests: request.guests ?? 1,
-    status: request.status,
-  }))
-
+  const requestRows = (requestsData || []) as RequestRow[]
   const rangeRows = (ranges || []) as RangeRow[]
-  const calendarRanges: CalendarRange[] = rangeRows.map((range) => ({
-    listing_id: range.listing_id,
-    start_date: range.start_date,
-    end_date: range.end_date,
-    reason: range.reason,
-    source: range.source,
-  }))
 
-  const manualEntries = rangeRows
-    .filter((range) => range.source === 'manual' || range.source === 'manual_booking')
-    .map((range) => ({
-      id: range.id,
-      start_date: range.start_date,
-      end_date: range.end_date,
-      reason: range.reason,
-      source: range.source,
-      title: oneOrNull(range.listings)?.title || 'Stay',
-    }))
+  // One unified list of calendar events. Each occupies its dates on the grid and
+  // opens its own details/edit popup when clicked.
+  const events: CalendarEvent[] = [
+    ...bookingRows.map((booking): CalendarEvent => ({
+      id: booking.id,
+      kind: 'booking',
+      listingId: booking.listing_id,
+      listingTitle: oneOrNull(booking.listings)?.title || 'Stay',
+      start: booking.check_in,
+      endExclusive: booking.check_out,
+      guestName: oneOrNull(booking.profiles)?.full_name ?? null,
+      guests: booking.guests,
+      status: booking.status,
+      reason: null,
+      removable: false,
+      external: false,
+    })),
+    ...requestRows
+      .filter((request) => request.check_in && request.check_out)
+      .map((request): CalendarEvent => ({
+        id: request.id,
+        kind: 'request',
+        listingId: request.listing_id,
+        listingTitle: oneOrNull(request.listings)?.title || 'Stay',
+        start: request.check_in as string,
+        endExclusive: request.check_out as string,
+        guestName: oneOrNull(request.guest)?.full_name ?? null,
+        guests: request.guests,
+        status: request.status,
+        reason: null,
+        removable: false,
+        external: false,
+      })),
+    ...rangeRows
+      // 'booking'-sourced ranges are already covered by the bookings table.
+      .filter((range) => range.source !== 'booking')
+      .map((range): CalendarEvent => {
+        const isManualBooking = range.source === 'manual_booking'
+        const isExternal = range.source === 'external_calendar'
+        return {
+          id: range.id,
+          kind: isManualBooking ? 'manual_booking' : 'block',
+          listingId: range.listing_id,
+          listingTitle: oneOrNull(range.listings)?.title || 'Stay',
+          start: range.start_date,
+          endExclusive: range.end_date,
+          guestName: null,
+          guests: null,
+          status: null,
+          reason: range.reason,
+          removable: !isExternal,
+          external: isExternal,
+        }
+      }),
+  ]
 
   const calendarUrl = hostContact?.calendar_token
     ? `https://jlmcollective.co/api/host-calendar/${hostContact.calendar_token}.ics`
@@ -169,67 +179,12 @@ export default async function HostCalendarPage() {
           <>
             <HostCalendarBoard
               listings={hostListings}
-              bookings={bookings}
-              ranges={calendarRanges}
+              events={events}
               saveAction={saveCalendarEntry}
+              updateBookingAction={updateBookingAsHost}
+              updateRequestAction={updateRequestAsHost}
+              removeRangeAction={removeUnavailableRange}
             />
-
-            <section className="mt-6 overflow-hidden rounded-3xl bg-white shadow-sm">
-              <div className="border-b border-stone-100 px-6 py-4">
-                <h2 className="text-lg font-bold text-stone-950">Bookings and requests</h2>
-                <p className="mt-1 text-sm text-stone-600">
-                  Edit the dates, guests, or status. Changing a paid booking&rsquo;s dates does not re-price the
-                  deposit or balance.
-                </p>
-              </div>
-              <HostBookingEditor
-                bookings={editableBookings}
-                requests={editableRequests}
-                updateBookingAction={updateBookingAsHost}
-                updateRequestAction={updateRequestAsHost}
-              />
-            </section>
-
-            <section className="mt-6 overflow-hidden rounded-3xl bg-white shadow-sm">
-              <div className="border-b border-stone-100 px-6 py-4">
-                <h2 className="text-lg font-bold text-stone-950">Blocks and manual bookings</h2>
-              </div>
-
-              {manualEntries.length === 0 ? (
-                <div className="px-6 py-10 text-center text-stone-500">
-                  No blocks or manual bookings yet.
-                </div>
-              ) : (
-                <div className="divide-y divide-stone-100">
-                  {manualEntries.map((range) => (
-                    <div
-                      key={range.id}
-                      className="grid gap-4 px-6 py-5 md:grid-cols-[1fr_0.8fr_auto] md:items-center"
-                    >
-                      <div>
-                        <p className="font-bold text-stone-950">{range.title}</p>
-                        <p className="mt-1 text-sm text-stone-500">
-                          <span
-                            className={`mr-2 inline-flex rounded-full px-2 py-0.5 text-[11px] font-bold ${
-                              range.source === 'manual_booking'
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-stone-100 text-stone-600'
-                            }`}
-                          >
-                            {range.source === 'manual_booking' ? 'Booking' : 'Blocked'}
-                          </span>
-                          {range.reason || 'Unavailable'}
-                        </p>
-                      </div>
-                      <p className="text-sm font-semibold text-stone-700">
-                        {formatDate(range.start_date)} - {formatDate(range.end_date)}
-                      </p>
-                      <RemoveBlockedDateButton rangeId={range.id} />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
 
             <section className="mt-6 rounded-3xl bg-white p-6 shadow-sm">
               <h2 className="text-lg font-bold text-stone-950">Subscribe to your bookings</h2>
@@ -299,12 +254,4 @@ export default async function HostCalendarPage() {
       </section>
     </div>
   )
-}
-
-function formatDate(value: string) {
-  return new Date(`${value}T12:00:00`).toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  })
 }
