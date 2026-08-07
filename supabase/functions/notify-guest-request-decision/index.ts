@@ -31,10 +31,12 @@ Deno.serve(async (request) => {
     const record = payload.record
     const oldRecord = payload.old_record
 
+    // 'accepted' now sends a richer in-app confirmation email (property details
+    // + payment plan) from /api/notify-guest-confirmation, so this webhook only
+    // handles declines to avoid a duplicate acceptance email.
     if (
       !record?.guest_id ||
-      !record.status ||
-      !['accepted', 'declined'].includes(record.status) ||
+      record.status !== 'declined' ||
       oldRecord?.status === record.status
     ) {
       return ok()
@@ -53,20 +55,11 @@ Deno.serve(async (request) => {
     }
 
     const listingTitle = listing?.title || 'your stay'
-    const dates = `${record.check_in || 'Date not set'} to ${record.check_out || 'date not set'}`
-    const isAccepted = record.status === 'accepted'
 
     await sendEmail({
       to: guestEmail,
-      subject: `Your booking request was ${record.status}`,
-      html: isAccepted
-        ? `
-          <p>Good news - your booking request for <strong>${escapeHtml(listingTitle)}</strong> was accepted.</p>
-          <p><strong>Dates:</strong> ${escapeHtml(dates)}</p>
-          <p>You can view your trip details in your account and add it to your calendar from My trips.</p>
-          <p><a href="${siteUrl}/account/bookings">Open my bookings</a></p>
-        `
-        : `
+      subject: 'Your booking request was declined',
+      html: `
           <p>Your booking request for <strong>${escapeHtml(listingTitle)}</strong> was declined.</p>
           <p>We are sorry this stay was not available. You can browse other JLM Collective stays here:</p>
           <p><a href="${siteUrl}/stays">Find another stay</a></p>

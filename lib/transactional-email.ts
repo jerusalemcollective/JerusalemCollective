@@ -409,6 +409,182 @@ export async function sendGuestNewMessageEmail({
   }
 }
 
+type BookingConfirmListingRow = {
+  id: string
+  title: string | null
+  area: string | null
+  check_in_instructions: string | null
+}
+
+type PaymentProfileEmailRow = {
+  accepts_direct_payment: boolean | null
+  direct_payment_instructions: string | null
+  preferred_currency: string | null
+}
+
+function formatEmailDate(iso: string | null): string {
+  if (!iso) return 'to be confirmed'
+  return new Date(`${iso}T12:00:00`).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+function minusDaysIso(iso: string, days: number): string {
+  const date = new Date(`${iso}T12:00:00`)
+  date.setDate(date.getDate() - days)
+  return date.toISOString().slice(0, 10)
+}
+
+function moneyLabel(currency: string, amount: number): string {
+  const symbol = currency === 'USD' ? '$' : currency === 'ILS' ? '₪' : currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : ''
+  const formatted = amount.toLocaleString('en-GB', { maximumFractionDigits: 2 })
+  return symbol ? `${symbol}${formatted}` : `${formatted} ${currency}`
+}
+
+// Sent to the guest when a host confirms their request: property details, dates,
+// and the direct-payment plan (deposit + balance due dates, how to pay).
+export async function sendGuestBookingConfirmedEmail({
+  supabase,
+  requestId,
+}: {
+  supabase: SupabaseClient
+  requestId: string
+}) {
+  try {
+    const { data: request } = await supabase
+      .from('booking_requests')
+      .select('id, listing_id, host_id, guest_id, check_in, check_out, guests, message')
+      .eq('id', requestId)
+      .maybeSingle<BookingRequestEmailRow>()
+
+    if (!request?.guest_id || !request.listing_id) return false
+
+    const [{ data: listing }, { data: profile }, { data: paymentProfile }] = await Promise.all([
+      supabase
+        .from('listings')
+        .select('id, title, area, check_in_instructions')
+        .eq('id', request.listing_id)
+        .maybeSingle<BookingConfirmListingRow>(),
+      supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', request.guest_id)
+        .maybeSingle<ProfileEmailRow>(),
+      request.host_id
+        ? hostReader(supabase)
+            .from('host_payment_profiles')
+            .select('accepts_direct_payment, direct_payment_instructions, preferred_currency')
+            .eq('host_id', request.host_id)
+            .maybeSingle<PaymentProfileEmailRow>()
+        : Promise.resolve({ data: null }),
+    ])
+
+    const guestEmail = await getAuthUserEmail(request.guest_id)
+    if (!guestEmail) {
+      console.error('Skipping booking confirmed email: guest email not found')
+      return false
+    }
+
+    const guestName = profile?.full_name || 'there'
+    const listingTitle = listing?.title || 'your stay'
+    const areaSuffix = listing?.area ? ` in ${listing.area}` : ''
+
+    const detailRows: [string, string][] = [
+      ['Dates', `${formatEmailDate(request.check_in)} to ${formatEmailDate(request.check_out)}`],
+      ['Guests', String(request.guests || 1)],
+    ]
+    if (listing?.area) detailRows.push(['Area', listing.area])
+
+    let paymentHtml = ''
+    if (paymentProfile?.accepts_direct_payment && paymentProfile.direct_payment_instructions) {
+      let parsed: {
+        depositAmount?: number
+        depositCurrency?: string
+        depositDueDays?: number
+        balanceDueDays?: number
+        method?: string
+        v?: number
+      } | null = null
+      try {
+        const candidate = JSON.parse(paymentProfile.direct_payment_instructions)
+        if (candidate && typeof candidate === 'object' && candidate.v === 1) parsed = candidate
+      } catch {
+        parsed = null
+      }
+
+      if (parsed) {
+        const currency = parsed.depositCurrency || paymentProfile.preferred_currency || 'USD'
+        const payRows: [string, string][] = []
+        if (typeof parsed.depositAmount === 'number') {
+          const due =
+            request.check_in && typeof parsed.depositDueDays === 'number'
+              ? `due by ${formatEmailDate(minusDaysIso(request.check_in, parsed.depositDueDays))}`
+              : 'due when you book'
+          payRows.push(['Deposit', `${moneyLabel(currency, parsed.depositAmount)} — ${due}`])
+        }
+        const balanceDue =
+          request.check_in && typeof parsed.balanceDueDays === 'number'
+            ? ` — due by ${formatEmailDate(minusDaysIso(request.check_in, parsed.balanceDueDays))}`
+            : ''
+        payRows.push(['Rest of payment', `the remaining balance${balanceDue}`])
+        const methodHtml =
+          typeof parsed.method === 'string' && parsed.method
+            ? `<p style="margin:8px 0 0"><strong>How to pay:</strong> ${escapeHtml(parsed.method)}</p>`
+            : ''
+        paymentHtml = `<h3 style="font-size:15px;margin:20px 0 6px">Paying the host</h3>${detailTableHtml(payRows)}${methodHtml}`
+      } else {
+        paymentHtml = `<h3 style="font-size:15px;margin:20px 0 6px">Paying the host</h3><p style="margin:0;white-space:pre-line">${escapeHtml(paymentProfile.direct_payment_instructions)}</p>`
+      }
+    }
+
+    const checkInHtml = listing?.check_in_instructions
+      ? `<h3 style="font-size:15px;margin:20px 0 6px">Check-in</h3><p style="margin:0;white-space:pre-line">${escapeHtml(listing.check_in_instructions)}</p>`
+      : ''
+
+    const html = `
+    <div style="font-family:Arial,sans-serif;line-height:1.6;color:#292524">
+      <p>Hi ${escapeHtml(guestName)},</p>
+      <p>Great news — your booking at <strong>${escapeHtml(listingTitle)}</strong>${escapeHtml(areaSuffix)} is confirmed.</p>
+      ${detailTableHtml(detailRows)}
+      ${paymentHtml}
+      ${checkInHtml}
+      <p style="margin:20px 0 0">
+        <a href="${siteUrl}/account/bookings" style="display:inline-block;background:#c76f55;color:#ffffff;text-decoration:none;border-radius:999px;padding:12px 18px;font-weight:700">
+          View your trip
+        </a>
+      </p>
+      <p style="margin-top:16px">JLM Collective</p>
+      <p style="color:#a8a29e;font-size:11px;margin:8px 0 0;line-height:1.5">
+        JLM Collective acts as letting agent for Jerusalem property owners. Bookings are between guests and hosts. JLM Collective is not a party to any booking agreement.
+      </p>
+    </div>
+    `
+
+    return await sendEmail({
+      to: guestEmail,
+      subject: `Your booking at ${listingTitle} is confirmed`,
+      html,
+    })
+  } catch (error) {
+    console.error('Unable to send booking confirmed email', error)
+    return false
+  }
+}
+
+function detailTableHtml(rows: [string, string][]) {
+  const rowHtml = rows
+    .map(
+      ([label, value]) =>
+        `<tr><td style="padding:4px 16px 4px 0;color:#78716c;vertical-align:top;white-space:nowrap">${escapeHtml(
+          label,
+        )}</td><td style="padding:4px 0;color:#292524">${escapeHtml(value)}</td></tr>`,
+    )
+    .join('')
+  return `<table style="border-collapse:collapse;font-size:14px;margin:8px 0">${rowHtml}</table>`
+}
+
 export async function sendPaymentFailureAdminAlert({
   supabase,
   sessionId,

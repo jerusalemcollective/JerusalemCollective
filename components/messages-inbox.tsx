@@ -825,15 +825,25 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
     }
   }
 
+  const notifyGuestConfirmation = (requestId: string) => {
+    void fetch('/api/notify-guest-confirmation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requestId }),
+    }).catch((notifyError) => console.error('Unable to send guest confirmation email', notifyError))
+  }
+
   const handleRequestStatus = async (status: 'accepted' | 'declined') => {
     if (!selectedConversation?.request?.id) return
 
+    const requestId = selectedConversation.request.id
     setSending(true)
     setError(null)
 
     try {
       const supabase = createClient()
-      await updateBookingRequestStatus(supabase, selectedConversation.request.id, status)
+      await updateBookingRequestStatus(supabase, requestId, status)
+      if (status === 'accepted') notifyGuestConfirmation(requestId)
       setConversations((current) =>
         current.map((conversation) =>
           conversation.id === selectedConversationId
@@ -859,7 +869,9 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
 
     try {
       const supabase = createClient()
-      await updateBookingRequestStatus(supabase, selectedConversation.request.id, 'accepted')
+      const acceptedRequestId = selectedConversation.request.id
+      await updateBookingRequestStatus(supabase, acceptedRequestId, 'accepted')
+      notifyGuestConfirmation(acceptedRequestId)
       setConversations((current) =>
         current.map((conversation) =>
           conversation.id === selectedConversation.id
