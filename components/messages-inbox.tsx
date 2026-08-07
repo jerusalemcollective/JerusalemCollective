@@ -219,6 +219,16 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
     composerRef.current?.focus()
   }, [selectedConversationId])
 
+  // Escape closes the conversation overlay and returns to the contacts list.
+  useEffect(() => {
+    if (!selectedConversationId) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSelectedConversationId(null)
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [selectedConversationId])
+
   useEffect(() => {
     const loadInbox = async () => {
       try {
@@ -412,11 +422,12 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
 
         setConversations(hydrated)
 
+        // Show the contacts list by default; the conversation overlay opens only
+        // when a contact is clicked (or a specific conversation is deep-linked).
         const requestedConversation = initialConversationId || searchParams.get('conversation')
-        const nextConversationId =
-          hydrated.find((conversation) => conversation.id === requestedConversation)?.id ||
-          hydrated[0]?.id ||
-          null
+        const nextConversationId = requestedConversation
+          ? hydrated.find((conversation) => conversation.id === requestedConversation)?.id || null
+          : null
 
         setSelectedConversationId(nextConversationId)
       } catch (err) {
@@ -688,7 +699,6 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
     selectedConversation?.other_participant?.full_name || (mode === 'host' ? 'Guest' : 'Host')
   const selectedListingTitle = selectedConversation?.listing?.title || 'Conversation'
   const selectedListingArea = selectedConversation?.listing?.area || 'Jerusalem'
-  const newRequestCount = conversations.filter((conversation) => conversation.request?.status === 'new').length
 
   const listingOptions = useMemo(() => {
     const seen = new Map<string, string>()
@@ -890,113 +900,105 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
   }
 
   return (
-    <div className="overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm">
-      <div className="grid h-[min(74vh,720px)] min-h-[560px] lg:grid-cols-[380px_1fr]">
-        <aside className="border-b border-stone-200 bg-[#fbfaf8] lg:border-b-0 lg:border-r">
-          <div className="border-b border-stone-200 bg-white px-5 py-5">
-            <div className="flex items-end justify-between gap-3">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Inbox</p>
-                <h2 className="mt-1 text-2xl font-bold text-stone-950">Messages</h2>
-              </div>
-              {mode === 'host' && newRequestCount > 0 && (
-                <span className="rounded-full bg-[#c76f55] px-3 py-1 text-xs font-bold text-white">
-                  {newRequestCount} new
-                </span>
-              )}
-            </div>
-
+    <>
+      <div className="overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm">
+        {mode === 'host' && listingOptions.length > 1 && (
+          <div className="border-b border-stone-200 px-4 py-4">
+            <select
+              value={listingFilter}
+              onChange={(event) => setListingFilter(event.target.value)}
+              className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm font-semibold text-stone-700 outline-none transition focus:border-[#c76f55]"
+            >
+              <option value="all">All listings</option>
+              {listingOptions.map(([id, title]) => (
+                <option key={id} value={id}>
+                  {title}
+                </option>
+              ))}
+            </select>
           </div>
+        )}
 
-          {mode === 'host' && listingOptions.length > 1 && (
-            <div className="border-b border-stone-200 px-4 py-4">
-              <select
-                value={listingFilter}
-                onChange={(event) => setListingFilter(event.target.value)}
-                className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm font-semibold text-stone-700 outline-none transition focus:border-[#c76f55]"
+        <div className="divide-y divide-stone-100">
+          {filteredConversations.map((conversation) => {
+            const participantName = conversation.other_participant?.full_name || (mode === 'host' ? 'Guest' : 'Host')
+
+            return (
+              <button
+                key={conversation.id}
+                type="button"
+                onClick={() => setSelectedConversationId(conversation.id)}
+                className="flex w-full items-center gap-3 px-5 py-4 text-left transition hover:bg-stone-50"
               >
-                <option value="all">All listings</option>
-                {listingOptions.map(([id, title]) => (
-                  <option key={id} value={id}>
-                    {title}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-stone-950 text-sm font-bold text-white">
+                  {getInitials(participantName)}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-bold text-stone-950">{participantName}</span>
+                  <span className="block truncate text-sm text-stone-500">
+                    {conversation.listing?.title || 'Listing conversation'}
+                  </span>
+                  <span className="mt-0.5 block truncate text-sm text-stone-400">
+                    {conversation.last_message?.content || conversation.request?.message || 'Open conversation'}
+                  </span>
+                </span>
+                {/* Fixed right column: the time stays pinned top-right and the
+                    status tag sits below it, so the date never shifts. */}
+                <span className="flex shrink-0 flex-col items-end gap-1.5 pl-2">
+                  <span className="text-[11px] font-medium text-stone-400">
+                    {formatTimestamp(conversation.updated_at)}
+                  </span>
+                  {conversation.request && (
+                    <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ring-1 ${requestStatusClass(conversation.request.status)}`}>
+                      {requestStatusLabel(conversation.request.status)}
+                    </span>
+                  )}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
 
-          <div className="h-[calc(100%-9.5rem)] space-y-2 overflow-y-auto px-3 py-3">
-            {filteredConversations.map((conversation) => {
-              const participantName = conversation.other_participant?.full_name || (mode === 'host' ? 'Guest' : 'Host')
-              const isSelected = conversation.id === selectedConversationId
-
-              return (
+      {selectedConversation && (
+        <div
+          className="fixed inset-0 z-50 flex justify-center bg-stone-950/40 sm:items-center sm:p-6"
+          onClick={() => setSelectedConversationId(null)}
+        >
+          <div
+            className="flex h-full w-full flex-col bg-[#fcfaf8] shadow-2xl sm:h-[88vh] sm:max-w-2xl sm:overflow-hidden sm:rounded-[2rem]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="border-b border-stone-200 bg-white px-4 py-4">
+              <div className="flex items-center gap-3">
                 <button
-                  key={conversation.id}
                   type="button"
-                  onClick={() => setSelectedConversationId(conversation.id)}
-                  className={`w-full rounded-3xl border p-4 text-left transition ${
-                    isSelected
-                      ? 'border-[#c76f55] bg-white shadow-md shadow-stone-200/70'
-                      : 'border-transparent bg-white/70 hover:border-stone-200 hover:bg-white hover:shadow-sm'
-                  }`}
+                  onClick={() => setSelectedConversationId(null)}
+                  aria-label="Back to messages"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-stone-600 transition hover:bg-stone-100"
                 >
-                  <div className="flex items-start gap-3">
-                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-stone-950 text-sm font-bold text-white">
-                      {getInitials(participantName)}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-start justify-between gap-3">
-                        <span className="min-w-0">
-                          <span className="block truncate font-bold text-stone-950">{participantName}</span>
-                          <span className="mt-0.5 block truncate text-sm text-stone-500">
-                            {conversation.listing?.title || 'Listing conversation'}
-                          </span>
-                        </span>
-                        <span className="shrink-0 text-[11px] font-medium text-stone-500">
-                          {formatTimestamp(conversation.updated_at)}
-                        </span>
-                      </span>
-
-                      {conversation.request && (
-                        <span className={`mt-3 inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ${requestStatusClass(conversation.request.status)}`}>
-                          {requestStatusLabel(conversation.request.status)}
-                        </span>
-                      )}
-
-                      <span className="mt-3 block line-clamp-2 text-sm leading-5 text-stone-600">
-                        {conversation.last_message?.content || conversation.request?.message || 'Open conversation'}
-                      </span>
-                    </span>
-                  </div>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M19 12H5" />
+                    <path d="M12 19l-7-7 7-7" />
+                  </svg>
                 </button>
-              )
-            })}
-          </div>
-        </aside>
-
-        <section className="flex min-h-0 min-w-0 flex-col bg-[#fcfaf8]">
-          <div className="border-b border-stone-200 bg-white px-5 py-4">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#F8F5F2] text-sm font-bold text-[#c76f55]">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#F8F5F2] text-sm font-bold text-[#c76f55]">
                   {getInitials(selectedParticipantName)}
                 </span>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <h3 className="truncate text-lg font-bold text-stone-950">{selectedParticipantName}</h3>
                   <p className="truncate text-sm text-stone-500">
                     {selectedListingTitle} · {selectedListingArea}
                   </p>
                 </div>
+                {selectedConversation.request && (
+                  <span className={`w-fit shrink-0 rounded-full px-3 py-1.5 text-xs font-bold ring-1 ${requestStatusClass(selectedConversation.request.status)}`}>
+                    {requestStatusLabel(selectedConversation.request.status)}
+                  </span>
+                )}
               </div>
-              {selectedConversation?.request && (
-                <span className={`w-fit rounded-full px-3 py-1.5 text-xs font-bold ring-1 ${requestStatusClass(selectedConversation.request.status)}`}>
-                  {requestStatusLabel(selectedConversation.request.status)}
-                </span>
-              )}
-            </div>
 
-            {selectedConversation?.request && (
+            {selectedConversation.request && (
               <div className="mt-4 rounded-3xl border border-stone-200 bg-[#fbfaf8] p-4">
                 <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-center">
                   <div>
@@ -1168,35 +1170,28 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
               Enter to send · Shift + Enter for a new line
             </p>
           </div>
-        </section>
-      </div>
-    </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
 export function MessagesInboxSkeleton() {
   return (
-    <div className="overflow-hidden rounded-3xl bg-white shadow-sm">
-      <div className="grid min-h-[420px] lg:grid-cols-[320px_1fr]">
-        <aside className="border-b border-stone-200 lg:border-b-0 lg:border-r">
-          <div className="space-y-4 p-5">
-            {[0, 1, 2].map((item) => (
-              <div key={item} className="animate-pulse rounded-2xl border border-stone-100 p-4">
-                <div className="h-4 w-32 rounded bg-stone-200" />
-                <div className="mt-3 h-3 w-44 rounded bg-stone-200" />
-                <div className="mt-4 h-3 w-full rounded bg-stone-200" />
-              </div>
-            ))}
+    <div className="overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm">
+      <div className="divide-y divide-stone-100">
+        {[0, 1, 2, 3].map((item) => (
+          <div key={item} className="flex animate-pulse items-center gap-3 px-5 py-4">
+            <div className="h-12 w-12 shrink-0 rounded-full bg-stone-200" />
+            <div className="flex-1">
+              <div className="h-4 w-32 rounded bg-stone-200" />
+              <div className="mt-2 h-3 w-44 rounded bg-stone-200" />
+              <div className="mt-2 h-3 w-56 rounded bg-stone-200" />
+            </div>
+            <div className="h-3 w-10 rounded bg-stone-200" />
           </div>
-        </aside>
-        <section className="hidden p-6 lg:block">
-          <div className="animate-pulse space-y-5">
-            <div className="h-5 w-48 rounded bg-stone-200" />
-            <div className="h-24 rounded-3xl bg-stone-200" />
-            <div className="ml-auto h-14 w-64 rounded-2xl bg-stone-200" />
-            <div className="h-14 w-72 rounded-2xl bg-stone-200" />
-          </div>
-        </section>
+        ))}
       </div>
     </div>
   )
