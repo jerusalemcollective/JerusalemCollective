@@ -87,6 +87,7 @@ const listingDetailListingSchema = z.object({
   american_washer_dryer: z.boolean().nullish().transform((value) => Boolean(value)),
   american_mattress: z.boolean().nullish().transform((value) => Boolean(value)),
   powerful_water_heater: z.boolean().nullish().transform((value) => Boolean(value)),
+  min_nights: z.number().nullish().transform((value) => value ?? 1),
 })
 
 const hostRowSchema = z.object({
@@ -354,6 +355,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
             american_washer_dryer: false,
             american_mattress: false,
             powerful_water_heater: false,
+            min_nights: 1,
           }}
           host={null}
           publicHostName={null}
