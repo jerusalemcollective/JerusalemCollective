@@ -401,16 +401,41 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
           requestByConversation.set(`request:${request.id}`, request)
         })
 
-        const hydrated = rows.map((conversation) => ({
-          ...conversation,
-          listing: conversation.listing_id ? listingMap.get(conversation.listing_id) || null : null,
-          other_participant:
-            profileMap.get(mode === 'host' ? conversation.participant_1 : conversation.participant_2) ||
-            hostParticipantMap.get(mode === 'host' ? conversation.participant_1 : conversation.participant_2) ||
-            null,
-          last_message: latestByConversation.get(conversation.id) || conversation.last_message || null,
-          request: requestByConversation.get(conversation.id) || null,
-        }))
+        // A conversation's listing can live only on a linked booking request
+        // when the thread itself has no listing_id (legacy "message host"
+        // threads). Back-fill any such listings the first batch missed so every
+        // row can still name the property.
+        const extraListingIds = Array.from(
+          new Set(
+            requestRows
+              .map((request) => request.listing_id)
+              .filter((id): id is string => Boolean(id) && !listingMap.has(id as string)),
+          ),
+        )
+        if (extraListingIds.length > 0) {
+          const { data: extraListings } = await supabase
+            .from('listings')
+            .select('id, title, area')
+            .in('id', extraListingIds)
+          for (const listing of (extraListings || []) as ListingPreview[]) {
+            listingMap.set(listing.id, listing)
+          }
+        }
+
+        const hydrated = rows.map((conversation) => {
+          const request = requestByConversation.get(conversation.id) || null
+          const listingId = conversation.listing_id ?? request?.listing_id ?? null
+          return {
+            ...conversation,
+            listing: listingId ? listingMap.get(listingId) || null : null,
+            other_participant:
+              profileMap.get(mode === 'host' ? conversation.participant_1 : conversation.participant_2) ||
+              hostParticipantMap.get(mode === 'host' ? conversation.participant_1 : conversation.participant_2) ||
+              null,
+            last_message: latestByConversation.get(conversation.id) || conversation.last_message || null,
+            request,
+          }
+        })
 
         setConversations(hydrated)
 
@@ -1133,6 +1158,14 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
       <div className="divide-y divide-stone-100">
         {filteredConversations.map((conversation) => {
           const participantName = conversation.other_participant?.full_name || (mode === 'host' ? 'Guest' : 'Host')
+          const listing = conversation.listing
+          const listingLabel = listing?.title
+            ? listing.area
+              ? `${listing.title} · ${listing.area}`
+              : listing.title
+            : conversation.request
+              ? 'Booking request'
+              : 'Direct message'
 
           return (
             <button
@@ -1145,10 +1178,10 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
                 {getInitials(participantName)}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate font-bold text-stone-950">{participantName}</span>
-                <span className="block truncate text-sm text-stone-500">
-                  {conversation.listing?.title || 'Listing conversation'}
+                <span className="block truncate text-[11px] font-bold uppercase tracking-wide text-[#c76f55]">
+                  {listingLabel}
                 </span>
+                <span className="block truncate font-bold text-stone-950">{participantName}</span>
                 <span className="mt-0.5 block truncate text-sm text-stone-400">
                   {conversation.last_message?.content || conversation.request?.message || 'Open conversation'}
                 </span>
