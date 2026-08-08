@@ -229,6 +229,18 @@ export async function updateHostListing(formData: FormData) {
     }
   }
 
+  const minNightsRaw = Number(formData.get('minNights') || '1')
+  const minNights = Number.isFinite(minNightsRaw)
+    ? Math.min(Math.max(Math.trunc(minNightsRaw), 1), 365)
+    : 1
+  const { error: minNightsError } = await supabase.rpc('update_listing_min_nights', {
+    listing_uuid: listingId,
+    p_min_nights: minNights,
+  })
+  if (minNightsError) {
+    throw minNightsError
+  }
+
   const { data: listingForDistances } = await supabase
     .from('listings')
     .select('id, latitude, longitude, area')

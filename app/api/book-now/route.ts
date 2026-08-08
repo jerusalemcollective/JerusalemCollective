@@ -18,6 +18,7 @@ type InstantListing = {
   booking_type: string | null
   online_payment_enabled: boolean | null
   is_published: boolean | null
+  min_nights: number | null
 }
 
 type HostPaymentProfile = {
@@ -102,7 +103,7 @@ export async function POST(request: Request) {
 
   const { data: listing, error: listingError } = await supabase
     .from('listings')
-    .select('id, title, host_id, price_usd, price_ils, booking_type, online_payment_enabled, is_published')
+    .select('id, title, host_id, price_usd, price_ils, booking_type, online_payment_enabled, is_published, min_nights')
     .eq('id', listingId)
     .maybeSingle<InstantListing>()
 
@@ -116,6 +117,13 @@ export async function POST(request: Request) {
 
   if (!listing.host_id) {
     return NextResponse.json({ error: 'Host is not available for this listing.' }, { status: 400 })
+  }
+
+  if (listing.min_nights && nights < listing.min_nights) {
+    return NextResponse.json(
+      { error: `This stay requires a minimum of ${listing.min_nights} nights.` },
+      { status: 400 },
+    )
   }
 
   const { data: paymentProfile, error: paymentProfileError } = await supabase

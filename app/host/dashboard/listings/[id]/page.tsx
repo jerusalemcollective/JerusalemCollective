@@ -6,6 +6,7 @@ import { allNeighborhoods } from '@/lib/neighborhoods'
 import { updateHostListing, deleteHostListing } from '../actions'
 import { ConfirmSubmitButton } from '@/components/confirm-submit-button'
 import { DepositFields } from '@/components/deposit-fields'
+import { MinNightsField } from '@/components/min-nights-field'
 import { ListingAiAssistant } from '@/components/listing-ai-assistant'
 import { AmenitySelector } from '@/components/amenity-selector'
 import { ListingPhotoManager } from '@/components/listing-photo-manager'
@@ -36,7 +37,7 @@ export default async function HostListingEditPage({
       supabase
         .from('listings')
         .select(
-          'id, title, area, bedrooms, bathrooms, max_guests, sleeping_setup, price_ils, price_usd, booking_type, online_payment_enabled, amenities, description, house_rules, welcome_message, check_in_instructions, is_published, shabbat_elevator, physical_key_entry, shabbat_clock, kosher_kitchen_level, walking_minutes_to_kotel, near_synagogue, sukkah_balcony, american_comfort, central_ac, american_washer_dryer, american_mattress, powerful_water_heater, deposit_type, deposit_value, balance_due_days_before_checkin',
+          'id, title, area, bedrooms, bathrooms, max_guests, sleeping_setup, price_ils, price_usd, booking_type, online_payment_enabled, amenities, description, house_rules, welcome_message, check_in_instructions, is_published, shabbat_elevator, physical_key_entry, shabbat_clock, kosher_kitchen_level, walking_minutes_to_kotel, near_synagogue, sukkah_balcony, american_comfort, central_ac, american_washer_dryer, american_mattress, powerful_water_heater, deposit_type, deposit_value, balance_due_days_before_checkin, min_nights',
         )
         .eq('id', id)
         .in('host_id', hostIds)
@@ -296,6 +297,8 @@ export default async function HostListingEditPage({
               balanceDueDays={Number(listing.balance_due_days_before_checkin ?? 0)}
               currency={depositCurrency}
             />
+
+            <MinNightsField minNights={Number(listing.min_nights ?? 1)} />
 
           </EditorSection>
 
