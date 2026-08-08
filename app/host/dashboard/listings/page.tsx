@@ -241,10 +241,7 @@ export default async function HostListingsPage() {
 
 
         <section className="py-8">
-          <SectionHeading
-            title="Live listings"
-            detail="Approved stays already visible to guests."
-          />
+          <SectionHeading title="Live listings" />
           {hostListings.length === 0 ? (
             <EmptyPanel text="No live listings yet. Approved stays will appear here." />
           ) : (
@@ -288,10 +285,7 @@ export default async function HostListingsPage() {
         </section>
 
         <section className="pb-8">
-          <SectionHeading
-            title="Submitted stays"
-            detail="Applications waiting for review or needing changes."
-          />
+          <SectionHeading title="Submitted stays" />
           {pendingApplications.length === 0 ? (
             <EmptyPanel text="No submitted stays waiting at the moment." />
           ) : (
@@ -320,11 +314,10 @@ function Metric({ label, value }: { label: string; value: number }) {
   )
 }
 
-function SectionHeading({ title, detail }: { title: string; detail: string }) {
+function SectionHeading({ title }: { title: string }) {
   return (
     <div>
       <h2 className="text-xl font-bold text-stone-950">{title}</h2>
-      <p className="mt-1 text-sm text-stone-600">{detail}</p>
     </div>
   )
 }

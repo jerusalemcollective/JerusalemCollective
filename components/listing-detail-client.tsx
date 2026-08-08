@@ -432,7 +432,7 @@ export function ListingDetailClient({
           </div>
         </div>
 
-        <div className="relative mb-0 overflow-hidden rounded-3xl md:rounded-none lg:rounded-xl">
+        <div className="relative mb-8 overflow-hidden rounded-3xl md:rounded-none lg:rounded-xl">
           {photos.length > 0 ? (
             <>
               <div className="relative md:hidden">
