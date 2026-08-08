@@ -282,9 +282,6 @@ export default async function AdminListingDetailPage({
 
           <div className="mt-6 border-t border-stone-100 pt-5">
             <h2 className="text-sm font-bold text-stone-950">Danger zone</h2>
-            <p className="mt-1 text-xs leading-5 text-stone-500">
-              Remove this listing from the platform.
-            </p>
             <form action={deleteListing} className="mt-3">
               <input type="hidden" name="listingId" value={listing.id} />
               <ConfirmSubmitButton

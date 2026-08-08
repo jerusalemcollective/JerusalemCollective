@@ -50,9 +50,6 @@ export default async function AdminSettingsPage() {
         <h1 className="font-display mt-2 text-3xl font-bold text-stone-950">
           Platform settings
         </h1>
-        <p className="mt-2 max-w-2xl text-stone-600">
-          Global settings that affect bookings and platform operations.
-        </p>
       </div>
 
       <section className="max-w-3xl rounded-3xl bg-white p-6 shadow-sm">

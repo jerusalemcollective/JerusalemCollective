@@ -82,7 +82,6 @@ export default async function AdminReviewsPage({
     <div>
       <div className="mb-8">
         <h2 className="text-3xl font-bold tracking-tight text-stone-950">Reviews</h2>
-        <p className="mt-2 text-stone-600">Approve or hide guest reviews before they appear publicly.</p>
       </div>
 
       <div className="mb-6 flex flex-wrap gap-2">

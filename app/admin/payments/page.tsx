@@ -93,9 +93,6 @@ export default async function AdminPaymentsPage() {
         <h1 className="font-display mt-2 text-3xl font-bold text-stone-950">
           Payment control
         </h1>
-        <p className="mt-2 max-w-2xl text-stone-600">
-          Track JLM-collected payments, direct payment records, host net payout, and payout currency.
-        </p>
       </header>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

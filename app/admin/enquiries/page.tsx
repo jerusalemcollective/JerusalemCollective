@@ -106,9 +106,6 @@ export default async function AdminEnquiriesPage({
     <div>
       <header className="border-b border-stone-200 pb-6">
         <h2 className="text-3xl font-bold tracking-tight text-stone-950">Enquiries</h2>
-        <p className="mt-2 text-stone-600">
-          Guest requests, host replies, and booking intent in one admin queue.
-        </p>
       </header>
 
       <div className="grid gap-4 border-b border-stone-200 py-5 sm:grid-cols-3">

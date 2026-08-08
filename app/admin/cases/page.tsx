@@ -96,9 +96,6 @@ export default async function AdminCasesPage({
     <div>
       <div className="mb-8">
         <h2 className="text-3xl font-bold tracking-tight text-stone-950">Disputes & refunds</h2>
-        <p className="mt-2 text-stone-600">
-          Track guest issues, host responses, and any refund decision in one queue.
-        </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">

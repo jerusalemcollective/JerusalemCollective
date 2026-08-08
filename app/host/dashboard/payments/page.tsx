@@ -115,9 +115,6 @@ export default async function HostPaymentsPage({
         <div className="mb-8">
           <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Host dashboard</p>
           <h1 className="font-display mt-2 text-3xl font-bold tracking-tight text-stone-950">Payment setup</h1>
-          <p className="mt-2 max-w-2xl text-stone-600">
-            Choose how you receive payment for your bookings.
-          </p>
         </div>
 
         {saved === '1' && (
@@ -332,9 +329,6 @@ export default async function HostPaymentsPage({
         <section className="mt-8 overflow-hidden rounded-3xl bg-white shadow-sm">
           <div className="border-b border-stone-100 px-6 py-4">
             <h2 className="text-lg font-bold text-stone-950">Booking payment tracking</h2>
-            <p className="mt-1 text-sm text-stone-600">
-              Track off-platform payments for your confirmed bookings.
-            </p>
           </div>
 
           {bookings.length === 0 ? (

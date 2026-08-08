@@ -57,10 +57,7 @@ export function DraftListingCard() {
 
   return (
     <section className="border-b border-stone-200 py-6">
-      <div className="flex flex-col gap-2">
-        <h2 className="text-xl font-bold text-stone-950">Drafts</h2>
-        <p className="text-sm text-stone-600">A stay you started but haven&apos;t submitted yet.</p>
-      </div>
+      <h2 className="text-xl font-bold text-stone-950">Drafts</h2>
       <div className="mt-4 flex flex-col gap-4 rounded-3xl border border-[#c76f55]/30 bg-white p-6 shadow-sm md:flex-row md:items-center md:justify-between">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#fff4ef]">

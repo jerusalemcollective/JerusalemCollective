@@ -133,9 +133,6 @@ export default function HowItWorksPage() {
         <h1 className="font-display text-4xl font-bold tracking-tight text-stone-950 md:text-5xl">
           How JLM Collective works
         </h1>
-        <p className="mx-auto mt-4 max-w-xl text-lg leading-8 text-stone-600">
-          Simple, personal, and verified {'\u2014'} from search to keys.
-        </p>
       </div>
 
       <div className="mx-auto max-w-3xl px-5 pb-16 md:px-8">

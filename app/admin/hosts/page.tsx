@@ -124,9 +124,6 @@ export default async function AdminHostsPage({
     <div>
       <div className="mb-8">
         <h2 className="text-3xl font-bold tracking-tight text-stone-950">Hosts</h2>
-        <p className="mt-2 text-stone-600">
-          All host accounts, their contact details, verification, and inventory.
-        </p>
       </div>
 
       <div className="overflow-hidden border-y border-stone-200">

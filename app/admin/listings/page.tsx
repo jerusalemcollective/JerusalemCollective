@@ -144,7 +144,6 @@ export default async function AdminListingsPage({
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-stone-950">Listings</h2>
-          <p className="mt-2 text-stone-600">Control what is live, what gets featured, and create listings for hosts.</p>
         </div>
         <Link
           href="/admin/listings/new"

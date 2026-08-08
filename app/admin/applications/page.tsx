@@ -82,8 +82,7 @@ export default async function AdminApplicationsPage({
     <div>
       <div className="mb-8">
         <h2 className="text-3xl font-bold tracking-tight text-stone-950">Applications</h2>
-        <p className="mt-2 text-stone-600">Review incoming host submissions and publish approved stays.</p>
-        <p className="mt-1 text-sm text-stone-500">
+        <p className="mt-2 text-sm text-stone-500">
           Rejected applications remain here for 25 hours so they can be edited or unrejected, then leave this queue.
         </p>
       </div>
