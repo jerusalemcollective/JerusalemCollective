@@ -44,6 +44,7 @@ export type ListingDetailListing = {
   bathrooms: number | null
   max_guests: number | null
   sleeping_setup: string | null
+  min_nights: number
   price_ils: number | null
   price_usd: number | null
   booking_type: string
@@ -674,10 +675,27 @@ export function ListingDetailClient({
               </div>
             </div>
 
+            {hasJewishFeatures && (
+              <div className="rounded-2xl border border-[#f0c2b3] bg-[#fff7f3] p-5">
+                <p className="text-sm font-bold text-[#a95b45]">Shabbat-ready home</p>
+                <div className="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 text-sm text-stone-700 sm:grid-cols-2">
+                  {listing.kosher_kitchen_level &&
+                    listing.kosher_kitchen_level !== 'not_kosher' && (
+                      <ShabbatReadyItem label={kosherLabel(listing.kosher_kitchen_level)} />
+                    )}
+                  {listing.shabbat_elevator && <ShabbatReadyItem label="Shabbos elevator" />}
+                  {listing.physical_key_entry && <ShabbatReadyItem label="Keyless entry for Shabbos" />}
+                  {listing.shabbat_clock && <ShabbatReadyItem label="Shabbos clock / timers" />}
+                  {listing.sukkah_balcony && <ShabbatReadyItem label="Sukkah balcony" />}
+                  {listing.near_synagogue && <ShabbatReadyItem label="Near a shul" />}
+                </div>
+              </div>
+            )}
+
             {listing.description && (
               <>
                 <hr className="border-stone-100" />
-                <div className="py-8">
+                <div className="py-5">
                   <h2 className="mb-3 text-lg font-bold text-stone-900">About this stay</h2>
                   <p className="whitespace-pre-line text-base leading-8 text-stone-700">{listing.description}</p>
                 </div>
@@ -687,7 +705,7 @@ export function ListingDetailClient({
             {listing.sleeping_setup?.trim() && (
               <>
                 <hr className="border-stone-100" />
-                <div className="py-8">
+                <div className="py-5">
                   <h2 className="mb-3 text-lg font-bold text-stone-900">Sleeping setup</h2>
                   <p className="whitespace-pre-line rounded-3xl bg-[#F8F5F2] p-5 text-sm leading-7 text-stone-700">
                     {listing.sleeping_setup}
@@ -699,7 +717,7 @@ export function ListingDetailClient({
             {listing.house_rules?.trim() && (
               <>
                 <hr className="border-stone-100" />
-                <div className="py-8">
+                <div className="py-5">
                   <h2 className="text-lg font-bold text-stone-950">House rules</h2>
                   <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-stone-700">
                     {listing.house_rules}
@@ -711,47 +729,27 @@ export function ListingDetailClient({
             {listing.amenities && listing.amenities.length > 0 && (
               <>
                 <hr className="border-stone-100" />
-                <div className="py-8">
+                <div className="py-5">
                   <h2 className="mb-3 text-lg font-bold text-stone-900">Amenities</h2>
                   <AmenityDisplay amenities={listing.amenities} />
                 </div>
               </>
             )}
 
-            {(hasJewishFeatures || comfortFeatures.length > 0 || shulDistances.length > 0) && (
+            {(comfortFeatures.length > 0 || shulDistances.length > 0) && (
               <>
                 <hr className="border-stone-100" />
-                <div className="py-8">
+                <div className="py-5">
                   <h2 className="font-display text-xl font-bold text-stone-950">
-                    Jewish lifestyle
+                    Comfort &amp; walking distances
                   </h2>
-                  <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    {listing.kosher_kitchen_level &&
-                      listing.kosher_kitchen_level !== 'not_kosher' && (
-                        <FeaturePill
-                          label={kosherLabel(listing.kosher_kitchen_level)}
-                          icon="kosher"
-                        />
-                      )}
-                    {listing.shabbat_elevator && (
-                      <FeaturePill label="Shabbos elevator" icon="elevator" />
-                    )}
-                    {listing.physical_key_entry && (
-                      <FeaturePill label="Physical key entry" icon="key" />
-                    )}
-                    {listing.shabbat_clock && (
-                      <FeaturePill label="Shabbos clock" icon="clock" />
-                    )}
-                    {listing.sukkah_balcony && (
-                      <FeaturePill label="Sukkah balcony" icon="sukkah" />
-                    )}
-                    {listing.near_synagogue && (
-                      <FeaturePill label="Near shul" icon="synagogue" />
-                    )}
-                    {comfortFeatures.map((feature) => (
-                      <FeaturePill key={feature} label={feature} icon="comfort" />
-                    ))}
-                  </div>
+                  {comfortFeatures.length > 0 && (
+                    <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      {comfortFeatures.map((feature) => (
+                        <FeaturePill key={feature} label={feature} icon="comfort" />
+                      ))}
+                    </div>
+                  )}
                   {shulDistances.length > 0 && (
                     <div className="mt-3 space-y-1.5">
                       <p className="text-xs font-bold uppercase tracking-widest text-stone-500">
@@ -790,7 +788,7 @@ export function ListingDetailClient({
             {listing.area && (
               <>
                 <hr className="border-stone-100" />
-                <div className="py-8">
+                <div className="py-5">
                   <div className="flex items-center justify-between gap-4">
                     <h2 className="font-display text-xl font-bold text-stone-950">
                       About {listing.area}
@@ -812,7 +810,7 @@ export function ListingDetailClient({
             {listing.latitude !== null && listing.longitude !== null && (
               <>
                 <hr className="border-stone-100" />
-                <div className="py-8">
+                <div className="py-5">
                   <h2 className="font-display text-xl font-bold text-stone-950">
                     Location
                   </h2>
@@ -831,7 +829,7 @@ export function ListingDetailClient({
             {servicesBarEnabled && listing.host_id && (
               <>
                 <hr className="border-stone-100" />
-                <div className="py-8">
+                <div className="py-5">
                   <h2 className="text-lg font-bold text-stone-950">Enhance your stay</h2>
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
                     <Link
@@ -900,7 +898,7 @@ export function ListingDetailClient({
             {similarListings.length > 0 && (
               <>
                 <hr className="border-stone-100" />
-                <div className="py-8">
+                <div className="py-5">
                   <h2 className="mb-4 text-xl font-bold text-stone-950">You might also like</h2>
                   <div className="grid gap-4 md:grid-cols-3">
                     {similarListings.map((similarListing) => (
@@ -1224,6 +1222,27 @@ function FeaturePill({
   )
 }
 
+function ShabbatReadyItem({ label }: { label: string }) {
+  return (
+    <span className="flex items-start gap-2">
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#c76f55"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="mt-0.5 shrink-0"
+      >
+        <path d="M20 6 9 17l-5-5" />
+      </svg>
+      <span>{label}</span>
+    </span>
+  )
+}
+
 function BookNowButton({
   listing,
   dateRange,
@@ -1334,6 +1353,9 @@ function BookingControls({
   const isEnquiryOnly = listing.booking_type === 'enquiry'
   const hasDates = Boolean(dateRange.from && dateRange.to)
   const dateRequiredMessage = 'Choose dates first.'
+  const minNights = listing.min_nights || 1
+  const belowMin = nights > 0 && nights < minNights
+  const minNightsMessage = `Minimum stay is ${minNights} nights.`
 
   const perNightILS = totalILS && nights ? Math.round(totalILS / nights) : null
   const perNightUSD = totalUSD && nights ? Math.round(totalUSD / nights) : null
@@ -1366,6 +1388,17 @@ function BookingControls({
               <span>Total</span>
               <span>{formatDual(totalILS, totalUSD)}</span>
             </div>
+          </div>
+        )}
+        {belowMin && (
+          <div className="flex items-start gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mt-0.5 shrink-0" aria-hidden="true">
+              <path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+            </svg>
+            <span>
+              Minimum stay is {minNights} nights &mdash; add {minNights - nights} more night
+              {minNights - nights === 1 ? '' : 's'}.
+            </span>
           </div>
         )}
         <div className="rounded-2xl border border-stone-200 bg-white p-4">
@@ -1402,7 +1435,7 @@ function BookingControls({
                 listing={listing}
                 dateRange={dateRange}
                 guests={guestCount}
-                disabled={!hasDates}
+                disabled={!hasDates || belowMin}
               />
             )}
             {!allowsOnlinePayment && !isEnquiryOnly && (
@@ -1414,8 +1447,8 @@ function BookingControls({
                 guests={guestCount}
                 intent="request"
                 buttonLabel="Request to book"
-                disabled={!hasDates}
-                disabledReason={dateRequiredMessage}
+                disabled={!hasDates || belowMin}
+                disabledReason={belowMin ? minNightsMessage : dateRequiredMessage}
                 showIcon={false}
                 buttonClassName="flex min-h-11 w-full items-center justify-center rounded-full bg-stone-950 px-5 py-0 text-center text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-500 disabled:shadow-none"
                 onConversationCreated={onConversationCreated}
