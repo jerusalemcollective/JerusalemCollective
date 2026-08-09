@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { recordListingEngagement } from '@/lib/listing-engagement'
 
@@ -74,8 +75,17 @@ export function SaveListingButton({ listingId }: { listingId: string }) {
         if (error) throw error
         setSaved(false)
       }
-    } catch {
+    } catch (error) {
+      // Surface the real reason instead of silently reverting, so a blocked
+      // save (RLS, a constraint, a missing column) is visible rather than
+      // looking like a dead button.
       setOptimisticSaved(!newValue)
+      const message =
+        error && typeof error === 'object' && 'message' in error
+          ? String((error as { message: unknown }).message)
+          : 'Could not update your saved list. Please try again.'
+      console.error('Save listing failed:', error)
+      toast.error(message)
     }
   }
 

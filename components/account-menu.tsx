@@ -8,7 +8,6 @@ import {
   ArrowLeftRight,
   CalendarDays,
   Heart,
-  Home,
   LifeBuoy,
   MessageCircle,
   MessageSquare,
@@ -93,10 +92,7 @@ export function AccountMenu({ hasStay, isAdmin }: { hasStay: boolean; isAdmin: b
 
       <div className="mt-3 space-y-2 border-t border-stone-200 pt-4">
         {hasStay ? (
-          <>
-            <MenuLink href="/host/dashboard" label="Host dashboard" icon={<Home className="h-5 w-5" />} accent />
-            <MenuLink href="/choose-dashboard" label="Switch dashboard" icon={<ArrowLeftRight className="h-5 w-5" />} accent />
-          </>
+          <MenuLink href="/choose-dashboard" label="Switch dashboard" icon={<ArrowLeftRight className="h-5 w-5" />} accent />
         ) : (
           <MenuLink href="/become-a-host" label="Become a host" icon={<Plus className="h-5 w-5" />} accent />
         )}
