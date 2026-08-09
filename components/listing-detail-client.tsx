@@ -13,9 +13,10 @@ import { SaveListingButton } from '@/components/save-listing-button'
 import { AmenityDisplay } from '@/components/amenity-display'
 import { recordListingView } from '@/components/recently-viewed'
 import { recordListingEngagement } from '@/lib/listing-engagement'
-import { formatListingPrice, formatPrice } from '@/lib/utils/currency'
+import { formatListingPrice, formatPrice, formatCurrencyAmount } from '@/lib/utils/currency'
 import { loadEnquiryDraft } from '@/lib/enquiry-draft'
-import { formatDateISO } from '@/lib/utils/date'
+import { formatDateISO, formatBookingDate } from '@/lib/utils/date'
+import { computeDepositPreview } from '@/lib/utils/deposit'
 
 // Google Maps (@react-google-maps/api) is heavy; load it only in the browser,
 // on demand, so it doesn't ship in or block this high-traffic SEO page.
@@ -46,6 +47,9 @@ export type ListingDetailListing = {
   max_guests: number | null
   sleeping_setup: string | null
   min_nights: number
+  deposit_type: string
+  deposit_value: number
+  balance_due_days_before_checkin: number
   price_ils: number | null
   price_usd: number | null
   booking_type: string
@@ -1305,6 +1309,22 @@ function BookingControls({
       .filter(Boolean)
       .join(' / ') || 'Price on request'
 
+  // Pre-checkout deposit/balance preview. Single currency — the one Stripe actually
+  // charges (USD when set, else ILS) — derived from the computed total so currency
+  // and amount can never disagree. Only when a real online booking is possible.
+  const bookingCurrency: 'USD' | 'ILS' = totalUSD != null ? 'USD' : 'ILS'
+  const bookingTotal = totalUSD != null ? totalUSD : totalILS
+  const depositPreview =
+    allowsOnlinePayment && !belowMin && nights > 0 && bookingTotal && dateRange.from
+      ? computeDepositPreview({
+          bookingTotal,
+          depositType: listing.deposit_type,
+          depositValue: listing.deposit_value,
+          balanceDueDaysBeforeCheckin: listing.balance_due_days_before_checkin,
+          checkIn: dateRange.from,
+        })
+      : null
+
   return (
     <>
       <div className={`${mobile ? 'mb-6' : 'mb-4'} space-y-3`}>
@@ -1329,6 +1349,18 @@ function BookingControls({
               <span>Total</span>
               <span>{formatDual(totalILS, totalUSD)}</span>
             </div>
+            {depositPreview && depositPreview.balanceStatus === 'due' && (
+              <>
+                <div className="flex items-center justify-between gap-3 text-sm font-bold text-stone-950">
+                  <span>Pay now</span>
+                  <span>{formatCurrencyAmount(bookingCurrency, depositPreview.depositAmount)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3 text-sm text-stone-600">
+                  <span>Balance on {formatBookingDate(formatDateISO(depositPreview.balanceDueDate))}</span>
+                  <span>{formatCurrencyAmount(bookingCurrency, depositPreview.balanceAmount)}</span>
+                </div>
+              </>
+            )}
           </div>
         )}
         {belowMin && (

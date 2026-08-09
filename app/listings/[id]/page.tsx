@@ -88,6 +88,11 @@ const listingDetailListingSchema = z.object({
   american_mattress: z.boolean().nullish().transform((value) => Boolean(value)),
   powerful_water_heater: z.boolean().nullish().transform((value) => Boolean(value)),
   min_nights: z.number().nullish().transform((value) => value ?? 1),
+  // Deposit config feeds the pre-checkout "pay now / balance later" preview. NOT
+  // NULL columns with defaults; the coalesce is a belt-and-braces fallback.
+  deposit_type: z.string().nullish().transform((value) => value ?? 'percent'),
+  deposit_value: z.number().nullish().transform((value) => value ?? 10),
+  balance_due_days_before_checkin: z.number().nullish().transform((value) => value ?? 0),
 })
 
 const hostRowSchema = z.object({
@@ -356,6 +361,9 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
             american_mattress: false,
             powerful_water_heater: false,
             min_nights: 1,
+            deposit_type: 'percent',
+            deposit_value: 10,
+            balance_due_days_before_checkin: 0,
           }}
           host={null}
           publicHostName={null}
