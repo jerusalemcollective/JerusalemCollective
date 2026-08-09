@@ -93,6 +93,26 @@ const neveYaakovDsc = `The far-northern end of the city and one of its best-valu
 
 const pisgatZeevDsc = `One of Jerusalem's largest neighbourhoods — a suburban, family-first north with malls, parks and the light rail running through it. Space and value, a ride from the centre.`
 
+const shmuelHanaviDsc = `A busy chareidi neighbourhood strung along the light-rail line between Sanhedria and Mea Shearim — dense, well-connected, and cheaper than the centre, for guests at home in a fully frum setting.`
+
+const makorBaruchDsc = `An older chareidi quarter pressed right up against Mahane Yehuda and Geula — steps from the shuk and the heart of frum Jerusalem, with the character of a long-established neighbourhood.`
+
+const zichronMosheDsc = `A small, historic chareidi pocket beside Geula, best known for the shul where a minyan runs at nearly every hour of the day — deeply traditional and thoroughly central.`
+
+const kiryatBelzDsc = `The Belz Chassidic centre in the north of the city, built around the enormous Belz beis medrash — an immersive Chassidic neighbourhood for guests fully at home in that world.`
+
+const kiryatSanzDsc = `The Sanz-Klausenburg enclave beside Kiryat Belz — a quiet, tightly knit Chassidic neighbourhood in the north, away from the busier chareidi streets.`
+
+const schnellerDsc = `A newer chareidi development on the historic Schneller compound, a short walk from Geula and Makor Baruch — modern apartments in the thick of frum Jerusalem.`
+
+const sanhedriaMurchevetDsc = `The newer, higher extension above Sanhedria — wider streets, larger apartments, and a mix of chareidi and Dati Leumi families, at better value than the neighbourhoods below.`
+
+const mekorChaimDsc = `A small, mixed traditional-and-religious neighbourhood beside Talpiot in the south — quiet and residential, handy for the southern commercial district.`
+
+const irGanimDsc = `A working-class neighbourhood in the south-west — mixed traditional and religious, among the best value in the city, and an easy light-rail ride from the centre.`
+
+const patDsc = `A small, well-connected neighbourhood between Talpiot and the south-western hills — quiet, residential, on the light rail, and priced well below the centre.`
+
 export const neighborhoodDescriptions: Record<string, string> = {
   'Yemin Moshe': yeminMosheDsc,
   Talbiya: talbiyaDsc,
@@ -172,4 +192,24 @@ export const neighborhoodDescriptions: Record<string, string> = {
   'Pisgat Zeev': pisgatZeevDsc,
   "Pisgat Ze'ev": pisgatZeevDsc,
   'Pisgat Zev': pisgatZeevDsc,
+  'Shmuel Hanavi': shmuelHanaviDsc,
+  'Shmuel HaNavi': shmuelHanaviDsc,
+  'Makor Baruch': makorBaruchDsc,
+  'Makor Boruch': makorBaruchDsc,
+  'Zichron Moshe': zichronMosheDsc,
+  'Kiryat Belz': kiryatBelzDsc,
+  'Kiryat Sanz': kiryatSanzDsc,
+  'Kiryat Zanz': kiryatSanzDsc,
+  Schneller: schnellerDsc,
+  'Sanhedria Murchevet': sanhedriaMurchevetDsc,
+  'Sanhedria Murchevat': sanhedriaMurchevetDsc,
+  'Mekor Chaim': mekorChaimDsc,
+  'Mekor Chayim': mekorChaimDsc,
+  'Ir Ganim': irGanimDsc,
+  'Kiryat Menachem': irGanimDsc,
+  Pat: patDsc,
+  'Ramot Aleph': ramotDsc,
+  'Ramot Bet': ramotDsc,
+  'Ramot Gimmel': ramotDsc,
+  'Ramot Dalet': ramotDsc,
 }
