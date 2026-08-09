@@ -1316,7 +1316,7 @@ function BookingControls({
           <div className="mt-3 space-y-2 rounded-2xl border border-stone-200 bg-[#F8F5F2] px-4 py-3">
             <div className="flex items-center justify-between gap-3 text-sm text-stone-600">
               <span>
-                {formatDual(perNightILS, perNightUSD)} \u00d7 {nights} night{nights === 1 ? '' : 's'}
+                {formatDual(perNightILS, perNightUSD)} {'\u00d7'} {nights} night{nights === 1 ? '' : 's'}
               </span>
               <span className="text-stone-900">{formatDual(totalILS, totalUSD)}</span>
             </div>
