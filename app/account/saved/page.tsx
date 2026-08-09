@@ -15,12 +15,7 @@ const savedListingSchema = z.object({
   max_guests: z.number().nullable(),
   price_ils: z.number().nullable(),
   price_usd: z.number().nullable(),
-  listing_photos: z
-    .array(z.object({
-      photo_url: z.string(),
-      is_cover: z.boolean().nullable(),
-    }))
-    .optional(),
+  cover_photo_url: z.string().nullable(),
 })
 
 const savedRowSchema = z.object({
@@ -42,7 +37,7 @@ export default async function SavedPage() {
 
   const { data } = await supabase
     .from('saved_listings')
-    .select('listing_id, listings(id, title, area, bedrooms, max_guests, price_ils, price_usd, listing_photos(photo_url, is_cover))')
+    .select('listing_id, listings(id, title, area, bedrooms, max_guests, price_ils, price_usd, cover_photo_url)')
     .eq('user_id', user.id)
 
   const savedListings = z.array(savedRowSchema).parse(data ?? [])
@@ -63,10 +58,7 @@ export default async function SavedPage() {
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {savedListings.map((listing) => {
-              const coverPhotoUrl =
-                listing.listing_photos?.find((photo) => photo.is_cover)?.photo_url ||
-                listing.listing_photos?.[0]?.photo_url ||
-                null
+              const coverPhotoUrl = listing.cover_photo_url
 
               return (
                 <Link

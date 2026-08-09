@@ -13,9 +13,8 @@ type CollectionListing = {
   max_guests: number | null
   price_ils: number | null
   price_usd: number | null
+  cover_photo_url: string | null
 }
-
-type ListingPhoto = { listing_id: string | null; photo_url: string }
 
 export const revalidate = 3600
 
@@ -67,7 +66,7 @@ export default async function StayCollectionPage({
   const supabase = createPublicClient()
   let query = supabase
     .from('listings')
-    .select('id, title, area, bedrooms, max_guests, price_ils, price_usd')
+    .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, cover_photo_url')
     .eq('is_published', true)
     .order('is_featured', { ascending: false })
 
@@ -79,12 +78,6 @@ export default async function StayCollectionPage({
 
   const { data: listingsData } = await query
   const listings = (listingsData || []) as CollectionListing[]
-  const listingIds = listings.map((listing) => listing.id)
-
-  const { data: photoData } = listingIds.length
-    ? await supabase.from('listing_photos').select('listing_id, photo_url').eq('is_cover', true).in('listing_id', listingIds)
-    : { data: [] }
-  const photoMap = new Map((photoData || []).map((photo: ListingPhoto) => [photo.listing_id, photo.photo_url]))
 
   const faqJsonLd = {
     '@context': 'https://schema.org',
@@ -156,7 +149,7 @@ export default async function StayCollectionPage({
                     area: listing.area,
                     bedrooms: listing.bedrooms,
                     max_guests: listing.max_guests,
-                    coverPhotoUrl: photoMap.get(listing.id) ?? null,
+                    coverPhotoUrl: listing.cover_photo_url ?? null,
                     rating: null,
                     priceLabel,
                     hasPrice: Boolean(listing.price_ils || listing.price_usd),

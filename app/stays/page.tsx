@@ -62,12 +62,6 @@ const blockedListingRowSchema = z.object({
   listing_id: z.string().nullable(),
 })
 
-const listingPhotoRowSchema = z.object({
-  listing_id: z.string().nullable(),
-  photo_url: z.string(),
-  is_cover: z.boolean().nullable().optional(),
-})
-
 const popularNeighborhoodRowSchema = z.object({
   neighborhood: z.string().nullable(),
 })
@@ -418,7 +412,7 @@ async function loadListings({
   let listingsQuery = supabase
     .from('listings')
     .select(
-      'id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, is_featured, latitude, longitude, amenities',
+      'id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, is_featured, latitude, longitude, amenities, cover_photo_url',
       { count: 'exact' },
     )
     .eq('is_published', true)
@@ -498,28 +492,12 @@ async function loadListings({
   const { data: listingsData, count } = await listingsQuery
   const listingRows = z.array(listingSchema).parse(listingsData ?? [])
   const listingIds = listingRows.map((listing) => listing.id)
-  const { data: photosData } = listingIds.length
-    ? await supabase
-        .from('listing_photos')
-        .select('listing_id, photo_url, is_cover')
-        .in('listing_id', listingIds)
-        .order('is_cover', { ascending: false })
-        .order('sort_order', { ascending: true })
-    : { data: [] }
-  const photoMap = new Map<string, string>()
-
-  for (const photo of z.array(listingPhotoRowSchema).parse(photosData ?? [])) {
-    if (photo.listing_id && !photoMap.has(photo.listing_id)) {
-      photoMap.set(photo.listing_id, photo.photo_url)
-    }
-  }
-
   const ratings = await getListingRatings(supabase, listingIds)
 
   return {
     listings: listingRows.map((listing) => ({
       ...listing,
-      cover_photo_url: photoMap.get(listing.id) || null,
+      cover_photo_url: listing.cover_photo_url ?? null,
       rating: ratings.get(listing.id) ?? null,
     })),
     total: count ?? listingRows.length,

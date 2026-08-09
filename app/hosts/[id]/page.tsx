@@ -27,13 +27,6 @@ type ListingWithPhoto = {
   cover_photo_url: string | null
 }
 
-type ListingRow = Omit<ListingWithPhoto, 'cover_photo_url'>
-
-type ListingPhotoRow = {
-  listing_id: string | null
-  photo_url: string
-}
-
 type ReviewRow = {
   id: string
   reviewer_name: string
@@ -112,7 +105,7 @@ export default async function HostProfilePage({ params }: HostPageProps) {
         .single(),
       supabase
         .from('listings')
-        .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type')
+        .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, cover_photo_url')
         .eq('host_id', hostId)
         .eq('is_published', true),
       supabase
@@ -137,7 +130,7 @@ export default async function HostProfilePage({ params }: HostPageProps) {
     host_type: hostData.host_type,
     bio: hostData.bio,
   }
-  const listingRows: ListingRow[] = (listingsData || []).map((listing: ListingRow) => ({
+  const listings: ListingWithPhoto[] = (listingsData || []).map((listing: ListingWithPhoto) => ({
     id: listing.id,
     title: listing.title,
     area: listing.area,
@@ -146,24 +139,7 @@ export default async function HostProfilePage({ params }: HostPageProps) {
     price_ils: listing.price_ils,
     price_usd: listing.price_usd,
     booking_type: listing.booking_type,
-  }))
-  const listingIds = listingRows.map((listing) => listing.id)
-  const { data: photosData } = listingIds.length
-    ? await supabase
-        .from('listing_photos')
-        .select('listing_id, photo_url')
-        .eq('is_cover', true)
-        .in('listing_id', listingIds)
-    : { data: [] }
-  const photoMap = new Map<string, string>()
-  ;(photosData || []).forEach((photo: ListingPhotoRow) => {
-    if (photo.listing_id) {
-      photoMap.set(photo.listing_id, photo.photo_url)
-    }
-  })
-  const listings: ListingWithPhoto[] = listingRows.map((listing) => ({
-    ...listing,
-    cover_photo_url: photoMap.get(listing.id) || null,
+    cover_photo_url: listing.cover_photo_url ?? null,
   }))
   const reviews: ReviewRow[] = (reviewsData || []).map((review: ReviewRow) => ({
     id: review.id,

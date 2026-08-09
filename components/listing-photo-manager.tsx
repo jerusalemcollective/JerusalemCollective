@@ -128,21 +128,16 @@ export function ListingPhotoManager({
     setMessage('')
     setPhotos(nextPhotos)
 
-    const updates = nextPhotos.map((photo, index) =>
-      supabase
-        .from('listing_photos')
-        .update({
-          sort_order: index,
-          is_cover: index === 0,
-        })
-        .eq('id', photo.id),
-    )
+    // One atomic statement (sort_order + is_cover for every row) so the
+    // cover-photo sync trigger sees the final ordering and never converges on the
+    // previous cover — and it is a single round-trip instead of N.
+    const { error } = await supabase.rpc('reorder_listing_photos', {
+      p_listing_id: listingId,
+      p_ordered_ids: nextPhotos.map((photo) => photo.id),
+    })
 
-    const results = await Promise.all(updates)
-    const firstError = results.find((result) => result.error)?.error
-
-    if (firstError) {
-      setMessage(firstError.message)
+    if (error) {
+      setMessage(error.message)
       return
     }
 

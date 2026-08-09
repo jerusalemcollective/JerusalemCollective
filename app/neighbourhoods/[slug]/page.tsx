@@ -18,11 +18,7 @@ type NeighborhoodListing = {
   price_usd: number | null
   booking_type: string | null
   is_featured: boolean | null
-}
-
-type ListingPhoto = {
-  listing_id: string | null
-  photo_url: string
+  cover_photo_url: string | null
 }
 
 export const revalidate = 86400
@@ -102,7 +98,7 @@ export default async function NeighbourhoodPage({
   const supabase = createPublicClient()
   const { data: listingsData } = await supabase
     .from('listings')
-    .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, is_featured')
+    .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, is_featured, cover_photo_url')
     .eq('is_published', true)
     .eq('area', name)
     .order('is_featured', { ascending: false })
@@ -117,23 +113,8 @@ export default async function NeighbourhoodPage({
     price_usd: listing.price_usd,
     booking_type: listing.booking_type,
     is_featured: listing.is_featured,
+    cover_photo_url: listing.cover_photo_url,
   }))
-  const listingIds = listings.map((listing) => listing.id)
-
-  const { data: photoData } = listingIds.length
-    ? await supabase
-        .from('listing_photos')
-        .select('listing_id, photo_url')
-        .eq('is_cover', true)
-        .in('listing_id', listingIds)
-    : { data: [] }
-
-  const photoMap = new Map(
-    (photoData || []).map((photo: ListingPhoto) => [
-      photo.listing_id,
-      photo.photo_url,
-    ]),
-  )
   const description = neighborhoodDescriptions[name] || null
 
   const breadcrumbJsonLd = {
@@ -216,7 +197,7 @@ export default async function NeighbourhoodPage({
         {listings.length > 0 ? (
           <div className="mt-10 grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
             {listings.map((listing) => {
-              const coverPhotoUrl = photoMap.get(listing.id)
+              const coverPhotoUrl = listing.cover_photo_url
 
               return (
                 <Link key={listing.id} href={`/listings/${listing.id}`} className="group block">

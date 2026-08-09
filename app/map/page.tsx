@@ -14,12 +14,7 @@ const listingRowSchema = z.object({
   latitude: z.number().nullable(),
   longitude: z.number().nullable(),
   amenities: z.array(z.string()).nullable(),
-})
-
-const listingPhotoRowSchema = z.object({
-  listing_id: z.string(),
-  photo_url: z.string(),
-  is_cover: z.boolean().nullable(),
+  cover_photo_url: z.string().nullable(),
 })
 
 type ListingRow = z.infer<typeof listingRowSchema>
@@ -59,30 +54,14 @@ export default async function MapPage() {
   const supabase = createPublicClient()
   const { data } = await supabase
     .from('listings')
-    .select('id, title, area, price_ils, price_usd, bedrooms, max_guests, latitude, longitude, amenities')
+    .select('id, title, area, price_ils, price_usd, bedrooms, max_guests, latitude, longitude, amenities, cover_photo_url')
     .eq('is_published', true)
     .order('is_featured', { ascending: false })
     .limit(MAP_MAX_LISTINGS)
 
   const listingRows = z.array(listingRowSchema).parse(data ?? [])
-  const listingIds = listingRows.map((listing) => listing.id)
-  const { data: photoData } =
-    listingIds.length > 0
-      ? await supabase
-          .from('listing_photos')
-          .select('listing_id, photo_url, is_cover')
-          .eq('is_cover', true)
-          .in('listing_id', listingIds)
-      : { data: [] }
-  const coverPhotoByListing = new Map<string, string>()
-
-  for (const photo of z.array(listingPhotoRowSchema).parse(photoData ?? [])) {
-    if (!coverPhotoByListing.has(photo.listing_id)) {
-      coverPhotoByListing.set(photo.listing_id, photo.photo_url)
-    }
-  }
   const listings = listingRows.map((listing) =>
-    toMapListing(listing, coverPhotoByListing.get(listing.id) || null),
+    toMapListing(listing, listing.cover_photo_url ?? null),
   )
 
   return <MapPageClient listings={listings} />
