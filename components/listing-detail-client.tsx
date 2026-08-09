@@ -15,6 +15,7 @@ import { recordListingView } from '@/components/recently-viewed'
 import { recordListingEngagement } from '@/lib/listing-engagement'
 import { formatListingPrice, formatPrice } from '@/lib/utils/currency'
 import { loadEnquiryDraft } from '@/lib/enquiry-draft'
+import { formatDateISO } from '@/lib/utils/date'
 
 // Google Maps (@react-google-maps/api) is heavy; load it only in the browser,
 // on demand, so it doesn't ship in or block this high-traffic SEO page.
@@ -886,7 +887,7 @@ export function ListingDetailClient({
                         </p>
                         <h3 className="mt-2 font-bold text-stone-950">{similarListing.title}</h3>
                         <p className="mt-2 text-sm text-stone-600">
-                          {similarListing.bedrooms || 0} bedrooms \u00b7 sleeps {similarListing.max_guests || 0}
+                          {similarListing.bedrooms || 0} bedrooms {'\u00b7'} sleeps {similarListing.max_guests || 0}
                         </p>
                         <p className="mt-4 text-sm font-semibold text-stone-900">
                           {formatListingPrice(similarListing)}
@@ -955,7 +956,7 @@ export function ListingDetailClient({
               <p className="text-xs text-stone-500">per night</p>
             )}
           </div>
-          {existingConversationId ? (
+          {existingConversationId && !allowsOnlinePayment ? (
             <Link
               href={`/account/messages?conversation=${existingConversationId}`}
               className="flex min-h-11 flex-1 items-center justify-center rounded-full bg-stone-950 px-5 py-0 text-center text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800"
@@ -971,7 +972,7 @@ export function ListingDetailClient({
               >
                 {mobileActionLabel}
               </button>
-              {listing.booking_type !== 'enquiry' && (
+              {listing.host_id && listing.booking_type !== 'enquiry' && (
                 <button
                   type="button"
                   onClick={() => setShowMobileMessageHost(true)}
@@ -1113,10 +1114,10 @@ function Pricing({ priceIls, priceUsd }: { priceIls: string | null; priceUsd: st
   return (
     <div className="mb-6">
       <p className="text-2xl font-bold text-stone-900">
-        {priceIls ? `\u20aa${priceIls}` : 'Price on request'}
-        {priceIls && <span className="ml-1 text-base font-normal text-stone-500">/ night</span>}
+        {priceIls ? `\u20aa${priceIls}` : priceUsd ? `$${priceUsd}` : 'Price on request'}
+        {(priceIls || priceUsd) && <span className="ml-1 text-base font-normal text-stone-500">/ night</span>}
       </p>
-      {priceUsd && <p className="text-sm text-stone-500">~${priceUsd} USD / night</p>}
+      {priceIls && priceUsd && <p className="text-sm text-stone-500">~${priceUsd} USD / night</p>}
     </div>
   )
 }
@@ -1212,8 +1213,8 @@ function BookNowButton({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           listingId: listing.id,
-          checkIn: dateRange.from.toISOString().slice(0, 10),
-          checkOut: dateRange.to.toISOString().slice(0, 10),
+          checkIn: formatDateISO(dateRange.from),
+          checkOut: formatDateISO(dateRange.to),
           guests,
         }),
       })
@@ -1358,7 +1359,7 @@ function BookingControls({
       </div>
 
       <div className={mobile ? 'space-y-3' : ''}>
-        {existingConversationId ? (
+        {existingConversationId && !allowsOnlinePayment ? (
           <Link
             href={`/account/messages?conversation=${existingConversationId}`}
             className={`${mobile ? 'flex min-h-11 w-full items-center justify-center rounded-full bg-stone-950 px-5 py-0' : 'mb-3 flex min-h-11 w-full items-center justify-center rounded-full bg-stone-950 px-5 py-0'} gap-2 text-center text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800`}

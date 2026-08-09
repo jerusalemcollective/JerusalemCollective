@@ -56,7 +56,13 @@ export function formatDateDisplay(
 export function formatDateISO(
   date: Date,
 ): string {
-  return date.toISOString().slice(0, 10)
+  // Use LOCAL calendar components, not toISOString() (UTC): the date picker
+  // returns dates at local midnight, so a UTC+ guest (Israel, Europe) would
+  // otherwise get the previous day, shifting bookings and enquiries by a day.
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 export function formatBookingDate(
