@@ -212,17 +212,6 @@ export function ListingDetailClient({
     nights > 0 && listing.price_usd
       ? nights * listing.price_usd
       : null
-  const hasJewishFeatures =
-    Boolean(
-      listing.kosher_kitchen_level &&
-      listing.kosher_kitchen_level !== 'not_kosher',
-    ) ||
-    listing.shabbat_elevator ||
-    listing.physical_key_entry ||
-    listing.shabbat_clock ||
-    listing.sukkah_balcony ||
-    listing.near_synagogue ||
-    Boolean(listing.walking_minutes_to_kotel)
   const comfortFeatures = [
     listing.central_ac ? 'Central air conditioning' : null,
     listing.american_washer_dryer ? 'American washer and dryer' : null,
@@ -675,22 +664,7 @@ export function ListingDetailClient({
               </div>
             </div>
 
-            {hasJewishFeatures && (
-              <div className="rounded-2xl border border-[#f0c2b3] bg-[#fff7f3] p-5">
-                <p className="text-sm font-bold text-[#a95b45]">Shabbat-ready home</p>
-                <div className="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 text-sm text-stone-700 sm:grid-cols-2">
-                  {listing.kosher_kitchen_level &&
-                    listing.kosher_kitchen_level !== 'not_kosher' && (
-                      <ShabbatReadyItem label={kosherLabel(listing.kosher_kitchen_level)} />
-                    )}
-                  {listing.shabbat_elevator && <ShabbatReadyItem label="Shabbos elevator" />}
-                  {listing.physical_key_entry && <ShabbatReadyItem label="Keyless entry for Shabbos" />}
-                  {listing.shabbat_clock && <ShabbatReadyItem label="Shabbos clock / timers" />}
-                  {listing.sukkah_balcony && <ShabbatReadyItem label="Sukkah balcony" />}
-                  {listing.near_synagogue && <ShabbatReadyItem label="Near a shul" />}
-                </div>
-              </div>
-            )}
+            <HostCard host={host} publicHostName={publicHostName} />
 
             {listing.description && (
               <>
@@ -960,7 +934,6 @@ export function ListingDetailClient({
                     {formatResponseTime(avgResponseHours)}
                   </p>
                 )}
-                <HostCard host={host} publicHostName={publicHostName} />
               </div>
             </div>
           </div>
@@ -1196,18 +1169,6 @@ function StarRating({ rating }: { rating: number }) {
   )
 }
 
-function kosherLabel(level: string): string {
-  const labels: Record<string, string> = {
-    kosher: 'Kosher kitchen',
-    mehadrin: 'Mehadrin kitchen',
-    // Legacy values kept so existing listings still display correctly:
-    kosher_friendly: 'Kosher-friendly kitchen',
-    glatt_kosher: 'Glatt kosher kitchen',
-    chalav_yisrael: 'Mehadrin kitchen',
-  }
-  return labels[level] || 'Kosher kitchen'
-}
-
 function FeaturePill({
   label,
 }: {
@@ -1219,27 +1180,6 @@ function FeaturePill({
       <CheckCircle2 className="h-4 w-4 shrink-0 text-[#c76f55]" />
       <span>{label}</span>
     </div>
-  )
-}
-
-function ShabbatReadyItem({ label }: { label: string }) {
-  return (
-    <span className="flex items-start gap-2">
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="#c76f55"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="mt-0.5 shrink-0"
-      >
-        <path d="M20 6 9 17l-5-5" />
-      </svg>
-      <span>{label}</span>
-    </span>
   )
 }
 
