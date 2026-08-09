@@ -686,9 +686,18 @@ export function ListingDetailClient({
                 <hr className="border-stone-100" />
                 <div className="py-3">
                   <h2 className="mb-3 text-lg font-bold text-stone-900">Sleeping setup</h2>
-                  <p className="whitespace-pre-line rounded-3xl bg-[#F8F5F2] p-5 text-sm leading-7 text-stone-700">
-                    {listing.sleeping_setup}
-                  </p>
+                  <div className="grid gap-x-8 gap-y-2.5 sm:grid-cols-2">
+                    {listing.sleeping_setup
+                      .split('\n')
+                      .map((line) => line.trim())
+                      .filter(Boolean)
+                      .map((line, index) => (
+                        <div key={index} className="flex items-start gap-2.5 text-sm text-stone-700">
+                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#c76f55]" />
+                          <span>{line}</span>
+                        </div>
+                      ))}
+                  </div>
                 </div>
               </>
             )}
