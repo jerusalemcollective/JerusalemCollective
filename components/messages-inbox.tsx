@@ -191,6 +191,8 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
   const [guestProfile, setGuestProfile] = useState<GuestProfile | null>(null)
   const [listingFilter, setListingFilter] = useState<string>('all')
   const [statusFilter] = useState<string>('all')
+  // A conversation is an "enquiry" when it has a linked booking request.
+  const [enquiriesOnly, setEnquiriesOnly] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
   const participantIdsKey = participantIds.join('|')
@@ -737,9 +739,12 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
         (statusFilter === 'accepted' && conversation.request?.status === 'accepted') ||
         (statusFilter === 'no_request' && !conversation.request)
 
-      return matchesListing && matchesStatus
+      // "Enquiries only" keeps conversations that carry a booking request.
+      const matchesEnquiry = !enquiriesOnly || Boolean(conversation.request)
+
+      return matchesListing && matchesStatus && matchesEnquiry
     })
-  }, [conversations, listingFilter, statusFilter])
+  }, [conversations, listingFilter, statusFilter, enquiriesOnly])
 
   const canAcceptSelectedConversation =
     mode === 'host' &&
@@ -1138,24 +1143,51 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
 
   return (
     <div className="overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm">
-      {mode === 'host' && listingOptions.length > 1 && (
-        <div className="border-b border-stone-200 px-4 py-4">
-          <select
-            value={listingFilter}
-            onChange={(event) => setListingFilter(event.target.value)}
-            className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm font-semibold text-stone-700 outline-none transition focus:border-[#c76f55]"
-          >
-            <option value="all">All listings</option>
-            {listingOptions.map(([id, title]) => (
-              <option key={id} value={id}>
-                {title}
-              </option>
-            ))}
-          </select>
+      {mode === 'host' && (
+        <div className="flex flex-wrap items-center gap-3 border-b border-stone-200 px-4 py-4">
+          <div className="inline-flex rounded-full bg-[#F8F5F2] p-1">
+            <button
+              type="button"
+              onClick={() => setEnquiriesOnly(false)}
+              className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+                enquiriesOnly ? 'text-stone-600 hover:text-stone-900' : 'bg-white text-stone-950 shadow-sm'
+              }`}
+            >
+              All
+            </button>
+            <button
+              type="button"
+              onClick={() => setEnquiriesOnly(true)}
+              className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+                enquiriesOnly ? 'bg-white text-stone-950 shadow-sm' : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              Enquiries
+            </button>
+          </div>
+          {listingOptions.length > 1 && (
+            <select
+              value={listingFilter}
+              onChange={(event) => setListingFilter(event.target.value)}
+              className="ml-auto rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-semibold text-stone-700 outline-none transition focus:border-[#c76f55]"
+            >
+              <option value="all">All listings</option>
+              {listingOptions.map(([id, title]) => (
+                <option key={id} value={id}>
+                  {title}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
       )}
 
       <div className="divide-y divide-stone-100">
+        {filteredConversations.length === 0 && (
+          <p className="px-5 py-10 text-center text-sm text-stone-500">
+            {enquiriesOnly ? 'No enquiries yet.' : 'No conversations match this filter.'}
+          </p>
+        )}
         {filteredConversations.map((conversation) => {
           const participantName = conversation.other_participant?.full_name || (mode === 'host' ? 'Guest' : 'Host')
           const listing = conversation.listing
