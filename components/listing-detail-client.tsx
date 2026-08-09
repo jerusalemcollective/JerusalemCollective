@@ -705,59 +705,22 @@ export function ListingDetailClient({
               </>
             )}
 
-            {listing.amenities && listing.amenities.length > 0 && (
+            {((listing.amenities && listing.amenities.length > 0) || comfortFeatures.length > 0) && (
               <>
                 <hr className="border-stone-100" />
                 <div className="py-3">
                   <h2 className="mb-3 text-lg font-bold text-stone-900">Amenities</h2>
-                  <AmenityDisplay amenities={listing.amenities} />
-                </div>
-              </>
-            )}
-
-            {(comfortFeatures.length > 0 || shulDistances.length > 0) && (
-              <>
-                <hr className="border-stone-100" />
-                <div className="py-3">
-                  <h2 className="font-display text-xl font-bold text-stone-950">
-                    Comfort &amp; walking distances
-                  </h2>
-                  {comfortFeatures.length > 0 && (
-                    <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                      {comfortFeatures.map((feature) => (
-                        <FeaturePill key={feature} label={feature} icon="comfort" />
-                      ))}
-                    </div>
+                  {listing.amenities && listing.amenities.length > 0 && (
+                    <AmenityDisplay amenities={listing.amenities} />
                   )}
-                  {shulDistances.length > 0 && (
-                    <div className="mt-3 space-y-1.5">
-                      <p className="text-xs font-bold uppercase tracking-widest text-stone-500">
-                        Walking distance to shuls
-                      </p>
-                      {shulDistances.map((shul) => (
-                        <div
-                          key={shul.shul_name}
-                          className="flex items-center gap-2"
-                        >
-                          <svg
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="#c76f55"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <circle cx="12" cy="5" r="1" />
-                            <path d="m9 20 3-6 3 6" />
-                            <path d="m6 8 6 2 3-3" />
-                          </svg>
-                          <span className="text-sm text-stone-600">
-                            {shul.walking_minutes} min walk to {shul.shul_name}
-                          </span>
-                        </div>
-                      ))}
+                  {comfortFeatures.length > 0 && (
+                    <div className={listing.amenities && listing.amenities.length > 0 ? 'mt-6' : ''}>
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-stone-500">Comfort</h3>
+                      <div className="mt-3 grid gap-x-8 gap-y-2.5 sm:grid-cols-2">
+                        {comfortFeatures.map((feature) => (
+                          <FeaturePill key={feature} label={feature} icon="comfort" />
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -781,6 +744,25 @@ export function ListingDetailClient({
                     <p className="mt-3 text-sm text-stone-500">
                       {listing.area} is one of Jerusalem&apos;s most sought-after neighbourhoods for short-term stays.
                     </p>
+                  )}
+                  {shulDistances.length > 0 && (
+                    <div className="mt-4 space-y-1.5">
+                      <p className="text-xs font-bold uppercase tracking-widest text-stone-500">
+                        Walking distance to shuls
+                      </p>
+                      {shulDistances.map((shul) => (
+                        <div key={shul.shul_name} className="flex items-center gap-2">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c76f55" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="5" r="1" />
+                            <path d="m9 20 3-6 3 6" />
+                            <path d="m6 8 6 2 3-3" />
+                          </svg>
+                          <span className="text-sm text-stone-600">
+                            {shul.walking_minutes} min walk to {shul.shul_name}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               </>
