@@ -584,7 +584,7 @@ export function ListingDetailClient({
         </div>
 
         <div className="grid gap-10 lg:grid-cols-[1fr_360px] lg:items-start">
-          <div className="space-y-8">
+          <div className="space-y-6">
             <div>
               <p className="text-sm font-bold uppercase tracking-widest text-[#c76f55]">
                 {listing.title.toLowerCase().includes(listing.area.toLowerCase())
@@ -674,7 +674,7 @@ export function ListingDetailClient({
             {listing.description && (
               <>
                 <hr className="border-stone-100" />
-                <div className="py-5">
+                <div className="py-3">
                   <h2 className="mb-3 text-lg font-bold text-stone-900">About this stay</h2>
                   <p className="whitespace-pre-line text-base leading-8 text-stone-700">{listing.description}</p>
                 </div>
@@ -684,7 +684,7 @@ export function ListingDetailClient({
             {listing.sleeping_setup?.trim() && (
               <>
                 <hr className="border-stone-100" />
-                <div className="py-5">
+                <div className="py-3">
                   <h2 className="mb-3 text-lg font-bold text-stone-900">Sleeping setup</h2>
                   <p className="whitespace-pre-line rounded-3xl bg-[#F8F5F2] p-5 text-sm leading-7 text-stone-700">
                     {listing.sleeping_setup}
@@ -696,7 +696,7 @@ export function ListingDetailClient({
             {listing.house_rules?.trim() && (
               <>
                 <hr className="border-stone-100" />
-                <div className="py-5">
+                <div className="py-3">
                   <h2 className="text-lg font-bold text-stone-950">House rules</h2>
                   <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-stone-700">
                     {listing.house_rules}
@@ -708,7 +708,7 @@ export function ListingDetailClient({
             {listing.amenities && listing.amenities.length > 0 && (
               <>
                 <hr className="border-stone-100" />
-                <div className="py-5">
+                <div className="py-3">
                   <h2 className="mb-3 text-lg font-bold text-stone-900">Amenities</h2>
                   <AmenityDisplay amenities={listing.amenities} />
                 </div>
@@ -718,7 +718,7 @@ export function ListingDetailClient({
             {(comfortFeatures.length > 0 || shulDistances.length > 0) && (
               <>
                 <hr className="border-stone-100" />
-                <div className="py-5">
+                <div className="py-3">
                   <h2 className="font-display text-xl font-bold text-stone-950">
                     Comfort &amp; walking distances
                   </h2>
@@ -767,7 +767,7 @@ export function ListingDetailClient({
             {listing.area && (
               <>
                 <hr className="border-stone-100" />
-                <div className="py-5">
+                <div className="py-3">
                   <div className="flex items-center justify-between gap-4">
                     <h2 className="font-display text-xl font-bold text-stone-950">
                       About {listing.area}
@@ -789,7 +789,7 @@ export function ListingDetailClient({
             {listing.latitude !== null && listing.longitude !== null && (
               <>
                 <hr className="border-stone-100" />
-                <div className="py-5">
+                <div className="py-3">
                   <h2 className="font-display text-xl font-bold text-stone-950">
                     Location
                   </h2>
@@ -808,7 +808,7 @@ export function ListingDetailClient({
             {servicesBarEnabled && listing.host_id && (
               <>
                 <hr className="border-stone-100" />
-                <div className="py-5">
+                <div className="py-3">
                   <h2 className="text-lg font-bold text-stone-950">Enhance your stay</h2>
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
                     <Link
@@ -877,7 +877,7 @@ export function ListingDetailClient({
             {similarListings.length > 0 && (
               <>
                 <hr className="border-stone-100" />
-                <div className="py-5">
+                <div className="py-3">
                   <h2 className="mb-4 text-xl font-bold text-stone-950">You might also like</h2>
                   <div className="grid gap-4 md:grid-cols-3">
                     {similarListings.map((similarListing) => (
@@ -1181,7 +1181,7 @@ function FeaturePill({
   icon: string
 }) {
   return (
-    <div className="flex min-h-12 items-center gap-3 rounded-2xl bg-[#F8F5F2] px-4 py-3 text-sm font-semibold text-stone-700">
+    <div className="flex items-center gap-2.5 text-sm text-stone-700">
       <CheckCircle2 className="h-4 w-4 shrink-0 text-[#c76f55]" />
       <span>{label}</span>
     </div>

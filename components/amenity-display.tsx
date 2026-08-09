@@ -13,22 +13,19 @@ export function AmenityDisplay({ amenities }: { amenities: string[] }) {
   if (visibleGroups.length === 0) return null
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {visibleGroups.map((group) => (
-        <section key={group.title} className="rounded-3xl border border-stone-200 bg-white p-4 shadow-sm">
-          <h3 className="mb-3 text-sm font-bold text-stone-950">{group.title}</h3>
-          <div className="grid gap-2 sm:grid-cols-2">
+        <div key={group.title}>
+          <h3 className="text-xs font-bold uppercase tracking-widest text-stone-500">{group.title}</h3>
+          <div className="mt-3 grid gap-x-8 gap-y-2.5 sm:grid-cols-2">
             {group.amenities.map((amenity) => (
-              <div
-                key={amenity}
-                className="flex min-h-12 items-center gap-3 rounded-2xl bg-[#F8F5F2] px-4 py-3 text-sm font-semibold text-stone-700"
-              >
+              <div key={amenity} className="flex items-center gap-2.5 text-sm text-stone-700">
                 <CheckCircle2 className="h-4 w-4 shrink-0 text-[#c76f55]" />
                 <span>{amenity}</span>
               </div>
             ))}
           </div>
-        </section>
+        </div>
       ))}
     </div>
   )
