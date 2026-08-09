@@ -245,7 +245,7 @@ export default async function HostListingsPage() {
           {hostListings.length === 0 ? (
             <EmptyPanel text="No live listings yet. Approved stays will appear here." />
           ) : (
-            <div className="mt-4 divide-y divide-stone-200 border-y border-stone-200">
+            <div className="mt-4 space-y-3">
               {hostListings.map((listing) => {
                 const photoCount = photoCountByListing.get(listing.id) || 0
                 const scoreInput = {
@@ -272,10 +272,6 @@ export default async function HostListingsPage() {
                     bedrooms={listing.bedrooms}
                     americanComfort={Boolean(listing.american_comfort)}
                     performance={performanceByListing.get(listing.id) || null}
-                    badge={{
-                      label: listing.is_published ? 'Live' : 'Hidden',
-                      tone: listing.is_published ? 'green' : 'stone',
-                    }}
                     isPublished={listing.is_published}
                   />
                 )
@@ -334,7 +330,6 @@ function ListingRow({
   bedrooms,
   americanComfort,
   performance,
-  badge,
   isPublished,
 }: {
   id: string
@@ -348,52 +343,76 @@ function ListingRow({
   bedrooms: number | null
   americanComfort: boolean
   performance: PerformanceInsight | null
-  badge: { label: string; tone: 'green' | 'stone' }
   isPublished: boolean
 }) {
   return (
-    <article className="grid gap-4 py-4 md:grid-cols-[96px_1fr_auto] md:items-center">
-      <Thumb src={image} title={title} />
-      <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">{area}</p>
-        <h3 className="mt-1 font-bold text-stone-950">{title}</h3>
-        <p className="mt-1 text-sm text-stone-600">{meta}</p>
-        <div className="mt-4 max-w-xl">
-          <ListingQualityScore score={score} label="Listing strength" suggestions={suggestions} />
+    <article className="rounded-2xl border border-[#eee7e0] bg-white p-4 shadow-sm md:p-5">
+      <div className="flex flex-col gap-4 sm:flex-row">
+        <div className="relative hidden h-28 w-40 shrink-0 overflow-hidden rounded-xl bg-stone-200 sm:block">
+          {image ? (
+            <Image src={image} alt={title} fill className="object-cover" sizes="160px" />
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-stone-100 via-stone-200 to-stone-300" />
+          )}
         </div>
-        <PriceInsight
-          comparison={comparison}
-          area={area}
-          bedrooms={bedrooms}
-          americanComfort={americanComfort}
-        />
-        <PerformanceInsightCard performance={performance} />
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span
-            className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
-              isPublished ? 'bg-green-100 text-green-700' : 'bg-stone-100 text-stone-600'
-            }`}
-          >
-            {isPublished ? 'Live' : 'Hidden'}
-          </span>
-          <Link
-            href={`/host/dashboard/listings/${id}`}
-            className="rounded-full bg-stone-950 px-4 py-1.5 text-xs font-bold text-white transition hover:bg-stone-800"
-          >
-            Manage property
-          </Link>
-          <Link
-            href={`/listings/${id}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-full border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-300"
-          >
-            View live ↗
-          </Link>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">{area}</p>
+              <h3 className="mt-0.5 text-lg font-bold text-stone-950">{title}</h3>
+              <p className="mt-0.5 text-sm text-stone-600">{meta}</p>
+            </div>
+            <span
+              className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
+                isPublished ? 'bg-green-100 text-green-700' : 'bg-stone-100 text-stone-600'
+              }`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${isPublished ? 'bg-green-600' : 'bg-stone-400'}`} />
+              {isPublished ? 'Live' : 'Hidden'}
+            </span>
+          </div>
+
+          <div className="mt-4 max-w-xl">
+            <ListingQualityScore score={score} label="Listing strength" />
+            {suggestions.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {suggestions.map((suggestion) => (
+                  <span
+                    key={suggestion}
+                    className="rounded-full bg-[#fff4ef] px-2.5 py-1 text-[11px] font-semibold text-[#a95b45]"
+                  >
+                    {suggestion}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <PriceInsight
+            comparison={comparison}
+            area={area}
+            bedrooms={bedrooms}
+            americanComfort={americanComfort}
+          />
+          <PerformanceInsightCard performance={performance} />
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Link
+              href={`/host/dashboard/listings/${id}`}
+              className="rounded-full bg-stone-950 px-4 py-2 text-xs font-bold text-white transition hover:bg-stone-800"
+            >
+              Manage
+            </Link>
+            <Link
+              href={`/listings/${id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-full border border-stone-300 px-4 py-2 text-xs font-bold text-stone-700 transition hover:border-stone-400"
+            >
+              View live ↗
+            </Link>
+          </div>
         </div>
-      </div>
-      <div className="flex flex-wrap items-center gap-2 md:justify-end">
-        <StatusBadge label={badge.label} tone={badge.tone} />
       </div>
     </article>
   )
@@ -566,13 +585,11 @@ function listingStrengthSuggestions(listing: HostListing, photoCount: number) {
   const descriptionLength = listing.description?.length || 0
   const amenities = listing.amenities || []
 
-  if (photoCount < 10) suggestions.push('Add more photos, ideally at least 10.')
-  if (descriptionLength <= 150) {
-    suggestions.push('Write a fuller description with sleeping setup, location, and guest details.')
-  }
-  if (listing.bathrooms === null) suggestions.push('Add the bathroom count.')
-  if (!listing.price_usd && !listing.price_ils) suggestions.push('Add a clear price.')
-  if (amenities.length < 5) suggestions.push('Add at least five useful amenities.')
+  if (photoCount < 10) suggestions.push('Add more photos')
+  if (descriptionLength <= 150) suggestions.push('Fuller description')
+  if (listing.bathrooms === null) suggestions.push('Add bathrooms')
+  if (!listing.price_usd && !listing.price_ils) suggestions.push('Add a price')
+  if (amenities.length < 5) suggestions.push('More amenities')
 
   return suggestions.slice(0, 3)
 }
