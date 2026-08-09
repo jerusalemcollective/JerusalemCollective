@@ -67,13 +67,30 @@ export function BookingDateRangePicker({
 }: BookingDateRangePickerProps) {
   const [showCalendar, setShowCalendar] = useState(false)
   const calendarRef = useRef<HTMLDivElement>(null)
+  // Disable only the INTERIOR booked nights (start_date+1 … end_date-1), not the
+  // block's own start_date: a checkout landing on the start day is a valid
+  // same-day turnover, since the server treats stays as half-open. One-night
+  // blocks have no interior day, so they are enforced solely by the onSelect
+  // overlap guard below.
   const disabledDates = [
     { before: new Date() },
-    ...blockedRanges.map((range) => ({
-      from: parseLocalDate(range.start_date),
-      to: blockedRangeInclusiveEnd(range.end_date),
-    })),
+    ...blockedRanges
+      .map((range) => {
+        const from = parseLocalDate(range.start_date)
+        from.setDate(from.getDate() + 1)
+        return { from, to: blockedRangeInclusiveEnd(range.end_date) }
+      })
+      .filter((interior) => interior.from.getTime() <= interior.to.getTime()),
   ]
+
+  // A completed range is unbookable if it overlaps any booked night — the same
+  // half-open rule the server uses (block.start < checkOut && block.end > checkIn).
+  const rangeOverlapsBlocked = (from: Date, to: Date) =>
+    blockedRanges.some((range) => {
+      const blockStart = parseLocalDate(range.start_date)
+      const blockEnd = parseLocalDate(range.end_date)
+      return blockStart.getTime() < to.getTime() && blockEnd.getTime() > from.getTime()
+    })
   const selectedRange: DayPickerDateRange | undefined = dateRange.from
     ? { from: dateRange.from, to: dateRange.to }
     : undefined
@@ -122,6 +139,13 @@ export function BookingDateRangePicker({
                   return
                 }
 
+                // A completed range overlapping a booked night is unbookable —
+                // keep the start and clear the checkout so the guest re-picks.
+                if (range?.from && range?.to && rangeOverlapsBlocked(range.from, range.to)) {
+                  setDateRange({ from: range.from, to: undefined })
+                  return
+                }
+
                 setDateRange(range || { from: undefined, to: undefined })
 
                 if (range?.from && range?.to && range.from.getTime() !== range.to.getTime()) {
@@ -157,14 +181,26 @@ export function BookingDateRangePicker({
               <QuickRangeButton
                 label="1 week"
                 onClick={() => {
-                  setDateRange({ from: new Date(), to: addDays(new Date(), 7) })
+                  const from = new Date()
+                  const to = addDays(from, 7)
+                  if (rangeOverlapsBlocked(from, to)) {
+                    setDateRange({ from, to: undefined })
+                    return
+                  }
+                  setDateRange({ from, to })
                   setTimeout(() => setShowCalendar(false), 300)
                 }}
               />
               <QuickRangeButton
                 label="2 weeks"
                 onClick={() => {
-                  setDateRange({ from: new Date(), to: addDays(new Date(), 14) })
+                  const from = new Date()
+                  const to = addDays(from, 14)
+                  if (rangeOverlapsBlocked(from, to)) {
+                    setDateRange({ from, to: undefined })
+                    return
+                  }
+                  setDateRange({ from, to })
                   setTimeout(() => setShowCalendar(false), 300)
                 }}
               />
