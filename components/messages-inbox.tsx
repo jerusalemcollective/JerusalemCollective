@@ -968,18 +968,19 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
               </div>
 
             {selectedConversation.request && (
-              <div className="mt-4 rounded-3xl border border-stone-200 bg-[#fbfaf8] p-4">
-                <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-center">
+              <div className="mt-4 rounded-3xl border border-[#f2d2c7] bg-[#fff4ef] p-4">
+                <div className="grid gap-3 md:grid-cols-[1.4fr_1fr_auto] md:items-center">
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-stone-500">Dates</p>
-                    <p className="mt-1 text-sm font-bold text-stone-950">
-                      {formatRequestDate(selectedConversation.request.check_in)} to{' '}
-                      {formatRequestDate(selectedConversation.request.check_out)}
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-[#c76f55]">Requested dates</p>
+                    <p className="mt-1 text-lg font-bold text-stone-950">
+                      {selectedConversation.request.check_in && selectedConversation.request.check_out
+                        ? `${formatRequestDate(selectedConversation.request.check_in)} → ${formatRequestDate(selectedConversation.request.check_out)}`
+                        : 'No dates given'}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-stone-500">Guests</p>
-                    <p className="mt-1 text-sm font-bold text-stone-950">
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-[#c76f55]">Guests</p>
+                    <p className="mt-1 text-lg font-bold text-stone-950">
                       {selectedConversation.request.guests} guest{selectedConversation.request.guests === 1 ? '' : 's'}
                     </p>
                   </div>
