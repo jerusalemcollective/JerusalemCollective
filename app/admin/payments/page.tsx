@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { requireAdmin } from '@/lib/admin'
 import { getPaymentRouteSettings } from '@/lib/platform-settings'
+import { oneOrNull } from '@/lib/utils/one-or-null'
 
 type PaymentRow = {
   id: string
@@ -50,8 +51,8 @@ export default async function AdminPaymentsPage() {
 
   const normalize = (payment: PaymentQueryRow): PaymentRow => ({
     ...payment,
-    hosts: Array.isArray(payment.hosts) ? payment.hosts[0] || null : payment.hosts || null,
-    profiles: Array.isArray(payment.profiles) ? payment.profiles[0] || null : payment.profiles || null,
+    hosts: oneOrNull(payment.hosts),
+    profiles: oneOrNull(payment.profiles),
   })
 
   // Exceptions are queried separately so they surface even if they fall outside

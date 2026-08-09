@@ -2,6 +2,7 @@
 import { requireAdminPermission } from '@/lib/admin'
 import { StatusBadge } from '@/components/status-badge'
 import { Pagination, normalizePaginationSearchParams, type PaginationSearchParams } from '@/components/pagination'
+import { oneOrNull } from '@/lib/utils/one-or-null'
 
 const PAGE_SIZE = 25
 
@@ -88,15 +89,9 @@ export default async function AdminEnquiriesPage({
   const enquiries: EnquiryRow[] = (data || []).map((enquiry: EnquiryQueryRow) => ({
     ...enquiry,
     guests: enquiry.guests || 1,
-    listings: Array.isArray(enquiry.listings)
-      ? enquiry.listings[0] || null
-      : enquiry.listings,
-    hosts: Array.isArray(enquiry.hosts)
-      ? enquiry.hosts[0] || null
-      : enquiry.hosts,
-    guest: Array.isArray(enquiry.guest)
-      ? enquiry.guest[0] || null
-      : enquiry.guest,
+    listings: oneOrNull(enquiry.listings),
+    hosts: oneOrNull(enquiry.hosts),
+    guest: oneOrNull(enquiry.guest),
   }))
   const total = count || 0
   const newCount = enquiries.filter((enquiry: EnquiryRow) => enquiry.status === 'new').length

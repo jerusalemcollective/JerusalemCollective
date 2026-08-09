@@ -7,6 +7,7 @@ import { ConfirmSubmitButton } from '@/components/confirm-submit-button'
 import { ListingQualityScore } from '@/components/listing-quality-score'
 import { calculateListingScore } from '@/lib/marketplace-rules'
 import { AmenitySelector } from '@/components/amenity-selector'
+import { oneOrNull } from '@/lib/utils/one-or-null'
 
 type ListingAdminStatus = 'needs_work' | 'ready_for_launch' | 'live'
 
@@ -67,9 +68,7 @@ export default async function AdminListingDetailPage({
   const listingRow: AdminListingDetailRow = listingData
   const listing: AdminListingDetail = {
     ...listingRow,
-    hosts: Array.isArray(listingRow.hosts)
-      ? listingRow.hosts[0] || null
-      : listingRow.hosts,
+    hosts: oneOrNull(listingRow.hosts),
   }
   const qualityScore = calculateListingScore({
     photo_count: photos?.length || 0,

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { oneOrNull } from '@/lib/utils/one-or-null'
 
 type BookingListing = {
   title: string | null
@@ -49,9 +50,7 @@ export async function GET(
     return NextResponse.json({ error: 'Booking dates are missing' }, { status: 400 })
   }
 
-  const listing = Array.isArray(booking.listings)
-    ? booking.listings[0] || null
-    : booking.listings
+  const listing = oneOrNull(booking.listings)
   const title = listing?.title || 'JLM Collective Stay'
   const location = listing?.exact_address || listing?.area || 'Jerusalem'
   const icsContent = [

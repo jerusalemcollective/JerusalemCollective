@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { sendGuestBalanceReminderEmail } from '@/lib/transactional-email'
 import { pingCronHeartbeat } from '@/lib/cron-heartbeat'
+import { oneOrNull } from '@/lib/utils/one-or-null'
 
 const HEARTBEAT_SLUG = 'balance-reminders'
 
@@ -84,7 +85,7 @@ export async function GET(request: Request) {
         .eq('id', row.booking_id)
         .maybeSingle<{ listings: { title: string } | { title: string }[] | null }>()
       const listings = booking?.listings
-      const title = Array.isArray(listings) ? listings[0]?.title : listings?.title
+      const title = oneOrNull(listings)?.title
       if (typeof title === 'string' && title.trim()) listingTitle = title
     }
 

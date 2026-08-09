@@ -3,6 +3,7 @@ import { requireAdminPermission } from '@/lib/admin'
 import { updateReviewApproval } from '@/app/admin/review-actions'
 import { BooleanBadge } from '@/components/boolean-badge'
 import { Pagination, normalizePaginationSearchParams, type PaginationSearchParams } from '@/components/pagination'
+import { oneOrNull } from '@/lib/utils/one-or-null'
 
 const PAGE_SIZE = 25
 
@@ -72,9 +73,7 @@ export default async function AdminReviewsPage({
 
   const reviews: ReviewRow[] = (data || []).map((review: ReviewQueryRow) => ({
     ...review,
-    listings: Array.isArray(review.listings)
-      ? review.listings[0] || null
-      : review.listings,
+    listings: oneOrNull(review.listings),
   }))
   const total = count || 0
 

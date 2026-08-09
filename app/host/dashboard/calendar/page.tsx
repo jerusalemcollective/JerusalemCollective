@@ -11,6 +11,7 @@ import {
 } from './actions'
 import { ExternalCalendarSyncForm } from '@/components/external-calendar-sync-form'
 import { CopyCalendarUrlButton } from '@/components/copy-calendar-url-button'
+import { oneOrNull } from '@/lib/utils/one-or-null'
 
 type HostListing = {
   id: string
@@ -49,11 +50,6 @@ type RangeRow = {
   reason: string | null
   source: string
   listings?: { title: string } | { title: string }[] | null
-}
-
-function oneOrNull<T>(rel: T | T[] | null | undefined): T | null {
-  if (Array.isArray(rel)) return rel[0] ?? null
-  return rel ?? null
 }
 
 export default async function HostCalendarPage() {

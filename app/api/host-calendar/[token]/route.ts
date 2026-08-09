@@ -1,4 +1,5 @@
 import { createServiceRoleClient } from '@/lib/supabase/service'
+import { oneOrNull } from '@/lib/utils/one-or-null'
 
 type HostCalendarRow = {
   id: string
@@ -60,12 +61,8 @@ export async function GET(
     .order('check_in', { ascending: true })
 
   const events = ((bookings || []) as HostBookingRow[]).map((booking) => {
-    const listing = Array.isArray(booking.listings)
-      ? booking.listings[0] || null
-      : booking.listings
-    const guest = Array.isArray(booking.profiles)
-      ? booking.profiles[0] || null
-      : booking.profiles
+    const listing = oneOrNull(booking.listings)
+    const guest = oneOrNull(booking.profiles)
 
     return [
       'BEGIN:VEVENT',

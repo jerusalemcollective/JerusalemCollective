@@ -6,6 +6,7 @@ import { BooleanBadge } from '@/components/boolean-badge'
 import { ListingQualityScore } from '@/components/listing-quality-score'
 import { Pagination, normalizePaginationSearchParams, type PaginationSearchParams } from '@/components/pagination'
 import { calculateListingScore } from '@/lib/marketplace-rules'
+import { oneOrNull } from '@/lib/utils/one-or-null'
 
 const PAGE_SIZE = 25
 
@@ -110,9 +111,7 @@ export default async function AdminListingsPage({
 
   const listings: ListingRow[] = (data || []).map((listing: ListingQueryRow) => ({
     ...listing,
-    hosts: Array.isArray(listing.hosts)
-      ? listing.hosts[0] || null
-      : listing.hosts,
+    hosts: oneOrNull(listing.hosts),
   }))
   const listingIds = listings.map((listing) => listing.id)
   const [{ data: photos }, { data: shulDistances }] = await Promise.all([

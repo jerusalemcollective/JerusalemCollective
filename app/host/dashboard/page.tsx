@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { DraftListingCard } from '@/components/draft-listing-card'
+import { oneOrNull } from '@/lib/utils/one-or-null'
 
 type UpcomingBooking = {
   id: string
@@ -97,7 +98,7 @@ export default async function HostDashboardPage() {
     id: booking.id,
     check_in: booking.check_in,
     check_out: booking.check_out,
-    listings: Array.isArray(booking.listings) ? booking.listings[0] || null : booking.listings || null,
+    listings: oneOrNull(booking.listings),
   }))
   const openSupportCases: HostSupportCase[] = (supportCasesData || []).map((supportCase: HostSupportCase) => ({
     id: supportCase.id,

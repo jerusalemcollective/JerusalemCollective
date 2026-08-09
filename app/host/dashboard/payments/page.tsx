@@ -3,6 +3,7 @@ import { HostPaymentCurrencyAndSchedule } from '@/components/host-payment-curren
 import { StripeConnectCard } from '@/components/stripe-connect-card'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { getPaymentRouteSettings } from '@/lib/platform-settings'
+import { oneOrNull } from '@/lib/utils/one-or-null'
 import { updateHostPaymentPreferences } from './actions'
 
 type PaymentBooking = {
@@ -82,8 +83,8 @@ export default async function HostPaymentsPage({
     payment_notes: booking.payment_notes,
     payment_updated_at: booking.payment_updated_at,
     commission_percent: booking.commission_percent,
-    listings: Array.isArray(booking.listings) ? booking.listings[0] || null : booking.listings || null,
-    profiles: Array.isArray(booking.profiles) ? booking.profiles[0] || null : booking.profiles || null,
+    listings: oneOrNull(booking.listings),
+    profiles: oneOrNull(booking.profiles),
   }))
   const payouts: HostPayout[] = (payoutRows || []) as HostPayout[]
 

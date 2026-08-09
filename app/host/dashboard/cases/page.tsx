@@ -1,4 +1,5 @@
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
+import { oneOrNull } from '@/lib/utils/one-or-null'
 
 type HostSupportCase = {
   id: string
@@ -50,10 +51,8 @@ export default async function HostCasesPage() {
     requested_amount: supportCase.requested_amount,
     approved_refund_amount: supportCase.approved_refund_amount,
     currency: supportCase.currency,
-    listings: Array.isArray(supportCase.listings)
-      ? supportCase.listings[0] || null
-      : supportCase.listings || null,
-    guest: Array.isArray(supportCase.guest) ? supportCase.guest[0] || null : supportCase.guest || null,
+    listings: oneOrNull(supportCase.listings),
+    guest: oneOrNull(supportCase.guest),
   }))
 
   return (

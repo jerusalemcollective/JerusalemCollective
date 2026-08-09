@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getPaymentRouteSettings } from '@/lib/platform-settings'
+import { oneOrNull } from '@/lib/utils/one-or-null'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -92,7 +93,7 @@ export async function POST(request: Request) {
 
   let listingTitle = 'your stay'
   const listings = booking?.listings
-  const bookingTitle = Array.isArray(listings) ? listings[0]?.title : listings?.title
+  const bookingTitle = oneOrNull(listings)?.title
   if (typeof bookingTitle === 'string' && bookingTitle.trim()) {
     listingTitle = bookingTitle
   }

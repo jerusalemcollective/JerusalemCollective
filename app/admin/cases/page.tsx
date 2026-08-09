@@ -3,6 +3,7 @@ import { requireAdminPermission } from '@/lib/admin'
 import { CasesList, type SupportCase } from './cases-list'
 import { summarizeSupportCases } from '@/lib/marketplace-rules'
 import { Pagination, normalizePaginationSearchParams, type PaginationSearchParams } from '@/components/pagination'
+import { oneOrNull } from '@/lib/utils/one-or-null'
 
 const PAGE_SIZE = 25
 
@@ -76,18 +77,10 @@ export default async function AdminCasesPage({
   const cases: SupportCase[] = (data || []).map((supportCase: SupportCaseRow) => ({
     ...supportCase,
     approved_refund_amount: supportCase.approved_refund_amount || 0,
-    bookings: Array.isArray(supportCase.bookings)
-      ? supportCase.bookings[0] || null
-      : supportCase.bookings,
-    listings: Array.isArray(supportCase.listings)
-      ? supportCase.listings[0] || null
-      : supportCase.listings,
-    guest: Array.isArray(supportCase.guest)
-      ? supportCase.guest[0] || null
-      : supportCase.guest,
-    host: Array.isArray(supportCase.host)
-      ? supportCase.host[0] || null
-      : supportCase.host,
+    bookings: oneOrNull(supportCase.bookings),
+    listings: oneOrNull(supportCase.listings),
+    guest: oneOrNull(supportCase.guest),
+    host: oneOrNull(supportCase.host),
   }))
   const total = count || 0
   const summary = summarizeSupportCases(cases)
