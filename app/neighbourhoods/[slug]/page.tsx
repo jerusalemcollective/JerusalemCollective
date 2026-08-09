@@ -7,6 +7,7 @@ import {
   findNeighborhoodBySlug,
   neighborhoodDescriptions,
 } from '@/lib/neighborhood-pages'
+import { formatPreferredNightlyPrice } from '@/lib/utils/currency'
 
 type NeighborhoodListing = {
   id: string
@@ -228,11 +229,7 @@ export default async function NeighbourhoodPage({
                         .join(' \u00b7 ')}
                     </p>
                     <p className="pt-1 text-sm font-semibold text-stone-950">
-                      {listing.price_usd
-                        ? `$${Number(listing.price_usd).toLocaleString()}`
-                        : listing.price_ils
-                          ? `\u20aa${Number(listing.price_ils).toLocaleString()}`
-                          : 'Price on request'}
+                      {formatPreferredNightlyPrice(listing)}
                       {(listing.price_usd || listing.price_ils) && (
                         <span className="font-normal text-stone-500"> / night</span>
                       )}

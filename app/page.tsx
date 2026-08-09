@@ -21,6 +21,7 @@ import { HomeSearchForm } from '@/components/home-search-form'
 import { RecentlyViewed } from '@/components/recently-viewed-home'
 import { getListingRatings, type ListingRating } from '@/lib/reviews'
 import { ListingCard } from '@/components/listing-card'
+import { formatPreferredNightlyPrice } from '@/lib/utils/currency'
 
 // Public, global content only (featured listings + neighbourhoods; the
 // recently-viewed strip is client-side). Cache it via ISR instead of
@@ -266,7 +267,7 @@ export default async function JLMCollectiveHomePage() {
                     max_guests: stay.max_guests,
                     coverPhotoUrl: stay.coverPhotoUrl ?? null,
                     rating: stay.rating,
-                    priceLabel: formatFeaturedPrice(stay),
+                    priceLabel: formatPreferredNightlyPrice(stay),
                     hasPrice: Boolean(stay.price_ils || stay.price_usd),
                   }}
                 />
@@ -333,8 +334,3 @@ export default async function JLMCollectiveHomePage() {
   )
 }
 
-function formatFeaturedPrice(listing: Pick<FeaturedStay, 'price_ils' | 'price_usd'>) {
-  if (listing.price_usd) return `$${Number(listing.price_usd).toLocaleString()}`
-  if (listing.price_ils) return `₪${Number(listing.price_ils).toLocaleString()}`
-  return 'Price on request'
-}

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { createPublicClient } from '@/lib/supabase/public'
 import { findStayCollection } from '@/lib/stay-collections'
 import { ListingCard } from '@/components/listing-card'
+import { formatPreferredNightlyPrice } from '@/lib/utils/currency'
 
 type CollectionListing = {
   id: string
@@ -134,11 +135,7 @@ export default async function StayCollectionPage({
         {listings.length > 0 ? (
           <div className="mt-10 grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
             {listings.map((listing, index) => {
-              const priceLabel = listing.price_usd
-                ? `$${Number(listing.price_usd).toLocaleString()}`
-                : listing.price_ils
-                  ? `\u20aa${Number(listing.price_ils).toLocaleString()}`
-                  : 'Price on request'
+              const priceLabel = formatPreferredNightlyPrice(listing)
               return (
                 <ListingCard
                   key={listing.id}

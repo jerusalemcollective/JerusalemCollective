@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { formatPreferredNightlyPrice } from '@/lib/utils/currency'
 
 type HomeMapListing = {
   id: string
@@ -18,11 +19,6 @@ const pinPositions = [
   'right-[18%] bottom-[14%]',
 ]
 
-function formatMapPrice(listing: HomeMapListing) {
-  if (listing.price_usd) return `$${Number(listing.price_usd).toLocaleString()}`
-  if (listing.price_ils) return `\u20aa${Number(listing.price_ils).toLocaleString()}`
-  return 'View stay'
-}
 
 export function HomeMapSection({ listings }: { listings: HomeMapListing[] }) {
   const previewListings = listings.length > 0 ? listings : []
@@ -79,7 +75,7 @@ export function HomeMapSection({ listings }: { listings: HomeMapListing[] }) {
               {listing.area}
             </p>
             <p className="text-[10px] font-semibold text-[#c76f55]">
-              {formatMapPrice(listing)}
+              {formatPreferredNightlyPrice(listing, 'View stay')}
             </p>
           </Link>
         ))}
