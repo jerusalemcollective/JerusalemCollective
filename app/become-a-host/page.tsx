@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { ensureHostProfile } from '@/lib/host-profile'
+import { allNeighborhoods } from '@/lib/neighborhoods'
 import { HOST_TERMS, HOST_TERMS_LAST_UPDATED, HOST_TERMS_VERSION } from '@/lib/host-terms'
 import { GoogleAddressField } from '@/components/google-address-field'
 import { AmenitySelector } from '@/components/amenity-selector'
@@ -216,45 +217,6 @@ function isGoogleMapsValue(value: unknown): value is GoogleMapsValue {
   return maps === undefined || isRecord(maps)
 }
 
-// Jerusalem neighbourhoods for autocomplete suggestions
-const neighbourhoods = [
-  'Ramat Eshkol',
-  'Gush 80',
-  'Jerusalem Estates',
-  'Romema',
-  'Minchas Yitzchok',
-  'Rechavia',
-  'Shaarei Chesed',
-  'Baka',
-  'German Colony',
-  'Katamon',
-  'Mamilla',
-  'Nachlaot',
-  'Talbiya',
-  'Ein Kerem',
-  'Old City',
-  'City Center',
-  'Givat Shaul',
-  'Har Nof',
-  'Bayit Vegan',
-  'Kiryat Moshe',
-  'Neve Yaakov',
-  'Pisgat Zeev',
-  'French Hill',
-  'Sanhedria',
-  'Mea Shearim',
-  'Geula',
-  'Armon Hanatziv',
-  'Abu Tor',
-  'Arnona',
-  'Malha',
-  'Gilo',
-  'Pat',
-  'Neve Granot',
-  'Neve Shaanan',
-  'Beit Hakerem',
-]
-
 type NeighbourhoodAutocompleteProps = {
   value: string
   onChange: (value: string) => void
@@ -271,7 +233,7 @@ function NeighbourhoodAutocomplete({ value, onChange, placeholder, className }: 
   const suggestions = useMemo(() => {
     if (!inputValue.trim()) return []
     const query = inputValue.toLowerCase()
-    return neighbourhoods.filter((neighbourhood) => 
+    return allNeighborhoods.filter((neighbourhood) => 
       neighbourhood.toLowerCase().includes(query)
     ).slice(0, 8) // Limit to 8 suggestions
   }, [inputValue])

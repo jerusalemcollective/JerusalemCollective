@@ -59,7 +59,7 @@ export const SHUL_COORDINATES: ShulCoordinates[] = [
     neighbourhoods: [
       'Romema',
       'Geula',
-      'Mekor Baruch',
+      'Makor Baruch',
       'Gush 80',
     ],
   },
@@ -82,7 +82,7 @@ export const SHUL_COORDINATES: ShulCoordinates[] = [
     neighbourhoods: [
       'Beit Yisrael',
       'Geula',
-      'Mekor Baruch',
+      'Makor Baruch',
       'Sanhedria',
       'Ramat Eshkol',
     ],
@@ -93,7 +93,7 @@ export const SHUL_COORDINATES: ShulCoordinates[] = [
     lng: 35.2128,
     neighbourhoods: [
       'Geula',
-      'Mekor Baruch',
+      'Makor Baruch',
       'Romema',
       'Gush 80',
     ],
