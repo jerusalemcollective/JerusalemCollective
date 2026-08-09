@@ -966,28 +966,13 @@ export function ListingDetailClient({
               Continue conversation
             </Link>
           ) : (
-            <div className="flex flex-1 items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setShowMobileBooking(true)}
-                className="flex min-h-11 flex-1 items-center justify-center rounded-full bg-stone-950 px-4 py-0 text-center text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800"
-              >
-                {mobileActionLabel}
-              </button>
-              {listing.host_id && listing.booking_type !== 'enquiry' && (
-                <button
-                  type="button"
-                  onClick={() => setShowMobileMessageHost(true)}
-                  aria-label="Message host"
-                  className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-0 text-center text-sm font-semibold leading-none text-stone-700 transition hover:border-[#c76f55] hover:text-[#9f513f] sm:flex-1"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                  </svg>
-                  <span className="hidden sm:inline">Message host</span>
-                </button>
-              )}
-            </div>
+            <button
+              type="button"
+              onClick={() => setShowMobileBooking(true)}
+              className="flex min-h-11 flex-1 items-center justify-center rounded-full bg-stone-950 px-4 py-0 text-center text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800"
+            >
+              {mobileActionLabel}
+            </button>
           )}
         </div>
       </div>
@@ -1429,19 +1414,6 @@ function BookingControls({
                 disabledReason={belowMin ? minNightsMessage : dateRequiredMessage}
                 showIcon={false}
                 buttonClassName="flex min-h-11 w-full items-center justify-center rounded-full bg-stone-950 px-5 py-0 text-center text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-500 disabled:shadow-none"
-                onConversationCreated={onConversationCreated}
-              />
-            )}
-            {(allowsOnlinePayment || !isEnquiryOnly) && (
-              <MessageHostDialog
-                listingId={listing.id}
-                listingTitle={listing.title}
-                hostId={listing.host_id}
-                guests={guestCount}
-                intent="message"
-                buttonLabel="Message host"
-                showIcon={false}
-                buttonClassName="flex min-h-11 w-full items-center justify-center rounded-full border border-stone-200 bg-white px-5 py-0 text-center text-sm font-semibold leading-none text-stone-700 transition hover:border-[#c76f55] hover:text-[#9f513f]"
                 onConversationCreated={onConversationCreated}
               />
             )}
