@@ -23,14 +23,10 @@ export function ExternalCalendarSyncForm({
   const [state, formAction, pending] = useActionState(saveExternalCalendarUrl, initialState)
 
   return (
-    <section className="rounded-3xl bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-bold text-stone-950">Calendar sync</h2>
-      <p className="mt-2 text-sm leading-6 text-stone-600">
-        Paste your Google Calendar, Apple Calendar, Airbnb, or Booking.com iCal link here. We will check it every hour and block unavailable dates automatically.
-      </p>
+    <div>
       <Link
         href="/help/calendar-sync"
-        className="mt-3 inline-flex text-sm font-semibold text-[#c76f55] hover:underline"
+        className="inline-flex text-sm font-semibold text-[#c76f55] hover:underline"
       >
         How to find your iCal URL -&gt;
       </Link>
@@ -88,6 +84,6 @@ export function ExternalCalendarSyncForm({
           </button>
         </form>
       ) : null}
-    </section>
+    </div>
   )
 }
