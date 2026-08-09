@@ -395,48 +395,17 @@ export function Header({
 
                     {/* Host Section */}
                     <div className="border-t border-stone-100 py-2">
-                      {user.isAdmin && (
+                      {user.hasStay || user.isAdmin ? (
                         <Link
-                          href="/admin"
+                          href="/choose-dashboard"
                           onClick={() => setShowDropdown(false)}
                           className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-[#c76f55] transition hover:bg-[#fff4ef]"
                         >
                           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15a.75.75 0 01.75.75V21H3.75V3.75A.75.75 0 014.5 3zm3 4.5h3m-3 4.5h3m3-4.5h3m-3 4.5h3" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
                           </svg>
-                          Admin dashboard
+                          Switch dashboard
                         </Link>
-                      )}
-                      {user.hasStay ? (
-                        <>
-                          <Link
-                            href="/host/dashboard"
-                            onClick={() => setShowDropdown(false)}
-                            className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-[#c76f55] transition hover:bg-[#fff4ef]"
-                          >
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-                            </svg>
-                            Host Dashboard
-                          </Link>
-                          <Link
-                            href="/host/dashboard/messages"
-                            onClick={() => setShowDropdown(false)}
-                            className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-[#c76f55] transition hover:bg-[#fff4ef]"
-                          >
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
-                            </svg>
-                            <span className="flex flex-1 items-center gap-2">
-                              <span>Host messages</span>
-                              {unreadCounts.host > 0 && (
-                                <span className="inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-[11px] font-bold leading-none text-white">
-                                  {unreadCounts.host}
-                                </span>
-                              )}
-                            </span>
-                          </Link>
-                        </>
                       ) : (
                         <Link
                           href="/become-a-host"
@@ -566,27 +535,13 @@ export function Header({
                 >
                   My trips
                 </Link>
-                {user.isAdmin && (
+                {(user.hasStay || user.isAdmin) && (
                   <Link
-                    href="/admin"
+                    href="/choose-dashboard"
                     onClick={() => setMobileOpen(false)}
                     className="block px-5 py-4 font-medium text-[#c76f55]"
                   >
-                    Admin dashboard
-                  </Link>
-                )}
-                {user.hasStay && (
-                  <Link
-                    href="/host/dashboard/messages"
-                    onClick={() => setMobileOpen(false)}
-                    className="flex items-center justify-between gap-3 px-5 py-4 font-medium text-[#c76f55]"
-                  >
-                    <span>Host messages</span>
-                    {unreadCounts.host > 0 && (
-                      <span className="inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-[11px] font-bold leading-none text-white">
-                        {unreadCounts.host}
-                      </span>
-                    )}
+                    Switch dashboard
                   </Link>
                 )}
                 <button
