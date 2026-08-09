@@ -7,6 +7,7 @@ import {
   Bell,
   CalendarDays,
   CreditCard,
+  HelpCircle,
   Home,
   LifeBuoy,
   ListChecks,
@@ -21,6 +22,7 @@ const links = [
   { href: '/host/dashboard/cases', label: 'Cases', icon: LifeBuoy },
   { href: '/host/dashboard/payments', label: 'Payments', icon: CreditCard },
   { href: '/host/dashboard/notifications', label: 'Notifications', icon: Bell },
+  { href: '/account/support', label: 'Support', icon: HelpCircle },
 ]
 
 export function HostDashboardNav() {

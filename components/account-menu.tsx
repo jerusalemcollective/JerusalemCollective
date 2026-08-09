@@ -83,7 +83,7 @@ export function AccountMenu({ hasStay, isAdmin }: { hasStay: boolean; isAdmin: b
       <MenuLink href="/account/saved" label="Saved" icon={<Heart className="h-5 w-5" />} active={pathname === '/account/saved'} />
       <MenuLink
         href="/account/messages"
-        label={hasStay ? 'Guest messages' : 'Messages'}
+        label="Messages"
         icon={<MessageCircle className="h-5 w-5" />}
         active={pathname === '/account/messages'}
         badge={guestUnreadCount}

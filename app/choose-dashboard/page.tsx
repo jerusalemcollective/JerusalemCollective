@@ -36,14 +36,15 @@ export default async function ChooseDashboardPage() {
   const [{ data: application }, { data: listing }, { data: profile }] = await Promise.all([
     supabase.from('host_applications').select('id').in('host_id', hostIds).limit(1).maybeSingle(),
     supabase.from('listings').select('id').in('host_id', hostIds).limit(1).maybeSingle(),
-    supabase.from('profiles').select('full_name').eq('id', user.id).maybeSingle(),
+    supabase.from('profiles').select('full_name, is_admin').eq('id', user.id).maybeSingle(),
   ])
 
   const isHost = Boolean(application || listing)
+  const isAdmin = Boolean((profile as { is_admin?: boolean } | null)?.is_admin)
 
-  // Not a host yet (never submitted an application): the chooser is meaningless.
-  // Send them straight to the guest account — a normal login, no extra screen.
-  if (!isHost) {
+  // Nothing to choose between (not a host and not an admin): go straight to the
+  // guest account — a normal login, no extra screen.
+  if (!isHost && !isAdmin) {
     redirect('/account')
   }
 
@@ -53,5 +54,5 @@ export default async function ChooseDashboardPage() {
     host?.name ||
     null
 
-  return <DashboardChooser displayName={displayName} />
+  return <DashboardChooser displayName={displayName} isHost={isHost} isAdmin={isAdmin} />
 }

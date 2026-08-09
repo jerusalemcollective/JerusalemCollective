@@ -1,10 +1,18 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { ArrowRight, Home, Luggage } from 'lucide-react'
+import { ArrowRight, Home, Luggage, ShieldCheck } from 'lucide-react'
 import { ChooserSignOut } from '@/components/chooser-sign-out'
 
-export function DashboardChooser({ displayName }: { displayName: string | null }) {
+export function DashboardChooser({
+  displayName,
+  isHost = true,
+  isAdmin = false,
+}: {
+  displayName: string | null
+  isHost?: boolean
+  isAdmin?: boolean
+}) {
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-[#F8F5F2] p-6">
       <div className="w-full max-w-3xl">
@@ -32,14 +40,26 @@ export function DashboardChooser({ displayName }: { displayName: string | null }
             icon={<Luggage className="h-6 w-6" />}
             iconClass="bg-[#fff4ef] text-[#c76f55]"
           />
-          <DestinationCard
-            href="/host/dashboard"
-            title="Host dashboard"
-            description="Manage your listings, calendar, bookings and host messages."
-            cta="Continue as host"
-            icon={<Home className="h-6 w-6" />}
-            iconClass="bg-[#252525] text-white"
-          />
+          {isHost && (
+            <DestinationCard
+              href="/host/dashboard"
+              title="Host dashboard"
+              description="Manage your listings, calendar, bookings and host messages."
+              cta="Continue as host"
+              icon={<Home className="h-6 w-6" />}
+              iconClass="bg-[#252525] text-white"
+            />
+          )}
+          {isAdmin && (
+            <DestinationCard
+              href="/admin"
+              title="Admin workspace"
+              description="Review applications, listings, payments and support cases."
+              cta="Continue as admin"
+              icon={<ShieldCheck className="h-6 w-6" />}
+              iconClass="bg-[#c76f55] text-white"
+            />
+          )}
         </div>
 
         <div className="mt-8 flex flex-col items-center gap-3 text-xs text-stone-500">
