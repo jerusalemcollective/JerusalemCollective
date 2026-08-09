@@ -669,7 +669,14 @@ export function ListingDetailClient({
               </div>
             </div>
 
-            <HostCard host={host} publicHostName={publicHostName} />
+            <HostCard
+              host={host}
+              publicHostName={publicHostName}
+              listingId={listing.id}
+              listingTitle={listing.title}
+              hostUserId={listing.host_id}
+              guests={guestCount}
+            />
 
             {listing.description && (
               <>
@@ -1073,7 +1080,14 @@ export function ListingDetailClient({
                   {formatResponseTime(avgResponseHours)}
                 </p>
               )}
-              <HostCard host={host} publicHostName={publicHostName} />
+              <HostCard
+              host={host}
+              publicHostName={publicHostName}
+              listingId={listing.id}
+              listingTitle={listing.title}
+              hostUserId={listing.host_id}
+              guests={guestCount}
+            />
             </div>
           </div>
         </div>
@@ -1459,9 +1473,17 @@ function BookingControls({
 function HostCard({
   host,
   publicHostName,
+  listingId,
+  listingTitle,
+  hostUserId,
+  guests,
 }: {
   host: ListingDetailHost | null
   publicHostName: string | null
+  listingId: string
+  listingTitle: string
+  hostUserId: string | null
+  guests: number
 }) {
   if (!host || !publicHostName) return null
 
@@ -1490,6 +1512,19 @@ function HostCard({
         </div>
         <ChevronRightIcon />
       </Link>
+      {/* Talk to the host without committing to dates — a plain message,
+          separate from "Request to book" (which carries the dates). */}
+      <div className="mt-3">
+        <MessageHostDialog
+          listingId={listingId}
+          listingTitle={listingTitle}
+          hostId={hostUserId}
+          guests={guests}
+          intent="message"
+          buttonLabel="Message host"
+          buttonClassName="flex w-full items-center justify-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2.5 text-sm font-semibold text-stone-700 transition hover:border-[#c76f55] hover:text-[#c76f55]"
+        />
+      </div>
     </div>
   )
 }
