@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient as createServiceRoleClient } from '@supabase/supabase-js'
+import { createServiceRoleClient } from '@/lib/supabase/service'
 import { sendGuestBalanceReminderEmail } from '@/lib/transactional-email'
 import { pingCronHeartbeat } from '@/lib/cron-heartbeat'
 

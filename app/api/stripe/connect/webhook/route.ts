@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'crypto'
 import { NextResponse } from 'next/server'
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { createServiceRoleClient } from '@/lib/supabase/service'
 
 export const runtime = 'nodejs'
 
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Missing account.' }, { status: 400 })
   }
 
-  const supabase = createSupabaseClient(supabaseUrl, serviceRoleKey)
+  const supabase = createServiceRoleClient(supabaseUrl, serviceRoleKey)
 
   // Idempotency: shared ledger with the checkout webhook. A redelivered id no-ops.
   if (eventId) {

@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { createServiceRoleClient } from '@/lib/supabase/service'
 
 type HostCalendarRow = {
   id: string
@@ -41,7 +41,7 @@ export async function GET(
     return new Response('Calendar feed is not configured.', { status: 500 })
   }
 
-  const supabase = createClient(supabaseUrl, serviceRoleKey)
+  const supabase = createServiceRoleClient(supabaseUrl, serviceRoleKey)
   const { data: host } = await supabase
     .from('hosts')
     .select('id, name')

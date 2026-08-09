@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { createServiceRoleClient } from '@/lib/supabase/service'
 import { createClient } from '@/lib/supabase/server'
 
 export const runtime = 'nodejs'
@@ -45,7 +45,7 @@ export async function POST() {
 
   const hostId = host?.id ?? user.id
 
-  const admin = createServiceClient(supabaseUrl, serviceRoleKey)
+  const admin = createServiceRoleClient(supabaseUrl, serviceRoleKey)
   const { data: profile } = await admin
     .from('host_payment_profiles')
     .select('stripe_account_id')

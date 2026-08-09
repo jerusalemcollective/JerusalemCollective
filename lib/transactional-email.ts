@@ -1,4 +1,5 @@
-import { createClient as createServiceRoleClient, type SupabaseClient } from '@supabase/supabase-js'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { createServiceRoleClient } from '@/lib/supabase/service'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.jlmcollective.co'
 
@@ -24,9 +25,7 @@ async function recipientMagicLink(email: string, path: string): Promise<string> 
   if (!url || !key) return fallback
 
   try {
-    const admin = createServiceRoleClient(url, key, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    })
+    const admin = createServiceRoleClient(url, key)
     const { data, error } = await admin.auth.admin.generateLink({
       type: 'magiclink',
       email,

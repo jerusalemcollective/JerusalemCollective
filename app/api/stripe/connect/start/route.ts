@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { createServiceRoleClient } from '@/lib/supabase/service'
 import { createClient } from '@/lib/supabase/server'
 
 export const runtime = 'nodejs'
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
   // Service-role client: the protect_host_stripe_columns trigger blocks the
   // authenticated session from writing stripe_account_id, so it is persisted here
   // (auth.uid() IS NULL under the service role).
-  const admin = createServiceClient(supabaseUrl, serviceRoleKey)
+  const admin = createServiceRoleClient(supabaseUrl, serviceRoleKey)
 
   const { data: existing } = await admin
     .from('host_payment_profiles')

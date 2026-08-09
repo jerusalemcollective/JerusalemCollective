@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'crypto'
 import { NextResponse } from 'next/server'
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { createServiceRoleClient } from '@/lib/supabase/service'
 import { z } from 'zod'
 import { sendPaymentFailureAdminAlert } from '@/lib/transactional-email'
 
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
   }
   const sessionId = session.id
 
-  const supabase = createSupabaseClient(supabaseUrl, serviceRoleKey)
+  const supabase = createServiceRoleClient(supabaseUrl, serviceRoleKey)
 
   // Idempotency: a replayed/retried event (same event_id) is a no-op. event_id
   // is unique PER EVENT, so the distinct lifecycle events for one session
