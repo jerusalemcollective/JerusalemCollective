@@ -1,5 +1,6 @@
 import { formatDateDisplay } from '@/lib/utils/date'
 import { parsePayout, formatPayoutRows, type PayoutDetails } from '@/lib/direct-payment'
+import { PayoutCopyRows } from '@/components/payout-copy-rows'
 
 type Props = {
   instructions: string | null
@@ -95,15 +96,8 @@ export function DirectPaymentScheduleSummary({ instructions, checkIn, payout = n
         )}
         {payoutRows.length > 0 ? (
           <div className={dividerClass}>
-            <span className="text-stone-500">How to pay</span>
-            <div className="mt-1 space-y-0.5">
-              {payoutRows.map(([label, value]) => (
-                <div key={label} className="flex flex-wrap justify-between gap-x-4">
-                  <span className="text-stone-500">{label}</span>
-                  <span className="font-medium text-stone-800">{value}</span>
-                </div>
-              ))}
-            </div>
+            <span className="text-stone-500">How to pay — tap any detail to copy</span>
+            <PayoutCopyRows rows={payoutRows} />
           </div>
         ) : (
           schedule?.method && (
