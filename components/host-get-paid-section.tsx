@@ -111,6 +111,8 @@ export function HostGetPaidSection({
         <input type="hidden" name="preferredCurrency" value={currency} />
       </div>
 
+      <DirectPaymentScheduleFields defaultValue={scheduleDefault} currency={currency} />
+
       <div className="border-t border-stone-200 pt-5">
         <label className="flex items-start gap-3">
           <input
@@ -133,12 +135,6 @@ export function HostGetPaidSection({
             )}
           </span>
         </label>
-
-        {acceptsDirect && (
-          <div className="mt-4">
-            <DirectPaymentScheduleFields defaultValue={scheduleDefault} currency={currency} />
-          </div>
-        )}
       </div>
     </div>
   )
