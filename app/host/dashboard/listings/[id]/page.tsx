@@ -37,7 +37,7 @@ export default async function HostListingEditPage({
       supabase
         .from('listings')
         .select(
-          'id, title, area, bedrooms, bathrooms, max_guests, sleeping_setup, price_ils, price_usd, booking_type, online_payment_enabled, amenities, description, house_rules, welcome_message, check_in_instructions, is_published, shabbat_elevator, physical_key_entry, shabbat_clock, kosher_kitchen_level, walking_minutes_to_kotel, near_synagogue, sukkah_balcony, american_comfort, central_ac, american_washer_dryer, american_mattress, powerful_water_heater, deposit_type, deposit_value, balance_due_days_before_checkin, min_nights',
+          'id, title, area, bedrooms, bathrooms, max_guests, sleeping_setup, price_ils, price_usd, included_guests, extra_guest_fee_ils, extra_guest_fee_usd, booking_type, online_payment_enabled, amenities, description, house_rules, welcome_message, check_in_instructions, is_published, shabbat_elevator, physical_key_entry, shabbat_clock, kosher_kitchen_level, walking_minutes_to_kotel, near_synagogue, sukkah_balcony, american_comfort, central_ac, american_washer_dryer, american_mattress, powerful_water_heater, deposit_type, deposit_value, balance_due_days_before_checkin, min_nights',
         )
         .eq('id', id)
         .in('host_id', hostIds)
@@ -272,6 +272,20 @@ export default async function HostListingEditPage({
                 </select>
               </Field>
             </div>
+            <div className="mt-4 grid gap-4 md:grid-cols-3">
+              <Field label="Price includes up to (guests)">
+                <input name="includedGuests" type="number" min="1" defaultValue={listing.included_guests ?? listing.max_guests ?? ''} className={inputClass} />
+              </Field>
+              <Field label="Extra guest fee ILS (per night)">
+                <input name="extraGuestFeeIls" type="number" min="0" defaultValue={listing.extra_guest_fee_ils ?? 0} className={inputClass} />
+              </Field>
+              <Field label="Extra guest fee USD (per night)">
+                <input name="extraGuestFeeUsd" type="number" min="0" defaultValue={listing.extra_guest_fee_usd ?? 0} className={inputClass} />
+              </Field>
+            </div>
+            <p className="mt-2 text-sm text-stone-500">
+              Guests above the included count add the extra-guest fee per night. Leave the fee at 0 for flat pricing.
+            </p>
             {paymentRoutes.jlmPaymentsEnabled ? (
               <label className="mt-5 flex items-start gap-3 rounded-2xl bg-[#F8F5F2] p-4">
                 <input

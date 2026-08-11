@@ -68,6 +68,9 @@ const listingDetailListingSchema = z.object({
   sleeping_setup: z.string().nullable().optional().transform((value) => value ?? null),
   price_ils: z.number().nullable(),
   price_usd: z.number().nullable(),
+  included_guests: z.number().nullish().transform((value) => value ?? null),
+  extra_guest_fee_ils: z.number().nullish().transform((value) => value ?? 0),
+  extra_guest_fee_usd: z.number().nullish().transform((value) => value ?? 0),
   booking_type: z.string(),
   online_payment_enabled: z.boolean().nullish().transform((value) => Boolean(value)),
   amenities: z.array(z.string()).nullable(),
@@ -364,6 +367,9 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
             deposit_type: 'percent',
             deposit_value: 10,
             balance_due_days_before_checkin: 0,
+            included_guests: null,
+            extra_guest_fee_ils: 0,
+            extra_guest_fee_usd: 0,
           }}
           host={null}
           publicHostName={null}

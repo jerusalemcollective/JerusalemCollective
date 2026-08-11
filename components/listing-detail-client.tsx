@@ -17,6 +17,7 @@ import { formatListingPrice, formatPrice, formatCurrencyAmount } from '@/lib/uti
 import { loadEnquiryDraft } from '@/lib/enquiry-draft'
 import { formatDateISO, formatBookingDate } from '@/lib/utils/date'
 import { computeDepositPreview } from '@/lib/utils/deposit'
+import { computeBookingTotal, computeExtraGuests } from '@/lib/utils/pricing'
 
 // Google Maps (@react-google-maps/api) is heavy; load it only in the browser,
 // on demand, so it doesn't ship in or block this high-traffic SEO page.
@@ -52,6 +53,9 @@ export type ListingDetailListing = {
   balance_due_days_before_checkin: number
   price_ils: number | null
   price_usd: number | null
+  included_guests: number | null
+  extra_guest_fee_ils: number | null
+  extra_guest_fee_usd: number | null
   booking_type: string
   online_payment_enabled: boolean
   amenities: string[] | null
@@ -213,13 +217,25 @@ export function ListingDetailClient({
             (1000 * 60 * 60 * 24),
         )
       : 0
+  // Extra-guest surcharge mirrors the server RPC (see lib/utils/pricing.ts).
+  const extraGuests = computeExtraGuests(guestCount, listing.included_guests, listing.max_guests)
   const totalILS =
     nights > 0 && listing.price_ils
-      ? nights * listing.price_ils
+      ? computeBookingTotal({
+          nightlyPrice: listing.price_ils,
+          nights,
+          extraGuests,
+          extraGuestFee: listing.extra_guest_fee_ils ?? 0,
+        })
       : null
   const totalUSD =
     nights > 0 && listing.price_usd
-      ? nights * listing.price_usd
+      ? computeBookingTotal({
+          nightlyPrice: listing.price_usd,
+          nights,
+          extraGuests,
+          extraGuestFee: listing.extra_guest_fee_usd ?? 0,
+        })
       : null
   const comfortFeatures = [
     listing.central_ac ? 'Central air conditioning' : null,
@@ -1330,8 +1346,14 @@ function BookingControls({
   const belowMin = nights > 0 && nights < minNights
   const minNightsMessage = `Minimum stay is ${minNights} nights.`
 
-  const perNightILS = totalILS && nights ? Math.round(totalILS / nights) : null
-  const perNightUSD = totalUSD && nights ? Math.round(totalUSD / nights) : null
+  const baseTotalILS = listing.price_ils && nights ? listing.price_ils * nights : null
+  const baseTotalUSD = listing.price_usd && nights ? listing.price_usd * nights : null
+  const extraGuestCount = computeExtraGuests(guestCount, listing.included_guests, listing.max_guests)
+  const extraFeeILS = listing.extra_guest_fee_ils ?? 0
+  const extraFeeUSD = listing.extra_guest_fee_usd ?? 0
+  const extraTotalILS = extraGuestCount > 0 && extraFeeILS ? extraFeeILS * extraGuestCount * nights : null
+  const extraTotalUSD = extraGuestCount > 0 && extraFeeUSD ? extraFeeUSD * extraGuestCount * nights : null
+  const hasExtraGuestFee = extraGuestCount > 0 && Boolean(extraTotalILS || extraTotalUSD)
   const formatDual = (ils: number | null, usd: number | null) =>
     [ils ? `₪${ils.toLocaleString()}` : null, usd ? `$${usd.toLocaleString()}` : null]
       .filter(Boolean)
@@ -1365,10 +1387,18 @@ function BookingControls({
           <div className="mt-3 space-y-2 rounded-2xl border border-stone-200 bg-[#F8F5F2] px-4 py-3">
             <div className="flex items-center justify-between gap-3 text-sm text-stone-600">
               <span>
-                {formatDual(perNightILS, perNightUSD)} {'\u00d7'} {nights} night{nights === 1 ? '' : 's'}
+                {formatDual(listing.price_ils, listing.price_usd)} {'\u00d7'} {nights} night{nights === 1 ? '' : 's'}
               </span>
-              <span className="text-stone-900">{formatDual(totalILS, totalUSD)}</span>
+              <span className="text-stone-900">{formatDual(baseTotalILS, baseTotalUSD)}</span>
             </div>
+            {hasExtraGuestFee && (
+              <div className="flex items-center justify-between gap-3 text-sm text-stone-600">
+                <span>
+                  {extraGuestCount} extra guest{extraGuestCount === 1 ? '' : 's'} {'\u00d7'} {formatDual(extraFeeILS || null, extraFeeUSD || null)} {'\u00d7'} {nights} night{nights === 1 ? '' : 's'}
+                </span>
+                <span className="text-stone-900">{formatDual(extraTotalILS, extraTotalUSD)}</span>
+              </div>
+            )}
             <div className="flex items-center justify-between gap-3 text-sm text-stone-500">
               <span>Booking fees</span>
               <span>None</span>
