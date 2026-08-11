@@ -439,6 +439,20 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
           }
         })
 
+        if (mode === 'host') {
+          console.log('[inbox-debug] host enquiry attach', {
+            hostParticipantIds,
+            conversationsFetched: conversationRowsList.length,
+            hostRequestsByHostId: hostRequests.length,
+            requestsByConversationId: (requests || []).length,
+            requestRowsTotal: requestRows.length,
+            conversationsWithRequestAttached: hydrated.filter((conversation) => conversation.request).length,
+            sampleRequest: requestRows[0]
+              ? { id: requestRows[0].id, host_id: requestRows[0].host_id, conversation_id: requestRows[0].conversation_id, status: requestRows[0].status }
+              : null,
+          })
+        }
+
         setConversations(hydrated)
 
         // Show the contacts list by default; the conversation overlay opens only
