@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { formatPayoutRows, resolveHostPayout } from '@/lib/direct-payment'
+import { oneOrNull } from '@/lib/utils/one-or-null'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.jlmcollective.co'
 
@@ -439,6 +440,8 @@ type BookingConfirmListingRow = {
   title: string | null
   area: string | null
   check_in_instructions: string | null
+  price_usd: number | null
+  price_ils: number | null
 }
 
 type PaymentProfileEmailRow = {
@@ -490,7 +493,7 @@ export async function sendGuestBookingConfirmedEmail({
     const [{ data: listing }, { data: profile }, { data: paymentProfile }] = await Promise.all([
       supabase
         .from('listings')
-        .select('id, title, area, check_in_instructions')
+        .select('id, title, area, check_in_instructions, price_usd, price_ils')
         .eq('id', request.listing_id)
         .maybeSingle<BookingConfirmListingRow>(),
       supabase
@@ -555,11 +558,32 @@ export async function sendGuestBookingConfirmedEmail({
               : 'due when you book'
           payRows.push(['Deposit', `${moneyLabel(currency, parsed.depositAmount)} — ${due}`])
         }
+        // Balance = booking total − deposit, where total = nights × the listing's
+        // nightly rate (round(nightly × nights, 2), matching the JLM RPC in
+        // migration 071). Only quote a figure when the listing is actually priced
+        // in the deposit currency; otherwise say "the remaining balance" rather
+        // than risk a number in the wrong currency (listings store USD/ILS only).
+        const nights =
+          request.check_in && request.check_out
+            ? Math.round(
+                (new Date(`${request.check_out}T12:00:00`).getTime() -
+                  new Date(`${request.check_in}T12:00:00`).getTime()) /
+                  (1000 * 60 * 60 * 24),
+              )
+            : 0
+        const nightly =
+          currency === 'USD' ? listing?.price_usd : currency === 'ILS' ? listing?.price_ils : null
+        let balanceText = 'the remaining balance'
+        if (typeof parsed.depositAmount === 'number' && typeof nightly === 'number' && nights > 0) {
+          const total = Math.round(nightly * nights * 100) / 100
+          const balance = Math.max(Math.round((total - parsed.depositAmount) * 100) / 100, 0)
+          balanceText = moneyLabel(currency, balance)
+        }
         const balanceDue =
           request.check_in && typeof parsed.balanceDueDays === 'number'
             ? ` — due by ${formatEmailDate(minusDaysIso(request.check_in, parsed.balanceDueDays))}`
             : ''
-        payRows.push(['Rest of payment', `the remaining balance${balanceDue}`])
+        payRows.push(['Balance', `${balanceText}${balanceDue}`])
       }
 
       // Payout account: host-level column first, legacy nested JSON as a fallback.
@@ -612,6 +636,123 @@ export async function sendGuestBookingConfirmedEmail({
     })
   } catch (error) {
     console.error('Unable to send booking confirmed email', error)
+    return false
+  }
+}
+
+type PaidBookingPaymentRow = {
+  id: string
+  guest_id: string | null
+  booking_id: string | null
+  currency: string | null
+  balance_amount: number | null
+  balance_due_date: string | null
+  balance_status: string | null
+}
+
+type PaidBookingRow = {
+  check_in: string | null
+  check_out: string | null
+  listings:
+    | { title: string | null; area: string | null }
+    | { title: string | null; area: string | null }[]
+    | null
+}
+
+// Sent to the guest when a JLM/Stripe booking finalises (deposit settled + booking
+// created). The deposit is already paid, so we acknowledge it and surface the balance
+// with a one-click "pay your balance" link. Instant book-now bookings get no other
+// confirmation, so this IS their confirmation. Called best-effort from the Stripe
+// webhook AFTER the event is recorded, so a Stripe retry (deduped up front) can't
+// resend it, and a failure here never blocks finalisation. Every amount comes from
+// the settled booking_payments row, never recomputed.
+export async function sendGuestPaidBookingConfirmedEmail({
+  supabase,
+  sessionId,
+}: {
+  supabase: SupabaseClient
+  sessionId: string
+}) {
+  try {
+    const { data: paymentRow } = await supabase
+      .from('booking_payments')
+      .select('id, guest_id, booking_id, currency, balance_amount, balance_due_date, balance_status')
+      .eq('stripe_checkout_session_id', sessionId)
+      .maybeSingle<PaidBookingPaymentRow>()
+
+    if (!paymentRow?.guest_id || !paymentRow.booking_id) return false
+
+    const { data: booking } = await supabase
+      .from('bookings')
+      .select('check_in, check_out, listings(title, area)')
+      .eq('id', paymentRow.booking_id)
+      .maybeSingle<PaidBookingRow>()
+
+    const guestEmail = await getAuthUserEmail(paymentRow.guest_id)
+    if (!guestEmail) {
+      console.error('Skipping paid booking confirmed email: guest email not found')
+      return false
+    }
+
+    const listingRow = oneOrNull(booking?.listings)
+    const listingTitle = listingRow?.title || 'your stay'
+    const areaSuffix = listingRow?.area ? ` in ${listingRow.area}` : ''
+    const currency = String(paymentRow.currency || 'USD').toUpperCase()
+
+    const detailRows: [string, string][] = [
+      ['Dates', `${formatEmailDate(booking?.check_in ?? null)} to ${formatEmailDate(booking?.check_out ?? null)}`],
+      ['Deposit', 'Paid at booking'],
+    ]
+
+    const balanceMajor = Number(paymentRow.balance_amount)
+    const hasBalance =
+      paymentRow.balance_status === 'due' && Number.isFinite(balanceMajor) && balanceMajor > 0
+
+    let balanceHtml = ''
+    if (hasBalance) {
+      detailRows.push([
+        'Balance',
+        `${moneyLabel(currency, balanceMajor)} — due by ${formatEmailDate(paymentRow.balance_due_date)}`,
+      ])
+      // One-click: signs the guest in and opens the Stripe checkout for this exact
+      // booking's balance (falls back to the bookings page if a link can't be made).
+      const payUrl = await recipientMagicLink(guestEmail, `/pay-balance/${paymentRow.id}`)
+      balanceHtml = `
+      <p style="margin:20px 0 0">
+        <a href="${payUrl}" style="display:inline-block;background:#c76f55;color:#ffffff;text-decoration:none;border-radius:999px;padding:12px 18px;font-weight:700">
+          Pay your balance
+        </a>
+      </p>
+      <p style="color:#78716c;font-size:13px;margin:8px 0 0">One click — pay the remaining balance securely by card.</p>`
+    } else {
+      balanceHtml = `<p style="margin:16px 0 0">Your stay is paid in full — nothing more to pay.</p>`
+    }
+
+    const html = `
+    <div style="font-family:Arial,sans-serif;line-height:1.6;color:#292524">
+      <p>Hi there,</p>
+      <p>Your payment went through and your stay at <strong>${escapeHtml(listingTitle)}</strong>${escapeHtml(areaSuffix)} is confirmed.</p>
+      ${detailTableHtml(detailRows)}
+      ${balanceHtml}
+      <p style="margin:20px 0 0">
+        <a href="${siteUrl}/account/bookings" style="display:inline-block;border:1px solid #d6d3d1;color:#292524;text-decoration:none;border-radius:999px;padding:10px 16px;font-weight:600">
+          View your trip
+        </a>
+      </p>
+      <p style="margin-top:16px">JLM Collective</p>
+      <p style="color:#a8a29e;font-size:11px;margin:8px 0 0;line-height:1.5">
+        JLM Collective acts as letting agent for Jerusalem property owners. Bookings are between guests and hosts. JLM Collective is not a party to any booking agreement.
+      </p>
+    </div>
+    `
+
+    return await sendEmail({
+      to: guestEmail,
+      subject: `Your booking at ${listingTitle} is confirmed`,
+      html,
+    })
+  } catch (error) {
+    console.error('Unable to send paid booking confirmed email', error)
     return false
   }
 }
@@ -804,11 +945,13 @@ function paymentAlertHtml(rows: [string, string][]) {
 
 export async function sendGuestBalanceReminderEmail({
   guestId,
+  bookingPaymentId,
   listingTitle,
   balanceLabel,
   dueDateLabel,
 }: {
   guestId: string
+  bookingPaymentId?: string | null
   listingTitle: string
   balanceLabel: string
   dueDateLabel: string
@@ -819,13 +962,19 @@ export async function sendGuestBalanceReminderEmail({
     return false
   }
 
+  // One-click: the CTA signs the guest in and drops them straight into the Stripe
+  // checkout for this booking's balance. If we don't have the payment id, fall back
+  // to the bookings page where they can still pay it.
+  const ctaPath = bookingPaymentId ? `/pay-balance/${bookingPaymentId}` : '/account/bookings'
+  const ctaUrl = await recipientMagicLink(guestEmail, ctaPath)
+
   return await sendEmail({
     to: guestEmail,
     subject: `Balance due for ${listingTitle}`,
     html: baseEmailHtml({
       greeting: 'Hi there,',
-      intro: `The remaining balance of ${balanceLabel} for your stay at ${listingTitle} is due by ${dueDateLabel}. You can pay it securely through the site from your trips.`,
-      ctaUrl: `${siteUrl}/account/bookings`,
+      intro: `The remaining balance of ${balanceLabel} for your stay at ${listingTitle} is due by ${dueDateLabel}. Pay it securely by card using the button below.`,
+      ctaUrl,
       ctaLabel: 'Pay your balance',
     }),
   })

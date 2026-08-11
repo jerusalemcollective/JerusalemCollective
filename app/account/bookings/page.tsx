@@ -203,6 +203,18 @@ export default async function BookingsPage({
           </div>
         )}
 
+        {payment === 'balance_error' && (
+          <div
+            role="status"
+            className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+          >
+            <p className="font-semibold">We couldn&rsquo;t open your balance payment.</p>
+            <p className="mt-1 text-amber-800">
+              It may already be paid, or the booking isn&rsquo;t ready yet. Find your stay below to pay the balance or check its status.
+            </p>
+          </div>
+        )}
+
         <header className="mb-8 border-b border-stone-200 pb-6">
           <h1 className="font-display text-3xl font-bold tracking-tight text-stone-950">My trips</h1>
         </header>

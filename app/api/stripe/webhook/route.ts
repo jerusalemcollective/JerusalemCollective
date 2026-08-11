@@ -2,7 +2,10 @@ import { createHmac, timingSafeEqual } from 'crypto'
 import { NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { z } from 'zod'
-import { sendPaymentFailureAdminAlert } from '@/lib/transactional-email'
+import {
+  sendGuestPaidBookingConfirmedEmail,
+  sendPaymentFailureAdminAlert,
+} from '@/lib/transactional-email'
 
 export const runtime = 'nodejs'
 
@@ -106,12 +109,22 @@ export async function POST(request: Request) {
   const paymentIntentId =
     typeof session.payment_intent === 'string' ? session.payment_intent : null
 
-  const recordEvent = async () => {
-    if (eventId) {
-      await supabase
-        .from('processed_stripe_events')
-        .insert({ event_id: eventId, type: eventType })
-    }
+  // Returns true only when THIS request newly recorded the event. The insert on the
+  // event_id primary key is atomic, so if the same event is delivered concurrently
+  // (Stripe is at-least-once), exactly one delivery wins the insert; the loser gets a
+  // unique-violation and returns false. Callers that must fire exactly once per event
+  // (the guest confirmation email) gate on this — the top-of-handler SELECT only
+  // dedupes SEQUENTIAL retries, not concurrent ones.
+  const recordEvent = async (): Promise<boolean> => {
+    if (!eventId) return true
+    const { error } = await supabase
+      .from('processed_stripe_events')
+      .insert({ event_id: eventId, type: eventType })
+    // Any error (unique-violation on a concurrent duplicate, or a transient failure)
+    // means we did not newly record it: suppress the once-only side effect. A
+    // transient failure also leaves the event unrecorded, so Stripe's retry
+    // reprocesses and records it then — the email is deferred, never lost.
+    return !error
   }
 
   // Shared escalation for every post-settlement failure: money captured but the
@@ -372,6 +385,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: successError.message }, { status: 500 })
   }
 
-  await recordEvent() // mark processed only after a successful finalise
+  const newlyRecorded = await recordEvent() // mark processed only after a successful finalise
+
+  // Guest confirmation (deposit paid ✓ + balance + one-click pay link). Gated on
+  // newlyRecorded so it fires exactly once per event: a sequential retry is stopped
+  // by the top-of-handler SELECT, and a concurrent duplicate delivery loses the
+  // atomic event_id insert here. Best-effort by design — the function swallows its
+  // own errors and never throws, so a mail hiccup can't 500 the webhook and undo a
+  // finalised booking.
+  if (newlyRecorded) {
+    await sendGuestPaidBookingConfirmedEmail({ supabase, sessionId })
+  }
+
   return NextResponse.json({ ok: true })
 }

@@ -91,6 +91,7 @@ export async function GET(request: Request) {
 
     const ok = await sendGuestBalanceReminderEmail({
       guestId: row.guest_id,
+      bookingPaymentId: row.id,
       listingTitle,
       balanceLabel: formatMoney(row.currency, row.balance_amount),
       dueDateLabel: formatDate(row.balance_due_date),

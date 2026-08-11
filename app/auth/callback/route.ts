@@ -7,8 +7,18 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code')
   const tokenHash = searchParams.get('token_hash')
   const type = searchParams.get('type') as EmailOtpType | null
-  const next = searchParams.get('next') ?? '/account'
   const isHostSignup = searchParams.get('host') === '1'
+
+  // `next` is redirected to after sign-in. Accept only a same-origin absolute path:
+  // it must start with a single '/', never '//' or '/\' (protocol-relative, which
+  // would leave the origin). Since `origin` has no trailing slash, values like
+  // '.evil.com' or '@evil.com' would otherwise escape to another host — an
+  // open-redirect / login-CSRF phishing aid. Anything invalid falls back to /account.
+  const rawNext = searchParams.get('next') ?? '/account'
+  const next =
+    rawNext.startsWith('/') && !rawNext.startsWith('//') && !rawNext.startsWith('/\\')
+      ? rawNext
+      : '/account'
 
   if (code || (tokenHash && type)) {
     try {
