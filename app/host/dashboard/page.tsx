@@ -32,7 +32,6 @@ export default async function HostDashboardPage() {
 
   const [
     { data: upcomingBookingsData },
-    { count: totalListingsCount },
     { data: profileData },
     { data: conversationRows },
   ] = await Promise.all([
@@ -43,10 +42,6 @@ export default async function HostDashboardPage() {
       .gte('check_in', today)
       .order('check_in', { ascending: true })
       .limit(2),
-    supabase
-      .from('listings')
-      .select('*', { count: 'exact', head: true })
-      .in('host_id', hostIds),
     supabase.from('profiles').select('full_name').in('id', hostIds).limit(1).maybeSingle(),
     supabase
       .from('conversations')
@@ -54,7 +49,6 @@ export default async function HostDashboardPage() {
       .in('participant_2', hostIds),
   ])
 
-  const totalListings = totalListingsCount || 0
   const upcomingBookings: UpcomingBooking[] = (upcomingBookingsData || []).map((booking: UpcomingBookingRow) => ({
     id: booking.id,
     check_in: booking.check_in,
@@ -155,12 +149,6 @@ export default async function HostDashboardPage() {
             </h1>
             <p className="mt-1 text-stone-500">Here&apos;s what&apos;s happening with your stays.</p>
           </div>
-          <Link
-            href="/become-a-host"
-            className="inline-flex w-fit shrink-0 rounded-full bg-stone-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-stone-800"
-          >
-            {totalListings === 0 ? 'List your first stay' : 'Add another stay'}
-          </Link>
         </header>
 
         <DraftListingCard />
@@ -183,7 +171,7 @@ export default async function HostDashboardPage() {
             </div>
           ) : (
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              {upcomingBookings.map((booking) => {
+              {upcomingBookings.map((booking, index) => {
                 const nights = nightsBetween(booking.check_in, booking.check_out)
                 return (
                   <article
@@ -194,7 +182,9 @@ export default async function HostDashboardPage() {
                       <CalendarDays className="h-6 w-6" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Next stay</p>
+                      {index === 0 && (
+                        <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Next stay</p>
+                      )}
                       <p className="mt-1 truncate font-bold text-stone-950">{booking.listings?.title || 'Stay'}</p>
                       <p className="mt-0.5 text-sm text-stone-500">
                         {formatDate(booking.check_in)} – {formatDate(booking.check_out)} · {nights}{' '}
