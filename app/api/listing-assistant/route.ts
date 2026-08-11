@@ -32,7 +32,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Too many requests. Please wait a moment and try again.' }, { status: 429 })
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY
+  // The deployed env var was added as ANTHROPIK_API_KEY (misspelled); accept
+  // both so the AI assistant works whether or not it gets renamed in Vercel.
+  const apiKey = process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIK_API_KEY
 
   if (!apiKey) {
     return NextResponse.json(
