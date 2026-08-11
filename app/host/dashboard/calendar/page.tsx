@@ -220,19 +220,16 @@ export default async function HostCalendarPage() {
                 </svg>
               </summary>
 
-              <div className="space-y-8 border-t border-stone-100 px-6 py-6">
+              <div className="space-y-6 border-t border-stone-100 px-6 py-6">
                 <div>
                   <h3 className="text-sm font-bold text-stone-950">
                     Import from Airbnb, Booking.com or another calendar
                   </h3>
-                  <p className="mt-1 text-sm text-stone-600">
-                    Paste an iCal link — we check it hourly and block those dates automatically.
-                  </p>
-                  <div className="mt-4 space-y-3">
+                  <div className="mt-3 space-y-4">
                     {hostListings.map((listing) => (
-                      <div key={listing.id} className="rounded-2xl border border-stone-200 p-4">
+                      <div key={listing.id}>
                         {hostListings.length > 1 && (
-                          <p className="mb-2 text-sm font-bold text-stone-700">{listing.title}</p>
+                          <p className="mb-2 text-sm font-semibold text-stone-700">{listing.title}</p>
                         )}
                         <ExternalCalendarSyncForm
                           listingId={listing.id}
@@ -246,10 +243,9 @@ export default async function HostCalendarPage() {
 
                 <div className="border-t border-stone-100 pt-6">
                   <h3 className="text-sm font-bold text-stone-950">Add your JLM bookings to your own calendar</h3>
-                  <p className="mt-1 text-sm text-stone-600">Add this private link to Google or Apple Calendar.</p>
                   {calendarUrl ? (
                     <>
-                      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+                      <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
                         <input
                           readOnly
                           value={calendarUrl}

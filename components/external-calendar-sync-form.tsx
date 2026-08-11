@@ -24,66 +24,55 @@ export function ExternalCalendarSyncForm({
 
   return (
     <div>
-      <Link
-        href="/help/calendar-sync"
-        className="inline-flex text-sm font-semibold text-[#c76f55] hover:underline"
-      >
-        How to find your iCal URL -&gt;
-      </Link>
-
-      {calendarLastSyncedAt ? (
-        <p className="mt-4 text-xs font-semibold text-stone-500">
-          Last synced: {new Date(calendarLastSyncedAt).toLocaleString('en-GB')}
-        </p>
-      ) : null}
-
-      <form action={formAction} className="mt-5 space-y-4">
+      <form action={formAction} className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <input type="hidden" name="listingId" value={listingId} />
-        <label className="block">
-          <span className="text-sm font-semibold text-stone-800">iCal URL</span>
-          <input
-            name="calendarUrl"
-            type="url"
-            defaultValue={externalCalendarUrl || ''}
-            placeholder="https://..."
-            className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-stone-900 outline-none transition placeholder:text-stone-500 focus:border-[#c76f55]"
-          />
-        </label>
-
-        {state.message ? (
-          <p
-            className={`rounded-2xl p-3 text-sm font-semibold ${
-              state.status === 'success'
-                ? 'bg-green-50 text-green-700'
-                : 'bg-red-50 text-red-700'
-            }`}
-          >
-            {state.message}
-          </p>
-        ) : null}
-
+        <input
+          name="calendarUrl"
+          type="url"
+          defaultValue={externalCalendarUrl || ''}
+          placeholder="Paste iCal link (https://...)"
+          className="min-w-0 flex-1 rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition placeholder:text-stone-500 focus:border-[#c76f55]"
+        />
         <button
           type="submit"
           disabled={pending}
-          className="rounded-full bg-[#252525] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#111111] disabled:cursor-not-allowed disabled:opacity-60"
+          className="shrink-0 rounded-full bg-[#252525] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#111111] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {pending ? 'Syncing...' : 'Save and sync'}
         </button>
       </form>
 
-      {externalCalendarUrl ? (
-        <form action={formAction} className="mt-3">
-          <input type="hidden" name="listingId" value={listingId} />
-          <input type="hidden" name="calendarUrl" value="" />
-          <button
-            type="submit"
-            disabled={pending}
-            className="rounded-full border border-stone-200 px-5 py-3 text-sm font-bold text-stone-700 transition hover:border-stone-300 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            Disconnect
-          </button>
-        </form>
+      {state.message ? (
+        <p
+          className={`mt-2 text-sm font-semibold ${
+            state.status === 'success' ? 'text-green-700' : 'text-red-700'
+          }`}
+        >
+          {state.message}
+        </p>
       ) : null}
+
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-500">
+        <Link href="/help/calendar-sync" className="font-semibold text-[#c76f55] hover:underline">
+          How to find your iCal URL →
+        </Link>
+        {calendarLastSyncedAt ? (
+          <span>Last synced {new Date(calendarLastSyncedAt).toLocaleString('en-GB')}</span>
+        ) : null}
+        {externalCalendarUrl ? (
+          <form action={formAction}>
+            <input type="hidden" name="listingId" value={listingId} />
+            <input type="hidden" name="calendarUrl" value="" />
+            <button
+              type="submit"
+              disabled={pending}
+              className="font-semibold text-stone-500 hover:text-stone-700 hover:underline disabled:opacity-60"
+            >
+              Disconnect
+            </button>
+          </form>
+        ) : null}
+      </div>
     </div>
   )
 }
