@@ -47,10 +47,23 @@ async function recipientMagicLink(email: string, path: string): Promise<string> 
 
 type HostEmailRow = {
   id: string
+  user_id?: string | null
   name: string | null
   email: string | null
   notify_new_enquiry_email?: boolean | null
   notify_booking_confirmed_email?: boolean | null
+}
+
+// The host's contact email. Prefer the hosts.email column, but fall back to the
+// account's auth email (hosts.email can be null or stale for accounts that never
+// ran the become-host self-service path). Without this, host emails silently
+// no-op when hosts.email is empty.
+async function resolveHostEmail(host: HostEmailRow | null): Promise<string | null> {
+  if (!host) return null
+  if (host.email) return host.email
+  const authId = host.user_id || host.id
+  if (!authId) return null
+  return await getAuthUserEmail(authId)
 }
 
 type ListingEmailRow = {
@@ -132,7 +145,7 @@ export async function sendHostAdminUpdateEmail({
       to: host.email,
       subject,
       html: baseEmailHtml({
-        greeting: `Hi ${escapeHtml(host.name || 'there')},`,
+        greeting: `Hi ${escapeHtml(host?.name || 'there')},`,
         intro,
         ctaLabel,
         ctaUrl,
@@ -205,7 +218,7 @@ export async function sendHostNewEnquiryEmail({
     const [{ data: host }, { data: listing }, { data: guest }] = await Promise.all([
       hostReader(supabase)
         .from('hosts')
-        .select('id, name, email, notify_new_enquiry_email')
+        .select('id, user_id, name, email, notify_new_enquiry_email')
         .eq('id', request.host_id)
         .maybeSingle<HostEmailRow>(),
       supabase
@@ -222,18 +235,22 @@ export async function sendHostNewEnquiryEmail({
         : Promise.resolve({ data: null }),
     ])
 
-    if (!host?.email) return false
-    if (host.notify_new_enquiry_email === false) return false
+    if (host?.notify_new_enquiry_email === false) return false
+    const hostEmail = await resolveHostEmail(host)
+    if (!hostEmail) {
+      console.error('Skipping host enquiry email: no host email for request', requestId)
+      return false
+    }
 
     const listingTitle = listing?.title || 'your stay'
     const dates = `${request.check_in || 'Date not set'} to ${request.check_out || 'date not set'}`
     const guestName = guest?.full_name || 'A guest'
 
     return await sendEmail({
-      to: host.email,
+      to: hostEmail,
       subject: `New enquiry for ${listingTitle}`,
       html: baseEmailHtml({
-        greeting: `Hi ${escapeHtml(host.name || 'there')},`,
+        greeting: `Hi ${escapeHtml(host?.name || 'there')},`,
         intro: `${guestName} sent a new enquiry for ${listingTitle}. Dates: ${dates}. Guests: ${request.guests || 1}. Message: ${request.message || 'No message provided.'}`,
         ctaLabel: 'Open host messages',
         ctaUrl: `${siteUrl}/host/dashboard/messages`,
@@ -266,7 +283,7 @@ export async function sendHostNewMessageEmail({
     const [{ data: host }, { data: listing }, { data: guest }, { data: message }] = await Promise.all([
       hostReader(supabase)
         .from('hosts')
-        .select('id, name, email, notify_messages_email')
+        .select('id, user_id, name, email, notify_messages_email')
         .or(`id.eq.${conversation.participant_2},user_id.eq.${conversation.participant_2}`)
         .limit(1)
         .maybeSingle<HostEmailRow & { notify_messages_email?: boolean | null }>(),
@@ -292,18 +309,19 @@ export async function sendHostNewMessageEmail({
         .maybeSingle<MessageEmailRow>(),
     ])
 
-    if (!host?.email) return false
-    if (host.notify_messages_email === false) return false
+    if (host?.notify_messages_email === false) return false
+    const hostEmail = await resolveHostEmail(host)
+    if (!hostEmail) return false
 
     const listingTitle = listing?.title || 'your listing'
     const guestName = guest?.full_name || 'A guest'
     const messagePreview = message?.content || 'New message received.'
 
     return await sendEmail({
-      to: host.email,
+      to: hostEmail,
       subject: `New message about ${listingTitle}`,
       html: baseEmailHtml({
-        greeting: `Hi ${escapeHtml(host.name || 'there')},`,
+        greeting: `Hi ${escapeHtml(host?.name || 'there')},`,
         intro: `${guestName} sent you a new message about ${listingTitle}: ${messagePreview}`,
         ctaLabel: 'Open host messages',
         ctaUrl: `${siteUrl}/host/dashboard/messages?conversation=${conversationId}`,
@@ -600,7 +618,7 @@ export async function sendHostBookingConfirmedEmail({
     const [{ data: host }, { data: listing }, { data: guest }] = await Promise.all([
       hostReader(supabase)
         .from('hosts')
-        .select('id, name, email, notify_booking_confirmed_email')
+        .select('id, user_id, name, email, notify_booking_confirmed_email')
         .eq('id', request.host_id)
         .maybeSingle<HostEmailRow>(),
       supabase
@@ -617,18 +635,19 @@ export async function sendHostBookingConfirmedEmail({
         : Promise.resolve({ data: null }),
     ])
 
-    if (!host?.email) return false
-    if (host.notify_booking_confirmed_email === false) return false
+    if (host?.notify_booking_confirmed_email === false) return false
+    const hostEmail = await resolveHostEmail(host)
+    if (!hostEmail) return false
 
     const listingTitle = listing?.title || 'your stay'
     const guestName = guest?.full_name || 'A guest'
     const dates = `${formatEmailDate(request.check_in)} to ${formatEmailDate(request.check_out)}`
 
     return await sendEmail({
-      to: host.email,
+      to: hostEmail,
       subject: `Booking confirmed — ${guestName} at ${listingTitle}`,
       html: baseEmailHtml({
-        greeting: `Hi ${escapeHtml(host.name || 'there')},`,
+        greeting: `Hi ${escapeHtml(host?.name || 'there')},`,
         intro: `You confirmed ${escapeHtml(guestName)}'s booking for ${escapeHtml(listingTitle)}. Dates: ${escapeHtml(dates)}. Guests: ${request.guests || 1}. We've emailed the guest their confirmation and payment details.`,
         ctaLabel: 'Open your calendar',
         ctaUrl: `${siteUrl}/host/dashboard/calendar`,
