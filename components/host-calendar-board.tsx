@@ -2,7 +2,8 @@
 
 import { useMemo, useState, useTransition } from 'react'
 import { formatDateISO } from '@/lib/utils/date'
-import { formatHebrewDay, formatHebrewMonthSpan, getJewishHoliday } from '@/lib/hebrew-date'
+import { formatHebrewDay, formatHebrewMonthSpan } from '@/lib/hebrew-date'
+import { getDayJudaica } from '@/lib/hebcal'
 import { HostCalendarEventDialog } from '@/components/host-calendar-event-dialog'
 
 type ListingOption = { id: string; title: string }
@@ -282,7 +283,7 @@ export function HostCalendarBoard({
 
                   const iso = formatDateISO(day)
                   const dayEvents = eventsByDay.get(iso) || []
-                  const holiday = getJewishHoliday(day)
+                  const { holiday, parsha } = getDayJudaica(day)
                   const isPast = day < today
                   const isToday = day.getTime() === today.getTime()
                   const isSelected = inSelectedRange(day)
@@ -310,6 +311,9 @@ export function HostCalendarBoard({
 
                       {holiday && (
                         <span className="mt-0.5 truncate text-[11px] font-semibold text-[#a9781f]">{holiday}</span>
+                      )}
+                      {parsha && (
+                        <span className="truncate text-[11px] font-semibold text-[#3b5a7a]">{parsha}</span>
                       )}
 
                       <div className="mt-1 flex flex-1 flex-col gap-1 overflow-hidden">

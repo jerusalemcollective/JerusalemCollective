@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@googlemaps/js-api-loader": "^2.0.2",
+    "@hebcal/core": "^6.9.2",
     "@radix-ui/react-slot": "1.2.4",
     "@react-google-maps/api": "^2.20.8",
     "@sentry/nextjs": "^10.69.0",
