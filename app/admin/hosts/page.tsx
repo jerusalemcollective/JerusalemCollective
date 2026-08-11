@@ -8,6 +8,7 @@ import {
 import { ConfirmSubmitButton } from '@/components/confirm-submit-button'
 import { BooleanBadge } from '@/components/boolean-badge'
 import { Pagination, normalizePaginationSearchParams, type PaginationSearchParams } from '@/components/pagination'
+import { parsePayout, formatPayoutRows } from '@/lib/direct-payment'
 
 const PAGE_SIZE = 25
 
@@ -36,6 +37,8 @@ type HostBlockRow = {
 type HostPaymentProfileRow = {
   host_id: string
   commission_percent_override: number | null
+  payout_method: string | null
+  payout_details: unknown
 }
 
 type PlatformSettingRow = {
@@ -90,7 +93,7 @@ export default async function AdminHostsPage({
   const { data: paymentProfileData } = hostIds.length
     ? await supabase
         .from('host_payment_profiles')
-        .select('host_id, commission_percent_override')
+        .select('host_id, commission_percent_override, payout_method, payout_details')
         .in('host_id', hostIds)
     : { data: [] }
   const blockStatusByHost = new Map(
@@ -100,6 +103,12 @@ export default async function AdminHostsPage({
     ((paymentProfileData || []) as HostPaymentProfileRow[]).map((profile) => [
       profile.host_id,
       profile.commission_percent_override,
+    ]),
+  )
+  const payoutByHost = new Map(
+    ((paymentProfileData || []) as HostPaymentProfileRow[]).map((profile) => [
+      profile.host_id,
+      { method: profile.payout_method, details: profile.payout_details },
     ]),
   )
   const defaultCommission = parseCommissionValue(
@@ -115,6 +124,7 @@ export default async function AdminHostsPage({
       listing_blocked_reason: blockStatus?.listing_blocked_reason ?? null,
       commission_percent_override: commissionOverride,
       effective_commission_percent: commissionOverride ?? defaultCommission,
+      payout: host.host_id ? payoutByHost.get(host.host_id) ?? null : null,
     }
   })
   const paged = hosts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -141,10 +151,13 @@ export default async function AdminHostsPage({
           <div className="py-12 text-center text-stone-500">No hosts yet.</div>
         ) : (
           <div className="divide-y divide-stone-200">
-            {paged.map((host) => (
+            {paged.map((host) => {
+              const payoutDetails = parsePayout(host.payout?.details)
+              const payoutRows = payoutDetails ? formatPayoutRows(payoutDetails) : []
+              return (
+              <div key={host.host_id} className="py-5">
               <div
-                key={host.host_id}
-                className="grid gap-4 py-5 md:grid-cols-[1.15fr_1fr_0.7fr_0.8fr_0.8fr_1fr_1.1fr] md:items-center"
+                className="grid gap-4 md:grid-cols-[1.15fr_1fr_0.7fr_0.8fr_0.8fr_1fr_1.1fr] md:items-center"
               >
                 <Link href={`/hosts/${host.host_id}`} className="font-bold text-stone-950 hover:underline">
                   {host.host_name || host.full_name || 'Host'}
@@ -219,7 +232,19 @@ export default async function AdminHostsPage({
                   </form>
                 </div>
               </div>
-            ))}
+              <div className="mt-3 rounded-xl bg-[#fbfaf8] px-4 py-2 text-xs text-stone-600">
+                <span className="font-bold uppercase tracking-widest text-stone-500">Payout </span>
+                {host.payout?.method === 'stripe' ? (
+                  <span>Stripe — send from the Stripe dashboard</span>
+                ) : payoutRows.length > 0 ? (
+                  <span>Manual — {payoutRows.map(([label, value]) => `${label}: ${value}`).join(' · ')}</span>
+                ) : (
+                  <span className="text-stone-400">Not set</span>
+                )}
+              </div>
+              </div>
+              )
+            })}
           </div>
         )}
       </div>
