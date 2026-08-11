@@ -14,7 +14,6 @@ import {
   Plus,
   ShieldCheck,
   Star,
-  UserRound,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -76,7 +75,6 @@ export function AccountMenu({ hasStay, isAdmin }: { hasStay: boolean; isAdmin: b
 
   return (
     <nav className="space-y-1">
-      <MenuLink href="/account" label="Profile" icon={<UserRound className="h-5 w-5" />} active={pathname === '/account'} />
       <MenuLink href="/account/bookings" label="My trips" icon={<CalendarDays className="h-5 w-5" />} active={pathname === '/account/bookings'} />
       <MenuLink href="/account/reviews" label="Reviews" icon={<Star className="h-5 w-5" />} active={pathname === '/account/reviews'} />
       <MenuLink href="/account/enquiries" label="Enquiries" icon={<MessageSquare className="h-5 w-5" />} active={pathname === '/account/enquiries'} />
