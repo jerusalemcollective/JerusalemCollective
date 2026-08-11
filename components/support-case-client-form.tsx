@@ -189,7 +189,6 @@ export function SupportCaseClientForm({
           >
             <option value="refund_request">Refund request</option>
             <option value="dispute">Dispute</option>
-            <option value="damage">Damage</option>
             <option value="cancellation">Cancellation</option>
             <option value="other">Other</option>
           </select>
