@@ -193,6 +193,8 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
   const [statusFilter] = useState<string>('all')
   // A conversation is an "enquiry" when it has a linked booking request.
   const [enquiriesOnly, setEnquiriesOnly] = useState(false)
+  // TEMP: on-page diagnostic for the enquiry-attachment issue. Remove once fixed.
+  const [debugInfo, setDebugInfo] = useState<string | null>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
   const participantIdsKey = participantIds.join('|')
@@ -262,8 +264,8 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
                 .in('host_id', hostParticipantIds)
                 .in('status', ['new', 'host_replied'])
                 .order('created_at', { ascending: false })
-            : Promise.resolve({ data: [] })
-        const { data: hostRequestRows } = await hostRequestQuery
+            : Promise.resolve({ data: [], error: null })
+        const { data: hostRequestRows, error: hostRequestError } = await hostRequestQuery
         const hostRequests = (hostRequestRows || []) as BookingRequestSummary[]
         const conversationIdsFromRequests = hostRequests
           .map((request) => request.conversation_id)
@@ -322,7 +324,7 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
           mode === 'host' ? conversation.participant_1 : conversation.participant_2,
         )
 
-        const [{ data: listings }, { data: profiles }, { data: latestMessages }, { data: requests }] = await Promise.all([
+        const [{ data: listings }, { data: profiles }, { data: latestMessages }, { data: requests, error: requestsError }] = await Promise.all([
           listingIds.length
             ? supabase
                 .from('listings')
@@ -348,7 +350,7 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
                 .select('id, conversation_id, listing_id, host_id, guest_id, status, check_in, check_out, guests, message, created_at')
                 .in('conversation_id', rows.map((conversation) => conversation.id).filter((id) => !isRequestOnlyConversationId(id)))
                 .order('created_at', { ascending: false })
-            : Promise.resolve({ data: [] }),
+            : Promise.resolve({ data: [], error: null }),
         ])
 
         const latestMessageRows: LatestMessagePreview[] = latestMessages || []
@@ -440,17 +442,20 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
         })
 
         if (mode === 'host') {
-          console.log('[inbox-debug] host enquiry attach', {
+          const dbg = {
+            me: authUser.id,
             hostParticipantIds,
-            conversationsFetched: conversationRowsList.length,
-            hostRequestsByHostId: hostRequests.length,
-            requestsByConversationId: (requests || []).length,
-            requestRowsTotal: requestRows.length,
-            conversationsWithRequestAttached: hydrated.filter((conversation) => conversation.request).length,
-            sampleRequest: requestRows[0]
-              ? { id: requestRows[0].id, host_id: requestRows[0].host_id, conversation_id: requestRows[0].conversation_id, status: requestRows[0].status }
-              : null,
-          })
+            convFetched: conversationRowsList.length,
+            reqByHostId: hostRequests.length,
+            reqByConvId: (requests || []).length,
+            reqTotal: requestRows.length,
+            attached: hydrated.filter((conversation) => conversation.request).length,
+            sampleReqHostId: requestRows[0]?.host_id ?? null,
+            hostReqError: hostRequestError?.message ?? null,
+            convReqError: requestsError?.message ?? null,
+          }
+          console.log('[inbox-debug] host enquiry attach', dbg)
+          setDebugInfo(JSON.stringify(dbg, null, 1))
         }
 
         setConversations(hydrated)
@@ -1158,6 +1163,11 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
 
   return (
     <div className="overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm">
+      {debugInfo && (
+        <pre className="overflow-x-auto whitespace-pre-wrap break-all border-b border-amber-300 bg-amber-50 px-4 py-3 text-[11px] leading-tight text-amber-900">
+          DEBUG (temporary): {debugInfo}
+        </pre>
+      )}
       {mode === 'host' && (
         <div className="flex flex-wrap items-center gap-3 border-b border-stone-200 px-4 py-4">
           <div className="inline-flex rounded-full bg-[#F8F5F2] p-1">
