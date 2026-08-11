@@ -48,7 +48,6 @@ export function Footer() {
             <Link href="/stays" className="text-stone-600 transition hover:text-[#c76f55]">Browse stays</Link>
             <Link href="/explore" className="text-stone-600 transition hover:text-[#c76f55]">Explore</Link>
             <Link href="/neighbourhoods" className="text-stone-600 transition hover:text-[#c76f55]">Neighbourhoods</Link>
-            <Link href="/host/login" className="text-stone-600 transition hover:text-[#c76f55]">Host login</Link>
             <Link href="/trust-and-safety" className="text-stone-600 transition hover:text-[#c76f55]">
               Trust & Safety
             </Link>
