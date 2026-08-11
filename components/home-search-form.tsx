@@ -6,6 +6,12 @@ import { allNeighborhoods } from '@/lib/neighborhoods'
 import { Calendar } from '@/components/ui/calendar'
 import { formatHebrewShortDate } from '@/lib/hebrew-date'
 import { formatDateISO } from '@/lib/utils/date'
+import { createClient } from '@/lib/supabase/client'
+import { convert, type FxRates } from '@/lib/fx'
+import { normalizeCurrency } from '@/lib/currencies'
+import { PriceRangeSlider } from '@/components/price-range-slider'
+
+const NIGHTLY_USD_CEILING = 1500
 
 type DateRange = {
   from?: Date
@@ -117,6 +123,15 @@ function trackNeighborhoodSearch(neighborhood: string, source: string) {
   })
 }
 
+const FEATURE_TOGGLES = [
+  { key: 'shabbatElevator', label: 'Shabbos elevator' },
+  { key: 'physicalKey', label: 'Keyless entry for Shabbos' },
+  { key: 'sukkahBalcony', label: 'Sukkah / sukkah balcony' },
+  { key: 'centralAc', label: 'Air conditioning' },
+] as const
+
+type FeatureKey = (typeof FEATURE_TOGGLES)[number]['key']
+
 export function HomeSearchForm() {
   const [neighbourhood, setNeighbourhood] = useState('')
   const [showNeighbourhoodSuggestions, setShowNeighbourhoodSuggestions] = useState(false)
@@ -124,6 +139,18 @@ export function HomeSearchForm() {
   const [dateRange, setDateRange] = useState<DateRange>({})
   const [showCalendar, setShowCalendar] = useState(false)
   const [guests, setGuests] = useState(0)
+  const [showFilters, setShowFilters] = useState(false)
+  const [bedrooms, setBedrooms] = useState(0)
+  const [preferredCurrency, setPreferredCurrency] = useState('USD')
+  const [rates, setRates] = useState<FxRates>({})
+  const [priceMin, setPriceMin] = useState(0)
+  const [priceMax, setPriceMax] = useState(0)
+  const [features, setFeatures] = useState<Record<FeatureKey, boolean>>({
+    shabbatElevator: false,
+    physicalKey: false,
+    sukkahBalcony: false,
+    centralAc: false,
+  })
   const [isLoadingPlaces, setIsLoadingPlaces] = useState(false)
   const [shouldLoadPlaces, setShouldLoadPlaces] = useState(false)
   const neighbourhoodRef = useRef<HTMLDivElement | null>(null)
@@ -176,6 +203,36 @@ export function HomeSearchForm() {
 
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Live FX + the guest's preferred currency for the price slider.
+  useEffect(() => {
+    let active = true
+    fetch('/api/fx')
+      .then((response) => response.json())
+      .then((data) => {
+        if (active && data?.rates) setRates(data.rates as FxRates)
+      })
+      .catch(() => {})
+
+    const supabase = createClient()
+    void supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      void supabase
+        .from('profiles')
+        .select('preferred_currency')
+        .eq('id', user.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (active && data?.preferred_currency) {
+            setPreferredCurrency(normalizeCurrency(data.preferred_currency))
+          }
+        })
+    })
+
+    return () => {
+      active = false
+    }
   }, [])
 
   const fetchPlacePredictions = useCallback(async (input: string) => {
@@ -269,19 +326,53 @@ export function HomeSearchForm() {
     return `${formatShortDate(dateRange.from)} - ${formatShortDate(dateRange.to)}`
   }
 
+  const nights =
+    dateRange.from && dateRange.to
+      ? Math.max(0, Math.round((dateRange.to.getTime() - dateRange.from.getTime()) / 86_400_000))
+      : 0
+  const nightsForCalc = nights > 0 ? nights : 1
+  const priceCeiling = Math.max(
+    100,
+    Math.round(convert(NIGHTLY_USD_CEILING, 'USD', preferredCurrency, rates) * nightsForCalc),
+  )
+  const priceLabel =
+    nights > 0
+      ? `Total for ${nights} night${nights === 1 ? '' : 's'} (${preferredCurrency})`
+      : `Price per night (${preferredCurrency})`
+
+  // Reset the slider scale when currency, rates, or dates change the ceiling.
+  useEffect(() => {
+    setPriceMin(0)
+    setPriceMax(priceCeiling)
+  }, [priceCeiling])
+
+  const priceIsFiltered = priceMin > 0 || (priceMax > 0 && priceMax < priceCeiling)
+  const activeFeatureCount =
+    FEATURE_TOGGLES.filter((toggle) => features[toggle.key]).length +
+    (bedrooms > 0 ? 1 : 0) +
+    (priceIsFiltered ? 1 : 0)
+
   const handleSearch = () => {
     const params = new URLSearchParams()
     if (neighbourhood) params.set('neighborhood', neighbourhood)
     if (dateRange.from) params.set('checkIn', formatDateISO(dateRange.from))
     if (dateRange.to) params.set('checkOut', formatDateISO(dateRange.to))
     if (guests > 0) params.set('guests', String(guests))
+    if (bedrooms > 0) params.set('bedrooms', String(bedrooms))
+    const toUsdPerNight = (preferredTotal: number) =>
+      Math.round(convert(preferredTotal, preferredCurrency, 'USD', rates) / nightsForCalc)
+    if (priceMin > 0) params.set('minPrice', String(toUsdPerNight(priceMin)))
+    if (priceMax > 0 && priceMax < priceCeiling) params.set('maxPrice', String(toUsdPerNight(priceMax)))
+    FEATURE_TOGGLES.forEach((toggle) => {
+      if (features[toggle.key]) params.set(toggle.key, '1')
+    })
     if (neighbourhood) trackNeighborhoodSearch(neighbourhood, 'hero_search')
     window.location.href = `/stays${params.toString() ? `?${params.toString()}` : ''}`
   }
 
   return (
     <div className="mx-auto max-w-4xl rounded-3xl border border-stone-200 bg-white p-1.5 shadow-xl shadow-stone-200/40">
-      <div className="grid grid-cols-1 divide-y divide-stone-100 md:grid-cols-[1.45fr_1fr_1fr_auto] md:divide-x md:divide-y-0">
+      <div className="grid grid-cols-1 divide-y divide-stone-100 md:grid-cols-[1.35fr_1fr_0.85fr_0.85fr_auto] md:divide-x md:divide-y-0">
         <div className="relative" ref={neighbourhoodRef}>
           <div className="flex flex-col rounded-2xl px-5 py-3 text-left transition focus-within:bg-[#faf8f6] focus-within:ring-2 focus-within:ring-stone-400">
             <label htmlFor="home-neighbourhood" className="text-[11px] font-bold uppercase tracking-widest text-stone-900">
@@ -385,6 +476,17 @@ export function HomeSearchForm() {
           </div>
         </div>
 
+        <button
+          type="button"
+          onClick={() => setShowFilters(true)}
+          className="flex flex-col rounded-2xl px-5 py-3 text-left transition hover:bg-stone-50 focus-visible:bg-[#faf8f6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400"
+        >
+          <span className="text-[11px] font-bold uppercase tracking-widest text-stone-900">Filters</span>
+          <span className={`mt-1 text-sm ${activeFeatureCount ? 'text-stone-900' : 'text-stone-500'}`}>
+            {activeFeatureCount ? `${activeFeatureCount} selected` : 'Any'}
+          </span>
+        </button>
+
         <div className="p-2">
           <button
             onClick={handleSearch}
@@ -395,6 +497,112 @@ export function HomeSearchForm() {
           </button>
         </div>
       </div>
+
+      {showFilters && (
+        <div
+          role="presentation"
+          onClick={() => setShowFilters(false)}
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-3 sm:items-center sm:p-6"
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Filters"
+            onClick={(event) => event.stopPropagation()}
+            className="flex max-h-[88vh] w-full max-w-[420px] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl"
+          >
+            <div className="flex items-center justify-between border-b border-stone-100 px-5 py-3">
+              <p className="text-sm font-bold text-stone-900">Filters</p>
+              <button
+                type="button"
+                onClick={() => setShowFilters(false)}
+                aria-label="Close filters"
+                className="rounded-full p-1.5 text-stone-500 transition hover:bg-stone-100 hover:text-stone-900"
+              >
+                <CloseIcon />
+              </button>
+            </div>
+
+            <div className="flex-1 space-y-5 overflow-y-auto p-5">
+              <label className="block">
+                <span className="text-sm font-semibold text-stone-900">Bedrooms</span>
+                <select
+                  value={bedrooms}
+                  onChange={(event) => setBedrooms(Number(event.target.value))}
+                  className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900"
+                >
+                  <option value={0}>Any</option>
+                  {[1, 2, 3, 4, 5].map((count) => (
+                    <option key={count} value={count}>
+                      {count}+ bedroom{count === 1 ? '' : 's'}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div>
+                <span className="text-sm font-semibold text-stone-900">{priceLabel}</span>
+                <div className="mt-3">
+                  <PriceRangeSlider
+                    max={priceCeiling}
+                    valueMin={priceMin}
+                    valueMax={priceMax}
+                    currency={preferredCurrency}
+                    onChange={(min, max) => {
+                      setPriceMin(min)
+                      setPriceMax(max)
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <span className="text-sm font-semibold text-stone-900">Features</span>
+                <div className="mt-2 space-y-2">
+                  {FEATURE_TOGGLES.map((toggle) => (
+                    <label
+                      key={toggle.key}
+                      className="flex cursor-pointer items-center gap-3 rounded-2xl border border-stone-200 px-4 py-3 text-sm font-medium text-stone-700 transition hover:border-stone-300"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={features[toggle.key]}
+                        onChange={(event) =>
+                          setFeatures((current) => ({ ...current, [toggle.key]: event.target.checked }))
+                        }
+                        className="h-4 w-4 rounded border-stone-300 text-[#c76f55] focus:ring-[#c76f55]"
+                      />
+                      {toggle.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 border-t border-stone-100 bg-white px-5 py-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setBedrooms(0)
+                  setPriceMin(0)
+                  setPriceMax(priceCeiling)
+                  setFeatures({ shabbatElevator: false, physicalKey: false, sukkahBalcony: false, centralAc: false })
+                }}
+                className="text-xs font-bold text-stone-500 transition hover:text-stone-800"
+              >
+                Clear filters
+              </button>
+              <button
+                type="button"
+                onClick={handleSearch}
+                className="rounded-full bg-[#252525] px-6 py-2.5 text-sm font-bold text-white transition hover:bg-[#111111]"
+              >
+                Show stays
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
