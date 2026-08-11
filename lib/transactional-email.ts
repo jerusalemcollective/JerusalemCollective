@@ -214,10 +214,7 @@ export async function sendHostNewEnquiryEmail({
       .eq('id', requestId)
       .maybeSingle<BookingRequestEmailRow>()
 
-    if (!request?.host_id || !request.listing_id) {
-      console.error('[host-enquiry-email] request missing host/listing', { requestId, hostId: request?.host_id, listingId: request?.listing_id })
-      return false
-    }
+    if (!request?.host_id || !request.listing_id) return false
 
     const [{ data: host }, { data: listing }, { data: guest }] = await Promise.all([
       hostReader(supabase)
@@ -239,13 +236,10 @@ export async function sendHostNewEnquiryEmail({
         : Promise.resolve({ data: null }),
     ])
 
-    if (host?.notify_new_enquiry_email === false) {
-      console.log('[host-enquiry-email] host has enquiry notifications off', { requestId, hostId: request.host_id })
-      return false
-    }
+    if (host?.notify_new_enquiry_email === false) return false
     const hostEmail = await resolveHostEmail(host)
     if (!hostEmail) {
-      console.error('[host-enquiry-email] no host email resolvable for request', requestId, { hostFound: Boolean(host) })
+      console.error('Skipping host enquiry email: no host email for request', requestId)
       return false
     }
 

@@ -20,7 +20,6 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    console.error('[notify-host-message] no authenticated user for conversation', conversationId)
     return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 })
   }
 
@@ -29,7 +28,6 @@ export async function POST(request: Request) {
     conversationId,
     senderId: user.id,
   })
-  console.log('[notify-host-message] send result', { conversationId, emailSent })
 
   return NextResponse.json({ ok: true, emailSent })
 }
