@@ -266,26 +266,6 @@ export default async function HostPaymentsPage({
                 <input type="hidden" name="acceptsJlm" value="" />
               )}
 
-              <div>
-                <p className="text-sm font-semibold text-stone-800">Currencies you can receive</p>
-                <div className="mt-2 grid gap-2 sm:grid-cols-4">
-                  {['GBP', 'USD', 'EUR', 'ILS'].map((currency) => (
-                    <label key={currency} className="flex items-center gap-2 rounded-2xl border border-stone-200 px-4 py-3 text-sm font-semibold text-stone-700">
-                      <input
-                        type="checkbox"
-                        name="payoutCurrencies"
-                        value={currency}
-                        defaultChecked={(profile?.payout_currencies || []).includes(currency)}
-                      />
-                      {currency}
-                    </label>
-                  ))}
-                </div>
-                <p className="mt-2 text-xs leading-5 text-stone-500">
-                  JLM Collective will aim to pay you in the same currency the guest paid, if you can receive that currency.
-                </p>
-              </div>
-
               <HostGetPaidSection
                 initialMethod={
                   profile?.payout_method === 'stripe' || profile?.payout_method === 'manual'
@@ -302,6 +282,7 @@ export default async function HostPaymentsPage({
                 directPaymentsEnabled={paymentRoutes.directPaymentsEnabled}
                 acceptsDirectDefault={paymentRoutes.directPaymentsEnabled && (profile?.accepts_direct_payment || false)}
                 initialCurrency={profile?.preferred_currency || 'USD'}
+                payoutCurrenciesDefault={profile?.payout_currencies || []}
                 scheduleDefault={profile?.direct_payment_instructions}
                 payoutDefault={resolveHostPayout(profile?.payout_details, profile?.direct_payment_instructions)}
               />

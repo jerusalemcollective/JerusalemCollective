@@ -20,6 +20,7 @@ export function HostGetPaidSection({
   directPaymentsEnabled,
   acceptsDirectDefault,
   initialCurrency,
+  payoutCurrenciesDefault,
   scheduleDefault,
   payoutDefault,
   legacyMethod,
@@ -29,6 +30,7 @@ export function HostGetPaidSection({
   directPaymentsEnabled: boolean
   acceptsDirectDefault: boolean
   initialCurrency: string
+  payoutCurrenciesDefault: string[]
   scheduleDefault: string | null | undefined
   payoutDefault: PayoutDetails | null
   legacyMethod?: string | null
@@ -48,6 +50,45 @@ export function HostGetPaidSection({
 
   return (
     <div className="space-y-5">
+      <div>
+        <p className="text-sm font-semibold text-stone-800">Currencies you can receive</p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {['GBP', 'USD', 'EUR', 'ILS'].map((code) => (
+            <label
+              key={code}
+              className="flex items-center gap-1.5 rounded-2xl border border-stone-200 px-3 py-2 text-sm font-semibold text-stone-700"
+            >
+              <input
+                type="checkbox"
+                name="payoutCurrencies"
+                value={code}
+                defaultChecked={payoutCurrenciesDefault.includes(code)}
+              />
+              {code}
+            </label>
+          ))}
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-stone-800">Preferred currency</span>
+            <button
+              type="button"
+              onClick={() => {
+                const order = ['USD', 'GBP', 'EUR', 'ILS']
+                setCurrency(order[(order.indexOf(currency) + 1) % order.length])
+              }}
+              className="inline-flex items-center gap-1.5 rounded-full border border-stone-300 bg-white px-3 py-1.5 text-sm font-bold text-stone-900 transition hover:border-[#c76f55] hover:bg-stone-50"
+              aria-label={`Preferred currency ${currency}. Click to switch.`}
+            >
+              {currency}
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="text-stone-400" aria-hidden="true">
+                <path d="m7 15 5 5 5-5" />
+                <path d="m7 9 5-5 5 5" />
+              </svg>
+            </button>
+          </div>
+          <input type="hidden" name="preferredCurrency" value={currency} />
+        </div>
+      </div>
+
       <div>
         <p className="font-bold text-stone-950">How you get paid</p>
         <div className="mt-3 flex flex-wrap gap-2">
@@ -89,27 +130,6 @@ export function HostGetPaidSection({
           <PayoutAccountFields payoutDefault={payoutDefault} legacyMethod={legacyMethod} />
         </div>
       )}
-
-      <div className="flex items-center gap-2 pt-1">
-        <span className="text-sm font-semibold text-stone-800">Preferred currency</span>
-        <button
-          type="button"
-          onClick={() => {
-            const order = ['USD', 'GBP', 'EUR', 'ILS']
-            setCurrency(order[(order.indexOf(currency) + 1) % order.length])
-          }}
-          className="inline-flex items-center gap-1.5 rounded-full border border-stone-300 bg-white px-3 py-1 text-sm font-bold text-stone-900 transition hover:border-[#c76f55] hover:bg-stone-50"
-          title="Click to switch currency"
-          aria-label={`Preferred currency ${currency}. Click to switch.`}
-        >
-          {currency}
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="text-stone-400" aria-hidden="true">
-            <path d="m7 15 5 5 5-5" />
-            <path d="m7 9 5-5 5 5" />
-          </svg>
-        </button>
-        <input type="hidden" name="preferredCurrency" value={currency} />
-      </div>
 
       <DirectPaymentScheduleFields defaultValue={scheduleDefault} currency={currency} />
 

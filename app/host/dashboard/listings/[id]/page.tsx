@@ -283,9 +283,6 @@ export default async function HostListingEditPage({
                 <input name="extraGuestFeeUsd" type="number" min="0" defaultValue={listing.extra_guest_fee_usd ?? 0} className={inputClass} />
               </Field>
             </div>
-            <p className="mt-2 text-sm text-stone-500">
-              Guests above the included count add the extra-guest fee per night. Leave the fee at 0 for flat pricing.
-            </p>
             {paymentRoutes.jlmPaymentsEnabled ? (
               <label className="mt-5 flex items-start gap-3 rounded-2xl bg-[#F8F5F2] p-4">
                 <input

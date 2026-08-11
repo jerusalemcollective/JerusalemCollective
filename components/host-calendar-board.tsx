@@ -43,6 +43,9 @@ type HostCalendarBoardProps = {
 
 const WEEKDAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
 
+// Sentinel for the combined "every listing" view. Not a real listing id.
+const ALL_LISTINGS = '__all__'
+
 // Expand a half-open [start, endExclusive) date range into one Date per day.
 function expandDays(startISO: string, endExclusiveISO: string): Date[] {
   const out: Date[] = []
@@ -64,19 +67,22 @@ function formatDisplayDate(date: Date): string {
 }
 
 // Pill colour + primary label for an event on the grid.
+// title = who (guest name); subtitle = which listing they are staying in. Status
+// is carried by the pill colour + the legend, so the listing name is free to sit
+// underneath on every event.
 function eventPill(event: CalendarEvent): { className: string; title: string; subtitle: string } {
   if (event.kind === 'block') {
     return {
       className: 'bg-stone-500 text-white',
       title: event.external ? 'Synced block' : 'Blocked',
-      subtitle: event.reason || event.listingTitle,
+      subtitle: event.listingTitle,
     }
   }
   if (event.kind === 'request') {
-    return { className: 'bg-sky-600 text-white', title: event.guestName || 'Request', subtitle: 'Enquiry' }
+    return { className: 'bg-sky-600 text-white', title: event.guestName || 'Request', subtitle: event.listingTitle }
   }
   if (event.kind === 'booking' && event.status === 'pending') {
-    return { className: 'bg-amber-500 text-white', title: event.guestName || 'Guest', subtitle: 'Pending' }
+    return { className: 'bg-amber-500 text-white', title: event.guestName || 'Guest', subtitle: event.listingTitle }
   }
   return { className: 'bg-green-700 text-white', title: event.guestName || 'Guest', subtitle: event.listingTitle }
 }
@@ -89,7 +95,13 @@ export function HostCalendarBoard({
   updateRequestAction,
   removeRangeAction,
 }: HostCalendarBoardProps) {
-  const [selectedListingId, setSelectedListingId] = useState(listings[0]?.id || '')
+  // With more than one listing, default to a single combined view of them all;
+  // a specific listing must be picked to add or edit dates. ALL_LISTINGS is a
+  // sentinel, never a real listing id.
+  const [selectedListingId, setSelectedListingId] = useState(
+    listings.length > 1 ? ALL_LISTINGS : listings[0]?.id || '',
+  )
+  const isAllListings = selectedListingId === ALL_LISTINGS
   const today = useMemo(() => startOfDay(new Date()), [])
   const [viewMonth, setViewMonth] = useState<Date>(() => new Date(today.getFullYear(), today.getMonth(), 1))
   const [range, setRange] = useState<{ from?: Date; to?: Date }>({})
@@ -107,7 +119,7 @@ export function HostCalendarBoard({
   const eventsByDay = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>()
     for (const event of events) {
-      if (event.listingId !== selectedListingId) continue
+      if (selectedListingId !== ALL_LISTINGS && event.listingId !== selectedListingId) continue
       for (const day of expandDays(event.start, event.endExclusive)) {
         const iso = formatDateISO(day)
         const list = map.get(iso)
@@ -139,7 +151,7 @@ export function HostCalendarBoard({
 
   const startISO = range.from ? formatDateISO(range.from) : ''
   const endISO = range.to ? formatDateISO(range.to) : ''
-  const hasRange = Boolean(selectedListingId && startISO && endISO)
+  const hasRange = Boolean(!isAllListings && selectedListingId && startISO && endISO)
 
   const clearSelection = () => {
     setRange({})
@@ -156,6 +168,8 @@ export function HostCalendarBoard({
   // a third starts a fresh range. Past days and days with events are not selectable.
   const pickDay = (day: Date) => {
     if (day < today) return
+    // In the combined view there is no single listing to add dates to.
+    if (isAllListings) return
     setError(null)
     setRange((current) => {
       if (!current.from || (current.from && current.to)) {
@@ -247,6 +261,7 @@ export function HostCalendarBoard({
             }}
             className="rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-semibold text-stone-900"
           >
+            <option value={ALL_LISTINGS}>All listings</option>
             {listings.map((listing) => (
               <option key={listing.id} value={listing.id}>
                 {listing.title}
@@ -327,10 +342,11 @@ export function HostCalendarBoard({
                                 clickEvent.stopPropagation()
                                 setActiveEvent(event)
                               }}
-                              className={`block w-full cursor-pointer truncate rounded-md px-2 py-1 text-left text-[11px] font-semibold leading-tight ${pill.className}`}
+                              className={`block w-full cursor-pointer rounded-md px-2 py-1 text-left text-[11px] font-semibold leading-tight ${pill.className}`}
                               title={`${pill.title} — ${pill.subtitle}`}
                             >
-                              {pill.title}
+                              <span className="block truncate">{pill.title}</span>
+                              <span className="block truncate text-[10px] font-normal opacity-90">{pill.subtitle}</span>
                             </button>
                           )
                         })}
