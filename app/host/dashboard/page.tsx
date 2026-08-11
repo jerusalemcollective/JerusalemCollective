@@ -1,13 +1,5 @@
 import Link from 'next/link'
-import type { ReactNode } from 'react'
-import {
-  CalendarDays,
-  CheckCircle2,
-  ChevronRight,
-  FileClock,
-  LifeBuoy,
-  MessageCircle,
-} from 'lucide-react'
+import { CalendarDays } from 'lucide-react'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { DraftListingCard } from '@/components/draft-listing-card'
 import { oneOrNull } from '@/lib/utils/one-or-null'
@@ -25,71 +17,43 @@ type UpcomingBookingRow = Omit<UpcomingBooking, 'listings'> & {
   listings?: UpcomingBooking['listings'] | NonNullable<UpcomingBooking['listings']>[] | null
 }
 
-type HostSupportCase = {
-  id: string
-  reason: string
-  status: string
-}
-
-type PendingApplication = {
-  id: string
-  status: string
+type UnreadThread = {
+  conversationId: string
+  listingId: string | null
+  guestId: string | null
+  preview: string
+  createdAt: string
 }
 
 export default async function HostDashboardPage() {
   const { supabase, hostIds } = await requireHostDashboardAccess()
+  const hostIdSet = new Set(hostIds)
   const today = new Date().toISOString().slice(0, 10)
-  const windowEndDate = (() => {
-    const end = new Date()
-    end.setDate(end.getDate() + 30)
-    return end.toISOString().slice(0, 10)
-  })()
 
   const [
-    { count: newEnquiryCount },
     { data: upcomingBookingsData },
-    { data: supportCasesData },
     { count: totalListingsCount },
-    { data: pendingApplicationData },
     { data: profileData },
+    { data: conversationRows },
   ] = await Promise.all([
-    supabase
-      .from('booking_requests')
-      .select('*', { count: 'exact', head: true })
-      .in('host_id', hostIds)
-      .eq('status', 'new'),
     supabase
       .from('bookings')
       .select('id, check_in, check_out, listings(title)')
       .in('host_id', hostIds)
       .gte('check_in', today)
-      .lte('check_in', windowEndDate)
       .order('check_in', { ascending: true })
-      .limit(5),
-    supabase
-      .from('support_cases')
-      .select('id, reason, status')
-      .in('host_id', hostIds)
-      .neq('status', 'resolved')
-      .neq('status', 'closed')
-      .order('created_at', { ascending: false }),
+      .limit(2),
     supabase
       .from('listings')
       .select('*', { count: 'exact', head: true })
       .in('host_id', hostIds),
-    supabase
-      .from('host_applications')
-      .select('id, status')
-      .in('host_id', hostIds)
-      .neq('status', 'approved')
-      .neq('status', 'rejected')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle(),
     supabase.from('profiles').select('full_name').in('id', hostIds).limit(1).maybeSingle(),
+    supabase
+      .from('conversations')
+      .select('id, listing_id, participant_1, updated_at')
+      .in('participant_2', hostIds),
   ])
 
-  const newEnquiries = newEnquiryCount || 0
   const totalListings = totalListingsCount || 0
   const upcomingBookings: UpcomingBooking[] = (upcomingBookingsData || []).map((booking: UpcomingBookingRow) => ({
     id: booking.id,
@@ -97,21 +61,88 @@ export default async function HostDashboardPage() {
     check_out: booking.check_out,
     listings: oneOrNull(booking.listings),
   }))
-  const openSupportCases: HostSupportCase[] = (supportCasesData || []).map((supportCase: HostSupportCase) => ({
-    id: supportCase.id,
-    reason: supportCase.reason,
-    status: supportCase.status,
-  }))
-  const pendingApplication: PendingApplication | null = pendingApplicationData
-    ? {
-        id: pendingApplicationData.id,
-        status: pendingApplicationData.status,
-      }
-    : null
 
   const fullName = (profileData as { full_name?: string | null } | null)?.full_name || ''
   const firstName = fullName.trim().split(/\s+/)[0] || ''
-  const hasActions = newEnquiries > 0 || openSupportCases.length > 0 || Boolean(pendingApplication)
+
+  // Build the unread-message list: one row per conversation that has an unread
+  // message from the guest (anything not sent by this host). Ordered by most
+  // recent unread first, so the newest threads surface at the top.
+  const conversations = (conversationRows || []) as {
+    id: string
+    listing_id: string | null
+    participant_1: string
+    updated_at: string
+  }[]
+  const conversationById = new Map(conversations.map((conversation) => [conversation.id, conversation]))
+
+  let unreadThreads: UnreadThread[] = []
+  if (conversations.length > 0) {
+    const { data: unreadMessages } = await supabase
+      .from('messages')
+      .select('conversation_id, content, created_at, sender_id')
+      .in(
+        'conversation_id',
+        conversations.map((conversation) => conversation.id),
+      )
+      .eq('read', false)
+      .order('created_at', { ascending: false })
+      .limit(100)
+
+    const seen = new Set<string>()
+    for (const message of (unreadMessages || []) as {
+      conversation_id: string
+      content: string
+      created_at: string
+      sender_id: string
+    }[]) {
+      if (hostIdSet.has(message.sender_id)) continue // the host's own reply
+      if (seen.has(message.conversation_id)) continue // keep only the latest per thread
+      const conversation = conversationById.get(message.conversation_id)
+      if (!conversation) continue
+      seen.add(message.conversation_id)
+      unreadThreads.push({
+        conversationId: message.conversation_id,
+        listingId: conversation.listing_id,
+        guestId: conversation.participant_1,
+        preview: message.content,
+        createdAt: message.created_at,
+      })
+    }
+  }
+
+  const totalUnread = unreadThreads.length
+  const shownUnread = unreadThreads.slice(0, 3)
+
+  // Resolve guest names + listing titles only for the rows we actually show.
+  const listingIds = Array.from(new Set(shownUnread.map((thread) => thread.listingId).filter(Boolean))) as string[]
+  const guestIds = Array.from(new Set(shownUnread.map((thread) => thread.guestId).filter(Boolean))) as string[]
+
+  let listingTitleById = new Map<string, string>()
+  let guestNameById = new Map<string, string | null>()
+  if (listingIds.length > 0) {
+    const { data } = await supabase.from('listings').select('id, title').in('id', listingIds)
+    listingTitleById = new Map(((data as { id: string; title: string }[]) || []).map((row) => [row.id, row.title]))
+  }
+  if (guestIds.length > 0) {
+    const { data } = await supabase.from('profiles').select('id, full_name').in('id', guestIds)
+    guestNameById = new Map(
+      ((data as { id: string; full_name: string | null }[]) || []).map((row) => [row.id, row.full_name]),
+    )
+  }
+
+  const unreadRows = shownUnread.map((thread) => {
+    const name = (thread.guestId && guestNameById.get(thread.guestId)) || 'Guest'
+    const listing = (thread.listingId && listingTitleById.get(thread.listingId)) || 'Stay'
+    return {
+      key: thread.conversationId,
+      name,
+      initials: toInitials(name),
+      listing,
+      preview: thread.preview,
+      time: relativeTime(thread.createdAt),
+    }
+  })
 
   return (
     <div className="min-h-screen bg-[#F8F5F2] px-5 py-8 text-[#252525] md:px-6">
@@ -134,56 +165,10 @@ export default async function HostDashboardPage() {
 
         <DraftListingCard />
 
-        {/* Needs your attention */}
-        <section className="mt-8">
-          <h2 className="text-xl font-bold text-stone-950">Needs your attention</h2>
-          <div className="mt-4 divide-y divide-stone-100 overflow-hidden rounded-3xl bg-white shadow-sm">
-            {hasActions ? (
-              <>
-                {newEnquiries > 0 && (
-                  <AttentionRow
-                    href="/host/dashboard/messages"
-                    icon={<MessageCircle className="h-5 w-5" />}
-                    title={
-                      newEnquiries === 1
-                        ? '1 guest is waiting for your reply'
-                        : `${newEnquiries} guests are waiting for your reply`
-                    }
-                    detail="Open messages to reply, accept, or decline"
-                  />
-                )}
-                {openSupportCases.length > 0 && (
-                  <AttentionRow
-                    href="/host/dashboard/cases"
-                    icon={<LifeBuoy className="h-5 w-5" />}
-                    title={`${openSupportCases.length} open support ${openSupportCases.length === 1 ? 'case' : 'cases'}`}
-                    detail="Review the latest updates on your cases"
-                  />
-                )}
-                {pendingApplication && (
-                  <AttentionRow
-                    href={`/host/dashboard/applications/${pendingApplication.id}`}
-                    icon={<FileClock className="h-5 w-5" />}
-                    title="Your application is under review"
-                    detail="JLM Collective is reviewing this stay"
-                  />
-                )}
-              </>
-            ) : (
-              <div className="flex items-center gap-3 px-6 py-8 text-stone-500">
-                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                <span>You&apos;re all caught up — nothing needs your attention right now.</span>
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Upcoming stays */}
+        {/* Next stays */}
         <section className="mt-8">
           <div className="flex items-center justify-between gap-4">
-            <h2 className="text-xl font-bold text-stone-950">
-              Upcoming stays <span className="text-sm font-medium text-stone-400">next 30 days</span>
-            </h2>
+            <h2 className="text-xl font-bold text-stone-950">Upcoming stays</h2>
             <Link
               href="/host/dashboard/calendar"
               className="text-sm font-bold text-[#c76f55] transition hover:text-[#a95b45]"
@@ -192,30 +177,76 @@ export default async function HostDashboardPage() {
             </Link>
           </div>
 
-          <div className="mt-4 overflow-hidden rounded-3xl bg-white shadow-sm">
-            {upcomingBookings.length === 0 ? (
-              <div className="px-6 py-12 text-center text-stone-500">
-                No stays arriving in the next 30 days
-              </div>
-            ) : (
-              <div className="divide-y divide-stone-100">
-                {upcomingBookings.map((booking) => (
-                  <article key={booking.id} className="flex items-center gap-4 px-6 py-4">
-                    <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#fff4ef] text-[#c76f55]">
-                      <CalendarDays className="h-5 w-5" />
+          {upcomingBookings.length === 0 ? (
+            <div className="mt-4 rounded-3xl bg-white px-6 py-12 text-center text-stone-500 shadow-sm">
+              No upcoming stays yet
+            </div>
+          ) : (
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              {upcomingBookings.map((booking) => {
+                const nights = nightsBetween(booking.check_in, booking.check_out)
+                return (
+                  <article
+                    key={booking.id}
+                    className="flex items-center gap-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-stone-100"
+                  >
+                    <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-[#fff4ef] text-[#c76f55]">
+                      <CalendarDays className="h-6 w-6" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-bold text-stone-950">{booking.listings?.title || 'Stay'}</p>
-                      <p className="mt-0.5 text-sm text-stone-500">Confirmed booking</p>
+                      <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Next stay</p>
+                      <p className="mt-1 truncate font-bold text-stone-950">{booking.listings?.title || 'Stay'}</p>
+                      <p className="mt-0.5 text-sm text-stone-500">
+                        {formatDate(booking.check_in)} – {formatDate(booking.check_out)} · {nights}{' '}
+                        {nights === 1 ? 'night' : 'nights'}
+                      </p>
                     </div>
-                    <p className="shrink-0 text-right text-sm font-semibold text-stone-700">
-                      {formatDate(booking.check_in)} – {formatDate(booking.check_out)}
-                      <span className="block text-xs font-medium text-stone-400">
-                        {nightsBetween(booking.check_in, booking.check_out)}{' '}
-                        {nightsBetween(booking.check_in, booking.check_out) === 1 ? 'night' : 'nights'}
-                      </span>
-                    </p>
                   </article>
+                )
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* Unread messages */}
+        <section className="mt-8">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-xl font-bold text-stone-950">Unread messages</h2>
+            {totalUnread > 3 && (
+              <Link
+                href="/host/dashboard/messages"
+                className="text-sm font-bold text-[#c76f55] transition hover:text-[#a95b45]"
+              >
+                See all
+              </Link>
+            )}
+          </div>
+
+          <div className="mt-4 overflow-hidden rounded-3xl bg-white shadow-sm">
+            {unreadRows.length === 0 ? (
+              <div className="px-6 py-12 text-center text-stone-500">You have no unread messages</div>
+            ) : (
+              <div className="divide-y divide-stone-100">
+                {unreadRows.map((row) => (
+                  <Link
+                    key={row.key}
+                    href="/host/dashboard/messages"
+                    className="flex items-start gap-4 px-6 py-4 transition hover:bg-stone-50"
+                  >
+                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#fff4ef] text-sm font-bold text-[#c76f55]">
+                      {row.initials}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-bold text-stone-950">
+                        {row.name} <span className="font-normal text-stone-400">· {row.listing}</span>
+                      </span>
+                      <span className="mt-0.5 block truncate text-sm text-stone-500">{row.preview}</span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-2 pt-0.5">
+                      <span className="text-xs text-stone-400">{row.time}</span>
+                      <span className="h-2 w-2 rounded-full bg-[#c76f55]" />
+                    </span>
+                  </Link>
                 ))}
               </div>
             )}
@@ -226,29 +257,10 @@ export default async function HostDashboardPage() {
   )
 }
 
-function AttentionRow({
-  href,
-  title,
-  detail,
-  icon,
-}: {
-  href: string
-  title: string
-  detail: string
-  icon: ReactNode
-}) {
-  return (
-    <Link href={href} className="flex items-center gap-4 px-6 py-4 transition hover:bg-stone-50">
-      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#fff4ef] text-[#c76f55]">
-        {icon}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block font-bold text-stone-950">{title}</span>
-        <span className="block truncate text-sm text-stone-500">{detail}</span>
-      </span>
-      <ChevronRight className="h-5 w-5 shrink-0 text-stone-300" />
-    </Link>
-  )
+function toInitials(name: string) {
+  const parts = name.trim().split(/\s+/)
+  const initials = `${parts[0]?.[0] || ''}${parts[1]?.[0] || ''}`.toUpperCase()
+  return initials || '?'
 }
 
 function formatDate(value: string) {
@@ -262,4 +274,18 @@ function nightsBetween(checkIn: string, checkOut: string) {
   const start = new Date(`${checkIn}T12:00:00`).getTime()
   const end = new Date(`${checkOut}T12:00:00`).getTime()
   return Math.max(1, Math.round((end - start) / 86_400_000))
+}
+
+function relativeTime(iso: string) {
+  const then = new Date(iso).getTime()
+  const diffMs = Math.max(0, Date.now() - then)
+  const minutes = Math.floor(diffMs / 60_000)
+  if (minutes < 1) return 'Just now'
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days === 1) return 'Yesterday'
+  if (days < 7) return `${days}d ago`
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 }
