@@ -5,6 +5,12 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import type { DateRange as DayPickerDateRange } from 'react-day-picker'
 import { Calendar } from '@/components/ui/calendar'
 import { formatHebrewShortDate, getJewishHoliday } from '@/lib/hebrew-date'
+import { createClient } from '@/lib/supabase/client'
+import { convert, type FxRates } from '@/lib/fx'
+import { normalizeCurrency } from '@/lib/currencies'
+import { PriceRangeSlider } from '@/components/price-range-slider'
+
+const NIGHTLY_USD_CEILING = 1500
 
 function parseLocalDate(value: string) {
   if (!value) return undefined
@@ -51,8 +57,10 @@ export function StaysFilterBar() {
   const [checkOutValue, setCheckOutValue] = useState(searchParams.get('checkOut') || '')
   const [guests, setGuests] = useState(Number(searchParams.get('guests')) || 0)
   const [bedrooms, setBedrooms] = useState(Number(searchParams.get('bedrooms')) || 0)
-  const [minPrice, setMinPrice] = useState(searchParams.get('minPrice') || '')
-  const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') || '')
+  const [preferredCurrency, setPreferredCurrency] = useState('USD')
+  const [rates, setRates] = useState<FxRates>({})
+  const [priceMin, setPriceMin] = useState(0)
+  const [priceMax, setPriceMax] = useState(0)
   const [features, setFeatures] = useState<Record<FeatureKey, boolean>>({
     shabbatElevator: Boolean(searchParams.get('shabbatElevator')),
     physicalKey: Boolean(searchParams.get('physicalKey')),
@@ -65,8 +73,6 @@ export function StaysFilterBar() {
     setCheckOutValue(searchParams.get('checkOut') || '')
     setGuests(Number(searchParams.get('guests')) || 0)
     setBedrooms(Number(searchParams.get('bedrooms')) || 0)
-    setMinPrice(searchParams.get('minPrice') || '')
-    setMaxPrice(searchParams.get('maxPrice') || '')
     setFeatures({
       shabbatElevator: Boolean(searchParams.get('shabbatElevator')),
       physicalKey: Boolean(searchParams.get('physicalKey')),
@@ -76,6 +82,37 @@ export function StaysFilterBar() {
     setShowCalendar(false)
     setShowFilters(false)
   }, [searchParams])
+
+  // Load the guest's preferred display currency + live FX rates so the price
+  // range can be shown and dragged in their own currency.
+  useEffect(() => {
+    let active = true
+    fetch('/api/fx')
+      .then((response) => response.json())
+      .then((data) => {
+        if (active && data?.rates) setRates(data.rates as FxRates)
+      })
+      .catch(() => {})
+
+    const supabase = createClient()
+    void supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      void supabase
+        .from('profiles')
+        .select('preferred_currency')
+        .eq('id', user.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (active && data?.preferred_currency) {
+            setPreferredCurrency(normalizeCurrency(data.preferred_currency))
+          }
+        })
+    })
+
+    return () => {
+      active = false
+    }
+  }, [])
 
   useEffect(() => {
     if (!showCalendar && !showFilters) return
@@ -103,10 +140,40 @@ export function StaysFilterBar() {
     ? { from: checkInDate, to: checkOutDate }
     : undefined
 
+  const nights =
+    checkInDate && checkOutDate
+      ? Math.max(0, Math.round((checkOutDate.getTime() - checkInDate.getTime()) / 86_400_000))
+      : 0
+  const nightsForCalc = nights > 0 ? nights : 1
+  const priceCeiling = Math.max(
+    100,
+    Math.round(convert(NIGHTLY_USD_CEILING, 'USD', preferredCurrency, rates) * nightsForCalc),
+  )
+  const priceLabel =
+    nights > 0
+      ? `Total for ${nights} night${nights === 1 ? '' : 's'} (${preferredCurrency})`
+      : `Price per night (${preferredCurrency})`
+
+  // Derive the slider position from the URL (stored as per-night USD) into the
+  // preferred-currency total whenever currency, rates, dates, or the URL change.
+  useEffect(() => {
+    const urlMin = Number(searchParams.get('minPrice')) || 0
+    const urlMax = Number(searchParams.get('maxPrice')) || 0
+    const toPreferredTotal = (usdPerNight: number) =>
+      Math.round(convert(usdPerNight, 'USD', preferredCurrency, rates) * nightsForCalc)
+    const ceiling = Math.max(
+      100,
+      Math.round(convert(NIGHTLY_USD_CEILING, 'USD', preferredCurrency, rates) * nightsForCalc),
+    )
+    setPriceMin(urlMin ? toPreferredTotal(urlMin) : 0)
+    setPriceMax(urlMax ? Math.min(toPreferredTotal(urlMax), ceiling) : ceiling)
+  }, [searchParams, preferredCurrency, rates, nightsForCalc])
+
+  const priceIsFiltered = priceMin > 0 || (priceMax > 0 && priceMax < priceCeiling)
   const activeFeatureCount =
     FEATURE_TOGGLES.filter((toggle) => features[toggle.key]).length +
     (bedrooms > 0 ? 1 : 0) +
-    (minPrice || maxPrice ? 1 : 0)
+    (priceIsFiltered ? 1 : 0)
 
   const hasFilters = Boolean(
     searchParams.get('checkIn') ||
@@ -133,8 +200,16 @@ export function StaysFilterBar() {
     setOrDelete(next, 'checkOut', checkOutValue)
     setOrDelete(next, 'guests', guests > 0 ? String(guests) : '')
     setOrDelete(next, 'bedrooms', bedrooms > 0 ? String(bedrooms) : '')
-    setOrDelete(next, 'minPrice', minPrice.trim())
-    setOrDelete(next, 'maxPrice', maxPrice.trim())
+    // The slider works in the guest's currency (a total when dates are chosen);
+    // the listing query filters on per-night USD, so convert back here.
+    const toUsdPerNight = (preferredTotal: number) =>
+      Math.round(convert(preferredTotal, preferredCurrency, 'USD', rates) / nightsForCalc)
+    setOrDelete(next, 'minPrice', priceMin > 0 ? String(toUsdPerNight(priceMin)) : '')
+    setOrDelete(
+      next,
+      'maxPrice',
+      priceMax > 0 && priceMax < priceCeiling ? String(toUsdPerNight(priceMax)) : '',
+    )
     FEATURE_TOGGLES.forEach((toggle) => setOrDelete(next, toggle.key, features[toggle.key] ? '1' : ''))
     next.delete('page')
 
@@ -158,8 +233,8 @@ export function StaysFilterBar() {
     setCheckOutValue('')
     setGuests(0)
     setBedrooms(0)
-    setMinPrice('')
-    setMaxPrice('')
+    setPriceMin(0)
+    setPriceMax(priceCeiling)
     setFeatures({ shabbatElevator: false, physicalKey: false, sukkahBalcony: false, centralAc: false })
     setShowCalendar(false)
     setShowFilters(false)
@@ -283,26 +358,17 @@ export function StaysFilterBar() {
               </label>
 
               <div>
-                <span className="text-sm font-semibold text-stone-900">Price per night (USD)</span>
-                <div className="mt-2 flex items-center gap-3">
-                  <input
-                    type="number"
-                    min="0"
-                    inputMode="numeric"
-                    value={minPrice}
-                    onChange={(event) => setMinPrice(event.target.value)}
-                    placeholder="Min"
-                    className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900"
-                  />
-                  <span className="text-stone-400">–</span>
-                  <input
-                    type="number"
-                    min="0"
-                    inputMode="numeric"
-                    value={maxPrice}
-                    onChange={(event) => setMaxPrice(event.target.value)}
-                    placeholder="Max"
-                    className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900"
+                <span className="text-sm font-semibold text-stone-900">{priceLabel}</span>
+                <div className="mt-3">
+                  <PriceRangeSlider
+                    max={priceCeiling}
+                    valueMin={priceMin}
+                    valueMax={priceMax}
+                    currency={preferredCurrency}
+                    onChange={(min, max) => {
+                      setPriceMin(min)
+                      setPriceMax(max)
+                    }}
                   />
                 </div>
               </div>
@@ -335,8 +401,8 @@ export function StaysFilterBar() {
                 type="button"
                 onClick={() => {
                   setBedrooms(0)
-                  setMinPrice('')
-                  setMaxPrice('')
+                  setPriceMin(0)
+                  setPriceMax(priceCeiling)
                   setFeatures({ shabbatElevator: false, physicalKey: false, sukkahBalcony: false, centralAc: false })
                 }}
                 className="text-xs font-bold text-stone-500 transition hover:text-stone-800"
