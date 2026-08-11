@@ -19,6 +19,48 @@ function toAmount(value: FormDataEntryValue | null): number | null {
   return n
 }
 
+// Reads the structured payout (bank) fields for the chosen region. Returns null if
+// the host filled nothing, so a host who hasn't entered bank details yet doesn't get
+// an empty payout object. Server-side we store what's given (no hard rejection); the
+// form nudges format client-side.
+function composePayout(formData: FormData) {
+  const type = String(formData.get('payoutType') || '')
+  if (type !== 'iban' && type !== 'uk' && type !== 'us') return null
+  const s = (key: string) => String(formData.get(key) || '').trim()
+  const accountName = s('payoutAccountName')
+
+  if (type === 'iban') {
+    const iban = s('payoutIban')
+    if (!accountName && !iban) return null
+    return {
+      type,
+      accountName,
+      iban,
+      swift: s('payoutSwift'),
+      bankName: s('payoutBankName'),
+      accountAddress: s('payoutAccountAddress'),
+    }
+  }
+  if (type === 'uk') {
+    const sortCode = s('payoutSortCode')
+    const accountNumber = s('payoutAccountNumber')
+    if (!accountName && !sortCode && !accountNumber) return null
+    return { type, accountName, sortCode, accountNumber }
+  }
+  // us
+  const routingNumber = s('payoutRoutingNumber')
+  const accountNumber = s('payoutAccountNumber')
+  if (!accountName && !routingNumber && !accountNumber) return null
+  return {
+    type,
+    accountName,
+    routingNumber,
+    accountNumber,
+    accountType: formData.get('payoutAccountType') === 'savings' ? 'savings' : 'checking',
+    bankName: s('payoutBankName'),
+  }
+}
+
 // The direct-payment schedule is entered as structured fields and stored as JSON
 // in host_payment_profiles.direct_payment_instructions (a text column). Returns
 // an empty string when nothing meaningful was filled, so the existing DB check
@@ -29,9 +71,12 @@ function composeDirectPaymentInstructions(formData: FormData): string {
   const depositDueMode = String(formData.get('depositDueMode') || 'booking')
   const depositDueDays = depositDueMode === 'days' ? toBoundedInt(formData.get('depositDueDays'), 0, 365) : null
   const balanceDueDays = toBoundedInt(formData.get('balanceDueDays'), 0, 365)
-  const method = String(formData.get('payMethod') || '').trim()
+  const payout = composePayout(formData)
+  // Preserve a legacy free-text entry only until the host provides structured bank
+  // details, so nothing a host already wrote is silently dropped.
+  const method = payout ? '' : String(formData.get('legacyMethod') || '').trim()
 
-  const hasContent = depositAmount != null || balanceDueDays != null || method !== ''
+  const hasContent = depositAmount != null || balanceDueDays != null || method !== '' || payout != null
   if (!hasContent) return ''
 
   return JSON.stringify({
@@ -41,6 +86,7 @@ function composeDirectPaymentInstructions(formData: FormData): string {
     depositDueDays,
     balanceDueDays,
     method,
+    ...(payout ? { payout } : {}),
   })
 }
 

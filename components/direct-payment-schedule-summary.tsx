@@ -1,4 +1,5 @@
 import { formatDateDisplay } from '@/lib/utils/date'
+import { parsePayout, formatPayoutRows, type PayoutDetails } from '@/lib/direct-payment'
 
 type Props = {
   instructions: string | null
@@ -27,6 +28,7 @@ export function DirectPaymentScheduleSummary({ instructions, checkIn }: Props) {
         depositDueDays: number | null
         balanceDueDays: number | null
         method: string
+        payout: PayoutDetails | null
       }
     | null = null
 
@@ -39,6 +41,7 @@ export function DirectPaymentScheduleSummary({ instructions, checkIn }: Props) {
         depositDueDays: typeof parsed.depositDueDays === 'number' ? parsed.depositDueDays : null,
         balanceDueDays: typeof parsed.balanceDueDays === 'number' ? parsed.balanceDueDays : null,
         method: typeof parsed.method === 'string' ? parsed.method : '',
+        payout: parsePayout(parsed.payout),
       }
     }
   } catch {
@@ -59,8 +62,11 @@ export function DirectPaymentScheduleSummary({ instructions, checkIn }: Props) {
   const depositDue = checkIn && schedule.depositDueDays != null ? minusDays(checkIn, schedule.depositDueDays) : null
   const balanceDue = checkIn && schedule.balanceDueDays != null ? minusDays(checkIn, schedule.balanceDueDays) : null
 
-  const hasSchedule = schedule.depositAmount != null || schedule.balanceDueDays != null || schedule.method
+  const hasSchedule =
+    schedule.depositAmount != null || schedule.balanceDueDays != null || schedule.method || schedule.payout
   if (!hasSchedule) return null
+
+  const payoutRows = schedule.payout ? formatPayoutRows(schedule.payout) : []
 
   return (
     <div className="mt-3 rounded-2xl bg-white p-4 ring-1 ring-stone-200">
@@ -81,11 +87,25 @@ export function DirectPaymentScheduleSummary({ instructions, checkIn }: Props) {
             the remaining balance{balanceDue ? ` — due by ${formatDateDisplay(balanceDue)}` : ''}
           </span>
         </div>
-        {schedule.method && (
+        {payoutRows.length > 0 ? (
           <div className="border-t border-stone-100 pt-2">
             <span className="text-stone-500">How to pay</span>
-            <p className="mt-0.5 whitespace-pre-line text-stone-700">{schedule.method}</p>
+            <div className="mt-1 space-y-0.5">
+              {payoutRows.map(([label, value]) => (
+                <div key={label} className="flex flex-wrap justify-between gap-x-4">
+                  <span className="text-stone-500">{label}</span>
+                  <span className="font-medium text-stone-800">{value}</span>
+                </div>
+              ))}
+            </div>
           </div>
+        ) : (
+          schedule.method && (
+            <div className="border-t border-stone-100 pt-2">
+              <span className="text-stone-500">How to pay</span>
+              <p className="mt-0.5 whitespace-pre-line text-stone-700">{schedule.method}</p>
+            </div>
+          )
         )}
       </div>
     </div>

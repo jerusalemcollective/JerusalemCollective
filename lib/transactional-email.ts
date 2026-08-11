@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createServiceRoleClient } from '@/lib/supabase/service'
+import { parsePayout, formatPayoutRows } from '@/lib/direct-payment'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.jlmcollective.co'
 
@@ -504,6 +505,7 @@ export async function sendGuestBookingConfirmedEmail({
         depositDueDays?: number
         balanceDueDays?: number
         method?: string
+        payout?: unknown
         v?: number
       } | null = null
       try {
@@ -528,11 +530,15 @@ export async function sendGuestBookingConfirmedEmail({
             ? ` — due by ${formatEmailDate(minusDaysIso(request.check_in, parsed.balanceDueDays))}`
             : ''
         payRows.push(['Rest of payment', `the remaining balance${balanceDue}`])
-        const methodHtml =
-          typeof parsed.method === 'string' && parsed.method
-            ? `<p style="margin:8px 0 0"><strong>How to pay:</strong> ${escapeHtml(parsed.method)}</p>`
-            : ''
-        paymentHtml = `<h3 style="font-size:15px;margin:20px 0 6px">Paying the host</h3>${detailTableHtml(payRows)}${methodHtml}`
+        const payout = parsePayout(parsed.payout)
+        const payoutRows = payout ? formatPayoutRows(payout) : []
+        const howToPayHtml =
+          payoutRows.length > 0
+            ? `<p style="margin:14px 0 2px"><strong>How to pay the host</strong></p>${detailTableHtml(payoutRows)}`
+            : typeof parsed.method === 'string' && parsed.method
+              ? `<p style="margin:8px 0 0"><strong>How to pay:</strong> ${escapeHtml(parsed.method)}</p>`
+              : ''
+        paymentHtml = `<h3 style="font-size:15px;margin:20px 0 6px">Paying the host</h3>${detailTableHtml(payRows)}${howToPayHtml}`
       } else {
         paymentHtml = `<h3 style="font-size:15px;margin:20px 0 6px">Paying the host</h3><p style="margin:0;white-space:pre-line">${escapeHtml(paymentProfile.direct_payment_instructions)}</p>`
       }
