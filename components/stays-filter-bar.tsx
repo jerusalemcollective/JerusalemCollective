@@ -253,7 +253,7 @@ export function StaysFilterBar() {
             onClick={(event) => event.stopPropagation()}
             className="flex max-h-[88vh] w-full max-w-[420px] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl"
           >
-            <div className="flex items-center justify-between border-b border-stone-100 bg-[#fbf8f5] px-5 py-3">
+            <div className="flex items-center justify-between border-b border-stone-100 px-5 py-3">
               <p className="text-sm font-bold text-stone-900">Filters</p>
               <button
                 type="button"
@@ -368,7 +368,7 @@ export function StaysFilterBar() {
             onClick={(event) => event.stopPropagation()}
             className="flex max-h-[88vh] w-full max-w-[380px] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl"
           >
-            <div className="flex items-start justify-between gap-3 border-b border-stone-100 bg-[#fbf8f5] px-4 py-3">
+            <div className="flex items-start justify-between gap-3 border-b border-stone-100 px-4 py-3">
               <div className="min-w-0">
                 <p className="text-[11px] font-bold uppercase tracking-widest text-[#c76f55]">Your dates</p>
                 <p className="truncate text-sm font-semibold text-stone-900">
