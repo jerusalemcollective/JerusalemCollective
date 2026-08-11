@@ -26,6 +26,9 @@ export type CalendarEvent = {
   reason: string | null
   removable: boolean
   external: boolean
+  guestEmail?: string | null
+  guestPhone?: string | null
+  notes?: string | null
 }
 
 type HostCalendarBoardProps = {
@@ -91,6 +94,10 @@ export function HostCalendarBoard({
   const [range, setRange] = useState<{ from?: Date; to?: Date }>({})
   const [showBooking, setShowBooking] = useState(false)
   const [guestName, setGuestName] = useState('')
+  const [guestCount, setGuestCount] = useState('1')
+  const [guestEmail, setGuestEmail] = useState('')
+  const [guestPhone, setGuestPhone] = useState('')
+  const [notes, setNotes] = useState('')
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
@@ -137,6 +144,10 @@ export function HostCalendarBoard({
     setRange({})
     setShowBooking(false)
     setGuestName('')
+    setGuestCount('1')
+    setGuestEmail('')
+    setGuestPhone('')
+    setNotes('')
     setError(null)
   }
 
@@ -173,7 +184,13 @@ export function HostCalendarBoard({
     formData.set('startDate', startISO)
     // The picker end is inclusive; the block form treats end as the last night.
     formData.set('endDate', endISO)
-    if (kind === 'booking') formData.set('guestName', guestName.trim())
+    if (kind === 'booking') {
+      formData.set('guestName', guestName.trim())
+      formData.set('guests', guestCount)
+      formData.set('guestEmail', guestEmail.trim())
+      formData.set('guestPhone', guestPhone.trim())
+      formData.set('notes', notes.trim())
+    }
 
     startTransition(async () => {
       try {
@@ -365,21 +382,54 @@ export function HostCalendarBoard({
           {error && <p className="mt-2 text-sm font-semibold text-rose-600">{error}</p>}
 
           {showBooking && (
-            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-stone-200 pt-3">
-              <input
-                value={guestName}
-                onChange={(event) => setGuestName(event.target.value)}
-                placeholder="Guest name"
-                className="min-w-[200px] flex-1 rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900"
+            <div className="mt-3 border-t border-stone-200 pt-3">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <input
+                  value={guestName}
+                  onChange={(event) => setGuestName(event.target.value)}
+                  placeholder="Guest name"
+                  className="rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900"
+                />
+                <input
+                  value={guestCount}
+                  onChange={(event) => setGuestCount(event.target.value)}
+                  type="number"
+                  min="1"
+                  placeholder="Number of guests"
+                  className="rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900"
+                />
+                <input
+                  value={guestEmail}
+                  onChange={(event) => setGuestEmail(event.target.value)}
+                  type="email"
+                  placeholder="Email (optional)"
+                  className="rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900"
+                />
+                <input
+                  value={guestPhone}
+                  onChange={(event) => setGuestPhone(event.target.value)}
+                  type="tel"
+                  placeholder="Phone (optional)"
+                  className="rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900"
+                />
+              </div>
+              <textarea
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+                rows={2}
+                placeholder="Notes (optional)"
+                className="mt-2 w-full resize-y rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900"
               />
-              <button
-                type="button"
-                onClick={() => submit('booking')}
-                disabled={pending || !guestName.trim()}
-                className="rounded-full bg-green-700 px-5 py-2 text-sm font-bold text-white transition hover:bg-green-800 disabled:opacity-60"
-              >
-                {pending ? 'Saving…' : 'Save booking'}
-              </button>
+              <div className="mt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => submit('booking')}
+                  disabled={pending || !guestName.trim()}
+                  className="rounded-full bg-green-700 px-5 py-2 text-sm font-bold text-white transition hover:bg-green-800 disabled:opacity-60"
+                >
+                  {pending ? 'Saving…' : 'Save booking'}
+                </button>
+              </div>
             </div>
           )}
         </div>

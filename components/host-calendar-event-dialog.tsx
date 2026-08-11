@@ -188,6 +188,28 @@ export function HostCalendarEventDialog({
             {event.reason && event.kind === 'block' && (
               <p className="text-sm text-stone-600">{event.reason}</p>
             )}
+            {event.kind === 'manual_booking' && (event.guestEmail || event.guestPhone || event.notes) && (
+              <div className="mb-4 space-y-3 rounded-2xl bg-[#F8F5F2] p-4 text-sm">
+                {event.guestEmail && (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-widest text-stone-500">Email</p>
+                    <p className="mt-0.5 text-stone-900">{event.guestEmail}</p>
+                  </div>
+                )}
+                {event.guestPhone && (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-widest text-stone-500">Phone</p>
+                    <p className="mt-0.5 text-stone-900">{event.guestPhone}</p>
+                  </div>
+                )}
+                {event.notes && (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-widest text-stone-500">Notes</p>
+                    <p className="mt-0.5 whitespace-pre-wrap text-stone-900">{event.notes}</p>
+                  </div>
+                )}
+              </div>
+            )}
             {event.external ? (
               <p className="rounded-2xl bg-[#F8F5F2] p-4 text-sm text-stone-600">
                 These dates come from a connected external calendar. Remove them in the source calendar, or

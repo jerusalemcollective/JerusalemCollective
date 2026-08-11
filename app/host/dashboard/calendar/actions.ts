@@ -119,6 +119,11 @@ export async function addManualBooking(formData: FormData) {
   const startDate = String(formData.get('startDate') || '')
   const endDate = String(formData.get('endDate') || '')
   const guestName = String(formData.get('guestName') || '').trim()
+  const guestCountRaw = Number(formData.get('guests') || '')
+  const guestCount = Number.isFinite(guestCountRaw) && guestCountRaw > 0 ? Math.trunc(guestCountRaw) : null
+  const guestEmail = String(formData.get('guestEmail') || '').trim() || null
+  const guestPhone = String(formData.get('guestPhone') || '').trim() || null
+  const notes = String(formData.get('notes') || '').trim() || null
 
   if (!listingId || !startDate || !endDate) {
     throw new Error('Choose a stay and the check-in and check-out dates.')
@@ -147,6 +152,11 @@ export async function addManualBooking(formData: FormData) {
     end_date: endDate,
     reason: guestName ? `Booking — ${guestName}` : 'Manual booking',
     source: 'manual_booking',
+    guest_name: guestName || null,
+    guest_count: guestCount,
+    guest_email: guestEmail,
+    guest_phone: guestPhone,
+    notes,
   })
   if (error) throw error
 

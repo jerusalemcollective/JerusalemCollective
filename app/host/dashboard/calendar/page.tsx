@@ -49,6 +49,11 @@ type RangeRow = {
   end_date: string
   reason: string | null
   source: string
+  guest_name: string | null
+  guest_count: number | null
+  guest_email: string | null
+  guest_phone: string | null
+  notes: string | null
   listings?: { title: string } | { title: string }[] | null
 }
 
@@ -68,7 +73,7 @@ export default async function HostCalendarPage() {
       .order('created_at', { ascending: false }),
     supabase
       .from('listing_unavailable_ranges')
-      .select('id, listing_id, start_date, end_date, reason, source, listings(title)')
+      .select('id, listing_id, start_date, end_date, reason, source, guest_name, guest_count, guest_email, guest_phone, notes, listings(title)')
       .in('host_id', hostIds)
       .order('start_date', { ascending: true }),
     supabase
@@ -138,6 +143,8 @@ export default async function HostCalendarPage() {
       .map((range): CalendarEvent => {
         const isManualBooking = range.source === 'manual_booking'
         const isExternal = range.source === 'external_calendar'
+        // Older manual bookings kept the name only in "reason" as "Booking — X".
+        const legacyName = range.reason?.replace(/^Booking\s*[—-]\s*/, '') || null
         return {
           id: range.id,
           kind: isManualBooking ? 'manual_booking' : 'block',
@@ -145,12 +152,15 @@ export default async function HostCalendarPage() {
           listingTitle: oneOrNull(range.listings)?.title || 'Stay',
           start: range.start_date,
           endExclusive: range.end_date,
-          guestName: null,
-          guests: null,
+          guestName: isManualBooking ? range.guest_name || legacyName : null,
+          guests: isManualBooking ? range.guest_count : null,
           status: null,
           reason: range.reason,
           removable: !isExternal,
           external: isExternal,
+          guestEmail: isManualBooking ? range.guest_email : null,
+          guestPhone: isManualBooking ? range.guest_phone : null,
+          notes: isManualBooking ? range.notes : null,
         }
       }),
   ]
