@@ -175,6 +175,10 @@ export function ListingDetailClient({
   const [bookingDateRange, setBookingDateRange] = useState<DateRange>({})
   const [guestCount, setGuestCount] = useState(1)
   const [existingConversationId, setExistingConversationId] = useState<string | null>(null)
+  // Whether this guest has already made a dated booking request (enquiry) for
+  // this listing. A plain "message host" chat does NOT count — see the button
+  // logic below, which must still let a guest who only messaged make an enquiry.
+  const [hasEnquiry, setHasEnquiry] = useState(false)
   // Start from the server snapshot, then refresh on mount so an ISR-cached page
   // never shows stale availability in the picker.
   const [availability, setAvailability] = useState<ListingBlockedRange[]>(blockedRanges)
@@ -261,16 +265,26 @@ export function ListingDetailClient({
 
       if (!isActive || !user) return
 
-      const { data: existingConv } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('listing_id', listing.id)
-        .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`)
-        .limit(1)
-        .maybeSingle()
+      const [{ data: existingConv }, { data: existingRequest }] = await Promise.all([
+        supabase
+          .from('conversations')
+          .select('id')
+          .eq('listing_id', listing.id)
+          .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`)
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from('booking_requests')
+          .select('id')
+          .eq('listing_id', listing.id)
+          .eq('guest_id', user.id)
+          .limit(1)
+          .maybeSingle(),
+      ])
 
       if (isActive) {
         setExistingConversationId(existingConv?.id || null)
+        setHasEnquiry(Boolean(existingRequest?.id))
       }
     }
 
@@ -324,6 +338,18 @@ export function ListingDetailClient({
   const priceIls = formatPrice(listing.price_ils)
   const priceUsd = formatPrice(listing.price_usd)
   const allowsOnlinePayment = listing.online_payment_enabled
+  const isEnquiryOnly = listing.booking_type === 'enquiry'
+  // Only show "Continue conversation" in place of the primary action when the
+  // guest can't take that action any further: enquiry-only listings (chat is the
+  // action) or when they've already made a booking request. A guest who merely
+  // messaged a request-listing host must still be able to request to book.
+  const showContinueAsPrimary =
+    Boolean(existingConversationId) && !allowsOnlinePayment && (isEnquiryOnly || hasEnquiry)
+  // Marks that a dated request now exists (flip the button after submitting one).
+  const handleEnquiryCreated = (conversationId: string) => {
+    setExistingConversationId(conversationId)
+    setHasEnquiry(true)
+  }
   const mobileActionLabel =
     allowsOnlinePayment
       ? 'Book now'
@@ -928,7 +954,9 @@ export function ListingDetailClient({
                   totalILS={totalILS}
                   totalUSD={totalUSD}
                   existingConversationId={existingConversationId}
+                  hasEnquiry={hasEnquiry}
                   onConversationCreated={setExistingConversationId}
+                  onEnquiryCreated={handleEnquiryCreated}
                   blockedRanges={availability}
                 />
                 <PaymentClarityNote allowsOnlinePayment={allowsOnlinePayment} />
@@ -958,7 +986,7 @@ export function ListingDetailClient({
               <p className="text-xs text-stone-500">per night</p>
             )}
           </div>
-          {existingConversationId && !allowsOnlinePayment ? (
+          {showContinueAsPrimary ? (
             <Link
               href={`/account/messages?conversation=${existingConversationId}`}
               className="flex min-h-11 flex-1 items-center justify-center rounded-full bg-stone-950 px-5 py-0 text-center text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800"
@@ -1031,7 +1059,9 @@ export function ListingDetailClient({
                 totalILS={totalILS}
                 totalUSD={totalUSD}
                 existingConversationId={existingConversationId}
+                hasEnquiry={hasEnquiry}
                 onConversationCreated={setExistingConversationId}
+                onEnquiryCreated={handleEnquiryCreated}
                 blockedRanges={availability}
                 mobile
               />
@@ -1266,7 +1296,9 @@ function BookingControls({
   totalILS,
   totalUSD,
   existingConversationId,
+  hasEnquiry,
   onConversationCreated,
+  onEnquiryCreated,
   blockedRanges,
   mobile = false,
 }: {
@@ -1280,12 +1312,18 @@ function BookingControls({
   totalILS: number | null
   totalUSD: number | null
   existingConversationId: string | null
+  hasEnquiry: boolean
   onConversationCreated: (conversationId: string) => void
+  onEnquiryCreated: (conversationId: string) => void
   blockedRanges: ListingBlockedRange[]
   mobile?: boolean
 }) {
   const allowsOnlinePayment = listing.online_payment_enabled
   const isEnquiryOnly = listing.booking_type === 'enquiry'
+  // See the matching note in the parent: only take over the primary slot when the
+  // guest has nothing further to initiate here (enquiry-only, or already requested).
+  const showContinueAsPrimary =
+    Boolean(existingConversationId) && !allowsOnlinePayment && (isEnquiryOnly || hasEnquiry)
   const hasDates = Boolean(dateRange.from && dateRange.to)
   const dateRequiredMessage = 'Choose dates first.'
   const minNights = listing.min_nights || 1
@@ -1381,7 +1419,7 @@ function BookingControls({
       </div>
 
       <div className={mobile ? 'space-y-3' : ''}>
-        {existingConversationId && !allowsOnlinePayment ? (
+        {showContinueAsPrimary ? (
           <Link
             href={`/account/messages?conversation=${existingConversationId}`}
             className={`${mobile ? 'flex min-h-11 w-full items-center justify-center rounded-full bg-stone-950 px-5 py-0' : 'mb-3 flex min-h-11 w-full items-center justify-center rounded-full bg-stone-950 px-5 py-0'} gap-2 text-center text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800`}
@@ -1414,8 +1452,21 @@ function BookingControls({
                 disabledReason={belowMin ? minNightsMessage : dateRequiredMessage}
                 showIcon={false}
                 buttonClassName="flex min-h-11 w-full items-center justify-center rounded-full bg-stone-950 px-5 py-0 text-center text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-500 disabled:shadow-none"
-                onConversationCreated={onConversationCreated}
+                onConversationCreated={onEnquiryCreated}
               />
+            )}
+            {/* Guest already has a plain chat but hasn't requested to book — keep
+                the request button primary and offer the thread as a secondary link. */}
+            {!allowsOnlinePayment && !isEnquiryOnly && existingConversationId && (
+              <Link
+                href={`/account/messages?conversation=${existingConversationId}`}
+                className="flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-stone-300 bg-white px-5 py-0 text-center text-sm font-semibold leading-none text-stone-800 transition hover:bg-stone-50"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+                Continue conversation
+              </Link>
             )}
             {isEnquiryOnly && (
               <MessageHostDialog
