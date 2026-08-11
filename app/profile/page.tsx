@@ -21,6 +21,7 @@ type Profile = {
   avatar_url: string | null
   is_host: boolean | null
   is_admin: boolean | null
+  preferred_currency: string | null
 }
 
 // Top-level identity page — deliberately NOT under /account so it carries no
@@ -41,7 +42,7 @@ export default async function ProfilePage() {
       .from('profiles')
       // phone and address are no longer readable via a user-scoped table select
       // (migrations 083 and 096); the definers below return the caller's own.
-      .select('id, full_name, avatar_url, is_host, is_admin')
+      .select('id, full_name, avatar_url, is_host, is_admin, preferred_currency')
       .eq('id', user.id)
       .maybeSingle(),
     supabase

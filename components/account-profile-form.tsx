@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { AvatarUpload } from '@/components/avatar-upload'
+import { CurrencySelect } from '@/components/currency-select'
+import { normalizeCurrency } from '@/lib/currencies'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
@@ -17,6 +19,7 @@ type AccountProfileFormProps = {
     phone: string | null
     address: string | null
     avatar_url: string | null
+    preferred_currency: string | null
   } | null
   hasStay: boolean
 }
@@ -26,6 +29,7 @@ export function AccountProfileForm({ user, profile, hasStay }: AccountProfileFor
   const [fullName, setFullName] = useState(profile?.full_name || '')
   const [phone, setPhone] = useState(profile?.phone || '')
   const [address, setAddress] = useState(profile?.address || '')
+  const [currency, setCurrency] = useState(normalizeCurrency(profile?.preferred_currency))
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -44,6 +48,7 @@ export function AccountProfileForm({ user, profile, hasStay }: AccountProfileFor
           full_name: fullName,
           phone,
           address: address.trim() || null,
+          preferred_currency: currency,
         })
         .eq('id', user.id)
 
@@ -128,6 +133,11 @@ export function AccountProfileForm({ user, profile, hasStay }: AccountProfileFor
             placeholder="Street, city, country"
             className="h-10 rounded-xl border-stone-200 bg-[#F8F5F2] px-4"
           />
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-stone-700">Preferred currency</label>
+          <CurrencySelect value={currency} onChange={setCurrency} />
         </div>
 
         {error && <div role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>}
