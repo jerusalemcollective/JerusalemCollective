@@ -1,9 +1,8 @@
 'use client'
 
-import { useMemo, useRef, useState, useTransition } from 'react'
-import type { DateRange as DayPickerDateRange } from 'react-day-picker'
-import { Calendar } from '@/components/ui/calendar'
+import { useMemo, useState, useTransition } from 'react'
 import { formatDateISO } from '@/lib/utils/date'
+import { formatHebrewDay, formatHebrewMonthSpan, getJewishHoliday } from '@/lib/hebrew-date'
 import { HostCalendarEventDialog } from '@/components/host-calendar-event-dialog'
 
 type ListingOption = { id: string; title: string }
@@ -38,6 +37,8 @@ type HostCalendarBoardProps = {
   removeRangeAction: RemoveAction
 }
 
+const WEEKDAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
+
 // Expand a half-open [start, endExclusive) date range into one Date per day.
 function expandDays(startISO: string, endExclusiveISO: string): Date[] {
   const out: Date[] = []
@@ -50,8 +51,30 @@ function expandDays(startISO: string, endExclusiveISO: string): Date[] {
   return out
 }
 
+function startOfDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate())
+}
+
 function formatDisplayDate(date: Date): string {
   return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+// Pill colour + primary label for an event on the grid.
+function eventPill(event: CalendarEvent): { className: string; title: string; subtitle: string } {
+  if (event.kind === 'block') {
+    return {
+      className: 'bg-stone-500 text-white',
+      title: event.external ? 'Synced block' : 'Blocked',
+      subtitle: event.reason || event.listingTitle,
+    }
+  }
+  if (event.kind === 'request') {
+    return { className: 'bg-sky-600 text-white', title: event.guestName || 'Request', subtitle: 'Enquiry' }
+  }
+  if (event.kind === 'booking' && event.status === 'pending') {
+    return { className: 'bg-amber-500 text-white', title: event.guestName || 'Guest', subtitle: 'Pending' }
+  }
+  return { className: 'bg-green-700 text-white', title: event.guestName || 'Guest', subtitle: event.listingTitle }
 }
 
 export function HostCalendarBoard({
@@ -63,68 +86,80 @@ export function HostCalendarBoard({
   removeRangeAction,
 }: HostCalendarBoardProps) {
   const [selectedListingId, setSelectedListingId] = useState(listings[0]?.id || '')
-  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({})
+  const today = useMemo(() => startOfDay(new Date()), [])
+  const [viewMonth, setViewMonth] = useState<Date>(() => new Date(today.getFullYear(), today.getMonth(), 1))
+  const [range, setRange] = useState<{ from?: Date; to?: Date }>({})
   const [showBooking, setShowBooking] = useState(false)
   const [guestName, setGuestName] = useState('')
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
-  // A day that belongs to an event opens its details; suppress the range-select
-  // that the same click would otherwise trigger.
-  const suppressSelectRef = useRef(false)
 
-  const { bookedDays, pendingDays, blockedDays, requestDays, eventByDay } = useMemo(() => {
-    const booked: Date[] = []
-    const pending: Date[] = []
-    const blocked: Date[] = []
-    const request: Date[] = []
-    const map = new Map<string, CalendarEvent>()
-
+  // Every day → the events (bookings/blocks/requests) covering it, for pills.
+  const eventsByDay = useMemo(() => {
+    const map = new Map<string, CalendarEvent[]>()
     for (const event of events) {
       if (event.listingId !== selectedListingId) continue
-      const days = expandDays(event.start, event.endExclusive)
-      for (const day of days) {
+      for (const day of expandDays(event.start, event.endExclusive)) {
         const iso = formatDateISO(day)
-        if (!map.has(iso)) map.set(iso, event)
-      }
-      if (event.kind === 'booking') {
-        if (event.status === 'pending') pending.push(...days)
-        else booked.push(...days)
-      } else if (event.kind === 'manual_booking') {
-        booked.push(...days)
-      } else if (event.kind === 'request') {
-        request.push(...days)
-      } else {
-        blocked.push(...days)
+        const list = map.get(iso)
+        if (list) list.push(event)
+        else map.set(iso, [event])
       }
     }
-
-    return { bookedDays: booked, pendingDays: pending, blockedDays: blocked, requestDays: request, eventByDay: map }
+    return map
   }, [events, selectedListingId])
 
-  const selectedRange: DayPickerDateRange | undefined = dateRange.from
-    ? { from: dateRange.from, to: dateRange.to }
-    : undefined
+  // Weeks (Sun–Sat rows) covering the visible month.
+  const weeks = useMemo(() => {
+    const first = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1)
+    const last = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 0)
+    const cursor = new Date(first)
+    cursor.setDate(first.getDate() - first.getDay()) // back to the Sunday
+    const out: Date[][] = []
+    while (true) {
+      const week: Date[] = []
+      for (let i = 0; i < 7; i += 1) {
+        week.push(new Date(cursor))
+        cursor.setDate(cursor.getDate() + 1)
+      }
+      out.push(week)
+      if (cursor > last) break
+    }
+    return out
+  }, [viewMonth])
 
-  const startISO = dateRange.from ? formatDateISO(dateRange.from) : ''
-  const endISO = dateRange.to ? formatDateISO(dateRange.to) : ''
+  const startISO = range.from ? formatDateISO(range.from) : ''
+  const endISO = range.to ? formatDateISO(range.to) : ''
   const hasRange = Boolean(selectedListingId && startISO && endISO)
 
   const clearSelection = () => {
-    setDateRange({})
+    setRange({})
     setShowBooking(false)
     setGuestName('')
     setError(null)
+  }
+
+  // Click-to-select: first click sets the start, second sets the end (ordered),
+  // a third starts a fresh range. Past days and days with events are not selectable.
+  const pickDay = (day: Date) => {
+    if (day < today) return
+    setError(null)
+    setRange((current) => {
+      if (!current.from || (current.from && current.to)) {
+        return { from: day, to: undefined }
+      }
+      return current.from <= day ? { from: current.from, to: day } : { from: day, to: current.from }
+    })
   }
 
   const submit = (kind: 'block' | 'booking') => {
     if (!hasRange) return
     if (kind === 'booking' && !guestName.trim()) return
 
-    // Immediate no-double-booking feedback: the DB rejects an overlap too, but
-    // that error is swallowed by the transition, so check here for a clear message.
+    // Immediate no-double-booking feedback; the DB also rejects overlaps.
     const overlaps = events.some(
-      (event) => event.listingId === selectedListingId && event.start < endISO && event.endExclusive > startISO,
+      (event) => event.listingId === selectedListingId && event.start <= endISO && event.endExclusive > startISO,
     )
     if (overlaps) {
       setError('Those dates overlap an existing booking or block. Pick free dates.')
@@ -136,6 +171,7 @@ export function HostCalendarBoard({
     formData.set('mode', kind)
     formData.set('listingId', selectedListingId)
     formData.set('startDate', startISO)
+    // The picker end is inclusive; the block form treats end as the last night.
     formData.set('endDate', endISO)
     if (kind === 'booking') formData.set('guestName', guestName.trim())
 
@@ -149,12 +185,40 @@ export function HostCalendarBoard({
     })
   }
 
+  const inSelectedRange = (day: Date) => {
+    if (!range.from) return false
+    if (!range.to) return day.getTime() === range.from.getTime()
+    return day >= range.from && day <= range.to
+  }
+
   return (
     <div className="rounded-3xl bg-white p-5 shadow-sm md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Availability</p>
-          <h2 className="mt-1 text-2xl font-bold text-stone-950">Calendar</h2>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            aria-label="Previous month"
+            onClick={() => setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
+            className="flex h-10 w-10 items-center justify-center rounded-2xl border border-stone-200 text-stone-600 transition hover:border-[#c76f55] hover:text-[#c76f55]"
+          >
+            ‹
+          </button>
+          <div className="text-center">
+            <h2 className="font-display text-2xl font-bold tracking-tight text-stone-950">
+              {viewMonth.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
+            </h2>
+            <p className="text-sm font-semibold text-[#c76f55]" dir="rtl">
+              {formatHebrewMonthSpan(viewMonth)}
+            </p>
+          </div>
+          <button
+            type="button"
+            aria-label="Next month"
+            onClick={() => setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
+            className="flex h-10 w-10 items-center justify-center rounded-2xl border border-stone-200 text-stone-600 transition hover:border-[#c76f55] hover:text-[#c76f55]"
+          >
+            ›
+          </button>
         </div>
         {listings.length > 1 && (
           <select
@@ -174,47 +238,101 @@ export function HostCalendarBoard({
         )}
       </div>
 
-      <div className="mt-4">
-        <Calendar
-          mode="range"
-          selected={selectedRange}
-          onDayClick={(day) => {
-            const event = eventByDay.get(formatDateISO(day))
-            if (event) {
-              suppressSelectRef.current = true
-              setActiveEvent(event)
-            }
-          }}
-          onSelect={(range) => {
-            if (suppressSelectRef.current) {
-              suppressSelectRef.current = false
-              return
-            }
-            if (range?.from && range?.to && range.from.getTime() === range.to.getTime()) {
-              setDateRange({ from: range.from, to: undefined })
-              return
-            }
-            setDateRange(range || {})
-          }}
-          numberOfMonths={1}
-          disabled={{ before: new Date() }}
-          showOutsideDays={false}
-          className="mx-auto [--cell-size:3.1rem]"
-          modifiers={{ booked: bookedDays, pending: pendingDays, blocked: blockedDays, request: requestDays }}
-          modifiersClassNames={{
-            booked: '[&_button]:bg-green-100 [&_button]:text-green-900',
-            pending: '[&_button]:bg-amber-100 [&_button]:text-amber-900',
-            blocked: '[&_button]:bg-stone-200 [&_button]:text-stone-500',
-            request: '[&_button]:bg-sky-100 [&_button]:text-sky-900',
-          }}
-        />
+      <div className="mt-4 flex flex-wrap gap-3 text-xs font-medium text-stone-600">
+        <LegendDot className="bg-green-700" label="Confirmed / booked" />
+        <LegendDot className="bg-amber-500" label="Pending" />
+        <LegendDot className="bg-sky-600" label="Request" />
+        <LegendDot className="bg-stone-500" label="Blocked" />
+        <LegendDot className="bg-[#fbe9c8] ring-1 ring-[#e6c179]" label="Chag" />
+      </div>
+
+      <div className="mt-4 overflow-x-auto">
+        <div className="min-w-[720px]">
+          <div className="grid grid-cols-7 gap-2 pb-2 text-center text-[11px] font-bold uppercase tracking-widest text-stone-400">
+            {WEEKDAYS.map((weekday) => (
+              <div key={weekday}>{weekday}</div>
+            ))}
+          </div>
+
+          <div className="space-y-2">
+            {weeks.map((week, weekIndex) => (
+              <div key={weekIndex} className="grid grid-cols-7 gap-2">
+                {week.map((day) => {
+                  const inMonth = day.getMonth() === viewMonth.getMonth()
+                  if (!inMonth) {
+                    return <div key={day.toISOString()} className="min-h-[112px]" aria-hidden="true" />
+                  }
+
+                  const iso = formatDateISO(day)
+                  const dayEvents = eventsByDay.get(iso) || []
+                  const holiday = getJewishHoliday(day)
+                  const isPast = day < today
+                  const isToday = day.getTime() === today.getTime()
+                  const isSelected = inSelectedRange(day)
+
+                  return (
+                    <div
+                      key={iso}
+                      onClick={() => pickDay(day)}
+                      className={`flex min-h-[112px] flex-col rounded-2xl border p-2 text-left transition ${
+                        isSelected
+                          ? 'border-[#c76f55] bg-[#fff4ef] ring-1 ring-[#c76f55]'
+                          : holiday
+                            ? 'border-[#e6c179] bg-[#fdf6e8]'
+                            : 'border-stone-200 bg-white hover:border-stone-300'
+                      } ${isPast ? 'cursor-default opacity-50' : 'cursor-pointer'} ${
+                        isToday ? 'ring-2 ring-[#c76f55]' : ''
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-1">
+                        <span className="text-sm font-bold text-stone-900">{day.getDate()}</span>
+                        <span className="text-[11px] font-semibold text-stone-400" dir="rtl">
+                          {formatHebrewDay(day)}
+                        </span>
+                      </div>
+
+                      {holiday && (
+                        <span className="mt-0.5 truncate text-[11px] font-semibold text-[#a9781f]">{holiday}</span>
+                      )}
+
+                      <div className="mt-1 flex flex-1 flex-col gap-1 overflow-hidden">
+                        {dayEvents.slice(0, 3).map((event) => {
+                          const pill = eventPill(event)
+                          return (
+                            <button
+                              key={event.id}
+                              type="button"
+                              onClick={(clickEvent) => {
+                                clickEvent.stopPropagation()
+                                setActiveEvent(event)
+                              }}
+                              className={`block w-full cursor-pointer truncate rounded-md px-2 py-1 text-left text-[11px] font-semibold leading-tight ${pill.className}`}
+                              title={`${pill.title} — ${pill.subtitle}`}
+                            >
+                              {pill.title}
+                            </button>
+                          )
+                        })}
+                        {dayEvents.length > 3 && (
+                          <span className="text-[10px] font-semibold text-stone-500">
+                            +{dayEvents.length - 3} more
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {hasRange && (
         <div className="mt-4 rounded-2xl bg-[#F8F5F2] p-4">
           <div className="flex flex-wrap items-center gap-3">
             <p className="text-sm font-semibold text-stone-900">
-              {formatDisplayDate(dateRange.from!)} — {formatDisplayDate(dateRange.to!)}
+              {formatDisplayDate(range.from!)} — {formatDisplayDate(range.to!)}
             </p>
             <div className="ml-auto flex items-center gap-2">
               <button
@@ -267,13 +385,11 @@ export function HostCalendarBoard({
         </div>
       )}
 
-      <div className="mt-5 flex flex-wrap gap-3 text-xs font-medium text-stone-600">
-        <LegendDot className="bg-green-200" label="Confirmed / booked" />
-        <LegendDot className="bg-amber-200" label="Pending" />
-        <LegendDot className="bg-sky-200" label="Request" />
-        <LegendDot className="bg-stone-300" label="Blocked" />
-        <LegendDot className="bg-[#fff3df] ring-1 ring-[#efd28c]" label="Chag" />
-      </div>
+      {!hasRange && (
+        <p className="mt-3 text-xs text-stone-500">
+          Click a start day then an end day to block dates or record a booking. Click a booking to edit it.
+        </p>
+      )}
 
       {activeEvent && (
         <HostCalendarEventDialog
