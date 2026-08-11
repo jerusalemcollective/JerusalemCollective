@@ -20,6 +20,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser()
 
   if (!user) {
+    console.error('[notify-host-enquiry] no authenticated user for request', requestId)
     return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 })
   }
 
@@ -34,14 +35,21 @@ export async function POST(request: Request) {
     }>()
 
   if (!bookingRequest || bookingRequest.guest_id !== user.id) {
+    console.error('[notify-host-enquiry] not allowed', {
+      requestId,
+      found: Boolean(bookingRequest),
+      guestMatches: bookingRequest?.guest_id === user.id,
+    })
     return NextResponse.json({ error: 'Not allowed.' }, { status: 403 })
   }
 
   if (bookingRequest.host_notified_at) {
+    console.log('[notify-host-enquiry] already notified, skipping', requestId)
     return NextResponse.json({ ok: true, skipped: true })
   }
 
   const emailSent = await sendHostNewEnquiryEmail({ supabase, requestId })
+  console.log('[notify-host-enquiry] send result', { requestId, emailSent })
 
   if (emailSent) {
     // The only UPDATE policy on booking_requests covers hosts and admins, but
