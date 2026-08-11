@@ -3,9 +3,6 @@
 import { useState } from 'react'
 import { DirectPaymentScheduleFields } from '@/components/direct-payment-schedule-fields'
 
-const inputClass =
-  'mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-stone-900 outline-none transition placeholder:text-stone-500 focus:border-[#c76f55]'
-
 // Keeps the preferred currency and the direct-payment schedule together so the
 // schedule's currency labels follow the host's selection live — no default is
 // forced; whatever the host picks is what the amounts are shown in. The fields are
@@ -22,20 +19,29 @@ export function HostPaymentCurrencyAndSchedule({
 
   return (
     <>
-      <label className="block">
+      <div>
         <span className="text-sm font-semibold text-stone-800">Preferred currency</span>
-        <select
-          name="preferredCurrency"
-          value={currency}
-          onChange={(event) => setCurrency(event.target.value)}
-          className={inputClass}
-        >
-          <option value="USD">USD</option>
-          <option value="GBP">GBP</option>
-          <option value="EUR">EUR</option>
-          <option value="ILS">ILS</option>
-        </select>
-      </label>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {['USD', 'GBP', 'EUR', 'ILS'].map((option) => {
+            const active = currency === option
+            return (
+              <button
+                key={option}
+                type="button"
+                onClick={() => setCurrency(option)}
+                className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                  active
+                    ? 'bg-[#c76f55] text-white'
+                    : 'border border-stone-200 bg-white text-stone-600 hover:bg-stone-50'
+                }`}
+              >
+                {option}
+              </button>
+            )
+          })}
+        </div>
+        <input type="hidden" name="preferredCurrency" value={currency} />
+      </div>
 
       <DirectPaymentScheduleFields defaultValue={scheduleDefault} currency={currency} />
     </>
