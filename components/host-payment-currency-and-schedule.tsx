@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { DirectPaymentScheduleFields } from '@/components/direct-payment-schedule-fields'
 
 const inputClass =
@@ -8,32 +8,17 @@ const inputClass =
 
 // Keeps the preferred currency and the direct-payment schedule together so the
 // schedule's currency labels follow the host's selection live — no default is
-// forced; whatever the host picks is what the amounts are shown in.
+// forced; whatever the host picks is what the amounts are shown in. The fields are
+// always editable here; the guest email + booking summary already gate on the
+// accepts_direct_payment flag, so guests never see these unless the host opts in.
 export function HostPaymentCurrencyAndSchedule({
   initialCurrency,
   scheduleDefault,
-  defaultAcceptsDirect,
 }: {
   initialCurrency: string
   scheduleDefault: string | null | undefined
-  defaultAcceptsDirect: boolean
 }) {
   const [currency, setCurrency] = useState(initialCurrency)
-
-  // The deposit schedule + payout details only apply when the host ticks
-  // "Accept direct payment to me". That checkbox is rendered separately in the form
-  // (above this block), so mirror its state from the DOM and only show these fields
-  // while it's ticked — unticked, they're not shown here (and the read paths already
-  // gate the guest email + booking summary on the same accepts_direct flag).
-  const [acceptsDirect, setAcceptsDirect] = useState(defaultAcceptsDirect)
-  useEffect(() => {
-    const checkbox = document.querySelector<HTMLInputElement>('input[name="acceptsDirect"]')
-    if (!checkbox) return
-    const sync = () => setAcceptsDirect(checkbox.checked)
-    sync()
-    checkbox.addEventListener('change', sync)
-    return () => checkbox.removeEventListener('change', sync)
-  }, [])
 
   return (
     <>
@@ -52,9 +37,7 @@ export function HostPaymentCurrencyAndSchedule({
         </select>
       </label>
 
-      {acceptsDirect && (
-        <DirectPaymentScheduleFields defaultValue={scheduleDefault} currency={currency} />
-      )}
+      <DirectPaymentScheduleFields defaultValue={scheduleDefault} currency={currency} />
     </>
   )
 }

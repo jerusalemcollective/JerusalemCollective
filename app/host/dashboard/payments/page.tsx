@@ -315,7 +315,6 @@ export default async function HostPaymentsPage({
               <HostPaymentCurrencyAndSchedule
                 initialCurrency={profile?.preferred_currency || 'USD'}
                 scheduleDefault={profile?.direct_payment_instructions}
-                defaultAcceptsDirect={paymentRoutes.directPaymentsEnabled && (profile?.accepts_direct_payment || false)}
               />
 
               <div className="flex justify-end">
