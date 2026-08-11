@@ -3,7 +3,7 @@
 // free-text "how to pay you" box so whoever pays the host has exactly what a transfer
 // needs. Bank transfer only — one field set per destination region.
 
-export type PayoutType = 'iban' | 'uk' | 'us'
+export type PayoutType = 'iban' | 'uk' | 'us' | 'zelle'
 
 export type PayoutDetails = {
   type: PayoutType
@@ -20,6 +20,8 @@ export type PayoutDetails = {
   // United States
   routingNumber?: string
   accountType?: 'checking' | 'savings'
+  // Zelle (US) — the registered email or US phone number
+  zelle?: string
 }
 
 // Parse a payout object off the parsed direct_payment_instructions JSON, or null if
@@ -27,7 +29,7 @@ export type PayoutDetails = {
 export function parsePayout(value: unknown): PayoutDetails | null {
   if (!value || typeof value !== 'object') return null
   const p = value as Record<string, unknown>
-  if (p.type !== 'iban' && p.type !== 'uk' && p.type !== 'us') return null
+  if (p.type !== 'iban' && p.type !== 'uk' && p.type !== 'us' && p.type !== 'zelle') return null
   const str = (key: string): string | undefined =>
     typeof p[key] === 'string' && (p[key] as string).trim() !== '' ? (p[key] as string) : undefined
   const accountType = p.accountType === 'savings' ? 'savings' : p.accountType === 'checking' ? 'checking' : undefined
@@ -42,6 +44,7 @@ export function parsePayout(value: unknown): PayoutDetails | null {
     accountNumber: str('accountNumber'),
     routingNumber: str('routingNumber'),
     accountType,
+    zelle: str('zelle'),
   }
 }
 
@@ -65,6 +68,8 @@ export function formatPayoutRows(payout: PayoutDetails): [string, string][] {
     if (payout.accountNumber) rows.push(['Account number', payout.accountNumber])
     if (payout.accountType) rows.push(['Account type', payout.accountType === 'savings' ? 'Savings' : 'Checking'])
     if (payout.bankName) rows.push(['Bank', payout.bankName])
+  } else if (payout.type === 'zelle') {
+    if (payout.zelle) rows.push(['Zelle', payout.zelle])
   }
   return rows
 }

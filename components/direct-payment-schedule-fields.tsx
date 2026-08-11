@@ -55,6 +55,7 @@ const REGIONS: { value: PayoutType; label: string }[] = [
   { value: 'iban', label: 'International (IBAN)' },
   { value: 'uk', label: 'United Kingdom' },
   { value: 'us', label: 'United States' },
+  { value: 'zelle', label: 'Zelle' },
 ]
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
@@ -258,6 +259,18 @@ export function DirectPaymentScheduleFields({ defaultValue, currency }: Props) {
               </label>
             </div>
           </>
+        )}
+
+        {payoutType === 'zelle' && (
+          <label className="mt-4 block">
+            <FieldLabel>Zelle email or US phone</FieldLabel>
+            <input
+              name="payoutZelle"
+              defaultValue={p?.zelle ?? ''}
+              placeholder="name@email.com or +1 555 123 4567"
+              className={inputClass}
+            />
+          </label>
         )}
       </div>
     </div>

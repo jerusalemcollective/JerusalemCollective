@@ -25,7 +25,7 @@ function toAmount(value: FormDataEntryValue | null): number | null {
 // form nudges format client-side.
 function composePayout(formData: FormData) {
   const type = String(formData.get('payoutType') || '')
-  if (type !== 'iban' && type !== 'uk' && type !== 'us') return null
+  if (type !== 'iban' && type !== 'uk' && type !== 'us' && type !== 'zelle') return null
   const s = (key: string) => String(formData.get(key) || '').trim()
   const accountName = s('payoutAccountName')
 
@@ -46,6 +46,11 @@ function composePayout(formData: FormData) {
     const accountNumber = s('payoutAccountNumber')
     if (!accountName && !sortCode && !accountNumber) return null
     return { type, accountName, sortCode, accountNumber }
+  }
+  if (type === 'zelle') {
+    const zelle = s('payoutZelle')
+    if (!accountName && !zelle) return null
+    return { type, accountName, zelle }
   }
   // us
   const routingNumber = s('payoutRoutingNumber')
