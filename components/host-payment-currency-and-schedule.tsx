@@ -19,27 +19,24 @@ export function HostPaymentCurrencyAndSchedule({
 
   return (
     <>
-      <div>
+      <div className="flex items-center gap-2">
         <span className="text-sm font-semibold text-stone-800">Preferred currency</span>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {['USD', 'GBP', 'EUR', 'ILS'].map((option) => {
-            const active = currency === option
-            return (
-              <button
-                key={option}
-                type="button"
-                onClick={() => setCurrency(option)}
-                className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                  active
-                    ? 'bg-[#c76f55] text-white'
-                    : 'border border-stone-200 bg-white text-stone-600 hover:bg-stone-50'
-                }`}
-              >
-                {option}
-              </button>
-            )
-          })}
-        </div>
+        <button
+          type="button"
+          onClick={() => {
+            const order = ['USD', 'GBP', 'EUR', 'ILS']
+            setCurrency(order[(order.indexOf(currency) + 1) % order.length])
+          }}
+          className="inline-flex items-center gap-1.5 rounded-full border border-stone-300 bg-white px-3 py-1 text-sm font-bold text-stone-900 transition hover:border-[#c76f55] hover:bg-stone-50"
+          title="Click to switch currency"
+          aria-label={`Preferred currency ${currency}. Click to switch.`}
+        >
+          {currency}
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="text-stone-400" aria-hidden="true">
+            <path d="m7 15 5 5 5-5" />
+            <path d="m7 9 5-5 5 5" />
+          </svg>
+        </button>
         <input type="hidden" name="preferredCurrency" value={currency} />
       </div>
 
