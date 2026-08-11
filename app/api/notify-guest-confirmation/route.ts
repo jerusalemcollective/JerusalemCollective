@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { sendGuestBookingConfirmedEmail } from '@/lib/transactional-email'
+import { sendGuestBookingConfirmedEmail, sendHostBookingConfirmedEmail } from '@/lib/transactional-email'
 
 type NotifyGuestConfirmationBody = {
   requestId?: string
@@ -23,7 +23,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 })
   }
 
-  const emailSent = await sendGuestBookingConfirmedEmail({ supabase, requestId })
+  // Confirm the guest; the host receipt is best-effort and gated on their
+  // "Booking confirmed" notification preference, so run it alongside.
+  const [emailSent] = await Promise.all([
+    sendGuestBookingConfirmedEmail({ supabase, requestId }),
+    sendHostBookingConfirmedEmail({ supabase, requestId }),
+  ])
 
   return NextResponse.json({ ok: true, emailSent })
 }

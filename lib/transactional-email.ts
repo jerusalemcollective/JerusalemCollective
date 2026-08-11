@@ -50,6 +50,7 @@ type HostEmailRow = {
   name: string | null
   email: string | null
   notify_new_enquiry_email?: boolean | null
+  notify_booking_confirmed_email?: boolean | null
 }
 
 type ListingEmailRow = {
@@ -574,6 +575,67 @@ export async function sendGuestBookingConfirmedEmail({
     })
   } catch (error) {
     console.error('Unable to send booking confirmed email', error)
+    return false
+  }
+}
+
+// Sent to the host as a record when they confirm a guest's request. Gated on the
+// host's "Booking confirmed" notification preference (notify_booking_confirmed_email).
+export async function sendHostBookingConfirmedEmail({
+  supabase,
+  requestId,
+}: {
+  supabase: SupabaseClient
+  requestId: string
+}) {
+  try {
+    const { data: request } = await supabase
+      .from('booking_requests')
+      .select('id, listing_id, host_id, guest_id, check_in, check_out, guests, message')
+      .eq('id', requestId)
+      .maybeSingle<BookingRequestEmailRow>()
+
+    if (!request?.host_id || !request.listing_id) return false
+
+    const [{ data: host }, { data: listing }, { data: guest }] = await Promise.all([
+      hostReader(supabase)
+        .from('hosts')
+        .select('id, name, email, notify_booking_confirmed_email')
+        .eq('id', request.host_id)
+        .maybeSingle<HostEmailRow>(),
+      supabase
+        .from('listings')
+        .select('id, title, host_id')
+        .eq('id', request.listing_id)
+        .maybeSingle<ListingEmailRow>(),
+      request.guest_id
+        ? supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', request.guest_id)
+            .maybeSingle<ProfileEmailRow>()
+        : Promise.resolve({ data: null }),
+    ])
+
+    if (!host?.email) return false
+    if (host.notify_booking_confirmed_email === false) return false
+
+    const listingTitle = listing?.title || 'your stay'
+    const guestName = guest?.full_name || 'A guest'
+    const dates = `${formatEmailDate(request.check_in)} to ${formatEmailDate(request.check_out)}`
+
+    return await sendEmail({
+      to: host.email,
+      subject: `Booking confirmed — ${guestName} at ${listingTitle}`,
+      html: baseEmailHtml({
+        greeting: `Hi ${escapeHtml(host.name || 'there')},`,
+        intro: `You confirmed ${escapeHtml(guestName)}'s booking for ${escapeHtml(listingTitle)}. Dates: ${escapeHtml(dates)}. Guests: ${request.guests || 1}. We've emailed the guest their confirmation and payment details.`,
+        ctaLabel: 'Open your calendar',
+        ctaUrl: `${siteUrl}/host/dashboard/calendar`,
+      }),
+    })
+  } catch (error) {
+    console.error('Unable to send host booking confirmed email', error)
     return false
   }
 }
