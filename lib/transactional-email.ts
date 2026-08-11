@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createServiceRoleClient } from '@/lib/supabase/service'
-import { parsePayout, formatPayoutRows } from '@/lib/direct-payment'
+import { formatPayoutRows, resolveHostPayout } from '@/lib/direct-payment'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.jlmcollective.co'
 
@@ -439,6 +439,7 @@ type PaymentProfileEmailRow = {
   accepts_direct_payment: boolean | null
   direct_payment_instructions: string | null
   preferred_currency: string | null
+  payout_details: unknown
 }
 
 function formatEmailDate(iso: string | null): string {
@@ -494,7 +495,7 @@ export async function sendGuestBookingConfirmedEmail({
       request.host_id
         ? hostReader(supabase)
             .from('host_payment_profiles')
-            .select('accepts_direct_payment, direct_payment_instructions, preferred_currency')
+            .select('accepts_direct_payment, direct_payment_instructions, preferred_currency, payout_details')
             .eq('host_id', request.host_id)
             .maybeSingle<PaymentProfileEmailRow>()
         : Promise.resolve({ data: null }),
@@ -517,26 +518,30 @@ export async function sendGuestBookingConfirmedEmail({
     if (listing?.area) detailRows.push(['Area', listing.area])
 
     let paymentHtml = ''
-    if (paymentProfile?.accepts_direct_payment && paymentProfile.direct_payment_instructions) {
+    if (
+      paymentProfile?.accepts_direct_payment &&
+      (paymentProfile.direct_payment_instructions || paymentProfile.payout_details)
+    ) {
       let parsed: {
         depositAmount?: number
         depositCurrency?: string
         depositDueDays?: number
         balanceDueDays?: number
         method?: string
-        payout?: unknown
         v?: number
       } | null = null
-      try {
-        const candidate = JSON.parse(paymentProfile.direct_payment_instructions)
-        if (candidate && typeof candidate === 'object' && candidate.v === 1) parsed = candidate
-      } catch {
-        parsed = null
+      if (paymentProfile.direct_payment_instructions) {
+        try {
+          const candidate = JSON.parse(paymentProfile.direct_payment_instructions)
+          if (candidate && typeof candidate === 'object' && candidate.v === 1) parsed = candidate
+        } catch {
+          parsed = null
+        }
       }
 
+      const payRows: [string, string][] = []
       if (parsed) {
         const currency = parsed.depositCurrency || paymentProfile.preferred_currency || 'USD'
-        const payRows: [string, string][] = []
         if (typeof parsed.depositAmount === 'number') {
           const due =
             request.check_in && typeof parsed.depositDueDays === 'number'
@@ -549,17 +554,25 @@ export async function sendGuestBookingConfirmedEmail({
             ? ` — due by ${formatEmailDate(minusDaysIso(request.check_in, parsed.balanceDueDays))}`
             : ''
         payRows.push(['Rest of payment', `the remaining balance${balanceDue}`])
-        const payout = parsePayout(parsed.payout)
-        const payoutRows = payout ? formatPayoutRows(payout) : []
-        const howToPayHtml =
-          payoutRows.length > 0
-            ? `<p style="margin:14px 0 2px"><strong>How to pay the host</strong></p>${detailTableHtml(payoutRows)}`
-            : typeof parsed.method === 'string' && parsed.method
-              ? `<p style="margin:8px 0 0"><strong>How to pay:</strong> ${escapeHtml(parsed.method)}</p>`
+      }
+
+      // Payout account: host-level column first, legacy nested JSON as a fallback.
+      const payout = resolveHostPayout(
+        paymentProfile.payout_details,
+        paymentProfile.direct_payment_instructions,
+      )
+      const payoutRows = payout ? formatPayoutRows(payout) : []
+      const howToPayHtml =
+        payoutRows.length > 0
+          ? `<p style="margin:14px 0 2px"><strong>How to pay the host</strong></p>${detailTableHtml(payoutRows)}`
+          : parsed && typeof parsed.method === 'string' && parsed.method
+            ? `<p style="margin:8px 0 0"><strong>How to pay:</strong> ${escapeHtml(parsed.method)}</p>`
+            : !parsed && paymentProfile.direct_payment_instructions
+              ? `<p style="margin:0;white-space:pre-line">${escapeHtml(paymentProfile.direct_payment_instructions)}</p>`
               : ''
-        paymentHtml = `<h3 style="font-size:15px;margin:20px 0 6px">Paying the host</h3>${detailTableHtml(payRows)}${howToPayHtml}`
-      } else {
-        paymentHtml = `<h3 style="font-size:15px;margin:20px 0 6px">Paying the host</h3><p style="margin:0;white-space:pre-line">${escapeHtml(paymentProfile.direct_payment_instructions)}</p>`
+
+      if (payRows.length > 0 || howToPayHtml) {
+        paymentHtml = `<h3 style="font-size:15px;margin:20px 0 6px">Paying the host</h3>${payRows.length > 0 ? detailTableHtml(payRows) : ''}${howToPayHtml}`
       }
     }
 

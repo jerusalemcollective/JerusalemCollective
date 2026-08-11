@@ -1,9 +1,9 @@
 import { PaymentUpdateForm } from '@/components/payment-update-form'
-import { HostPaymentCurrencyAndSchedule } from '@/components/host-payment-currency-and-schedule'
-import { StripeConnectCard } from '@/components/stripe-connect-card'
+import { HostGetPaidSection } from '@/components/host-get-paid-section'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { getPaymentRouteSettings } from '@/lib/platform-settings'
 import { oneOrNull } from '@/lib/utils/one-or-null'
+import { resolveHostPayout } from '@/lib/direct-payment'
 import { updateHostPaymentPreferences } from './actions'
 
 type PaymentBooking = {
@@ -35,6 +35,8 @@ type HostPaymentProfile = {
   stripe_charges_enabled: boolean | null
   stripe_payouts_enabled: boolean | null
   commission_percent_override: number | null
+  payout_method: string | null
+  payout_details: unknown
 }
 
 export default async function HostPaymentsPage({
@@ -48,7 +50,7 @@ export default async function HostPaymentsPage({
     supabase
       .from('host_payment_profiles')
       .select(
-        'accepts_direct_payment, accepts_jlm_payment, direct_payment_instructions, preferred_currency, payout_currencies, stripe_account_id, payout_setup_status, stripe_charges_enabled, stripe_payouts_enabled, commission_percent_override',
+        'accepts_direct_payment, accepts_jlm_payment, direct_payment_instructions, preferred_currency, payout_currencies, stripe_account_id, payout_setup_status, stripe_charges_enabled, stripe_payouts_enabled, commission_percent_override, payout_method, payout_details',
       )
       .in('host_id', hostIds)
       .limit(1)
@@ -134,12 +136,6 @@ export default async function HostPaymentsPage({
             We couldn’t save your payment settings. Please try again.
           </div>
         )}
-
-        <StripeConnectCard
-          chargesEnabled={profile?.stripe_charges_enabled ?? false}
-          payoutsEnabled={profile?.stripe_payouts_enabled ?? false}
-          hasAccount={Boolean(profile?.stripe_account_id)}
-        />
 
         <section className="mb-8 rounded-3xl bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -238,8 +234,7 @@ export default async function HostPaymentsPage({
               </div>
 
               <p className="mt-4 text-xs leading-5 text-stone-500">
-                Payouts are sent to the bank details JLM Collective holds for you. If those need
-                updating, message us rather than entering them here.
+                Payouts go to the payout method you set below.
               </p>
             </>
           )}
@@ -271,27 +266,6 @@ export default async function HostPaymentsPage({
                 <input type="hidden" name="acceptsJlm" value="" />
               )}
 
-              <label className="flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  name="acceptsDirect"
-                  defaultChecked={paymentRoutes.directPaymentsEnabled && (profile?.accepts_direct_payment || false)}
-                  disabled={!paymentRoutes.directPaymentsEnabled}
-                  className="mt-1"
-                />
-                <span>
-                  <span className="block font-bold text-stone-950">Accept direct payment to me</span>
-                  <span className="mt-1 block text-sm leading-6 text-stone-600">
-                    Offer a host-direct route as an alternative where you handle the payment yourself.
-                  </span>
-                  {!paymentRoutes.directPaymentsEnabled && (
-                    <span className="mt-2 block rounded-xl bg-white px-3 py-2 text-xs font-semibold text-amber-700">
-                      Direct-to-host payments are currently paused by JLM Collective.
-                    </span>
-                  )}
-                </span>
-              </label>
-
               <div>
                 <p className="text-sm font-semibold text-stone-800">Currencies you can receive</p>
                 <div className="mt-2 grid gap-2 sm:grid-cols-4">
@@ -312,9 +286,24 @@ export default async function HostPaymentsPage({
                 </p>
               </div>
 
-              <HostPaymentCurrencyAndSchedule
+              <HostGetPaidSection
+                initialMethod={
+                  profile?.payout_method === 'stripe' || profile?.payout_method === 'manual'
+                    ? profile.payout_method
+                    : profile?.stripe_payouts_enabled || profile?.stripe_account_id
+                      ? 'stripe'
+                      : 'manual'
+                }
+                stripe={{
+                  chargesEnabled: profile?.stripe_charges_enabled ?? false,
+                  payoutsEnabled: profile?.stripe_payouts_enabled ?? false,
+                  hasAccount: Boolean(profile?.stripe_account_id),
+                }}
+                directPaymentsEnabled={paymentRoutes.directPaymentsEnabled}
+                acceptsDirectDefault={paymentRoutes.directPaymentsEnabled && (profile?.accepts_direct_payment || false)}
                 initialCurrency={profile?.preferred_currency || 'USD'}
                 scheduleDefault={profile?.direct_payment_instructions}
+                payoutDefault={resolveHostPayout(profile?.payout_details, profile?.direct_payment_instructions)}
               />
 
               <div className="flex justify-end">

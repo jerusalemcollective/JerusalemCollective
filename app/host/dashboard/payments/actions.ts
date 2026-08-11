@@ -66,22 +66,18 @@ function composePayout(formData: FormData) {
   }
 }
 
-// The direct-payment schedule is entered as structured fields and stored as JSON
-// in host_payment_profiles.direct_payment_instructions (a text column). Returns
-// an empty string when nothing meaningful was filled, so the existing DB check
-// still requires content when a host accepts direct payment.
+// The direct-payment DEPOSIT SCHEDULE is stored as JSON in
+// host_payment_profiles.direct_payment_instructions (a text column). The payout
+// account no longer lives here — it goes to the payout_details column (see
+// composePayout + migration 106). Returns an empty string when no schedule was set.
 function composeDirectPaymentInstructions(formData: FormData): string {
   const depositAmount = toAmount(formData.get('depositAmount'))
   const depositCurrency = String(formData.get('preferredCurrency') || '') || null
   const depositDueMode = String(formData.get('depositDueMode') || 'booking')
   const depositDueDays = depositDueMode === 'days' ? toBoundedInt(formData.get('depositDueDays'), 0, 365) : null
   const balanceDueDays = toBoundedInt(formData.get('balanceDueDays'), 0, 365)
-  const payout = composePayout(formData)
-  // Preserve a legacy free-text entry only until the host provides structured bank
-  // details, so nothing a host already wrote is silently dropped.
-  const method = payout ? '' : String(formData.get('legacyMethod') || '').trim()
 
-  const hasContent = depositAmount != null || balanceDueDays != null || method !== '' || payout != null
+  const hasContent = depositAmount != null || balanceDueDays != null
   if (!hasContent) return ''
 
   return JSON.stringify({
@@ -90,8 +86,6 @@ function composeDirectPaymentInstructions(formData: FormData): string {
     depositCurrency,
     depositDueDays,
     balanceDueDays,
-    method,
-    ...(payout ? { payout } : {}),
   })
 }
 
@@ -102,6 +96,8 @@ export async function updateHostPaymentPreferences(formData: FormData) {
   const instructions = composeDirectPaymentInstructions(formData)
   const preferredCurrency = String(formData.get('preferredCurrency') || '')
   const payoutCurrencies = formData.getAll('payoutCurrencies').map(String)
+  const payoutMethod = String(formData.get('payoutMethod') || '')
+  const payout = composePayout(formData)
 
   const { supabase } = await requireHostDashboardAccess()
   const { error } = await supabase.rpc('update_host_payment_preferences', {
@@ -110,6 +106,8 @@ export async function updateHostPaymentPreferences(formData: FormData) {
     currency_code: preferredCurrency,
     accepts_jlm: acceptsJlm,
     supported_currencies: payoutCurrencies,
+    payout_method_in: payoutMethod,
+    payout_details_in: payout,
   })
 
   revalidatePath('/host/dashboard/payments')

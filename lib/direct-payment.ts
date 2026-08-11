@@ -48,6 +48,28 @@ export function parsePayout(value: unknown): PayoutDetails | null {
   }
 }
 
+// A host's payout account now lives in host_payment_profiles.payout_details, but
+// rows saved before migration 106 (or not yet backfilled) still carry it nested
+// inside the direct_payment_instructions schedule JSON. Read the column first, fall
+// back to the legacy nested payout, so every surface shows the same account.
+export function resolveHostPayout(
+  payoutDetails: unknown,
+  directPaymentInstructions: string | null | undefined,
+): PayoutDetails | null {
+  const fromColumn = parsePayout(payoutDetails)
+  if (fromColumn) return fromColumn
+  if (!directPaymentInstructions) return null
+  try {
+    const parsed = JSON.parse(directPaymentInstructions)
+    if (parsed && typeof parsed === 'object' && parsed.v === 1) {
+      return parsePayout(parsed.payout)
+    }
+  } catch {
+    // legacy free text — no structured payout
+  }
+  return null
+}
+
 // Ordered [label, value] rows for displaying a host's payout details (guest summary
 // + email). Only includes the fields relevant to the chosen region, and only ones
 // that are filled in.

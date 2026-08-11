@@ -8,6 +8,7 @@ import { formatDateDisplay } from '@/lib/utils/date'
 import { CancelBookingButton } from './cancel-booking-button'
 import { PayBalanceButton } from '@/components/pay-balance-button'
 import { DirectPaymentScheduleSummary } from '@/components/direct-payment-schedule-summary'
+import { parsePayout } from '@/lib/direct-payment'
 
 const bookingRowSchema = z.object({
   id: z.string(),
@@ -81,13 +82,21 @@ export default async function BookingsPage({
   // Direct-payment schedule per booking (host's terms, readable only for the
   // guest's own bookings via a definer function).
   const { data: scheduleRows } = await supabase.rpc('get_my_booking_payment_schedules')
-  const scheduleByBooking = new Map<string, { accepts_direct: boolean; instructions: string | null }>()
+  const scheduleByBooking = new Map<
+    string,
+    { accepts_direct: boolean; instructions: string | null; payout_details: unknown }
+  >()
   for (const row of (scheduleRows || []) as {
     booking_id: string
     accepts_direct: boolean
     instructions: string | null
+    payout_details: unknown
   }[]) {
-    scheduleByBooking.set(row.booking_id, { accepts_direct: row.accepts_direct, instructions: row.instructions })
+    scheduleByBooking.set(row.booking_id, {
+      accepts_direct: row.accepts_direct,
+      instructions: row.instructions,
+      payout_details: row.payout_details,
+    })
   }
 
   // After Stripe checkout the guest is redirected here immediately, before the
@@ -253,8 +262,12 @@ export default async function BookingsPage({
                       </svg>
                       Add to calendar
                     </a>
-                    {status === 'confirmed' && sched && sched.accepts_direct && sched.instructions && (
-                      <DirectPaymentScheduleSummary instructions={sched.instructions} checkIn={booking.check_in} />
+                    {status === 'confirmed' && sched && sched.accepts_direct && Boolean(sched.instructions || sched.payout_details) && (
+                      <DirectPaymentScheduleSummary
+                        instructions={sched.instructions}
+                        checkIn={booking.check_in}
+                        payout={parsePayout(sched.payout_details)}
+                      />
                     )}
                   </div>
                   <div className="flex flex-col items-start gap-2 md:items-end">

@@ -4,6 +4,9 @@ import { parsePayout, formatPayoutRows, type PayoutDetails } from '@/lib/direct-
 type Props = {
   instructions: string | null
   checkIn: string | null
+  // Host-level payout account (from host_payment_profiles.payout_details). Wins over
+  // any legacy payout nested in the instructions JSON.
+  payout?: PayoutDetails | null
 }
 
 function money(currency: string, amount: number): string {
@@ -18,9 +21,7 @@ function minusDays(iso: string, days: number): string {
   return date.toISOString().slice(0, 10)
 }
 
-export function DirectPaymentScheduleSummary({ instructions, checkIn }: Props) {
-  if (!instructions) return null
-
+export function DirectPaymentScheduleSummary({ instructions, checkIn, payout = null }: Props) {
   let schedule:
     | {
         depositAmount: number | null
@@ -32,24 +33,30 @@ export function DirectPaymentScheduleSummary({ instructions, checkIn }: Props) {
       }
     | null = null
 
-  try {
-    const parsed = JSON.parse(instructions)
-    if (parsed && typeof parsed === 'object' && parsed.v === 1) {
-      schedule = {
-        depositAmount: typeof parsed.depositAmount === 'number' ? parsed.depositAmount : null,
-        depositCurrency: typeof parsed.depositCurrency === 'string' ? parsed.depositCurrency : null,
-        depositDueDays: typeof parsed.depositDueDays === 'number' ? parsed.depositDueDays : null,
-        balanceDueDays: typeof parsed.balanceDueDays === 'number' ? parsed.balanceDueDays : null,
-        method: typeof parsed.method === 'string' ? parsed.method : '',
-        payout: parsePayout(parsed.payout),
+  if (instructions) {
+    try {
+      const parsed = JSON.parse(instructions)
+      if (parsed && typeof parsed === 'object' && parsed.v === 1) {
+        schedule = {
+          depositAmount: typeof parsed.depositAmount === 'number' ? parsed.depositAmount : null,
+          depositCurrency: typeof parsed.depositCurrency === 'string' ? parsed.depositCurrency : null,
+          depositDueDays: typeof parsed.depositDueDays === 'number' ? parsed.depositDueDays : null,
+          balanceDueDays: typeof parsed.balanceDueDays === 'number' ? parsed.balanceDueDays : null,
+          method: typeof parsed.method === 'string' ? parsed.method : '',
+          payout: parsePayout(parsed.payout),
+        }
       }
+    } catch {
+      // legacy free-text instructions
     }
-  } catch {
-    // legacy free-text instructions
   }
 
-  // Legacy free text: show it as-is.
-  if (!schedule) {
+  const resolvedPayout = payout ?? schedule?.payout ?? null
+  const payoutRows = resolvedPayout ? formatPayoutRows(resolvedPayout) : []
+
+  // Legacy free text with no structured schedule or payout: show it as-is.
+  if (!schedule && payoutRows.length === 0) {
+    if (!instructions) return null
     return (
       <div className="mt-3 rounded-2xl bg-white p-4 ring-1 ring-stone-200">
         <p className="text-xs font-bold uppercase tracking-wide text-[#c76f55]">How to pay the host</p>
@@ -58,37 +65,36 @@ export function DirectPaymentScheduleSummary({ instructions, checkIn }: Props) {
     )
   }
 
-  const currency = schedule.depositCurrency || 'USD'
-  const depositDue = checkIn && schedule.depositDueDays != null ? minusDays(checkIn, schedule.depositDueDays) : null
-  const balanceDue = checkIn && schedule.balanceDueDays != null ? minusDays(checkIn, schedule.balanceDueDays) : null
-
-  const hasSchedule =
-    schedule.depositAmount != null || schedule.balanceDueDays != null || schedule.method || schedule.payout
-  if (!hasSchedule) return null
-
-  const payoutRows = schedule.payout ? formatPayoutRows(schedule.payout) : []
+  const currency = schedule?.depositCurrency || 'USD'
+  const depositDue = checkIn && schedule?.depositDueDays != null ? minusDays(checkIn, schedule.depositDueDays) : null
+  const balanceDue = checkIn && schedule?.balanceDueDays != null ? minusDays(checkIn, schedule.balanceDueDays) : null
+  const dividerClass = schedule != null ? 'border-t border-stone-100 pt-2' : ''
 
   return (
     <div className="mt-3 rounded-2xl bg-white p-4 ring-1 ring-stone-200">
       <p className="text-xs font-bold uppercase tracking-wide text-[#c76f55]">Pay the host directly</p>
       <div className="mt-2 space-y-1.5 text-sm text-stone-700">
-        {schedule.depositAmount != null && (
-          <div className="flex flex-wrap justify-between gap-x-4">
-            <span className="text-stone-500">Deposit</span>
-            <span className="font-medium">
-              {money(currency, schedule.depositAmount)}
-              {depositDue ? ` — due by ${formatDateDisplay(depositDue)}` : ' — due when you book'}
-            </span>
-          </div>
+        {schedule != null && (
+          <>
+            {schedule.depositAmount != null && (
+              <div className="flex flex-wrap justify-between gap-x-4">
+                <span className="text-stone-500">Deposit</span>
+                <span className="font-medium">
+                  {money(currency, schedule.depositAmount)}
+                  {depositDue ? ` — due by ${formatDateDisplay(depositDue)}` : ' — due when you book'}
+                </span>
+              </div>
+            )}
+            <div className="flex flex-wrap justify-between gap-x-4">
+              <span className="text-stone-500">Rest of payment</span>
+              <span className="font-medium">
+                the remaining balance{balanceDue ? ` — due by ${formatDateDisplay(balanceDue)}` : ''}
+              </span>
+            </div>
+          </>
         )}
-        <div className="flex flex-wrap justify-between gap-x-4">
-          <span className="text-stone-500">Rest of payment</span>
-          <span className="font-medium">
-            the remaining balance{balanceDue ? ` — due by ${formatDateDisplay(balanceDue)}` : ''}
-          </span>
-        </div>
         {payoutRows.length > 0 ? (
-          <div className="border-t border-stone-100 pt-2">
+          <div className={dividerClass}>
             <span className="text-stone-500">How to pay</span>
             <div className="mt-1 space-y-0.5">
               {payoutRows.map(([label, value]) => (
@@ -100,8 +106,8 @@ export function DirectPaymentScheduleSummary({ instructions, checkIn }: Props) {
             </div>
           </div>
         ) : (
-          schedule.method && (
-            <div className="border-t border-stone-100 pt-2">
+          schedule?.method && (
+            <div className={dividerClass}>
               <span className="text-stone-500">How to pay</span>
               <p className="mt-0.5 whitespace-pre-line text-stone-700">{schedule.method}</p>
             </div>
