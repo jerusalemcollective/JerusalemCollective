@@ -602,7 +602,11 @@ export async function sendGuestBookingConfirmedEmail({
               : ''
 
       if (payRows.length > 0 || howToPayHtml) {
-        paymentHtml = `${payRows.length > 0 ? detailTableHtml(payRows) : ''}${howToPayHtml}`
+        const scheduleHtml =
+          payRows.length > 0
+            ? `<h3 style="font-size:15px;margin:20px 0 6px">Payment schedule</h3>${detailTableHtml(payRows)}`
+            : ''
+        paymentHtml = `${scheduleHtml}${howToPayHtml}`
       }
     }
 
