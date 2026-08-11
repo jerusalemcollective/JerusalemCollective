@@ -5,6 +5,7 @@ import { Header } from '@/components/header'
 import { Footer } from '@/components/footer'
 import { Toaster } from '@/components/ui/sonner'
 import { SessionTimeout } from '@/components/session-timeout'
+import { CurrencyProvider } from '@/components/currency-provider'
 import { getServicesBarEnabled } from '@/lib/platform-settings'
 import './globals.css'
 
@@ -92,10 +93,12 @@ export default async function RootLayout({
         >
           Skip to content
         </a>
-        <Header servicesBarEnabled={servicesBarEnabled} />
-        <SessionTimeout />
-        <main id="main-content">{children}</main>
-        <Footer />
+        <CurrencyProvider>
+          <Header servicesBarEnabled={servicesBarEnabled} />
+          <SessionTimeout />
+          <main id="main-content">{children}</main>
+          <Footer />
+        </CurrencyProvider>
         <Toaster richColors position="top-center" />
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

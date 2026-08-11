@@ -268,6 +268,8 @@ export default async function JLMCollectiveHomePage() {
                     coverPhotoUrl: stay.coverPhotoUrl ?? null,
                     rating: stay.rating,
                     priceLabel: formatPreferredNightlyPrice(stay),
+                    priceUsd: stay.price_usd,
+                    priceIls: stay.price_ils,
                     hasPrice: Boolean(stay.price_ils || stay.price_usd),
                   }}
                 />

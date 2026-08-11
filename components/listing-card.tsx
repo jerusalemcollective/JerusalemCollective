@@ -2,6 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { slugifyNeighborhood } from '@/lib/neighborhood-pages'
 import { ListingRatingBadge } from '@/components/listing-rating'
+import { ListingPrice } from '@/components/listing-price'
 import type { ListingRating } from '@/lib/reviews'
 
 export type ListingCardData = {
@@ -12,8 +13,11 @@ export type ListingCardData = {
   max_guests: number | null
   coverPhotoUrl: string | null
   rating?: ListingRating | null
-  // Pre-formatted so each surface keeps its own currency formatting.
+  // priceLabel is the server-rendered fallback; when the raw USD/ILS prices are
+  // provided the card shows them in the guest's preferred currency (live FX).
   priceLabel: string
+  priceUsd?: number | null
+  priceIls?: number | null
   hasPrice: boolean
 }
 
@@ -69,7 +73,15 @@ export function ListingCard({
               .join(' · ')}
           </p>
           <p className="pt-1 text-sm font-semibold text-stone-950">
-            {listing.priceLabel}
+            {listing.priceUsd != null || listing.priceIls != null ? (
+              <ListingPrice
+                priceUsd={listing.priceUsd ?? null}
+                priceIls={listing.priceIls ?? null}
+                fallback={listing.priceLabel}
+              />
+            ) : (
+              listing.priceLabel
+            )}
             {listing.hasPrice && <span className="font-normal text-stone-500"> / night</span>}
           </p>
         </Link>

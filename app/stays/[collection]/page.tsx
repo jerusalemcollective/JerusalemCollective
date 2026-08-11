@@ -149,6 +149,8 @@ export default async function StayCollectionPage({
                     coverPhotoUrl: listing.cover_photo_url ?? null,
                     rating: null,
                     priceLabel,
+                    priceUsd: listing.price_usd,
+                    priceIls: listing.price_ils,
                     hasPrice: Boolean(listing.price_ils || listing.price_usd),
                   }}
                 />

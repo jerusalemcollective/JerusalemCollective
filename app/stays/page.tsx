@@ -270,6 +270,8 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
                       coverPhotoUrl: listing.cover_photo_url ?? null,
                       rating: listing.rating,
                       priceLabel: formatDualCurrencyPrice(listing),
+                      priceUsd: listing.price_usd,
+                      priceIls: listing.price_ils,
                       hasPrice: Boolean(listing.price_ils || listing.price_usd),
                     }}
                   />
