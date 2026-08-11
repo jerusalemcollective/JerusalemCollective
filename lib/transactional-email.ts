@@ -602,7 +602,7 @@ export async function sendGuestBookingConfirmedEmail({
               : ''
 
       if (payRows.length > 0 || howToPayHtml) {
-        paymentHtml = `<h3 style="font-size:15px;margin:20px 0 6px">Paying the host</h3>${payRows.length > 0 ? detailTableHtml(payRows) : ''}${howToPayHtml}`
+        paymentHtml = `${payRows.length > 0 ? detailTableHtml(payRows) : ''}${howToPayHtml}`
       }
     }
 
@@ -722,8 +722,7 @@ export async function sendGuestPaidBookingConfirmedEmail({
         <a href="${payUrl}" style="display:inline-block;background:#c76f55;color:#ffffff;text-decoration:none;border-radius:999px;padding:12px 18px;font-weight:700">
           Pay your balance
         </a>
-      </p>
-      <p style="color:#78716c;font-size:13px;margin:8px 0 0">One click — pay the remaining balance securely by card.</p>`
+      </p>`
     } else {
       balanceHtml = `<p style="margin:16px 0 0">Your stay is paid in full — nothing more to pay.</p>`
     }
