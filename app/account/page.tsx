@@ -229,10 +229,10 @@ export default async function GuestDashboardPage() {
         </div>
 
         {unreadThreads.length === 0 ? (
-          <div className="px-4 py-8 text-center">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-stone-100">
-              <Mail className="h-6 w-6 text-stone-400" />
-            </div>
+          <div className="flex items-center justify-center gap-2.5 px-4 py-5">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-stone-100">
+              <Mail className="h-4 w-4 text-stone-400" />
+            </span>
             <p className="text-sm text-stone-600">You&rsquo;re all caught up.</p>
           </div>
         ) : (

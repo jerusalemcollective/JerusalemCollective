@@ -768,19 +768,7 @@ export function ListingDetailClient({
                 <hr className="border-stone-100" />
                 <div className="py-3">
                   <h2 className="mb-3 text-lg font-bold text-stone-900">Amenities</h2>
-                  {listing.amenities && listing.amenities.length > 0 && (
-                    <AmenityDisplay amenities={listing.amenities} />
-                  )}
-                  {comfortFeatures.length > 0 && (
-                    <div className={listing.amenities && listing.amenities.length > 0 ? 'mt-6' : ''}>
-                      <h3 className="text-xs font-bold uppercase tracking-widest text-stone-500">Comfort</h3>
-                      <div className="mt-3 grid gap-x-8 gap-y-2.5 sm:grid-cols-2">
-                        {comfortFeatures.map((feature) => (
-                          <FeaturePill key={feature} label={feature} icon="comfort" />
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  <AmenityDisplay amenities={listing.amenities || []} extraComfort={comfortFeatures} />
                 </div>
               </>
             )}
@@ -1206,20 +1194,6 @@ function StarRating({ rating }: { rating: number }) {
           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
         </svg>
       ))}
-    </div>
-  )
-}
-
-function FeaturePill({
-  label,
-}: {
-  label: string
-  icon: string
-}) {
-  return (
-    <div className="flex items-center gap-2.5 text-sm text-stone-700">
-      <CheckCircle2 className="h-4 w-4 shrink-0 text-[#c76f55]" />
-      <span>{label}</span>
     </div>
   )
 }

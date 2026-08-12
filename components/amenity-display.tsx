@@ -1,13 +1,27 @@
 import { CheckCircle2 } from 'lucide-react'
 import { STAY_AMENITY_GROUPS } from '@/lib/stay-amenities'
 
-export function AmenityDisplay({ amenities }: { amenities: string[] }) {
+// extraComfort folds the listing's boolean "American comfort" features
+// (central AC, American washer/dryer, etc.) into the Everyday comfort group, so
+// they aren't shown as a separate near-duplicate section.
+export function AmenityDisplay({
+  amenities,
+  extraComfort = [],
+}: {
+  amenities: string[]
+  extraComfort?: string[]
+}) {
   const selectedSet = new Set(amenities)
   const visibleGroups = STAY_AMENITY_GROUPS
-    .map((group) => ({
-      ...group,
-      amenities: group.amenities.filter((amenity) => selectedSet.has(amenity)),
-    }))
+    .map((group) => {
+      const items: string[] = group.amenities.filter((amenity) => selectedSet.has(amenity))
+      if (group.title === 'Everyday comfort') {
+        for (const extra of extraComfort) {
+          if (!items.includes(extra)) items.push(extra)
+        }
+      }
+      return { ...group, amenities: items }
+    })
     .filter((group) => group.amenities.length > 0)
 
   if (visibleGroups.length === 0) return null
