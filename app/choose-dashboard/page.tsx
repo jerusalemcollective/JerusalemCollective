@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { DashboardChooser } from '@/components/dashboard-chooser'
 
 export const metadata = {
-  title: 'Choose your dashboard | JLM Collective',
+  title: 'Choose your dashboard',
 }
 
 // Auth-gated, user-specific — render per request, never prerender at build.

@@ -6,7 +6,7 @@ import { ogImages, ogTwitterImages } from '@/lib/og'
 export const revalidate = 86400
 
 export const metadata: Metadata = {
-  title: 'Jerusalem Neighbourhoods for Short-Term Stays | JLM Collective',
+  title: 'Jerusalem Neighbourhoods for Short-Term Stays',
   description:
     'Explore Jerusalem neighbourhood by neighbourhood — Rechavia, the German Colony, Katamon, Baka, Nachlaot, Har Nof, Ramat Eshkol and more — to find the right base for your stay.',
   alternates: { canonical: '/neighbourhoods' },
