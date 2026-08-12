@@ -2,7 +2,6 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import type { LucideIcon } from 'lucide-react'
 import {
-  ArrowUpDown,
   Building2,
   Home,
   Landmark,
@@ -11,7 +10,6 @@ import {
   MapPin,
   MessageCircle,
   ShieldCheck,
-  Tent,
   Trees,
 } from 'lucide-react'
 import { createPublicClient } from '@/lib/supabase/public'
@@ -124,8 +122,6 @@ function buildCategoryChips(popularNeighborhoods: string[]): CategoryChip[] {
   return [
     { label: 'All stays', href: '/stays', Icon: LayoutGrid },
     ...neighbourhoodChips,
-    { label: 'Shabbos elevator', href: '/stays?shabbatElevator=1', Icon: ArrowUpDown },
-    { label: 'Sukkah option', href: '/stays?sukkahBalcony=1', Icon: Tent },
   ]
 }
 
