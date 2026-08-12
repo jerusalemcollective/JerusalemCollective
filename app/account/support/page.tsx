@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { Breadcrumb } from '@/components/breadcrumb'
 import { SupportCaseClientForm } from '@/components/support-case-client-form'
+import { ContactJlmButton } from '@/components/contact-jlm-button'
 
 const supportBookingSchema = z.object({
   id: z.string(),
@@ -62,8 +63,9 @@ export default async function AccountSupportPage() {
       <section className="mx-auto max-w-5xl">
         <Breadcrumb items={[{ label: 'Account', href: '/account' }, { label: 'Support' }]} />
 
-        <div className="mb-8">
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <h1 className="font-display text-3xl font-bold tracking-tight text-stone-950">Support</h1>
+          <ContactJlmButton />
         </div>
 
         <Suspense fallback={<SupportFormSkeleton />}>

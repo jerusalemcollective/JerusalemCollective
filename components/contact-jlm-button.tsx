@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation'
 import { LifeBuoy } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
-// Opens (or reuses) a direct chat between the host and JLM Collective's admin,
-// then drops the host into their messages where the thread lives.
+// Opens (or reuses) a direct chat between the current user (host or guest) and
+// JLM Collective's admin, then drops them into their messages where it lives.
 export function ContactJlmButton() {
   const router = useRouter()
   const [isOpening, setIsOpening] = useState(false)
