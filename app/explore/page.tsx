@@ -141,11 +141,19 @@ export default async function ExplorePage() {
         </div>
 
         <section className="mt-10">
-          <div className="mb-4">
-            <h2 className="text-xl font-bold text-stone-950">Popular neighbourhoods</h2>
-            <p className="mt-1 text-sm text-stone-600">
-              Based on what guests are searching for most.
-            </p>
+          <div className="mb-4 flex items-end justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-stone-950">Popular neighbourhoods</h2>
+              <p className="mt-1 text-sm text-stone-600">
+                Based on what guests are searching for most.
+              </p>
+            </div>
+            <Link
+              href="/neighbourhoods"
+              className="shrink-0 text-sm font-bold text-[#c76f55] transition hover:text-[#a95b45]"
+            >
+              Explore more neighbourhoods {'→'}
+            </Link>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
