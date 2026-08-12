@@ -108,16 +108,13 @@ export default async function HostPaymentsPage({
   })
   const payoutSummary = Array.from(totalsByCurrency.entries())
 
-  const effectiveCommissionPercent = profile?.commission_percent_override ?? paymentRoutes.commissionPercent
-  const jlmPaymentDescription = getJlmPaymentDescription(effectiveCommissionPercent)
-
   return (
     <div className="min-h-screen bg-[#F8F5F2] px-5 py-10 text-[#252525] md:px-6">
       <section className="mx-auto max-w-6xl">
 
         <div className="mb-8">
           <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Host dashboard</p>
-          <h1 className="font-display mt-2 text-3xl font-bold tracking-tight text-stone-950">Payment setup</h1>
+          <h1 className="font-display mt-2 text-3xl font-bold tracking-tight text-stone-950">Payments</h1>
         </div>
 
         {saved === '1' && (
@@ -137,165 +134,49 @@ export default async function HostPaymentsPage({
           </div>
         )}
 
-        <section className="mb-8 rounded-3xl bg-white p-6 shadow-sm">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="font-display text-xl font-bold text-stone-950">Your payouts</h2>
-          </div>
-
+        <div className="mb-6 rounded-3xl bg-[#fdece5] p-6">
+          <h2 className="font-display text-xl font-bold text-stone-950">Money from your bookings</h2>
           {payouts.length === 0 ? (
-            <p className="mt-5 rounded-2xl bg-[#F8F5F2] p-4 text-sm leading-6 text-stone-600">
-              No payments yet.
-            </p>
+            <p className="mt-3 text-sm text-stone-600">No payments yet.</p>
           ) : (
-            <>
+            <div className="mt-4 flex flex-wrap gap-x-12 gap-y-4">
               {payoutSummary.map(([currency, totals]) => (
-                <div key={currency} className="mt-5">
-                  {payoutSummary.length > 1 && (
-                    <p className="mb-2 text-xs font-bold uppercase tracking-widest text-stone-500">
-                      {currency}
-                    </p>
-                  )}
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-2xl bg-[#fff4ef] p-4">
-                      <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Due to you</p>
-                      <p className="mt-1 text-2xl font-bold text-stone-950">
-                        {formatMoney(totals.awaiting, currency)}
-                      </p>
-                    </div>
-                    <div className="rounded-2xl bg-[#F8F5F2] p-4">
-                      <p className="text-xs font-bold uppercase tracking-widest text-stone-500">Paid to you</p>
-                      <p className="mt-1 text-2xl font-bold text-stone-950">
-                        {formatMoney(totals.paid, currency)}
-                      </p>
-                    </div>
-                    <div className="rounded-2xl bg-[#F8F5F2] p-4">
-                      <p className="text-xs font-bold uppercase tracking-widest text-stone-500">Not due yet</p>
-                      <p className="mt-1 text-2xl font-bold text-stone-950">
-                        {formatMoney(totals.upcoming, currency)}
-                      </p>
-                      <p className="mt-1 text-xs text-stone-500">Released after check-in</p>
-                    </div>
-                  </div>
+                <div key={currency}>
+                  <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
+                    Due to you{payoutSummary.length > 1 ? ` · ${currency}` : ''}
+                  </p>
+                  <p className="mt-1 text-3xl font-bold text-stone-950">
+                    {formatMoney(totals.awaiting, currency)}
+                  </p>
                 </div>
               ))}
-
-              <div className="mt-6 overflow-hidden rounded-2xl border border-stone-200">
-                <div className="hidden gap-4 border-b border-stone-200 bg-[#fbfaf8] px-4 py-3 text-xs font-bold uppercase tracking-widest text-stone-500 md:grid md:grid-cols-[1fr_1fr_1fr_1.2fr]">
-                  <span>Guest paid</span>
-                  <span>JLM fee</span>
-                  <span>Your payout</span>
-                  <span>Status</span>
-                </div>
-                <div className="divide-y divide-stone-100">
-                  {payouts.map((payment) => {
-                    const currency = (payment.currency || 'USD').toUpperCase()
-                    const payoutCurrency = (payment.host_payout_currency || currency).toUpperCase()
-                    // "Guest paid" is the total collected: the deposit plus the
-                    // balance once it has been paid, so it reconciles to payout + fee.
-                    const guestPaid =
-                      Number(payment.amount || 0) +
-                      (payment.balance_status === 'paid' ? Number(payment.balance_amount || 0) : 0)
-
-                    return (
-                      <div
-                        key={payment.id}
-                        className="grid gap-2 px-4 py-4 text-sm md:grid-cols-[1fr_1fr_1fr_1.2fr] md:items-center"
-                      >
-                        <div>
-                          <span className="font-semibold text-stone-950">
-                            {formatMoney(guestPaid, currency)}
-                          </span>
-                          <span className="block text-xs text-stone-500">
-                            {formatDate(payment.paid_at || payment.created_at)}
-                          </span>
-                        </div>
-                        <span className="text-stone-600">
-                          &minus;{formatMoney(Number(payment.platform_fee_amount || 0), currency)}
-                        </span>
-                        <span className="font-bold text-stone-950">
-                          {formatMoney(Number(payment.host_payout_amount || 0), payoutCurrency)}
-                        </span>
-                        <div>
-                          <span
-                            className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${payoutStatusTone(payment.payout_status)}`}
-                          >
-                            {payoutStatusLabel(payment.payout_status)}
-                          </span>
-                          {payment.payout_released_at && (
-                            <span className="mt-1 block text-xs text-stone-500">
-                              {formatDate(payment.payout_released_at)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-
-              <p className="mt-4 text-xs leading-5 text-stone-500">
-                Payouts go to the payout method you set below.
-              </p>
-            </>
-          )}
-        </section>
-
-        <div>
-          <form action={updateHostPaymentPreferences} className="rounded-3xl bg-white p-6 shadow-sm">
-            <div className="space-y-5">
-              {paymentRoutes.jlmPaymentsEnabled && (
-                <>
-                  <label className="flex items-start gap-3">
-                    <input
-                      type="checkbox"
-                      name="acceptsJlm"
-                      defaultChecked={profile?.accepts_jlm_payment || false}
-                      className="mt-1"
-                    />
-                    <span>
-                      <span className="block font-bold text-stone-950">Allow JLM Collective to collect payment</span>
-                      <span className="mt-1 block text-sm leading-6 text-stone-600">
-                        Guests can use Book now on listings where online payment is enabled. {jlmPaymentDescription}
-                      </span>
-                    </span>
-                  </label>
-                </>
-              )}
-
-              {!paymentRoutes.jlmPaymentsEnabled && (
-                <input type="hidden" name="acceptsJlm" value="" />
-              )}
-
-              <HostGetPaidSection
-                initialMethod={
-                  profile?.payout_method === 'stripe' || profile?.payout_method === 'manual'
-                    ? profile.payout_method
-                    : profile?.stripe_payouts_enabled || profile?.stripe_account_id
-                      ? 'stripe'
-                      : 'manual'
-                }
-                stripe={{
-                  chargesEnabled: profile?.stripe_charges_enabled ?? false,
-                  payoutsEnabled: profile?.stripe_payouts_enabled ?? false,
-                  hasAccount: Boolean(profile?.stripe_account_id),
-                }}
-                directPaymentsEnabled={paymentRoutes.directPaymentsEnabled}
-                acceptsDirectDefault={paymentRoutes.directPaymentsEnabled && (profile?.accepts_direct_payment || false)}
-                initialCurrency={profile?.preferred_currency || 'USD'}
-                payoutCurrenciesDefault={profile?.payout_currencies || []}
-                scheduleDefault={profile?.direct_payment_instructions}
-                payoutDefault={resolveHostPayout(profile?.payout_details, profile?.direct_payment_instructions)}
-              />
-
-              <div className="flex justify-end">
-                <button className="rounded-full bg-[#252525] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#111111]">
-                  Save payment settings
-                </button>
-              </div>
             </div>
-          </form>
-
+          )}
         </div>
+
+        <form action={updateHostPaymentPreferences}>
+          <HostGetPaidSection
+            payoutCurrenciesDefault={profile?.payout_currencies || []}
+            initialCurrency={profile?.preferred_currency || 'USD'}
+            jlmPaymentsEnabled={paymentRoutes.jlmPaymentsEnabled}
+            acceptsJlmDefault={profile?.accepts_jlm_payment || false}
+            directPaymentsEnabled={paymentRoutes.directPaymentsEnabled}
+            acceptsDirectDefault={paymentRoutes.directPaymentsEnabled && (profile?.accepts_direct_payment || false)}
+            stripe={{
+              chargesEnabled: profile?.stripe_charges_enabled ?? false,
+              payoutsEnabled: profile?.stripe_payouts_enabled ?? false,
+              hasAccount: Boolean(profile?.stripe_account_id),
+            }}
+            payoutDefault={resolveHostPayout(profile?.payout_details, profile?.direct_payment_instructions)}
+            scheduleDefault={profile?.direct_payment_instructions}
+          />
+
+          <div className="mt-4 flex justify-end">
+            <button className="rounded-full bg-[#252525] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#111111]">
+              Save payment settings
+            </button>
+          </div>
+        </form>
 
         <section className="mt-8 overflow-hidden rounded-3xl bg-white shadow-sm">
           <div className="border-b border-stone-100 px-6 py-4">
@@ -371,14 +252,6 @@ function formatCommission(value: number | null) {
   })}%`
 }
 
-function getJlmPaymentDescription(commissionPercent: number) {
-  if (commissionPercent > 0) {
-    return `JLM Collective collects payment as agent, deducts the ${formatCommission(commissionPercent)} admin fee, and pays you in the currency received where your payout account supports it.`
-  }
-
-  return 'JLM Collective collects payment as agent. At the moment JLM Collective is not charging hosts a platform fee, so payouts are handled in the currency received where your payout account supports it.'
-}
-
 function formatDate(value: string) {
   return new Date(`${value}T12:00:00`).toLocaleDateString('en-GB', {
     day: 'numeric',
@@ -422,17 +295,3 @@ function formatMoney(amount: number, currency: string) {
   }
 }
 
-function payoutStatusLabel(status?: string | null) {
-  if (status === 'paid') return 'Paid to you'
-  if (status === 'scheduled') return 'Payout scheduled'
-  if (status === 'ready') return 'Due to you'
-  if (status === 'cancelled') return 'Cancelled'
-  return 'Not due yet'
-}
-
-function payoutStatusTone(status?: string | null) {
-  if (status === 'paid') return 'bg-green-100 text-green-800'
-  if (status === 'scheduled' || status === 'ready') return 'bg-[#fff4ef] text-[#c76f55]'
-  if (status === 'cancelled') return 'bg-stone-100 text-stone-500'
-  return 'bg-stone-100 text-stone-700'
-}

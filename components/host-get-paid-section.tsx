@@ -6,155 +6,185 @@ import { PayoutAccountFields } from '@/components/payout-account-fields'
 import { DirectPaymentScheduleFields } from '@/components/direct-payment-schedule-fields'
 import { type PayoutDetails } from '@/lib/direct-payment'
 
-type PayoutMethod = 'stripe' | 'manual'
+const CURRENCIES = ['USD', 'GBP', 'EUR', 'ILS']
 
-// One "How you get paid" section: the host chooses Automatic (Stripe) or Manual
-// (bank/Zelle). The manual account also feeds guest-direct display, so it shows
-// whenever the method is manual OR the host accepts direct guest payment. The
-// preferred currency stays visible for either route. All the field name= attributes
-// (payoutMethod, preferredCurrency, acceptsDirect, payout*, deposit*) are read by
-// the updateHostPaymentPreferences action.
+// The whole "How you get paid" + "Payment schedule" block. The host picks which
+// currencies they accept, a preferred one, and turns on either or both pay routes:
+// "Through JLM · card" (accepts_jlm → Stripe payout) and "Paid directly · bank/Zelle"
+// (accepts_direct → bank details). Each route's account setup appears ONLY when its
+// box is ticked. Field name= attributes (payoutCurrencies, preferredCurrency,
+// acceptsJlm, acceptsDirect, payoutMethod, payout*, deposit*) are read by the
+// updateHostPaymentPreferences action.
 export function HostGetPaidSection({
-  initialMethod,
-  stripe,
+  payoutCurrenciesDefault,
+  initialCurrency,
+  jlmPaymentsEnabled,
+  acceptsJlmDefault,
   directPaymentsEnabled,
   acceptsDirectDefault,
-  initialCurrency,
-  payoutCurrenciesDefault,
-  scheduleDefault,
+  stripe,
   payoutDefault,
   legacyMethod,
+  scheduleDefault,
 }: {
-  initialMethod: PayoutMethod
-  stripe: { chargesEnabled: boolean; payoutsEnabled: boolean; hasAccount: boolean }
+  payoutCurrenciesDefault: string[]
+  initialCurrency: string
+  jlmPaymentsEnabled: boolean
+  acceptsJlmDefault: boolean
   directPaymentsEnabled: boolean
   acceptsDirectDefault: boolean
-  initialCurrency: string
-  payoutCurrenciesDefault: string[]
-  scheduleDefault: string | null | undefined
+  stripe: { chargesEnabled: boolean; payoutsEnabled: boolean; hasAccount: boolean }
   payoutDefault: PayoutDetails | null
   legacyMethod?: string | null
+  scheduleDefault: string | null | undefined
 }) {
-  const [method, setMethod] = useState<PayoutMethod>(initialMethod)
+  const [accepted, setAccepted] = useState<string[]>(
+    payoutCurrenciesDefault.filter((c) => CURRENCIES.includes(c)),
+  )
   const [currency, setCurrency] = useState(initialCurrency)
+  const [acceptsJlm, setAcceptsJlm] = useState(acceptsJlmDefault)
   const [acceptsDirect, setAcceptsDirect] = useState(acceptsDirectDefault)
+
   // Returning from Stripe onboarding (?connect=return|refresh) must mount the card
-  // even if the stored method is manual, so its status-sync effect runs.
+  // even if JLM is off, so its status-sync effect runs.
   const [connectReturn, setConnectReturn] = useState(false)
   useEffect(() => {
     setConnectReturn(new URLSearchParams(window.location.search).has('connect'))
   }, [])
 
-  const showStripe = method === 'stripe' || connectReturn
-  const showManual = method === 'manual' || acceptsDirect
+  function toggleCurrency(code: string) {
+    setAccepted((prev) => {
+      const next = prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
+      // Keep the preferred currency valid: if it just got removed, fall back to the
+      // first still-accepted one.
+      if (!next.includes(currency) && next.length > 0) setCurrency(next[0])
+      return next
+    })
+  }
+
+  function cycleCurrency() {
+    const pool = accepted.length > 0 ? accepted : CURRENCIES
+    setCurrency(pool[(pool.indexOf(currency) + 1) % pool.length])
+  }
+
+  // Advisory only (admin display + future auto-payout readiness): which route the
+  // host's payout leans on. JLM card payouts settle to Stripe; direct is manual bank.
+  const payoutMethod = acceptsJlm ? 'stripe' : acceptsDirect ? 'manual' : ''
+  const showStripe = acceptsJlm || connectReturn
 
   return (
-    <div className="space-y-5">
-      <div>
-        <p className="text-sm font-semibold text-stone-800">Currencies you can receive</p>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          {['GBP', 'USD', 'EUR', 'ILS'].map((code) => (
-            <label
-              key={code}
-              className="flex items-center gap-1.5 rounded-2xl border border-stone-200 px-3 py-2 text-sm font-semibold text-stone-700"
-            >
-              <input
-                type="checkbox"
-                name="payoutCurrencies"
-                value={code}
-                defaultChecked={payoutCurrenciesDefault.includes(code)}
-              />
-              {code}
-            </label>
-          ))}
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-stone-800">Preferred currency</span>
-            <button
-              type="button"
-              onClick={() => {
-                const order = ['USD', 'GBP', 'EUR', 'ILS']
-                setCurrency(order[(order.indexOf(currency) + 1) % order.length])
-              }}
-              className="inline-flex items-center gap-1.5 rounded-full border border-stone-300 bg-white px-3 py-1.5 text-sm font-bold text-stone-900 transition hover:border-[#c76f55] hover:bg-stone-50"
-              aria-label={`Preferred currency ${currency}. Click to switch.`}
-            >
-              {currency}
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="text-stone-400" aria-hidden="true">
-                <path d="m7 15 5 5 5-5" />
-                <path d="m7 9 5-5 5 5" />
-              </svg>
-            </button>
+    <div className="space-y-4">
+      <div className="rounded-3xl bg-white p-6 shadow-sm">
+        <h2 className="font-display text-xl font-bold text-stone-950">How you get paid</h2>
+
+        <div className="mt-5">
+          <p className="text-sm font-semibold text-stone-800">Currencies you accept</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {CURRENCIES.map((code) => {
+              const on = accepted.includes(code)
+              return (
+                <button
+                  key={code}
+                  type="button"
+                  onClick={() => toggleCurrency(code)}
+                  aria-pressed={on}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    on
+                      ? 'bg-[#c76f55] text-white'
+                      : 'border border-stone-200 bg-white text-stone-600 hover:bg-stone-50'
+                  }`}
+                >
+                  {on ? '✓ ' : ''}
+                  {code}
+                </button>
+              )
+            })}
           </div>
+          {accepted.map((code) => (
+            <input key={code} type="hidden" name="payoutCurrencies" value={code} />
+          ))}
+        </div>
+
+        <div className="mt-5 flex items-center gap-3">
+          <span className="text-sm font-semibold text-stone-800">Preferred currency</span>
+          <button
+            type="button"
+            onClick={cycleCurrency}
+            className="inline-flex items-center gap-1.5 rounded-full border border-stone-300 bg-white px-3 py-1 text-sm font-bold text-stone-900 transition hover:border-[#c76f55] hover:bg-stone-50"
+            aria-label={`Preferred currency ${currency}. Click to switch.`}
+          >
+            {currency}
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="text-stone-400" aria-hidden="true">
+              <path d="m7 15 5 5 5-5" />
+              <path d="m7 9 5-5 5 5" />
+            </svg>
+          </button>
           <input type="hidden" name="preferredCurrency" value={currency} />
         </div>
+
+        <div className="mt-6">
+          <p className="text-sm font-semibold text-stone-800">How guests pay you</p>
+          <div className="mt-2 space-y-2.5">
+            <div className="overflow-hidden rounded-2xl border border-stone-200">
+              <label className="flex cursor-pointer items-center gap-3 px-4 py-3">
+                <input
+                  type="checkbox"
+                  name="acceptsJlm"
+                  checked={acceptsJlm}
+                  disabled={!jlmPaymentsEnabled}
+                  onChange={(event) => setAcceptsJlm(event.target.checked)}
+                />
+                <span className="font-semibold text-stone-900">Through JLM · card</span>
+              </label>
+              {showStripe && (
+                <div className="border-t border-stone-100 px-4 pb-4 pt-2">
+                  <StripeConnectCard
+                    chargesEnabled={stripe.chargesEnabled}
+                    payoutsEnabled={stripe.payoutsEnabled}
+                    hasAccount={stripe.hasAccount}
+                  />
+                </div>
+              )}
+              {!jlmPaymentsEnabled && (
+                <p className="border-t border-stone-100 px-4 py-2 text-xs font-semibold text-amber-700">
+                  JLM card payments are currently paused by JLM Collective.
+                </p>
+              )}
+            </div>
+
+            <div className="overflow-hidden rounded-2xl border border-stone-200">
+              <label className="flex cursor-pointer items-center gap-3 px-4 py-3">
+                <input
+                  type="checkbox"
+                  name="acceptsDirect"
+                  checked={acceptsDirect}
+                  disabled={!directPaymentsEnabled}
+                  onChange={(event) => setAcceptsDirect(event.target.checked)}
+                />
+                <span className="font-semibold text-stone-900">Paid directly · bank or Zelle</span>
+              </label>
+              {/* Kept mounted (only hidden) when unticked so a host's saved bank
+                  details aren't wiped on save — JLM still needs them for manual
+                  payout. They only ever appear when the box is ticked. */}
+              <div className={`border-t border-stone-100 px-4 pb-4 pt-2 ${acceptsDirect ? '' : 'hidden'}`}>
+                <PayoutAccountFields payoutDefault={payoutDefault} legacyMethod={legacyMethod} />
+              </div>
+              {!directPaymentsEnabled && (
+                <p className="border-t border-stone-100 px-4 py-2 text-xs font-semibold text-amber-700">
+                  Direct-to-host payments are currently paused by JLM Collective.
+                </p>
+              )}
+            </div>
+          </div>
+          <input type="hidden" name="payoutMethod" value={payoutMethod} />
+        </div>
       </div>
 
-      <div>
-        <p className="font-bold text-stone-950">How you get paid</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {([
-            { value: 'stripe', label: 'Automatic (Stripe)' },
-            { value: 'manual', label: 'Manual (bank transfer or Zelle)' },
-          ] as const).map((option) => {
-            const active = method === option.value
-            return (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => setMethod(option.value)}
-                className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                  active
-                    ? 'bg-[#c76f55] text-white'
-                    : 'border border-stone-200 bg-white text-stone-600 hover:bg-stone-50'
-                }`}
-              >
-                {option.label}
-              </button>
-            )
-          })}
+      <div className="rounded-3xl bg-white p-6 shadow-sm">
+        <h2 className="font-display text-xl font-bold text-stone-950">Payment schedule</h2>
+        <div className="mt-4">
+          <DirectPaymentScheduleFields defaultValue={scheduleDefault} currency={currency} />
         </div>
-        <input type="hidden" name="payoutMethod" value={method} />
-      </div>
-
-      {showStripe && (
-        <StripeConnectCard
-          chargesEnabled={stripe.chargesEnabled}
-          payoutsEnabled={stripe.payoutsEnabled}
-          hasAccount={stripe.hasAccount}
-        />
-      )}
-
-      {showManual && (
-        <div>
-          <p className="text-sm font-semibold text-stone-800">Your payout account</p>
-          <PayoutAccountFields payoutDefault={payoutDefault} legacyMethod={legacyMethod} />
-        </div>
-      )}
-
-      <DirectPaymentScheduleFields defaultValue={scheduleDefault} currency={currency} />
-
-      <div className="border-t border-stone-200 pt-5">
-        <label className="flex items-start gap-3">
-          <input
-            type="checkbox"
-            name="acceptsDirect"
-            checked={acceptsDirect}
-            disabled={!directPaymentsEnabled}
-            onChange={(event) => setAcceptsDirect(event.target.checked)}
-            className="mt-1"
-          />
-          <span>
-            <span className="block font-bold text-stone-950">Accept direct payment from guests</span>
-            <span className="mt-1 block text-sm leading-6 text-stone-600">
-              Offer a host-direct route where the guest pays you into your payout account above.
-            </span>
-            {!directPaymentsEnabled && (
-              <span className="mt-2 block rounded-xl bg-white px-3 py-2 text-xs font-semibold text-amber-700">
-                Direct-to-host payments are currently paused by JLM Collective.
-              </span>
-            )}
-          </span>
-        </label>
       </div>
     </div>
   )
