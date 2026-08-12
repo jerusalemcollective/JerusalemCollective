@@ -38,6 +38,7 @@ type HostCalendarBoardProps = {
   saveAction: (formData: FormData) => void
   updateBookingAction: EditAction
   updateRequestAction: EditAction
+  acceptRequestAction: EditAction
   removeRangeAction: RemoveAction
 }
 
@@ -93,6 +94,7 @@ export function HostCalendarBoard({
   saveAction,
   updateBookingAction,
   updateRequestAction,
+  acceptRequestAction,
   removeRangeAction,
 }: HostCalendarBoardProps) {
   // With more than one listing, default to a single combined view of them all;
@@ -468,6 +470,7 @@ export function HostCalendarBoard({
           onClose={() => setActiveEvent(null)}
           updateBookingAction={updateBookingAction}
           updateRequestAction={updateRequestAction}
+          acceptRequestAction={acceptRequestAction}
           removeRangeAction={removeRangeAction}
         />
       )}

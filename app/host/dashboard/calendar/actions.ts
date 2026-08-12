@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
+import { sendManualBookingGuestEmail } from '@/lib/transactional-email'
 
 export async function addUnavailableRange(formData: FormData) {
   return blockDateRange(formData)
@@ -135,7 +136,7 @@ export async function addManualBooking(formData: FormData) {
   const { supabase, host, hostIds } = await requireHostDashboardAccess()
   const { data: listing } = await supabase
     .from('listings')
-    .select('id')
+    .select('id, title, area')
     .eq('id', listingId)
     .in('host_id', hostIds)
     .single()
@@ -159,6 +160,22 @@ export async function addManualBooking(formData: FormData) {
     notes,
   })
   if (error) throw error
+
+  // If the host gave the guest's email, send them a confirmation. Never let an
+  // email failure undo the saved booking.
+  if (guestEmail) {
+    await sendManualBookingGuestEmail({
+      to: guestEmail,
+      guestName: guestName || null,
+      listingTitle: (listing as { title?: string }).title || 'your stay',
+      area: (listing as { area?: string | null }).area ?? null,
+      checkIn: startDate,
+      checkOut: endDate,
+      guests: guestCount,
+    }).catch((emailError) => {
+      console.error('Manual booking saved, but guest confirmation email failed', emailError)
+    })
+  }
 
   revalidatePath('/host/dashboard/calendar')
   revalidatePath(`/host/dashboard/listings/${listingId}`)
@@ -230,6 +247,29 @@ export async function updateRequestAsHost(_prev: EditState, formData: FormData):
       p_check_out: checkOut,
       p_guests: guests,
       p_status: status,
+    })
+    if (error) return { error: error.message }
+    revalidatePath('/host/dashboard/calendar')
+    return { ok: true }
+  } catch (error) {
+    return { error: editErrorMessage(error) }
+  }
+}
+
+// Accept a booking request. Reuses the canonical acceptance RPC (migration 100) —
+// the same one the Messages inbox uses — which creates a CONFIRMED booking (so it
+// shows in the guest's "My trips"), guards availability, and blocks the dates.
+export async function acceptRequestAsHost(_prev: EditState, formData: FormData): Promise<EditState> {
+  const requestId = String(formData.get('requestId') || '')
+  if (!requestId) {
+    return { error: 'Missing request.' }
+  }
+
+  try {
+    const { supabase } = await requireHostDashboardAccess()
+    const { error } = await supabase.rpc('update_booking_request_status', {
+      request_uuid: requestId,
+      new_status: 'accepted',
     })
     if (error) return { error: error.message }
     revalidatePath('/host/dashboard/calendar')

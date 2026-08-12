@@ -7,6 +7,7 @@ import {
   saveCalendarEntry,
   updateBookingAsHost,
   updateRequestAsHost,
+  acceptRequestAsHost,
   removeUnavailableRange,
 } from './actions'
 import { ExternalCalendarSyncForm } from '@/components/external-calendar-sync-form'
@@ -85,7 +86,9 @@ export default async function HostCalendarPage() {
       .from('booking_requests')
       .select('id, listing_id, check_in, check_out, guests, status, listings(title), guest:profiles!booking_requests_guest_id_fkey(full_name)')
       .in('host_id', hostIds)
-      .in('status', ['new', 'host_replied', 'accepted'])
+      // 'accepted' requests are excluded: accepting creates a booking (green) that
+      // blocks the dates, so the open-request (blue) pill must not also linger.
+      .in('status', ['new', 'host_replied'])
       .order('check_in', { ascending: true }),
     // calendar_token is only readable through this definer (migration 074).
     supabase
@@ -189,6 +192,7 @@ export default async function HostCalendarPage() {
               saveAction={saveCalendarEntry}
               updateBookingAction={updateBookingAsHost}
               updateRequestAction={updateRequestAsHost}
+              acceptRequestAction={acceptRequestAsHost}
               removeRangeAction={removeUnavailableRange}
             />
 

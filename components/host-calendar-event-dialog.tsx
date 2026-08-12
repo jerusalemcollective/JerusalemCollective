@@ -14,10 +14,12 @@ const BOOKING_STATUSES = [
   { value: 'cancelled', label: 'Cancelled' },
 ]
 
+// 'accepted' is deliberately not here: accepting is a real action (the green
+// "Accept booking" button below), which blocks the dates and creates a booking.
+// This dropdown is only for the other request states.
 const REQUEST_STATUSES = [
   { value: 'new', label: 'New' },
   { value: 'host_replied', label: 'Replied' },
-  { value: 'accepted', label: 'Accepted' },
   { value: 'declined', label: 'Declined' },
   { value: 'closed', label: 'Closed' },
 ]
@@ -50,6 +52,7 @@ type HostCalendarEventDialogProps = {
   onClose: () => void
   updateBookingAction: EditAction
   updateRequestAction: EditAction
+  acceptRequestAction: EditAction
   removeRangeAction: RemoveAction
 }
 
@@ -58,17 +61,19 @@ export function HostCalendarEventDialog({
   onClose,
   updateBookingAction,
   updateRequestAction,
+  acceptRequestAction,
   removeRangeAction,
 }: HostCalendarEventDialogProps) {
   const isEditable = event.kind === 'booking' || event.kind === 'request'
   const editAction = event.kind === 'request' ? updateRequestAction : updateBookingAction
   const [state, formAction, pending] = useActionState(editAction, {})
+  const [acceptState, acceptFormAction, acceptPending] = useActionState(acceptRequestAction, {})
   const [removePending, startRemove] = useTransition()
   const dialogRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (state.ok) onClose()
-  }, [state.ok, onClose])
+    if (state.ok || acceptState.ok) onClose()
+  }, [state.ok, acceptState.ok, onClose])
 
   // Keyboard support: focus the dialog on open and close it on Escape.
   useEffect(() => {
@@ -144,6 +149,20 @@ export function HostCalendarEventDialog({
             </div>
           )}
         </div>
+
+        {event.kind === 'request' && (
+          <form action={acceptFormAction} className="mt-5">
+            <input type="hidden" name="requestId" value={event.id} />
+            <button
+              type="submit"
+              disabled={acceptPending}
+              className="w-full rounded-full bg-green-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-green-800 disabled:opacity-60"
+            >
+              {acceptPending ? 'Accepting…' : 'Accept booking'}
+            </button>
+            {acceptState.error && <p className="mt-2 text-xs text-rose-600">{acceptState.error}</p>}
+          </form>
+        )}
 
         {isEditable ? (
           <form action={formAction} className="mt-5">
