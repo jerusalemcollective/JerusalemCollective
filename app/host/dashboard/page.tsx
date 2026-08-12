@@ -166,9 +166,7 @@ export default async function HostDashboardPage() {
           </div>
 
           {upcomingBookings.length === 0 ? (
-            <div className="mt-4 rounded-3xl bg-white px-6 py-12 text-center text-stone-500 shadow-sm">
-              No upcoming stays yet
-            </div>
+            <p className="mt-3 text-sm text-stone-500">No upcoming stays &mdash; nothing booked yet.</p>
           ) : (
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               {upcomingBookings.map((booking, index) => {
@@ -212,10 +210,10 @@ export default async function HostDashboardPage() {
             )}
           </div>
 
-          <div className="mt-4 overflow-hidden rounded-3xl bg-white shadow-sm">
-            {unreadRows.length === 0 ? (
-              <div className="px-6 py-12 text-center text-stone-500">You have no unread messages</div>
-            ) : (
+          {unreadRows.length === 0 ? (
+            <p className="mt-3 text-sm text-stone-500">You&rsquo;re all caught up &mdash; no new messages.</p>
+          ) : (
+            <div className="mt-4 overflow-hidden rounded-3xl bg-white shadow-sm">
               <div className="divide-y divide-stone-100">
                 {unreadRows.map((row) => (
                   <Link
@@ -239,8 +237,8 @@ export default async function HostDashboardPage() {
                   </Link>
                 ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </section>
       </section>
     </div>
