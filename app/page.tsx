@@ -1,21 +1,16 @@
+import { Suspense } from 'react'
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import type { LucideIcon } from 'lucide-react'
 import {
-  Building2,
-  Home,
-  Landmark,
-  LayoutGrid,
   Lock,
   MapPin,
   MessageCircle,
   ShieldCheck,
-  Trees,
 } from 'lucide-react'
 import { createPublicClient } from '@/lib/supabase/public'
-import { defaultExploreNeighborhoods } from '@/lib/neighborhoods'
-import { slugifyNeighborhood } from '@/lib/neighborhood-pages'
-import { HomeSearchForm } from '@/components/home-search-form'
+import { allNeighborhoods, defaultExploreNeighborhoods } from '@/lib/neighborhoods'
+import { StaysFilterBar } from '@/components/stays-filter-bar'
+import { StaysNeighborhoodNav } from '@/components/stays-neighborhood-nav'
 import { RecentlyViewed } from '@/components/recently-viewed-home'
 import { getListingRatings, type ListingRating } from '@/lib/reviews'
 import { ListingCard } from '@/components/listing-card'
@@ -57,12 +52,6 @@ type FeaturedStay = {
 
 type PopularNeighborhoodRow = {
   neighborhood: string | null
-}
-
-type CategoryChip = {
-  label: string
-  href: string
-  Icon: LucideIcon
 }
 
 export const metadata: Metadata = {
@@ -108,21 +97,6 @@ function toFeaturedStay(
     coverPhotoUrl: listing.cover_photo_url || null,
     rating: listing.rating ?? null,
   }
-}
-
-const neighbourhoodIcons: LucideIcon[] = [Building2, Trees, Home, Landmark, MapPin]
-
-function buildCategoryChips(popularNeighborhoods: string[]): CategoryChip[] {
-  const neighbourhoodChips = popularNeighborhoods.slice(0, 5).map((area, index) => ({
-    label: area,
-    href: `/neighbourhoods/${slugifyNeighborhood(area)}`,
-    Icon: neighbourhoodIcons[index % neighbourhoodIcons.length] ?? MapPin,
-  }))
-
-  return [
-    { label: 'All stays', href: '/stays', Icon: LayoutGrid },
-    ...neighbourhoodChips,
-  ]
 }
 
 async function getHomepageData() {
@@ -183,7 +157,6 @@ async function getHomepageData() {
 
 export default async function JLMCollectiveHomePage() {
   const { featuredStays, popularNeighborhoods } = await getHomepageData()
-  const categoryChips = buildCategoryChips(popularNeighborhoods)
 
   return (
     <div className="min-h-screen bg-[#F8F5F2] text-[#2D2D2D] antialiased">
@@ -211,28 +184,22 @@ export default async function JLMCollectiveHomePage() {
               Curated stays in Jerusalem
             </h1>
 
-            <div className="mt-6">
-              <HomeSearchForm />
+            <div className="mx-auto mt-6 max-w-4xl">
+              <Suspense fallback={<div className="h-16 rounded-3xl bg-white shadow-sm" />}>
+                <StaysFilterBar />
+              </Suspense>
             </div>
           </div>
         </section>
 
-        <section aria-label="Browse by category" className="mx-auto max-w-7xl px-6">
-          <div className="flex flex-wrap gap-2 border-b border-stone-200 pb-6">
-            {categoryChips.map((chip, index) => (
-              <Link
-                key={chip.label}
-                href={chip.href}
-                className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                  index === 0
-                    ? 'border-transparent bg-[#252525] text-white hover:bg-[#111111]'
-                    : 'border-stone-200 bg-white text-stone-700 hover:border-[#c76f55]'
-                }`}
-              >
-                <chip.Icon className="h-4 w-4" aria-hidden="true" />
-                {chip.label}
-              </Link>
-            ))}
+        <section aria-label="Browse by neighbourhood" className="mx-auto max-w-7xl px-6">
+          <div className="border-b border-stone-200 pb-6">
+            <StaysNeighborhoodNav
+              neighborhoods={['All', ...allNeighborhoods]}
+              featuredNeighborhoods={popularNeighborhoods.slice(0, 4)}
+              selectedArea="All"
+              baseQuery={{}}
+            />
           </div>
         </section>
 
