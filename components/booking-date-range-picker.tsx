@@ -161,15 +161,15 @@ export function BookingDateRangePicker({
                 jewishHoliday: 'font-bold text-[#c76f55]',
               }}
               showOutsideDays={false}
-              className="w-full [--cell-size:2.75rem]"
+              className="w-full [--cell-size:2rem] sm:[--cell-size:2.75rem]"
               classNames={{
                 root: 'w-full',
                 months: 'flex w-full flex-col',
                 month: 'w-full gap-5',
                 month_caption: 'min-h-12',
-                weekday: 'text-[10px] font-bold uppercase tracking-wider text-stone-500',
-                week: 'mt-2 flex w-full gap-2',
-                weekdays: 'flex gap-2',
+                weekday: 'flex-1 text-center text-[10px] font-bold uppercase tracking-wider text-stone-500',
+                week: 'mt-2 flex w-full gap-1 sm:gap-2',
+                weekdays: 'flex gap-1 sm:gap-2',
                 day: 'aspect-square flex-1 rounded-2xl',
                 day_button: 'rounded-2xl border border-transparent text-sm hover:border-stone-200 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-30',
               }}

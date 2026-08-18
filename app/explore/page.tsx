@@ -141,7 +141,7 @@ export default async function ExplorePage() {
         </div>
 
         <section className="mt-10">
-          <div className="mb-4 flex items-end justify-between gap-4">
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
             <div>
               <h2 className="text-xl font-bold text-stone-950">Popular neighbourhoods</h2>
               <p className="mt-1 text-sm text-stone-600">
