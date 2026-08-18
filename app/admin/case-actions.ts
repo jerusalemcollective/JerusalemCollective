@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { requireAdminPermission } from '@/lib/admin'
 import { logAdminAction } from '@/lib/audit'
 import { SUPPORT_CASE_STATUSES } from '@/lib/constants'
+import { sendSupportCaseStatusEmail } from '@/lib/transactional-email'
 
 export type SupportCaseState = {
   status: 'idle' | 'success' | 'error'
@@ -44,6 +45,9 @@ export async function updateSupportCase(
     if (error) throw error
 
     await logAdminAction(supabase, `set_status_${status}`, 'case', caseId)
+
+    // Notify both the guest and the host of the new status / resolution.
+    await sendSupportCaseStatusEmail({ supabase, caseId })
 
     revalidatePath('/admin')
     revalidatePath('/admin/cases')

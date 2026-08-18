@@ -938,6 +938,101 @@ function paymentAlertHtml(rows: [string, string][]) {
   `
 }
 
+const SUPPORT_CASE_STATUS_LABELS: Record<string, string> = {
+  open: 'Open',
+  under_review: 'Under review',
+  waiting_on_guest: 'Waiting on the guest',
+  waiting_on_host: 'Waiting on the host',
+  resolved: 'Resolved',
+  closed: 'Closed',
+}
+
+type SupportCaseEmailRow = {
+  id: string
+  guest_id: string | null
+  host_id: string | null
+  status: string
+  resolution_notes: string | null
+  approved_refund_amount: number | null
+  currency: string | null
+  listings?: { title: string | null } | { title: string | null }[] | null
+}
+
+// Notify BOTH the guest and the host when JLM changes a report's status or
+// records a resolution. Uses the service role so it can read both parties'
+// contact details regardless of who triggered the update.
+export async function sendSupportCaseStatusEmail({
+  supabase,
+  caseId,
+}: {
+  supabase: SupabaseClient
+  caseId: string
+}) {
+  try {
+    const { data: report } = await hostReader(supabase)
+      .from('support_cases')
+      .select('id, guest_id, host_id, status, resolution_notes, approved_refund_amount, currency, listings(title)')
+      .eq('id', caseId)
+      .maybeSingle<SupportCaseEmailRow>()
+
+    if (!report) return
+
+    const listingTitle = oneOrNull(report.listings)?.title || 'your stay'
+    const statusLabel = SUPPORT_CASE_STATUS_LABELS[report.status] || report.status
+    const amount =
+      report.approved_refund_amount && report.approved_refund_amount > 0
+        ? `${report.currency || ''} ${report.approved_refund_amount.toLocaleString()}`.trim()
+        : null
+
+    const lines = [`Your report about ${escapeHtml(listingTitle)} is now marked "${escapeHtml(statusLabel)}".`]
+    if (report.resolution_notes) lines.push(`JLM Collective's note: ${escapeHtml(report.resolution_notes)}`)
+    if (amount) lines.push(`Approved amount: ${escapeHtml(amount)}. JLM Collective will confirm how this is settled.`)
+    const intro = lines.join(' ')
+    const subject = `Update on your report — ${listingTitle}`
+
+    const guestEmail = report.guest_id ? await getAuthUserEmail(report.guest_id) : null
+
+    let hostEmail: string | null = null
+    if (report.host_id) {
+      const { data: host } = await hostReader(supabase)
+        .from('hosts')
+        .select('id, user_id, name, email')
+        .eq('id', report.host_id)
+        .maybeSingle<HostEmailRow>()
+      hostEmail = await resolveHostEmail(host)
+    }
+
+    await Promise.all([
+      guestEmail
+        ? sendEmail({
+            to: guestEmail,
+            subject,
+            html: baseEmailHtml({
+              greeting: 'Hi there,',
+              intro,
+              ctaLabel: 'View your report',
+              ctaUrl: `${siteUrl}/account/support`,
+            }),
+          })
+        : Promise.resolve(false),
+      hostEmail
+        ? sendEmail({
+            to: hostEmail,
+            subject,
+            html: baseEmailHtml({
+              greeting: 'Hi there,',
+              intro,
+              ctaLabel: 'View your report',
+              ctaUrl: `${siteUrl}/host/dashboard/cases`,
+            }),
+          })
+        : Promise.resolve(false),
+    ])
+  } catch (error) {
+    console.error('Unable to send support report status email', error)
+  }
+}
+
 export async function sendGuestBalanceReminderEmail({
   guestId,
   bookingPaymentId,
