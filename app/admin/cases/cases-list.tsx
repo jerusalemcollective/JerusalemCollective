@@ -86,7 +86,7 @@ export function CasesList({ cases }: CasesListProps) {
               onChange={toggleAll}
               className="h-4 w-4 rounded border-stone-300"
             />
-            Select all visible cases
+            Select all visible reports
           </label>
         )}
 
@@ -138,7 +138,7 @@ export function CasesList({ cases }: CasesListProps) {
 
         {cases.length === 0 && (
           <div className="rounded-3xl bg-white p-10 text-center text-stone-500 shadow-sm">
-            No dispute or refund cases yet.
+            No reports yet.
           </div>
         )}
       </div>
@@ -160,7 +160,7 @@ export function CasesList({ cases }: CasesListProps) {
             onClick={() => handleBulkStatus('closed')}
             className="rounded-full bg-stone-800 px-4 py-2 text-xs font-bold text-white transition hover:bg-stone-900"
           >
-            Close cases
+            Close reports
           </button>
           <button
             type="button"

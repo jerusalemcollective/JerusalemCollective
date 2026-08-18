@@ -91,7 +91,7 @@ export function HostSupportCaseForm({ userId, bookings }: { userId: string; book
       }
 
       setSubmitted(true)
-      setMessage('Your case has been sent to JLM Collective.')
+      setMessage('Your report has been sent to JLM Collective.')
     } catch (submitError) {
       setMessage(submitError instanceof Error ? submitError.message : 'Something went wrong. Please try again.')
       setIsSubmitting(false)
@@ -101,7 +101,7 @@ export function HostSupportCaseForm({ userId, bookings }: { userId: string; book
   if (submitted) {
     return (
       <div className="rounded-3xl bg-[#fff4ef] p-6">
-        <p className="font-bold text-stone-950">Case submitted</p>
+        <p className="font-bold text-stone-950">Report submitted</p>
         <p className="mt-2 text-sm text-stone-600">
           JLM Collective will review it and follow up. You can track it in the list below.
         </p>
@@ -119,7 +119,7 @@ export function HostSupportCaseForm({ userId, bookings }: { userId: string; book
           }}
           className="mt-4 inline-flex rounded-full bg-[#252525] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#111111]"
         >
-          Open another case
+          Report another issue
         </button>
       </div>
     )
@@ -127,8 +127,7 @@ export function HostSupportCaseForm({ userId, bookings }: { userId: string; book
 
   return (
     <form onSubmit={handleSubmit} className="rounded-3xl bg-white p-6 shadow-sm">
-      <h2 className="text-xl font-bold text-stone-950">Open a case</h2>
-      <p className="mt-1 text-sm text-stone-500">Report an issue with a guest or stay to JLM Collective.</p>
+      <h2 className="text-xl font-bold text-stone-950">Report an issue</h2>
 
       <label className="mt-5 block text-sm font-semibold text-stone-700">
         Stay
@@ -213,11 +212,11 @@ export function HostSupportCaseForm({ userId, bookings }: { userId: string; book
         disabled={isSubmitting || bookings.length === 0}
         className="mt-5 rounded-full bg-[#252525] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#111111] disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {isSubmitting ? 'Sending…' : 'Send case'}
+        {isSubmitting ? 'Sending…' : 'Send report'}
       </button>
 
       {bookings.length === 0 && (
-        <p className="mt-3 text-sm text-stone-500">You can open a case once you have a booking.</p>
+        <p className="mt-3 text-sm text-stone-500">You can report an issue once you have a booking.</p>
       )}
     </form>
   )

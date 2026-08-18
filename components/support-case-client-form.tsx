@@ -48,11 +48,11 @@ const getSupportCaseErrorMessage = (error: unknown) => {
       return 'Could not connect - please check your internet connection and try again.'
     }
     if (message.includes('duplicate') || message.includes('already')) {
-      return 'This support case may already exist. Please check your open cases.'
+      return 'This report may already exist. Please check your reports.'
     }
     return error.message
   }
-  return 'We could not send your case. Please try again or contact us on WhatsApp.'
+  return 'We could not send your report. Please try again or contact us on WhatsApp.'
 }
 
 function normalizeSupportCase(supportCase: AccountSupportCaseRow): AccountSupportCase {
@@ -135,7 +135,7 @@ export function SupportCaseClientForm({
       setRequestedAmount('')
       setCurrency('ILS')
       setSubmitted(true)
-      setMessage('Your case has been sent to JLM Collective.')
+      setMessage('Your report has been sent to JLM Collective.')
     } catch (submitError) {
       setMessage(getSupportCaseErrorMessage(submitError))
     } finally {
@@ -162,7 +162,7 @@ export function SupportCaseClientForm({
         </div>
       ) : (
       <form onSubmit={handleSubmit} className="rounded-3xl bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-bold text-stone-950">Open a case</h2>
+        <h2 className="text-xl font-bold text-stone-950">Report an issue</h2>
 
         <label className="mt-5 block text-sm font-semibold text-stone-700">
           Booking
@@ -247,12 +247,12 @@ export function SupportCaseClientForm({
           disabled={isSubmitting || bookings.length === 0}
           className="mt-5 rounded-full bg-[#252525] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#111111] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isSubmitting ? 'Sending...' : 'Send case'}
+          {isSubmitting ? 'Sending...' : 'Send report'}
         </button>
 
         {bookings.length === 0 && (
           <p className="mt-3 text-sm text-stone-500">
-            You can open a case once you have a booking.
+            You can report an issue once you have a booking.
           </p>
         )}
       </form>
@@ -260,7 +260,7 @@ export function SupportCaseClientForm({
 
       <section className="overflow-hidden rounded-3xl bg-white shadow-sm">
         <div className="border-b border-stone-100 px-6 py-4">
-          <h2 className="text-xl font-bold text-stone-950">Your cases</h2>
+          <h2 className="text-xl font-bold text-stone-950">Your reports</h2>
         </div>
         <div className="divide-y divide-stone-100">
           {cases.map((supportCase) => (
@@ -279,7 +279,7 @@ export function SupportCaseClientForm({
             </article>
           ))}
           {cases.length === 0 && (
-            <div className="px-6 py-10 text-center text-stone-500">No cases yet.</div>
+            <div className="px-6 py-10 text-center text-stone-500">No reports yet.</div>
           )}
         </div>
       </section>

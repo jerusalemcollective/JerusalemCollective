@@ -17,7 +17,7 @@ const roles = [
   {
     value: 'support',
     label: 'Support',
-    detail: 'Guests, hosts, disputes, cases, and messaging',
+    detail: 'Guests, hosts, disputes, reports, and messaging',
   },
   {
     value: 'content',

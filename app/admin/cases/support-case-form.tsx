@@ -74,7 +74,7 @@ export function SupportCaseForm({ supportCase }: SupportCaseFormProps) {
         disabled={pending}
         className="mt-4 rounded-full bg-[#252525] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#111111] disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {pending ? 'Saving...' : 'Save case'}
+        {pending ? 'Saving...' : 'Save report'}
       </button>
     </form>
   )

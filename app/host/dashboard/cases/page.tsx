@@ -99,11 +99,11 @@ export default async function HostSupportPage() {
 
           <div className="overflow-hidden rounded-3xl bg-white shadow-sm">
             <div className="border-b border-stone-100 px-6 py-4">
-              <h2 className="text-xl font-bold text-stone-950">Your cases</h2>
+              <h2 className="text-xl font-bold text-stone-950">Your reports</h2>
             </div>
 
             {cases.length === 0 ? (
-              <div className="px-6 py-12 text-center text-stone-500">No cases yet.</div>
+              <div className="px-6 py-12 text-center text-stone-500">No reports yet.</div>
             ) : (
               <div className="divide-y divide-stone-100">
                 {cases.map((supportCase) => (

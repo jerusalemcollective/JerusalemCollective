@@ -25,7 +25,7 @@ export async function updateSupportCase(
   ) {
     return {
       status: 'error',
-      message: 'Please choose a valid case status.',
+      message: 'Please choose a valid report status.',
     }
   }
 
@@ -50,12 +50,12 @@ export async function updateSupportCase(
 
     return {
       status: 'success',
-      message: 'Case updated.',
+      message: 'Report updated.',
     }
   } catch (error) {
     return {
       status: 'error',
-      message: error instanceof Error ? error.message : 'Unable to update the case.',
+      message: error instanceof Error ? error.message : 'Unable to update the report.',
     }
   }
 }
