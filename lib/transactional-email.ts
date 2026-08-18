@@ -975,6 +975,57 @@ export async function sendGuestBalanceReminderEmail({
   })
 }
 
+// Confirmation for a host-entered manual/off-platform booking. The guest has no
+// account, so this takes the raw email the host typed and the booking details
+// directly (no requestId / guest_id lookup) and sends a plain confirmation.
+export async function sendManualBookingGuestEmail({
+  to,
+  guestName,
+  listingTitle,
+  area,
+  checkIn,
+  checkOut,
+  guests,
+}: {
+  to: string
+  guestName: string | null
+  listingTitle: string
+  area: string | null
+  checkIn: string
+  checkOut: string
+  guests: number | null
+}) {
+  try {
+    const areaSuffix = area ? ` in ${area}` : ''
+    const detailRows: [string, string][] = [
+      ['Dates', `${formatEmailDate(checkIn)} to ${formatEmailDate(checkOut)}`],
+      ['Guests', String(guests || 1)],
+    ]
+    if (area) detailRows.push(['Area', area])
+
+    const html = `
+    <div style="font-family:Arial,sans-serif;line-height:1.6;color:#292524">
+      <p>Hi ${escapeHtml(guestName || 'there')},</p>
+      <p>Your booking at <strong>${escapeHtml(listingTitle)}</strong>${escapeHtml(areaSuffix)} is confirmed.</p>
+      ${detailTableHtml(detailRows)}
+      <p style="margin-top:16px">JLM Collective</p>
+      <p style="color:#a8a29e;font-size:11px;margin:8px 0 0;line-height:1.5">
+        JLM Collective acts as letting agent for Jerusalem property owners. Bookings are between guests and hosts. JLM Collective is not a party to any booking agreement.
+      </p>
+    </div>
+    `
+
+    return await sendEmail({
+      to,
+      subject: `Your booking at ${listingTitle} is confirmed`,
+      html,
+    })
+  } catch (error) {
+    console.error('Unable to send manual booking guest email', error)
+    return false
+  }
+}
+
 async function sendEmail({
   to,
   subject,
