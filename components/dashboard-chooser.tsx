@@ -31,7 +31,7 @@ export function DashboardChooser({
           <p className="mt-3 text-stone-600">Where would you like to go?</p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex flex-wrap justify-center gap-4">
           <DestinationCard
             href="/account"
             title="Guest dashboard"
@@ -89,7 +89,7 @@ function DestinationCard({
   return (
     <Link
       href={href}
-      className="group flex flex-col items-start rounded-3xl bg-white p-8 text-left shadow-sm ring-1 ring-stone-200 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-[#f0c2b3]"
+      className="group flex w-full flex-col items-start rounded-3xl bg-white p-8 text-left shadow-sm ring-1 ring-stone-200 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-[#f0c2b3] sm:w-[calc(50%-0.5rem)]"
     >
       <span className={`flex h-12 w-12 items-center justify-center rounded-2xl ${iconClass}`}>
         {icon}

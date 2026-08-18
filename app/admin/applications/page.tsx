@@ -4,7 +4,6 @@ import { StatusBadge } from '@/components/status-badge'
 import { Pagination, normalizePaginationSearchParams, type PaginationSearchParams } from '@/components/pagination'
 
 const PAGE_SIZE = 25
-const REJECTED_APPLICATION_VISIBLE_HOURS = 25
 
 type ApplicationRow = {
   id: string
@@ -44,20 +43,23 @@ export default async function AdminApplicationsPage({
   const currentSearchParams = normalizePaginationSearchParams(searchParams ? await searchParams : {})
   const statusFilter = currentSearchParams.status || 'all'
   const page = Math.max(1, Number(currentSearchParams.page) || 1)
-  const rejectedVisibilityCutoff = new Date(
-    Date.now() - REJECTED_APPLICATION_VISIBLE_HOURS * 60 * 60 * 1000,
-  ).toISOString()
+
+  // The default "All" view is a work queue: only open applications. Approved and
+  // rejected are terminal states, reachable via their own filter chips as history.
+  const OPEN_STATUSES = ['new', 'in_review', 'changes_requested']
+
   let applicationsQuery = supabase
     .from('host_applications')
     .select('id, host_name, apartment_title, area, status, created_at, rejected_at')
-    .or(`status.neq.rejected,rejected_at.gte.${rejectedVisibilityCutoff}`)
     .order('created_at', { ascending: false })
   let countQuery = supabase
     .from('host_applications')
     .select('*', { count: 'exact', head: true })
-    .or(`status.neq.rejected,rejected_at.gte.${rejectedVisibilityCutoff}`)
 
-  if (statusFilter !== 'all') {
+  if (statusFilter === 'all') {
+    applicationsQuery = applicationsQuery.in('status', OPEN_STATUSES)
+    countQuery = countQuery.in('status', OPEN_STATUSES)
+  } else {
     applicationsQuery = applicationsQuery.eq('status', statusFilter)
     countQuery = countQuery.eq('status', statusFilter)
   }
@@ -82,9 +84,6 @@ export default async function AdminApplicationsPage({
     <div>
       <div className="mb-8">
         <h2 className="text-3xl font-bold tracking-tight text-stone-950">Applications</h2>
-        <p className="mt-2 text-sm text-stone-500">
-          Rejected applications remain here for 25 hours so they can be edited or unrejected, then leave this queue.
-        </p>
       </div>
 
       <div className="mb-6 flex flex-wrap gap-2">
