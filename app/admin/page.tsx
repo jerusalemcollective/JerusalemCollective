@@ -42,23 +42,14 @@ export default async function AdminOverviewPage() {
     Date.now() - REJECTED_APPLICATION_VISIBLE_HOURS * 60 * 60 * 1000,
   ).toISOString()
   const [
-    { count: applicationCount },
     { count: newApplicationCount },
-    { count: publishedListingCount },
     { count: draftListingCount },
-    { count: hostCount },
     { count: newEnquiryCount },
     { data: recentApplications },
     { data: recentEnquiries },
   ] = await Promise.all([
-    supabase
-      .from('host_applications')
-      .select('*', { count: 'exact', head: true })
-      .or(`status.neq.rejected,rejected_at.gte.${rejectedVisibilityCutoff}`),
     supabase.from('host_applications').select('*', { count: 'exact', head: true }).eq('status', 'new'),
-    supabase.from('listings').select('*', { count: 'exact', head: true }).eq('is_published', true),
     supabase.from('listings').select('*', { count: 'exact', head: true }).eq('is_published', false),
-    supabase.from('hosts').select('id', { count: 'exact', head: true }),
     supabase.from('booking_requests').select('*', { count: 'exact', head: true }).eq('status', 'new'),
     supabase
       .from('host_applications')
@@ -126,15 +117,6 @@ export default async function AdminOverviewPage() {
       <header className="border-b border-stone-200 pb-6">
         <h2 className="text-3xl font-bold tracking-tight text-stone-950">Overview</h2>
       </header>
-
-      <div className="grid gap-4 border-b border-stone-200 py-5 sm:grid-cols-2 xl:grid-cols-6">
-        <Metric label="Applications" value={applicationCount || 0} />
-        <Metric label="New submissions" value={newApplicationCount || 0} />
-        <Metric label="New enquiries" value={newEnquiryCount || 0} />
-        <Metric label="Published" value={publishedListingCount || 0} />
-        <Metric label="Hidden drafts" value={draftListingCount || 0} />
-        <Metric label="Hosts" value={hostCount || 0} />
-      </div>
 
       <div className="grid gap-8 py-8 xl:grid-cols-[1.35fr_0.75fr]">
         <section>
@@ -220,15 +202,6 @@ export default async function AdminOverviewPage() {
           </div>
         </aside>
       </div>
-    </div>
-  )
-}
-
-function Metric({ label, value }: { label: string; value: number }) {
-  return (
-    <div>
-      <p className="text-sm font-medium text-stone-500">{label}</p>
-      <p className="mt-1 text-3xl font-bold tracking-tight text-stone-950">{value}</p>
     </div>
   )
 }
