@@ -121,6 +121,17 @@ export async function updateHostListing(formData: FormData) {
   const priceUsdValue = String(formData.get('priceUsd') || '')
   const priceIls = priceIlsValue ? Number(priceIlsValue) : null
   const priceUsd = priceUsdValue ? Number(priceUsdValue) : null
+  // Extra-guest pricing. included_guests is clamped to [1, maxGuests]; fees are
+  // non-negative. A blank included-guests field falls back to maxGuests (i.e. no
+  // surcharge). The authoritative charge recomputes from these columns in SQL.
+  const includedGuestsRaw = Number(formData.get('includedGuests') || '')
+  const includedGuests = Number.isFinite(includedGuestsRaw)
+    ? Math.min(Math.max(Math.trunc(includedGuestsRaw), 1), maxGuests || Math.trunc(includedGuestsRaw))
+    : maxGuests || null
+  const extraGuestFeeIlsRaw = Number(formData.get('extraGuestFeeIls') || '0')
+  const extraGuestFeeUsdRaw = Number(formData.get('extraGuestFeeUsd') || '0')
+  const extraGuestFeeIls = Number.isFinite(extraGuestFeeIlsRaw) ? Math.max(extraGuestFeeIlsRaw, 0) : 0
+  const extraGuestFeeUsd = Number.isFinite(extraGuestFeeUsdRaw) ? Math.max(extraGuestFeeUsdRaw, 0) : 0
   const bookingType = String(formData.get('bookingType') || 'request')
   const paymentRoutes = await getPaymentRouteSettings()
   const onlinePaymentEnabled =
@@ -190,6 +201,9 @@ export async function updateHostListing(formData: FormData) {
         americanMattress &&
         powerfulWaterHeater,
       online_payment_enabled: onlinePaymentEnabled,
+      included_guests: includedGuests,
+      extra_guest_fee_ils: extraGuestFeeIls,
+      extra_guest_fee_usd: extraGuestFeeUsd,
     })
     .eq('id', listingId)
     .in('host_id', hostIds)
