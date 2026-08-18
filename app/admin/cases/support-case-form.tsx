@@ -10,6 +10,7 @@ type SupportCaseFormProps = {
     approved_refund_amount: number
     resolution_notes: string | null
   }
+  paidOnline: boolean
 }
 
 const initialState: SupportCaseState = {
@@ -17,7 +18,7 @@ const initialState: SupportCaseState = {
   message: '',
 }
 
-export function SupportCaseForm({ supportCase }: SupportCaseFormProps) {
+export function SupportCaseForm({ supportCase, paidOnline }: SupportCaseFormProps) {
   const [state, formAction, pending] = useActionState(updateSupportCase, initialState)
 
   return (
@@ -50,6 +51,11 @@ export function SupportCaseForm({ supportCase }: SupportCaseFormProps) {
           defaultValue={supportCase.approved_refund_amount || 0}
           className="mt-2 w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900"
         />
+        <span className="mt-1.5 block text-xs font-normal text-stone-500">
+          {paidOnline
+            ? 'Paid online — this can be refunded through Stripe.'
+            : 'Direct-payment booking — this records the decision; settlement is arranged between host and guest.'}
+        </span>
       </label>
 
       <label className="mt-4 block text-sm font-semibold text-stone-700">

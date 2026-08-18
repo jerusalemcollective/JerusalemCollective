@@ -956,6 +956,7 @@ type SupportCaseEmailRow = {
   approved_refund_amount: number | null
   currency: string | null
   listings?: { title: string | null } | { title: string | null }[] | null
+  bookings?: { stripe_checkout_session_id: string | null } | { stripe_checkout_session_id: string | null }[] | null
 }
 
 // Notify BOTH the guest and the host when JLM changes a report's status or
@@ -971,7 +972,7 @@ export async function sendSupportCaseStatusEmail({
   try {
     const { data: report } = await hostReader(supabase)
       .from('support_cases')
-      .select('id, guest_id, host_id, status, resolution_notes, approved_refund_amount, currency, listings(title)')
+      .select('id, guest_id, host_id, status, resolution_notes, approved_refund_amount, currency, listings(title), bookings(stripe_checkout_session_id)')
       .eq('id', caseId)
       .maybeSingle<SupportCaseEmailRow>()
 
@@ -979,6 +980,7 @@ export async function sendSupportCaseStatusEmail({
 
     const listingTitle = oneOrNull(report.listings)?.title || 'your stay'
     const statusLabel = SUPPORT_CASE_STATUS_LABELS[report.status] || report.status
+    const paidOnline = Boolean(oneOrNull(report.bookings)?.stripe_checkout_session_id)
     const amount =
       report.approved_refund_amount && report.approved_refund_amount > 0
         ? `${report.currency || ''} ${report.approved_refund_amount.toLocaleString()}`.trim()
@@ -986,7 +988,16 @@ export async function sendSupportCaseStatusEmail({
 
     const lines = [`Your report about ${escapeHtml(listingTitle)} is now marked "${escapeHtml(statusLabel)}".`]
     if (report.resolution_notes) lines.push(`JLM Collective's note: ${escapeHtml(report.resolution_notes)}`)
-    if (amount) lines.push(`Approved amount: ${escapeHtml(amount)}. JLM Collective will confirm how this is settled.`)
+    if (amount) {
+      // Be honest about how money actually moves: online bookings can be
+      // refunded through Stripe; direct-payment bookings are settled between the
+      // host and guest, so JLM records the decision but does not refund itself.
+      lines.push(
+        paidOnline
+          ? `Approved amount: ${escapeHtml(amount)}. This will be refunded through the original online payment.`
+          : `Approved amount: ${escapeHtml(amount)}. This booking was paid directly, so JLM Collective will arrange settlement with the host — it is not refunded automatically.`,
+      )
+    }
     const intro = lines.join(' ')
     const subject = `Update on your report — ${listingTitle}`
 

@@ -55,7 +55,7 @@ export default async function AdminCasesPage({
       resolution_notes,
       created_at,
       resolved_at,
-      bookings(id),
+      bookings(id, stripe_checkout_session_id),
       listings(id, title),
       guest:profiles!support_cases_guest_id_fkey(full_name),
       host:hosts!support_cases_host_id_fkey(name)

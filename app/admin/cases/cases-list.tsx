@@ -20,6 +20,7 @@ export type SupportCase = {
   resolved_at: string | null
   bookings?: {
     id: string
+    stripe_checkout_session_id: string | null
   } | null
   listings?: {
     id: string
@@ -131,7 +132,10 @@ export function CasesList({ cases }: CasesListProps) {
                 </div>
               </div>
 
-              <SupportCaseForm supportCase={supportCase} />
+              <SupportCaseForm
+                supportCase={supportCase}
+                paidOnline={Boolean(supportCase.bookings?.stripe_checkout_session_id)}
+              />
             </div>
           </article>
         ))}
