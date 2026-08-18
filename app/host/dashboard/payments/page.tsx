@@ -168,7 +168,6 @@ export default async function HostPaymentsPage({
               hasAccount: Boolean(profile?.stripe_account_id),
             }}
             payoutDefault={resolveHostPayout(profile?.payout_details, profile?.direct_payment_instructions)}
-            scheduleDefault={profile?.direct_payment_instructions}
           />
 
           <div className="mt-4 flex justify-end">

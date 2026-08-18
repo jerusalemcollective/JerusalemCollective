@@ -5,20 +5,6 @@ import { redirect } from 'next/navigation'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { getPaymentRouteSettings } from '@/lib/platform-settings'
 
-function toBoundedInt(value: FormDataEntryValue | null, min: number, max: number): number | null {
-  if (value == null || String(value).trim() === '') return null
-  const n = Math.round(Number(value))
-  if (!Number.isFinite(n) || n < min || n > max) return null
-  return n
-}
-
-function toAmount(value: FormDataEntryValue | null): number | null {
-  if (value == null || String(value).trim() === '') return null
-  const n = Math.round(Number(value) * 100) / 100
-  if (!Number.isFinite(n) || n < 0 || n > 10_000_000) return null
-  return n
-}
-
 // Reads the structured payout (bank) fields for the chosen region. Returns null if
 // the host filled nothing, so a host who hasn't entered bank details yet doesn't get
 // an empty payout object. Server-side we store what's given (no hard rejection); the
@@ -66,40 +52,28 @@ function composePayout(formData: FormData) {
   }
 }
 
-// The direct-payment DEPOSIT SCHEDULE is stored as JSON in
-// host_payment_profiles.direct_payment_instructions (a text column). The payout
-// account no longer lives here — it goes to the payout_details column (see
-// composePayout + migration 106). Returns an empty string when no schedule was set.
-function composeDirectPaymentInstructions(formData: FormData): string {
-  const depositAmount = toAmount(formData.get('depositAmount'))
-  const depositCurrency = String(formData.get('preferredCurrency') || '') || null
-  const depositDueMode = String(formData.get('depositDueMode') || 'booking')
-  const depositDueDays = depositDueMode === 'days' ? toBoundedInt(formData.get('depositDueDays'), 0, 365) : null
-  const balanceDueDays = toBoundedInt(formData.get('balanceDueDays'), 0, 365)
-
-  const hasContent = depositAmount != null || balanceDueDays != null
-  if (!hasContent) return ''
-
-  return JSON.stringify({
-    v: 1,
-    depositAmount,
-    depositCurrency,
-    depositDueDays,
-    balanceDueDays,
-  })
-}
-
 export async function updateHostPaymentPreferences(formData: FormData) {
   const paymentRoutes = await getPaymentRouteSettings()
   const acceptsDirect = paymentRoutes.directPaymentsEnabled && formData.get('acceptsDirect') === 'on'
   const acceptsJlm = paymentRoutes.jlmPaymentsEnabled && formData.get('acceptsJlm') === 'on'
-  const instructions = composeDirectPaymentInstructions(formData)
   const preferredCurrency = String(formData.get('preferredCurrency') || '')
   const payoutCurrencies = formData.getAll('payoutCurrencies').map(String)
   const payoutMethod = String(formData.get('payoutMethod') || '')
   const payout = composePayout(formData)
 
-  const { supabase } = await requireHostDashboardAccess()
+  const { supabase, hostIds } = await requireHostDashboardAccess()
+
+  // The deposit/balance schedule now lives per-listing (listings.deposit_* columns),
+  // edited in the listing editor. This page no longer edits the legacy host-level
+  // schedule, so preserve whatever is stored rather than wiping it on save.
+  const { data: existingProfile } = await supabase
+    .from('host_payment_profiles')
+    .select('direct_payment_instructions')
+    .in('host_id', hostIds)
+    .limit(1)
+    .maybeSingle<{ direct_payment_instructions: string | null }>()
+  const instructions = existingProfile?.direct_payment_instructions ?? ''
+
   const { error } = await supabase.rpc('update_host_payment_preferences', {
     accepts_direct: acceptsDirect,
     instructions,

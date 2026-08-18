@@ -1,12 +1,19 @@
 import { formatDateDisplay } from '@/lib/utils/date'
-import { parsePayout, formatPayoutRows, type PayoutDetails } from '@/lib/direct-payment'
+import { formatPayoutRows, type PayoutDetails } from '@/lib/direct-payment'
+import { computeDepositPreview } from '@/lib/utils/deposit'
 import { PayoutCopyRows } from '@/components/payout-copy-rows'
 
 type Props = {
-  instructions: string | null
+  // Per-listing schedule (same source JLM bookings use).
+  depositType: string | null
+  depositValue: number | null
+  balanceDueDays: number | null
+  depositDueDays: number | null
+  nightlyUsd: number | null
+  nightlyIls: number | null
   checkIn: string | null
-  // Host-level payout account (from host_payment_profiles.payout_details). Wins over
-  // any legacy payout nested in the instructions JSON.
+  checkOut: string | null
+  // Host-level payout account (from host_payment_profiles.payout_details).
   payout?: PayoutDetails | null
 }
 
@@ -22,90 +29,91 @@ function minusDays(iso: string, days: number): string {
   return date.toISOString().slice(0, 10)
 }
 
-export function DirectPaymentScheduleSummary({ instructions, checkIn, payout = null }: Props) {
-  let schedule:
-    | {
-        depositAmount: number | null
-        depositCurrency: string | null
-        depositDueDays: number | null
-        balanceDueDays: number | null
-        method: string
-        payout: PayoutDetails | null
-      }
-    | null = null
+// YYYY-MM-DD from a Date's LOCAL components (computeDepositPreview returns
+// local-midnight dates; toISOString would shift a day for UTC+ timezones).
+function isoLocal(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
 
-  if (instructions) {
-    try {
-      const parsed = JSON.parse(instructions)
-      if (parsed && typeof parsed === 'object' && parsed.v === 1) {
-        schedule = {
-          depositAmount: typeof parsed.depositAmount === 'number' ? parsed.depositAmount : null,
-          depositCurrency: typeof parsed.depositCurrency === 'string' ? parsed.depositCurrency : null,
-          depositDueDays: typeof parsed.depositDueDays === 'number' ? parsed.depositDueDays : null,
-          balanceDueDays: typeof parsed.balanceDueDays === 'number' ? parsed.balanceDueDays : null,
-          method: typeof parsed.method === 'string' ? parsed.method : '',
-          payout: parsePayout(parsed.payout),
-        }
-      }
-    } catch {
-      // legacy free-text instructions
-    }
+export function DirectPaymentScheduleSummary({
+  depositType,
+  depositValue,
+  balanceDueDays,
+  depositDueDays,
+  nightlyUsd,
+  nightlyIls,
+  checkIn,
+  checkOut,
+  payout = null,
+}: Props) {
+  const payoutRows = payout ? formatPayoutRows(payout) : []
+
+  // Deposit/balance from the per-listing schedule, computed the same way as the JLM
+  // deposit (computeDepositPreview mirrors create_pending_booking_payment).
+  const nightly = nightlyUsd != null ? nightlyUsd : nightlyIls != null ? nightlyIls : null
+  const currency = nightlyUsd != null ? 'USD' : 'ILS'
+  const nights =
+    checkIn && checkOut
+      ? Math.round(
+          (new Date(`${checkOut}T12:00:00`).getTime() - new Date(`${checkIn}T12:00:00`).getTime()) /
+            (1000 * 60 * 60 * 24),
+        )
+      : 0
+
+  let deposit: number | null = null
+  let balance = 0
+  let balanceDueLabel: string | null = null
+  if (nightly != null && nights > 0 && checkIn && depositValue != null) {
+    const preview = computeDepositPreview({
+      bookingTotal: nightly * nights,
+      depositType: depositType || 'percent',
+      depositValue,
+      balanceDueDaysBeforeCheckin: balanceDueDays ?? 0,
+      checkIn: new Date(`${checkIn}T12:00:00`),
+    })
+    deposit = preview.depositAmount
+    balance = preview.balanceAmount
+    balanceDueLabel = formatDateDisplay(isoLocal(preview.balanceDueDate))
   }
 
-  const resolvedPayout = payout ?? schedule?.payout ?? null
-  const payoutRows = resolvedPayout ? formatPayoutRows(resolvedPayout) : []
+  const depositDueLabel =
+    depositDueDays != null && checkIn
+      ? `due by ${formatDateDisplay(minusDays(checkIn, depositDueDays))}`
+      : 'due to secure your booking'
 
-  // Legacy free text with no structured schedule or payout: show it as-is.
-  if (!schedule && payoutRows.length === 0) {
-    if (!instructions) return null
-    return (
-      <div className="mt-3 rounded-2xl bg-white p-4 ring-1 ring-stone-200">
-        <p className="text-xs font-bold uppercase tracking-wide text-[#c76f55]">How to pay the host</p>
-        <p className="mt-1 whitespace-pre-line text-sm text-stone-600">{instructions}</p>
-      </div>
-    )
-  }
-
-  const currency = schedule?.depositCurrency || 'USD'
-  const depositDue = checkIn && schedule?.depositDueDays != null ? minusDays(checkIn, schedule.depositDueDays) : null
-  const balanceDue = checkIn && schedule?.balanceDueDays != null ? minusDays(checkIn, schedule.balanceDueDays) : null
-  const dividerClass = schedule != null ? 'border-t border-stone-100 pt-2' : ''
+  if (deposit == null && payoutRows.length === 0) return null
 
   return (
     <div className="mt-3 rounded-2xl bg-white p-4 ring-1 ring-stone-200">
       <p className="text-xs font-bold uppercase tracking-wide text-[#c76f55]">Pay the host directly</p>
       <div className="mt-2 space-y-1.5 text-sm text-stone-700">
-        {schedule != null && (
+        {deposit != null && (
           <>
-            {schedule.depositAmount != null && (
+            <div className="flex flex-wrap justify-between gap-x-4">
+              <span className="text-stone-500">Deposit</span>
+              <span className="font-medium">
+                {money(currency, deposit)} — {depositDueLabel}
+              </span>
+            </div>
+            {balance > 0 && (
               <div className="flex flex-wrap justify-between gap-x-4">
-                <span className="text-stone-500">Deposit</span>
+                <span className="text-stone-500">Balance</span>
                 <span className="font-medium">
-                  {money(currency, schedule.depositAmount)}
-                  {depositDue ? ` — due by ${formatDateDisplay(depositDue)}` : ' — due when you book'}
+                  {money(currency, balance)}
+                  {balanceDueLabel ? ` — due by ${balanceDueLabel}` : ''}
                 </span>
               </div>
             )}
-            <div className="flex flex-wrap justify-between gap-x-4">
-              <span className="text-stone-500">Rest of payment</span>
-              <span className="font-medium">
-                the remaining balance{balanceDue ? ` — due by ${formatDateDisplay(balanceDue)}` : ''}
-              </span>
-            </div>
           </>
         )}
-        {payoutRows.length > 0 ? (
-          <div className={dividerClass}>
+        {payoutRows.length > 0 && (
+          <div className={deposit != null ? 'border-t border-stone-100 pt-2' : ''}>
             <span className="text-stone-500">How to pay — tap any detail to copy</span>
             <PayoutCopyRows rows={payoutRows} />
           </div>
-        ) : (
-          schedule?.method && (
-            <div className={dividerClass}>
-              <span className="text-stone-500">How to pay</span>
-              <p className="mt-0.5 whitespace-pre-line text-stone-700">{schedule.method}</p>
-            </div>
-          )
         )}
       </div>
     </div>

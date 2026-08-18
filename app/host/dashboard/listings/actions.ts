@@ -121,17 +121,6 @@ export async function updateHostListing(formData: FormData) {
   const priceUsdValue = String(formData.get('priceUsd') || '')
   const priceIls = priceIlsValue ? Number(priceIlsValue) : null
   const priceUsd = priceUsdValue ? Number(priceUsdValue) : null
-  // Extra-guest pricing. included_guests is clamped to [1, maxGuests]; fees are
-  // non-negative. A blank included-guests field falls back to maxGuests (i.e. no
-  // surcharge). The authoritative charge recomputes from these columns in SQL.
-  const includedGuestsRaw = Number(formData.get('includedGuests') || '')
-  const includedGuests = Number.isFinite(includedGuestsRaw)
-    ? Math.min(Math.max(Math.trunc(includedGuestsRaw), 1), maxGuests || Math.trunc(includedGuestsRaw))
-    : maxGuests || null
-  const extraGuestFeeIlsRaw = Number(formData.get('extraGuestFeeIls') || '0')
-  const extraGuestFeeUsdRaw = Number(formData.get('extraGuestFeeUsd') || '0')
-  const extraGuestFeeIls = Number.isFinite(extraGuestFeeIlsRaw) ? Math.max(extraGuestFeeIlsRaw, 0) : 0
-  const extraGuestFeeUsd = Number.isFinite(extraGuestFeeUsdRaw) ? Math.max(extraGuestFeeUsdRaw, 0) : 0
   const bookingType = String(formData.get('bookingType') || 'request')
   const paymentRoutes = await getPaymentRouteSettings()
   const onlinePaymentEnabled =
@@ -201,9 +190,6 @@ export async function updateHostListing(formData: FormData) {
         americanMattress &&
         powerfulWaterHeater,
       online_payment_enabled: onlinePaymentEnabled,
-      included_guests: includedGuests,
-      extra_guest_fee_ils: extraGuestFeeIls,
-      extra_guest_fee_usd: extraGuestFeeUsd,
     })
     .eq('id', listingId)
     .in('host_id', hostIds)
@@ -224,6 +210,14 @@ export async function updateHostListing(formData: FormData) {
       ? Math.min(Math.max(Math.trunc(balanceDueDaysRaw), 0), 365)
       : 0
 
+    // Optional deposit-due date (direct bookings). Blank = due at booking (null).
+    const depositDueRaw = String(formData.get('depositDueDays') || '').trim()
+    const depositDueParsed = Number(depositDueRaw)
+    const depositDueDays =
+      depositDueRaw === '' || !Number.isFinite(depositDueParsed)
+        ? null
+        : Math.min(Math.max(Math.trunc(depositDueParsed), 0), 365)
+
     const depositValid =
       Number.isFinite(depositValue) &&
       depositValue > 0 &&
@@ -235,6 +229,7 @@ export async function updateHostListing(formData: FormData) {
         p_deposit_type: depositType,
         p_deposit_value: depositValue,
         p_balance_due_days: balanceDueDays,
+        p_deposit_due_days: depositDueDays,
       })
 
       if (depositError) {
@@ -441,6 +436,12 @@ export async function updateListingDepositSettings(
   const depositType = String(formData.get('depositType') || 'percent')
   const depositValue = Number(formData.get('depositValue') || '')
   const balanceDueDays = Number(formData.get('balanceDueDays') || '0')
+  const depositDueRaw = String(formData.get('depositDueDays') || '').trim()
+  const depositDueParsed = Number(depositDueRaw)
+  const depositDueDays =
+    depositDueRaw === '' || !Number.isFinite(depositDueParsed)
+      ? null
+      : Math.min(Math.max(Math.trunc(depositDueParsed), 0), 365)
 
   if (!listingId) {
     return { status: 'error', message: 'Missing listing.' }
@@ -464,6 +465,7 @@ export async function updateListingDepositSettings(
     p_deposit_type: depositType,
     p_deposit_value: depositValue,
     p_balance_due_days: balanceDueDays,
+    p_deposit_due_days: depositDueDays,
   })
 
   if (error) {

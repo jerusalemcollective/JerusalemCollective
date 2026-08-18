@@ -6,6 +6,7 @@ type DepositFieldsProps = {
   depositType: string
   depositValue: number
   balanceDueDays: number
+  depositDueDays: number | null
   currency: string
 }
 
@@ -19,6 +20,7 @@ export function DepositFields({
   depositType,
   depositValue,
   balanceDueDays,
+  depositDueDays,
   currency,
 }: DepositFieldsProps) {
   const [type, setType] = useState(depositType === 'fixed' ? 'fixed' : 'percent')
@@ -59,17 +61,31 @@ export function DepositFields({
         </label>
       </div>
 
-      <label className="mt-4 block">
-        <span className="text-sm font-semibold text-stone-800">Balance due before check-in (days)</span>
-        <input
-          name="balanceDueDays"
-          type="number"
-          min="0"
-          max="365"
-          defaultValue={balanceDueDays}
-          className={inputClass}
-        />
-      </label>
+      <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <label className="block">
+          <span className="text-sm font-semibold text-stone-800">Deposit due before check-in (days)</span>
+          <input
+            name="depositDueDays"
+            type="number"
+            min="0"
+            max="365"
+            placeholder="At booking"
+            defaultValue={depositDueDays ?? ''}
+            className={inputClass}
+          />
+        </label>
+        <label className="block">
+          <span className="text-sm font-semibold text-stone-800">Balance due before check-in (days)</span>
+          <input
+            name="balanceDueDays"
+            type="number"
+            min="0"
+            max="365"
+            defaultValue={balanceDueDays}
+            className={inputClass}
+          />
+        </label>
+      </div>
     </div>
   )
 }

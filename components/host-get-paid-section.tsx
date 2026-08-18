@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { StripeConnectCard } from '@/components/stripe-connect-card'
 import { PayoutAccountFields } from '@/components/payout-account-fields'
-import { DirectPaymentScheduleFields } from '@/components/direct-payment-schedule-fields'
 import { type PayoutDetails } from '@/lib/direct-payment'
 
 const CURRENCIES = ['USD', 'GBP', 'EUR', 'ILS']
@@ -25,7 +24,6 @@ export function HostGetPaidSection({
   stripe,
   payoutDefault,
   legacyMethod,
-  scheduleDefault,
 }: {
   payoutCurrenciesDefault: string[]
   initialCurrency: string
@@ -36,7 +34,6 @@ export function HostGetPaidSection({
   stripe: { chargesEnabled: boolean; payoutsEnabled: boolean; hasAccount: boolean }
   payoutDefault: PayoutDetails | null
   legacyMethod?: string | null
-  scheduleDefault: string | null | undefined
 }) {
   const [accepted, setAccepted] = useState<string[]>(
     payoutCurrenciesDefault.filter((c) => CURRENCIES.includes(c)),
@@ -177,13 +174,6 @@ export function HostGetPaidSection({
             </div>
           </div>
           <input type="hidden" name="payoutMethod" value={payoutMethod} />
-        </div>
-      </div>
-
-      <div className="rounded-3xl bg-white p-6 shadow-sm">
-        <h2 className="font-display text-xl font-bold text-stone-950">Payment schedule</h2>
-        <div className="mt-4">
-          <DirectPaymentScheduleFields defaultValue={scheduleDefault} currency={currency} />
         </div>
       </div>
     </div>

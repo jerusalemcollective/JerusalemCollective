@@ -20,6 +20,12 @@ const bookingRowSchema = z.object({
       id: z.string(),
       title: z.string(),
       area: z.string().nullable(),
+      deposit_type: z.string().nullable(),
+      deposit_value: z.coerce.number().nullable(),
+      balance_due_days_before_checkin: z.coerce.number().nullable(),
+      deposit_due_days_before_checkin: z.coerce.number().nullable(),
+      price_usd: z.coerce.number().nullable(),
+      price_ils: z.coerce.number().nullable(),
     })
     .nullable()
     .optional(),
@@ -49,7 +55,9 @@ export default async function BookingsPage({
 
   const { data } = await supabase
     .from('bookings')
-    .select('id, check_in, check_out, status, listings(id, title, area)')
+    .select(
+      'id, check_in, check_out, status, listings(id, title, area, deposit_type, deposit_value, balance_due_days_before_checkin, deposit_due_days_before_checkin, price_usd, price_ils)',
+    )
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
@@ -274,10 +282,16 @@ export default async function BookingsPage({
                       </svg>
                       Add to calendar
                     </a>
-                    {status === 'confirmed' && sched && sched.accepts_direct && Boolean(sched.instructions || sched.payout_details) && (
+                    {status === 'confirmed' && sched && sched.accepts_direct && (
                       <DirectPaymentScheduleSummary
-                        instructions={sched.instructions}
+                        depositType={booking.listings?.deposit_type ?? null}
+                        depositValue={booking.listings?.deposit_value ?? null}
+                        balanceDueDays={booking.listings?.balance_due_days_before_checkin ?? null}
+                        depositDueDays={booking.listings?.deposit_due_days_before_checkin ?? null}
+                        nightlyUsd={booking.listings?.price_usd ?? null}
+                        nightlyIls={booking.listings?.price_ils ?? null}
                         checkIn={booking.check_in}
+                        checkOut={booking.check_out}
                         payout={parsePayout(sched.payout_details)}
                       />
                     )}

@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { formatPayoutRows, resolveHostPayout } from '@/lib/direct-payment'
 import { oneOrNull } from '@/lib/utils/one-or-null'
+import { computeDepositPreview } from '@/lib/utils/deposit'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.jlmcollective.co'
 
@@ -436,6 +437,10 @@ type BookingConfirmListingRow = {
   check_in_instructions: string | null
   price_usd: number | null
   price_ils: number | null
+  deposit_type: string | null
+  deposit_value: number | null
+  balance_due_days_before_checkin: number | null
+  deposit_due_days_before_checkin: number | null
 }
 
 type PaymentProfileEmailRow = {
@@ -458,6 +463,15 @@ function minusDaysIso(iso: string, days: number): string {
   const date = new Date(`${iso}T12:00:00`)
   date.setDate(date.getDate() - days)
   return date.toISOString().slice(0, 10)
+}
+
+// YYYY-MM-DD from a Date's LOCAL components (computeDepositPreview returns
+// local-midnight dates; toISOString would shift a day for UTC+ timezones).
+function isoDateLocal(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 
 function moneyLabel(currency: string, amount: number): string {
@@ -487,7 +501,9 @@ export async function sendGuestBookingConfirmedEmail({
     const [{ data: listing }, { data: profile }, { data: paymentProfile }] = await Promise.all([
       supabase
         .from('listings')
-        .select('id, title, area, check_in_instructions, price_usd, price_ils')
+        .select(
+          'id, title, area, check_in_instructions, price_usd, price_ils, deposit_type, deposit_value, balance_due_days_before_checkin, deposit_due_days_before_checkin',
+        )
         .eq('id', request.listing_id)
         .maybeSingle<BookingConfirmListingRow>(),
       supabase
@@ -521,63 +537,49 @@ export async function sendGuestBookingConfirmedEmail({
     if (listing?.area) detailRows.push(['Area', listing.area])
 
     let paymentHtml = ''
-    if (
-      paymentProfile?.accepts_direct_payment &&
-      (paymentProfile.direct_payment_instructions || paymentProfile.payout_details)
-    ) {
-      let parsed: {
-        depositAmount?: number
-        depositCurrency?: string
-        depositDueDays?: number
-        balanceDueDays?: number
-        method?: string
-        v?: number
-      } | null = null
-      if (paymentProfile.direct_payment_instructions) {
-        try {
-          const candidate = JSON.parse(paymentProfile.direct_payment_instructions)
-          if (candidate && typeof candidate === 'object' && candidate.v === 1) parsed = candidate
-        } catch {
-          parsed = null
-        }
-      }
-
+    if (paymentProfile?.accepts_direct_payment) {
       const payRows: [string, string][] = []
-      if (parsed) {
-        const currency = parsed.depositCurrency || paymentProfile.preferred_currency || 'USD'
-        if (typeof parsed.depositAmount === 'number') {
-          const due =
-            request.check_in && typeof parsed.depositDueDays === 'number'
-              ? `due by ${formatEmailDate(minusDaysIso(request.check_in, parsed.depositDueDays))}`
-              : 'due when you book'
-          payRows.push(['Deposit', `${moneyLabel(currency, parsed.depositAmount)} — ${due}`])
+
+      // The deposit/balance schedule comes from the LISTING (deposit_type/value +
+      // due-days) — the same source JLM bookings use — so a booking's terms don't
+      // change with the payment route. Total = nights × the listing's nightly rate
+      // in its booking currency (USD if priced in USD, else ILS), and the split is
+      // computed by computeDepositPreview (mirrors create_pending_booking_payment).
+      const nightly =
+        listing?.price_usd != null
+          ? Number(listing.price_usd)
+          : listing?.price_ils != null
+            ? Number(listing.price_ils)
+            : null
+      const currency = listing?.price_usd != null ? 'USD' : 'ILS'
+      const nights =
+        request.check_in && request.check_out
+          ? Math.round(
+              (new Date(`${request.check_out}T12:00:00`).getTime() -
+                new Date(`${request.check_in}T12:00:00`).getTime()) /
+                (1000 * 60 * 60 * 24),
+            )
+          : 0
+
+      if (listing && nightly != null && nights > 0 && request.check_in) {
+        const preview = computeDepositPreview({
+          bookingTotal: nightly * nights,
+          depositType: listing.deposit_type || 'percent',
+          depositValue: Number(listing.deposit_value ?? 10),
+          balanceDueDaysBeforeCheckin: Number(listing.balance_due_days_before_checkin ?? 0),
+          checkIn: new Date(`${request.check_in}T12:00:00`),
+        })
+        const depositDue =
+          listing.deposit_due_days_before_checkin != null
+            ? `due by ${formatEmailDate(minusDaysIso(request.check_in, Number(listing.deposit_due_days_before_checkin)))}`
+            : 'due to secure your booking'
+        payRows.push(['Deposit', `${moneyLabel(currency, preview.depositAmount)} — ${depositDue}`])
+        if (preview.balanceAmount > 0) {
+          payRows.push([
+            'Balance',
+            `${moneyLabel(currency, preview.balanceAmount)} — due by ${formatEmailDate(isoDateLocal(preview.balanceDueDate))}`,
+          ])
         }
-        // Balance = booking total − deposit, where total = nights × the listing's
-        // nightly rate (round(nightly × nights, 2), matching the JLM RPC in
-        // migration 071). Only quote a figure when the listing is actually priced
-        // in the deposit currency; otherwise say "the remaining balance" rather
-        // than risk a number in the wrong currency (listings store USD/ILS only).
-        const nights =
-          request.check_in && request.check_out
-            ? Math.round(
-                (new Date(`${request.check_out}T12:00:00`).getTime() -
-                  new Date(`${request.check_in}T12:00:00`).getTime()) /
-                  (1000 * 60 * 60 * 24),
-              )
-            : 0
-        const nightly =
-          currency === 'USD' ? listing?.price_usd : currency === 'ILS' ? listing?.price_ils : null
-        let balanceText = 'the remaining balance'
-        if (typeof parsed.depositAmount === 'number' && typeof nightly === 'number' && nights > 0) {
-          const total = Math.round(nightly * nights * 100) / 100
-          const balance = Math.max(Math.round((total - parsed.depositAmount) * 100) / 100, 0)
-          balanceText = moneyLabel(currency, balance)
-        }
-        const balanceDue =
-          request.check_in && typeof parsed.balanceDueDays === 'number'
-            ? ` — due by ${formatEmailDate(minusDaysIso(request.check_in, parsed.balanceDueDays))}`
-            : ''
-        payRows.push(['Balance', `${balanceText}${balanceDue}`])
       }
 
       // Payout account: host-level column first, legacy nested JSON as a fallback.
@@ -589,11 +591,7 @@ export async function sendGuestBookingConfirmedEmail({
       const howToPayHtml =
         payoutRows.length > 0
           ? `<p style="margin:14px 0 2px"><strong>How to pay the host</strong></p>${detailTableHtml(payoutRows)}`
-          : parsed && typeof parsed.method === 'string' && parsed.method
-            ? `<p style="margin:8px 0 0"><strong>How to pay:</strong> ${escapeHtml(parsed.method)}</p>`
-            : !parsed && paymentProfile.direct_payment_instructions
-              ? `<p style="margin:0;white-space:pre-line">${escapeHtml(paymentProfile.direct_payment_instructions)}</p>`
-              : ''
+          : ''
 
       if (payRows.length > 0 || howToPayHtml) {
         const scheduleHtml =
@@ -634,57 +632,6 @@ export async function sendGuestBookingConfirmedEmail({
     })
   } catch (error) {
     console.error('Unable to send booking confirmed email', error)
-    return false
-  }
-}
-
-// Confirmation for a host-entered manual/off-platform booking. The guest has no
-// account, so this takes the raw email the host typed and the booking details
-// directly (no requestId / guest_id lookup) and sends a plain confirmation.
-export async function sendManualBookingGuestEmail({
-  to,
-  guestName,
-  listingTitle,
-  area,
-  checkIn,
-  checkOut,
-  guests,
-}: {
-  to: string
-  guestName: string | null
-  listingTitle: string
-  area: string | null
-  checkIn: string
-  checkOut: string
-  guests: number | null
-}) {
-  try {
-    const areaSuffix = area ? ` in ${area}` : ''
-    const detailRows: [string, string][] = [
-      ['Dates', `${formatEmailDate(checkIn)} to ${formatEmailDate(checkOut)}`],
-      ['Guests', String(guests || 1)],
-    ]
-    if (area) detailRows.push(['Area', area])
-
-    const html = `
-    <div style="font-family:Arial,sans-serif;line-height:1.6;color:#292524">
-      <p>Hi ${escapeHtml(guestName || 'there')},</p>
-      <p>Your booking at <strong>${escapeHtml(listingTitle)}</strong>${escapeHtml(areaSuffix)} is confirmed.</p>
-      ${detailTableHtml(detailRows)}
-      <p style="margin-top:16px">JLM Collective</p>
-      <p style="color:#a8a29e;font-size:11px;margin:8px 0 0;line-height:1.5">
-        JLM Collective acts as letting agent for Jerusalem property owners. Bookings are between guests and hosts. JLM Collective is not a party to any booking agreement.
-      </p>
-    </div>
-    `
-
-    return await sendEmail({
-      to,
-      subject: `Your booking at ${listingTitle} is confirmed`,
-      html,
-    })
-  } catch (error) {
-    console.error('Unable to send manual booking guest email', error)
     return false
   }
 }
