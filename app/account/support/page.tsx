@@ -29,6 +29,8 @@ const accountSupportCaseSchema = z.object({
   approved_refund_amount: z.number().nullable().transform((value) => value ?? 0),
   currency: z.string().nullable(),
   created_at: z.string().nullable().transform((value) => value ?? ''),
+  guest_response: z.string().nullable(),
+  host_response: z.string().nullable(),
   listings: z
     .object({
       title: z.string(),
@@ -59,7 +61,7 @@ export default async function AccountSupportPage() {
       .order('created_at', { ascending: false }),
     supabase
       .from('support_cases')
-      .select('id, case_type, status, reason, requested_amount, approved_refund_amount, currency, created_at, listings(title)')
+      .select('id, case_type, status, reason, requested_amount, approved_refund_amount, currency, created_at, guest_response, host_response, listings(title)')
       .eq('guest_id', user.id)
       .order('created_at', { ascending: false }),
   ])

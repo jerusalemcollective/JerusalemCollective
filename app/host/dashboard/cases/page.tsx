@@ -3,6 +3,7 @@ import { oneOrNull } from '@/lib/utils/one-or-null'
 import { ContactJlmButton } from '@/components/contact-jlm-button'
 import { HostSupportCaseForm, type HostCaseBooking } from '@/components/host-support-case-form'
 import { getReportWindowDays, reportWindowCutoffISO } from '@/lib/report-window'
+import { CaseResponseBox } from '@/components/case-response-box'
 
 type HostSupportCase = {
   id: string
@@ -13,6 +14,8 @@ type HostSupportCase = {
   requested_amount: number | null
   approved_refund_amount: number
   currency: string | null
+  guest_response: string | null
+  host_response: string | null
   listings?: {
     title: string
   } | null
@@ -54,6 +57,8 @@ export default async function HostSupportPage() {
         requested_amount,
         approved_refund_amount,
         currency,
+        guest_response,
+        host_response,
         listings(title),
         guest:profiles!support_cases_guest_id_fkey(full_name)
       `)
@@ -78,6 +83,8 @@ export default async function HostSupportPage() {
     requested_amount: supportCase.requested_amount,
     approved_refund_amount: supportCase.approved_refund_amount,
     currency: supportCase.currency,
+    guest_response: supportCase.guest_response,
+    host_response: supportCase.host_response,
     listings: oneOrNull(supportCase.listings),
     guest: oneOrNull(supportCase.guest),
   }))
@@ -132,6 +139,12 @@ export default async function HostSupportPage() {
                           : `${supportCase.currency || ''} ${(supportCase.requested_amount || 0).toLocaleString()} requested`}
                       </p>
                     )}
+                    <CaseResponseBox
+                      caseId={supportCase.id}
+                      ownResponse={supportCase.host_response}
+                      counterpartyResponse={supportCase.guest_response}
+                      counterpartyLabel="Guest's response"
+                    />
                   </article>
                 ))}
               </div>

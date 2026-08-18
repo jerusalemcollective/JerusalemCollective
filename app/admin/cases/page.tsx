@@ -55,6 +55,8 @@ export default async function AdminCasesPage({
       resolution_notes,
       created_at,
       resolved_at,
+      guest_response,
+      host_response,
       bookings(id, stripe_checkout_session_id),
       listings(id, title),
       guest:profiles!support_cases_guest_id_fkey(full_name),

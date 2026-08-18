@@ -18,6 +18,8 @@ export type SupportCase = {
   resolution_notes: string | null
   created_at: string
   resolved_at: string | null
+  guest_response: string | null
+  host_response: string | null
   bookings?: {
     id: string
     stripe_checkout_session_id: string | null
@@ -129,6 +131,22 @@ export function CasesList({ cases }: CasesListProps) {
                         : 'None requested'}
                     </p>
                   </div>
+                  {(supportCase.guest_response || supportCase.host_response) && (
+                    <div className="mt-3 space-y-2">
+                      {supportCase.guest_response && (
+                        <div className="rounded-xl bg-[#F8F5F2] p-3">
+                          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500">Guest&rsquo;s response</p>
+                          <p className="mt-1 whitespace-pre-line text-sm text-stone-700">{supportCase.guest_response}</p>
+                        </div>
+                      )}
+                      {supportCase.host_response && (
+                        <div className="rounded-xl bg-[#F8F5F2] p-3">
+                          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500">Host&rsquo;s response</p>
+                          <p className="mt-1 whitespace-pre-line text-sm text-stone-700">{supportCase.host_response}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 

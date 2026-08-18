@@ -4,6 +4,7 @@ import { useMemo, useState, type FormEvent } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { StatusBadge } from '@/components/status-badge'
+import { CaseResponseBox } from '@/components/case-response-box'
 
 export type SupportBooking = {
   id: string
@@ -25,6 +26,8 @@ export type AccountSupportCase = {
   approved_refund_amount: number
   currency: string | null
   created_at: string
+  guest_response: string | null
+  host_response: string | null
   listings?: {
     title: string
   } | null
@@ -65,6 +68,8 @@ function normalizeSupportCase(supportCase: AccountSupportCaseRow): AccountSuppor
     approved_refund_amount: supportCase.approved_refund_amount,
     currency: supportCase.currency,
     created_at: supportCase.created_at,
+    guest_response: supportCase.guest_response,
+    host_response: supportCase.host_response,
     listings: Array.isArray(supportCase.listings)
       ? supportCase.listings[0] || null
       : supportCase.listings || null,
@@ -120,7 +125,7 @@ export function SupportCaseClientForm({
           requested_amount: requestedAmount ? Number(requestedAmount) : null,
           currency: requestedAmount ? currency : null,
         })
-        .select('id, case_type, status, reason, requested_amount, approved_refund_amount, currency, created_at, listings(title)')
+        .select('id, case_type, status, reason, requested_amount, approved_refund_amount, currency, created_at, guest_response, host_response, listings(title)')
         .single()
 
       if (error) {
@@ -276,6 +281,12 @@ export function SupportCaseClientForm({
                 {supportCase.listings?.title || 'Stay'} | opened{' '}
                 {new Date(supportCase.created_at).toLocaleDateString('en-GB')}
               </p>
+              <CaseResponseBox
+                caseId={supportCase.id}
+                ownResponse={supportCase.guest_response}
+                counterpartyResponse={supportCase.host_response}
+                counterpartyLabel="Host's response"
+              />
             </article>
           ))}
           {cases.length === 0 && (
