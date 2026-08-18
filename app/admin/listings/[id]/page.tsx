@@ -8,6 +8,7 @@ import { ListingQualityScore } from '@/components/listing-quality-score'
 import { calculateListingScore } from '@/lib/marketplace-rules'
 import { AmenitySelector } from '@/components/amenity-selector'
 import { oneOrNull } from '@/lib/utils/one-or-null'
+import { createServiceRoleClient } from '@/lib/supabase/service'
 
 type ListingAdminStatus = 'needs_work' | 'ready_for_launch' | 'live'
 
@@ -37,6 +38,24 @@ type AdminListingDetail = {
 
 type AdminListingDetailRow = Omit<AdminListingDetail, 'hosts'> & {
   hosts?: AdminListingDetail['hosts'] | NonNullable<AdminListingDetail['hosts']>[] | null
+}
+
+type MessageThreadRow = {
+  id: string
+  conversation_id: string
+  sender_id: string | null
+  content: string
+  created_at: string
+}
+
+type ListingReviewRow = {
+  id: string
+  reviewer_name: string | null
+  rating: number | null
+  title: string | null
+  content: string | null
+  is_approved: boolean
+  created_at: string
 }
 
 export default async function AdminListingDetailPage({
@@ -70,6 +89,63 @@ export default async function AdminListingDetailPage({
     ...listingRow,
     hosts: oneOrNull(listingRow.hosts),
   }
+
+  // Reviews for this listing — admins can read all (incl. hidden) via RLS.
+  const { data: reviews } = await supabase
+    .from('reviews')
+    .select('id, reviewer_name, rating, title, content, is_approved, created_at')
+    .eq('listing_id', id)
+    .order('created_at', { ascending: false })
+
+  // Host <-> guest message threads. conversations/messages are RLS-scoped to the
+  // participants, so read them with the service role — this page is admin-gated
+  // (requireAdminPermission('listings')), so an admin overseeing a listing is
+  // authorised to see its communication.
+  const serviceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const svc = serviceUrl && serviceKey ? createServiceRoleClient(serviceUrl, serviceKey) : null
+
+  const messagesByConvo = new Map<string, MessageThreadRow[]>()
+  const nameById = new Map<string, string>()
+  let hasThreads = false
+  if (svc) {
+    const { data: convoData } = await svc
+      .from('conversations')
+      .select('id, created_at')
+      .eq('listing_id', id)
+      .order('created_at', { ascending: false })
+    const convoIds = (convoData || []).map((c: { id: string }) => c.id)
+    if (convoIds.length) {
+      const { data: msgData } = await svc
+        .from('messages')
+        .select('id, conversation_id, sender_id, content, created_at')
+        .in('conversation_id', convoIds)
+        .order('created_at', { ascending: true })
+      for (const message of (msgData || []) as MessageThreadRow[]) {
+        const list = messagesByConvo.get(message.conversation_id) || []
+        list.push(message)
+        messagesByConvo.set(message.conversation_id, list)
+        hasThreads = true
+      }
+      const senderIds = [
+        ...new Set(
+          ((msgData || []) as MessageThreadRow[])
+            .map((message) => message.sender_id)
+            .filter((value): value is string => Boolean(value)),
+        ),
+      ]
+      if (senderIds.length) {
+        const { data: peopleData } = await svc
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', senderIds)
+        for (const person of (peopleData || []) as { id: string; full_name: string | null }[]) {
+          nameById.set(person.id, person.full_name || 'Unknown')
+        }
+      }
+    }
+  }
+
   const qualityScore = calculateListingScore({
     photo_count: photos?.length || 0,
     description: listing.description,
@@ -240,6 +316,65 @@ export default async function AdminListingDetailPage({
               ))}
               {!messages?.length && (
                 <p className="text-sm text-stone-500">No messages sent for this listing yet.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <h2 className="text-lg font-bold text-stone-950">Reviews</h2>
+            <div className="mt-4 space-y-3">
+              {((reviews || []) as ListingReviewRow[]).map((review) => (
+                <article key={review.id} className="rounded-2xl bg-[#F8F5F2] p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-bold text-stone-900">{review.reviewer_name || 'Guest'}</p>
+                    <span className="text-sm text-[#c76f55]" aria-label={`${review.rating ?? 0} out of 5`}>
+                      {'★'.repeat(Math.round(review.rating ?? 0))}
+                      <span className="text-stone-300">
+                        {'★'.repeat(Math.max(0, 5 - Math.round(review.rating ?? 0)))}
+                      </span>
+                    </span>
+                  </div>
+                  {review.title && <p className="mt-1 text-sm font-semibold text-stone-800">{review.title}</p>}
+                  {review.content && (
+                    <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-stone-700">{review.content}</p>
+                  )}
+                  <p className="mt-2 text-xs text-stone-500">
+                    {new Date(review.created_at).toLocaleDateString('en-GB')}
+                    {!review.is_approved && ' · Hidden from public'}
+                  </p>
+                </article>
+              ))}
+              {!((reviews || []) as ListingReviewRow[]).length && (
+                <p className="text-sm text-stone-500">No reviews yet.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <h2 className="text-lg font-bold text-stone-950">Guest &amp; host messages</h2>
+            <div className="mt-4 space-y-4">
+              {[...messagesByConvo.entries()].map(([conversationId, thread]) => (
+                <div key={conversationId} className="rounded-2xl border border-stone-200 p-4">
+                  <div className="space-y-3">
+                    {thread.map((message) => (
+                      <div key={message.id}>
+                        <p className="text-xs font-semibold text-stone-500">
+                          <span className="text-stone-900">
+                            {message.sender_id ? nameById.get(message.sender_id) || 'Unknown' : 'Unknown'}
+                          </span>
+                          {' · '}
+                          {new Date(message.created_at).toLocaleString('en-GB')}
+                        </p>
+                        <p className="mt-0.5 whitespace-pre-wrap text-sm leading-6 text-stone-800">
+                          {message.content}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {!hasThreads && (
+                <p className="text-sm text-stone-500">No guest messages for this listing yet.</p>
               )}
             </div>
           </div>
