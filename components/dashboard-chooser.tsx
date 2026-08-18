@@ -13,9 +13,10 @@ export function DashboardChooser({
   isHost?: boolean
   isAdmin?: boolean
 }) {
+  const cardCount = 1 + (isHost ? 1 : 0) + (isAdmin ? 1 : 0)
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-[#F8F5F2] p-6">
-      <div className="w-full max-w-3xl">
+      <div className={`w-full ${cardCount >= 3 ? 'max-w-5xl' : 'max-w-3xl'}`}>
         <div className="mb-8 text-center">
           <Image
             src="/logos/JLM_Collective_Primary_Horizontal_Terracotta_UI.webp"
@@ -31,7 +32,7 @@ export function DashboardChooser({
           <p className="mt-3 text-stone-600">Where would you like to go?</p>
         </div>
 
-        <div className="flex flex-wrap justify-center gap-4">
+        <div className={`grid gap-4 ${cardCount >= 3 ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2'}`}>
           <DestinationCard
             href="/account"
             title="Guest dashboard"
@@ -89,7 +90,7 @@ function DestinationCard({
   return (
     <Link
       href={href}
-      className="group flex w-full flex-col items-start rounded-3xl bg-white p-8 text-left shadow-sm ring-1 ring-stone-200 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-[#f0c2b3] sm:w-[calc(50%-0.5rem)]"
+      className="group flex flex-col items-start rounded-3xl bg-white p-8 text-left shadow-sm ring-1 ring-stone-200 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-[#f0c2b3]"
     >
       <span className={`flex h-12 w-12 items-center justify-center rounded-2xl ${iconClass}`}>
         {icon}
