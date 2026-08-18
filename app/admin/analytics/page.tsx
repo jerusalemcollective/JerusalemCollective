@@ -22,19 +22,7 @@ type ListingTitle = {
 
 export default async function AdminAnalyticsPage() {
   const { supabase } = await requireAdminPermission('analytics')
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
-  const [
-    { count: views },
-    { count: saves },
-    { count: enquiries },
-    { count: bookingRequests },
-    { data: neighborhoods },
-    { data: popularity },
-  ] = await Promise.all([
-    supabase.from('listing_engagement_events').select('*', { count: 'exact', head: true }).eq('event_type', 'view').gte('created_at', thirtyDaysAgo),
-    supabase.from('listing_engagement_events').select('*', { count: 'exact', head: true }).eq('event_type', 'save').gte('created_at', thirtyDaysAgo),
-    supabase.from('listing_engagement_events').select('*', { count: 'exact', head: true }).eq('event_type', 'enquiry').gte('created_at', thirtyDaysAgo),
-    supabase.from('listing_engagement_events').select('*', { count: 'exact', head: true }).eq('event_type', 'booking_request').gte('created_at', thirtyDaysAgo),
+  const [{ data: neighborhoods }, { data: popularity }] = await Promise.all([
     supabase.rpc('popular_neighborhoods', { result_limit: 8, lookback_days: 30 }),
     supabase.rpc('listing_popularity_summary', { result_limit: 8, lookback_days: 30 }),
   ])
@@ -68,14 +56,7 @@ export default async function AdminAnalyticsPage() {
         <h2 className="text-3xl font-bold tracking-tight text-stone-950">Analytics</h2>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard label="Listing views" value={views || 0} />
-        <SummaryCard label="Saves" value={saves || 0} />
-        <SummaryCard label="Enquiries" value={enquiries || 0} />
-        <SummaryCard label="Booking requests" value={bookingRequests || 0} />
-      </div>
-
-      <div className="mt-8 grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
         <section className="overflow-hidden rounded-3xl bg-white shadow-sm">
           <div className="border-b border-stone-100 px-6 py-4">
             <h3 className="text-lg font-bold text-stone-950">Top searched neighbourhoods</h3>
@@ -136,15 +117,6 @@ export default async function AdminAnalyticsPage() {
           </div>
         </section>
       </div>
-    </div>
-  )
-}
-
-function SummaryCard({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-3xl bg-white p-5 shadow-sm">
-      <p className="text-sm font-semibold text-stone-500">{label}</p>
-      <p className="mt-2 text-3xl font-bold text-stone-950">{value}</p>
     </div>
   )
 }
