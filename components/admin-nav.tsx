@@ -9,8 +9,7 @@ const adminLinks = [
   { href: '/admin/applications', label: 'Applications', permission: 'applications' },
   { href: '/admin/listings', label: 'Listings', permission: 'listings' },
   { href: '/admin/cases', label: 'Disputes & refunds', permission: 'cases' },
-  { href: '/admin/guests', label: 'Guests', permission: 'guests' },
-  { href: '/admin/hosts', label: 'Hosts', permission: 'hosts' },
+  { href: '/admin/users', label: 'Users', permission: 'users' },
   { href: '/admin/admins', label: 'Admins', permission: 'admins' },
   { href: '/admin/audit', label: 'Audit log', permission: 'admins' },
 ] satisfies { href: string; label: string; permission: AdminPermission }[]

@@ -8,6 +8,7 @@ export type AdminPermission =
   | 'listings'
   | 'hosts'
   | 'guests'
+  | 'users'
   | 'reviews'
   | 'analytics'
   | 'cases'
@@ -39,16 +40,17 @@ const ROLE_PERMISSIONS: Record<AdminRole, AdminPermission[]> = {
     'listings',
     'hosts',
     'guests',
+    'users',
     'reviews',
     'analytics',
     'cases',
     'messages',
     'admins',
   ],
-  operations: ['overview', 'applications', 'listings', 'hosts', 'guests', 'reviews', 'analytics', 'messages'],
-  support: ['overview', 'hosts', 'guests', 'cases', 'messages'],
+  operations: ['overview', 'applications', 'listings', 'hosts', 'guests', 'users', 'reviews', 'analytics', 'messages'],
+  support: ['overview', 'hosts', 'guests', 'users', 'cases', 'messages'],
   content: ['overview', 'applications', 'listings', 'reviews', 'analytics'],
-  analyst: ['overview', 'analytics', 'hosts', 'guests'],
+  analyst: ['overview', 'analytics', 'hosts', 'guests', 'users'],
   none: [],
 }
 
