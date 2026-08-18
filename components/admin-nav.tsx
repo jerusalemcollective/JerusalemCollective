@@ -7,13 +7,10 @@ import { canAdminRole, type AdminPermission, type AdminRole } from '@/lib/admin-
 const adminLinks = [
   { href: '/admin', label: 'Overview', permission: 'overview' },
   { href: '/admin/applications', label: 'Applications', permission: 'applications' },
-  { href: '/admin/enquiries', label: 'Enquiries', permission: 'messages' },
   { href: '/admin/listings', label: 'Listings', permission: 'listings' },
-  { href: '/admin/analytics', label: 'Analytics', permission: 'analytics' },
   { href: '/admin/cases', label: 'Disputes & refunds', permission: 'cases' },
   { href: '/admin/guests', label: 'Guests', permission: 'guests' },
   { href: '/admin/hosts', label: 'Hosts', permission: 'hosts' },
-  { href: '/admin/reviews', label: 'Reviews', permission: 'reviews' },
   { href: '/admin/admins', label: 'Admins', permission: 'admins' },
   { href: '/admin/audit', label: 'Audit log', permission: 'admins' },
 ] satisfies { href: string; label: string; permission: AdminPermission }[]
@@ -23,7 +20,6 @@ export function AdminNav({ adminRole }: { adminRole: AdminRole }) {
   const visibleLinks = adminLinks.filter((link) => canAdminRole(adminRole, link.permission))
   const ownerLinks = adminRole === 'owner'
     ? [
-        { href: '/admin/readiness', label: 'Readiness' },
         { href: '/admin/payments', label: 'Payments' },
         { href: '/admin/settings', label: 'Settings' },
       ]
