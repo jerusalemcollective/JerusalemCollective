@@ -66,12 +66,17 @@ export async function updateHostPaymentPreferences(formData: FormData) {
   // The deposit/balance schedule now lives per-listing (listings.deposit_* columns),
   // edited in the listing editor. This page no longer edits the legacy host-level
   // schedule, so preserve whatever is stored rather than wiping it on save.
-  const { data: existingProfile } = await supabase
+  const { data: existingProfile, error: readError } = await supabase
     .from('host_payment_profiles')
     .select('direct_payment_instructions')
     .in('host_id', hostIds)
     .limit(1)
     .maybeSingle<{ direct_payment_instructions: string | null }>()
+  // If the read fails (transient error), a blank would wipe the stored schedule via
+  // the RPC. Bail out instead so a save never silently erases it.
+  if (readError) {
+    redirect('/host/dashboard/payments?saved=error')
+  }
   const instructions = existingProfile?.direct_payment_instructions ?? ''
 
   const { error } = await supabase.rpc('update_host_payment_preferences', {

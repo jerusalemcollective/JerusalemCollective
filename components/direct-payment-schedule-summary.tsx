@@ -79,10 +79,13 @@ export function DirectPaymentScheduleSummary({
     balanceDueLabel = formatDateDisplay(isoLocal(preview.balanceDueDate))
   }
 
-  const depositDueLabel =
-    depositDueDays != null && checkIn
-      ? `due by ${formatDateDisplay(minusDays(checkIn, depositDueDays))}`
-      : 'due to secure your booking'
+  let depositDueLabel = 'due to secure your booking'
+  if (depositDueDays != null && checkIn) {
+    // Clamp to today so a just-confirmed booking never shows a past due date.
+    const rawDepositDue = minusDays(checkIn, depositDueDays)
+    const todayIso = isoLocal(new Date())
+    depositDueLabel = `due by ${formatDateDisplay(rawDepositDue < todayIso ? todayIso : rawDepositDue)}`
+  }
 
   if (deposit == null && payoutRows.length === 0) return null
 
