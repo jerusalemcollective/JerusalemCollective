@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/admin'
 import { UpdateCommissionForm } from '@/components/update-commission-form'
 import { ServicesVisibilityForm } from '@/components/services-visibility-form'
 import { PaymentRouteControlsForm } from '@/components/payment-route-controls-form'
+import { ReportWindowForm } from '@/components/report-window-form'
 
 type PlatformSetting = {
   key: string
@@ -36,10 +37,14 @@ export default async function AdminSettingsPage() {
   const directPaymentsSetting = platformSettings.find(
     (setting) => setting.key === 'direct_payments_enabled',
   )
+  const reportWindowSetting = platformSettings.find(
+    (setting) => setting.key === 'report_window_days',
+  )
   const currentCommission = commissionSetting?.value ?? '0'
   const servicesBarEnabled = servicesVisibilitySetting?.value !== 'false'
   const jlmPaymentsEnabled = jlmPaymentsSetting?.value === 'true'
   const directPaymentsEnabled = directPaymentsSetting?.value !== 'false'
+  const reportWindowDays = Number(reportWindowSetting?.value) || 14
 
   return (
     <div>
@@ -97,6 +102,16 @@ export default async function AdminSettingsPage() {
           jlmPaymentsEnabled={jlmPaymentsEnabled}
           directPaymentsEnabled={directPaymentsEnabled}
         />
+      </section>
+
+      <section className="mt-6 max-w-3xl rounded-3xl bg-white p-6 shadow-sm">
+        <h2 className="font-bold text-stone-950">Reporting window</h2>
+        <p className="mt-1 text-sm leading-6 text-stone-600">
+          How long after a stay ends a guest or host can still open a report about it. Currently{' '}
+          <strong>{reportWindowDays} days</strong> after checkout.
+        </p>
+
+        <ReportWindowForm days={reportWindowDays} />
       </section>
 
       <section className="mt-6 max-w-3xl rounded-3xl bg-stone-50 p-6">

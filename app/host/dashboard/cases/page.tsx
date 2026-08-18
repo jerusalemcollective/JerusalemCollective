@@ -2,6 +2,7 @@ import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { oneOrNull } from '@/lib/utils/one-or-null'
 import { ContactJlmButton } from '@/components/contact-jlm-button'
 import { HostSupportCaseForm, type HostCaseBooking } from '@/components/host-support-case-form'
+import { getReportWindowDays, reportWindowCutoffISO } from '@/lib/report-window'
 
 type HostSupportCase = {
   id: string
@@ -38,6 +39,9 @@ export default async function HostSupportPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
+  const reportWindowDays = await getReportWindowDays(supabase)
+  const reportCutoff = reportWindowCutoffISO(reportWindowDays)
+
   const [{ data: caseData }, { data: bookingData }] = await Promise.all([
     supabase
       .from('support_cases')
@@ -55,10 +59,12 @@ export default async function HostSupportPage() {
       `)
       .in('host_id', hostIds)
       .order('created_at', { ascending: false }),
+    // Only stays still inside the admin-set reporting window are reportable.
     supabase
       .from('bookings')
       .select('id, check_in, check_out, listings(title)')
       .in('host_id', hostIds)
+      .gte('check_out', reportCutoff)
       .order('check_in', { ascending: false })
       .limit(50),
   ])

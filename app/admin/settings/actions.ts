@@ -76,6 +76,35 @@ export async function updateServicesVisibilitySetting(formData: FormData) {
   revalidatePath('/services')
 }
 
+export async function updateReportWindowSetting(formData: FormData) {
+  const { supabase, adminRole } = await requireAdmin()
+
+  if (adminRole !== 'owner') {
+    return
+  }
+
+  const raw = Number(String(formData.get('reportWindowDays') || '').trim())
+  const days = Number.isFinite(raw) ? Math.min(365, Math.max(1, Math.round(raw))) : 14
+
+  const { error } = await supabase.from('platform_settings').upsert(
+    {
+      key: 'report_window_days',
+      value: String(days),
+      description: 'How many days after checkout a guest or host can still open a report about a stay.',
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'key' },
+  )
+
+  if (error) {
+    throw error
+  }
+
+  revalidatePath('/admin/settings')
+  revalidatePath('/account/support')
+  revalidatePath('/host/dashboard/cases')
+}
+
 export async function updatePaymentRouteSettings(formData: FormData) {
   const { supabase, adminRole } = await requireAdmin()
 

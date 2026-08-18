@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Breadcrumb } from '@/components/breadcrumb'
 import { SupportCaseClientForm } from '@/components/support-case-client-form'
 import { ContactJlmButton } from '@/components/contact-jlm-button'
+import { getReportWindowDays, reportWindowCutoffISO } from '@/lib/report-window'
 
 const supportBookingSchema = z.object({
   id: z.string(),
@@ -45,11 +46,16 @@ export default async function AccountSupportPage() {
     redirect('/login?redirect=/account/support')
   }
 
+  const reportWindowDays = await getReportWindowDays(supabase)
+  const reportCutoff = reportWindowCutoffISO(reportWindowDays)
+
   const [{ data: bookingRows }, { data: caseRows }] = await Promise.all([
+    // Only stays still inside the admin-set reporting window are reportable.
     supabase
       .from('bookings')
       .select('id, listing_id, host_id, check_in, check_out, listings(title)')
       .eq('user_id', user.id)
+      .gte('check_out', reportCutoff)
       .order('created_at', { ascending: false }),
     supabase
       .from('support_cases')
