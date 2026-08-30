@@ -718,13 +718,16 @@ export function ListingDetailClient({
               <>
                 <hr className="border-stone-100" />
                 <div className="py-3">
-                  <h2 className="mb-3 text-lg font-bold text-stone-900">Sleeping setup</h2>
-                  <div className="flex flex-wrap gap-2.5">
+                  <h2 className="mb-3 text-lg font-bold text-stone-900">Room by room</h2>
+                  <div className="flex snap-x snap-mandatory gap-3.5 overflow-x-auto pb-2">
                     {listing.sleeping_setup
                       .split('\n')
                       .map((line) => line.trim())
                       .filter(Boolean)
                       .map((line, index) => {
+                        const colon = line.indexOf(':')
+                        const name = colon >= 0 ? line.slice(0, colon).trim() : line
+                        const description = colon >= 0 ? line.slice(colon + 1).trim() : ''
                         const lower = line.toLowerCase()
                         const Icon =
                           lower.includes('single') || lower.includes('twin')
@@ -733,13 +736,16 @@ export function ListingDetailClient({
                               ? Sofa
                               : BedDouble
                         return (
-                          <span
+                          <div
                             key={index}
-                            className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-3.5 py-2 text-sm font-medium text-stone-700"
+                            className="w-48 shrink-0 snap-start rounded-2xl border border-stone-200 bg-white p-5 shadow-sm"
                           >
-                            <Icon className="h-4 w-4 shrink-0 text-[#c76f55]" />
-                            {line}
-                          </span>
+                            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#fff4ef] text-[#c76f55]">
+                              <Icon className="h-6 w-6" />
+                            </span>
+                            <p className="mt-4 font-semibold capitalize text-stone-900">{name}</p>
+                            {description && <p className="mt-1 text-sm text-[#b0806a]">{description}</p>}
+                          </div>
                         )
                       })}
                   </div>
