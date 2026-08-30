@@ -2173,8 +2173,8 @@ async function handleSubmit() {
                   title="Start with the basics"
                   description="Add a clear name and description for the stay."
                 >
-                  <div className="mb-6 rounded-3xl border border-stone-200 bg-[#fcfaf8] p-5">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="mb-6">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <p className="text-sm font-bold text-stone-950">AI listing assistant</p>
                       </div>
