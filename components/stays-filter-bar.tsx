@@ -432,7 +432,7 @@ export function StaysFilterBar() {
             aria-modal="true"
             aria-label="Select your dates"
             onClick={(event) => event.stopPropagation()}
-            className="flex max-h-[88vh] w-full max-w-[380px] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl"
+            className="flex max-h-[88vh] w-full max-w-[480px] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl"
           >
             <div className="flex items-start justify-between gap-3 border-b border-stone-100 px-4 py-3">
               <div className="min-w-0">
