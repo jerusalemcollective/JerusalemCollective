@@ -18,12 +18,23 @@ const hebrewDatePartsFormatter = new Intl.DateTimeFormat('en-u-ca-hebrew', {
   year: 'numeric',
 })
 
+// Intl's Hebrew month transliterations don't match the spellings commonly used
+// here (e.g. it emits "Heshvan" for what is usually written "Cheshvan"). Remap the
+// month names to the preferred spellings wherever a month is shown.
+const HEBREW_MONTH_SPELLING_FIXES: [RegExp, string][] = [
+  [/\bHeshvan\b/g, 'Cheshvan'],
+]
+
+function fixHebrewMonthSpelling(text: string) {
+  return HEBREW_MONTH_SPELLING_FIXES.reduce((acc, [pattern, replacement]) => acc.replace(pattern, replacement), text)
+}
+
 export function formatHebrewDay(date: Date) {
   return toHebrewDayLetters(Number(hebrewDayFormatter.format(date)))
 }
 
 export function formatHebrewShortDate(date: Date) {
-  return hebrewShortFormatter.format(date)
+  return fixHebrewMonthSpelling(hebrewShortFormatter.format(date))
 }
 
 export function formatHebrewMonthSpan(date: Date) {
@@ -48,7 +59,7 @@ function getHebrewMonthYearParts(date: Date) {
   const parts = hebrewMonthYearFormatter.formatToParts(date)
 
   return {
-    month: parts.find((part) => part.type === 'month')?.value || '',
+    month: fixHebrewMonthSpelling(parts.find((part) => part.type === 'month')?.value || ''),
     year: parts.find((part) => part.type === 'year')?.value || '',
   }
 }
