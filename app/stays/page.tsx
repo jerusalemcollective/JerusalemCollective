@@ -177,7 +177,7 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6">
+      <div className="mx-auto max-w-7xl px-4 pt-4 pb-4 sm:px-6">
         <StaysNeighborhoodNav
           neighborhoods={neighborhoods}
           featuredNeighborhoods={featuredNeighborhoods}
