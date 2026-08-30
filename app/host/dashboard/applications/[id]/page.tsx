@@ -6,6 +6,7 @@ import { ApplicationPhotoManager } from '@/components/application-photo-manager'
 import { ListingAiAssistant } from '@/components/listing-ai-assistant'
 import { GoogleAddressField } from '@/components/google-address-field'
 import { AmenitySelector } from '@/components/amenity-selector'
+import { HOST_PRICE_CURRENCIES, currencyName } from '@/lib/currencies'
 
 type HostApplication = {
   id: string
@@ -28,6 +29,8 @@ type HostApplication = {
   currency_preference?: string | null
   price_ils: number | null
   price_usd: number | null
+  price?: number | null
+  price_currency?: string | null
   amenities: string[] | null
   description: string | null
   photo_link: string | null
@@ -264,19 +267,28 @@ export default async function HostApplicationEditPage({
             </EditorSection>
 
             <EditorSection title="Pricing">
-              <div className="grid gap-4 md:grid-cols-3">
-                <Field label="Preferred currency">
-                  <select name="currencyPreference" defaultValue={hostApplication.currency_preference || 'ILS'} className={inputClass}>
-                    <option value="ILS">ILS</option>
-                    <option value="USD">USD</option>
-                    <option value="Both">Both</option>
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="Currency">
+                  <select
+                    name="priceCurrency"
+                    defaultValue={hostApplication.price_currency || (hostApplication.price_usd != null ? 'USD' : 'ILS')}
+                    className={inputClass}
+                  >
+                    {HOST_PRICE_CURRENCIES.map((code) => (
+                      <option key={code} value={code}>
+                        {code} — {currencyName(code)}
+                      </option>
+                    ))}
                   </select>
                 </Field>
-                <Field label="Price ILS">
-                  <input name="priceIls" type="number" min="0" defaultValue={hostApplication.price_ils ?? ''} className={inputClass} />
-                </Field>
-                <Field label="Price USD">
-                  <input name="priceUsd" type="number" min="0" defaultValue={hostApplication.price_usd ?? ''} className={inputClass} />
+                <Field label="Price per night">
+                  <input
+                    name="price"
+                    type="number"
+                    min="0"
+                    defaultValue={hostApplication.price ?? hostApplication.price_usd ?? hostApplication.price_ils ?? ''}
+                    className={inputClass}
+                  />
                 </Field>
               </div>
             </EditorSection>

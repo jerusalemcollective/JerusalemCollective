@@ -6,6 +6,8 @@ import { requireAdminPermission } from '@/lib/admin'
 import { logAdminAction } from '@/lib/audit'
 import { sendHostAdminUpdateEmail } from '@/lib/transactional-email'
 import { APPLICATION_STATUSES, type ApplicationStatus } from '@/lib/constants'
+import { toLegacyPrices } from '@/lib/fx'
+import { isHostPriceCurrency } from '@/lib/currencies'
 import {
   calculateShulDistances,
   saveShulDistances,
@@ -253,6 +255,11 @@ export async function updateAdminApplicationDetails(formData: FormData) {
     throw applicationError || new Error('Application not found.')
   }
 
+  const priceCurrencyRaw = String(formData.get('price_currency') || 'ILS')
+  const priceCurrency = isHostPriceCurrency(priceCurrencyRaw) ? priceCurrencyRaw : 'ILS'
+  const price = parseNullableNumber(formData.get('price'))
+  const { price_ils: derivedIls, price_usd: derivedUsd } = await toLegacyPrices(price, priceCurrency)
+
   const update = {
     apartment_title: String(formData.get('apartment_title') || '').trim(),
     area: String(formData.get('area') || '').trim(),
@@ -261,8 +268,10 @@ export async function updateAdminApplicationDetails(formData: FormData) {
     bathrooms: parseNullableNumber(formData.get('bathrooms')),
     sleeps: parseNullableNumber(formData.get('sleeps')),
     sleeping_setup: String(formData.get('sleeping_setup') || '').trim() || null,
-    price_ils: parseNullableNumber(formData.get('price_ils')),
-    price_usd: parseNullableNumber(formData.get('price_usd')),
+    price,
+    price_currency: priceCurrency,
+    price_ils: derivedIls,
+    price_usd: derivedUsd,
     amenities: parseAmenities(formData.getAll('amenities')),
     description: String(formData.get('description') || '').trim() || null,
   }
@@ -295,6 +304,8 @@ export async function updateAdminApplicationDetails(formData: FormData) {
         bathrooms: update.bathrooms,
         max_guests: update.sleeps || 1,
         sleeping_setup: update.sleeping_setup,
+        price: update.price,
+        price_currency: update.price_currency,
         price_ils: update.price_ils,
         price_usd: update.price_usd,
         amenities: update.amenities,

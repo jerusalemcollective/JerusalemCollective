@@ -331,11 +331,13 @@ export async function updateHostApplication(formData: FormData) {
   const bathrooms = bathroomsValue ? Number(bathroomsValue) : null
   const sleeps = Number(formData.get('sleeps') || 0)
   const sleepingSetup = String(formData.get('sleepingSetup') || '').trim()
-  const priceIlsValue = String(formData.get('priceIls') || '')
-  const priceUsdValue = String(formData.get('priceUsd') || '')
-  const currencyPreference = String(formData.get('currencyPreference') || 'ILS')
-  const priceIls = priceIlsValue ? Number(priceIlsValue) : null
-  const priceUsd = priceUsdValue ? Number(priceUsdValue) : null
+  const priceCurrencyRaw = String(formData.get('priceCurrency') || 'ILS')
+  const priceCurrency = isHostPriceCurrency(priceCurrencyRaw) ? priceCurrencyRaw : 'ILS'
+  const priceValue = String(formData.get('price') || '')
+  const price = priceValue ? Number(priceValue) : null
+  const { price_ils: priceIls, price_usd: priceUsd } = await toLegacyPrices(price, priceCurrency)
+  // The legacy currency_preference column only knows ILS/USD/Both.
+  const currencyPreference = priceCurrency === 'ILS' ? 'ILS' : 'USD'
   const amenities = formData.getAll('amenities').map(String)
   const description = String(formData.get('description') || '')
   const photoLink = String(formData.get('photoLink') || '').trim()
@@ -377,6 +379,17 @@ export async function updateHostApplication(formData: FormData) {
 
   if (error) {
     throw error
+  }
+
+  // Persist the host's chosen currency + single price (the RPC above only
+  // handles the legacy columns).
+  const { error: priceError } = await supabase.rpc('update_host_application_price', {
+    application_uuid: applicationId,
+    new_price: price,
+    new_price_currency: priceCurrency,
+  })
+  if (priceError) {
+    throw priceError
   }
 
   revalidatePath('/host/dashboard')
