@@ -1686,11 +1686,8 @@ async function handleSubmit() {
       american_washer_dryer: form.american_washer_dryer,
       american_mattress: form.american_mattress,
       powerful_water_heater: form.powerful_water_heater,
-      american_comfort:
-        form.central_ac &&
-        form.american_washer_dryer &&
-        form.american_mattress &&
-        form.powerful_water_heater,
+      // american_comfort is NOT a host_applications column — it's derived from
+      // the flags above when the application is approved into a listing.
 
       description: form.description || null,
       photo_link: form.photo_link || null,
