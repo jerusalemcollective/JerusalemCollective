@@ -52,6 +52,9 @@ export type ListingDetailListing = {
   balance_due_days_before_checkin: number
   price_ils: number | null
   price_usd: number | null
+  included_guests: number | null
+  extra_guest_fee_ils: number | null
+  extra_guest_fee_usd: number | null
   booking_type: string
   online_payment_enabled: boolean
   amenities: string[] | null
