@@ -269,7 +269,7 @@ export function StaysFilterBar() {
                 role="dialog"
                 aria-modal="true"
                 aria-label="Select your dates"
-                className="fixed inset-x-3 bottom-3 z-50 mx-auto flex max-h-[85vh] w-auto max-w-[440px] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:left-0 sm:top-full sm:mx-0 sm:mt-2 sm:max-h-[70vh] sm:w-[440px] sm:max-w-none"
+                className="fixed inset-x-3 bottom-3 z-50 mx-auto flex max-h-[85vh] w-auto max-w-[440px] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:left-0 sm:top-full sm:mx-0 sm:mt-2 sm:max-h-none sm:w-[440px] sm:max-w-none"
               >
                 <div className="flex items-start justify-between gap-3 border-b border-stone-100 px-4 py-3">
                   <div className="min-w-0">
@@ -298,7 +298,7 @@ export function StaysFilterBar() {
                   </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-3">
+                <div className="overflow-y-auto p-3 sm:overflow-visible">
                   <Calendar
                     mode="range"
                     excludeDisabled
