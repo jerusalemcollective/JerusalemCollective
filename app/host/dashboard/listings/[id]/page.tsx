@@ -196,15 +196,43 @@ export default async function HostListingEditPage({
             <AmenitySelector defaultSelectedAmenities={listing.amenities || []} name="amenities" />
 
             <div className="mt-6 border-t border-stone-100 pt-6">
-              <h3 className="text-sm font-bold text-stone-950">Kosher and Shabbos</h3>
-              <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <h3 className="text-sm font-bold text-stone-950">Shabbos &amp; Jewish stay</h3>
+              <div className="mt-4 max-w-xs">
                 <Field label="Kosher kitchen level">
                   <select name="kosherKitchenLevel" defaultValue={listing.kosher_kitchen_level || ''} className={inputClass}>
-                    <option value="">Select level</option>
+                    <option value="">Not kosher</option>
                     <option value="kosher">Kosher</option>
                     <option value="mehadrin">Mehadrin</option>
                   </select>
                 </Field>
+              </div>
+              <div className="mt-5 grid gap-3 md:grid-cols-2">
+                <CheckboxField name="shabbatElevator" defaultChecked={Boolean(listing.shabbat_elevator)}>
+                  Building has a Shabbos elevator
+                </CheckboxField>
+                <CheckboxField name="shabbatClock" defaultChecked={Boolean(listing.shabbat_clock)}>
+                  Apartment has a Shabbos clock or timer for lights
+                </CheckboxField>
+                <CheckboxField name="physicalKeyEntry" defaultChecked={Boolean(listing.physical_key_entry)}>
+                  Property uses a physical key (no digital keypad or smartlock)
+                </CheckboxField>
+                <CheckboxField name="sukkahBalcony" defaultChecked={Boolean(listing.sukkah_balcony)}>
+                  Has a balcony suitable for a sukkah
+                </CheckboxField>
+                <CheckboxField name="nearSynagogue" defaultChecked={Boolean(listing.near_synagogue)}>
+                  Within 5 minutes walk of a shul
+                </CheckboxField>
+                <CheckboxField name="amenities" value="Hot plate" defaultChecked={(listing.amenities || []).includes('Hot plate')}>
+                  Hot plate
+                </CheckboxField>
+                <CheckboxField name="amenities" value="Hot water urn" defaultChecked={(listing.amenities || []).includes('Hot water urn')}>
+                  Hot water urn
+                </CheckboxField>
+                <CheckboxField name="amenities" value="In eruv" defaultChecked={(listing.amenities || []).includes('In eruv')}>
+                  In eruv
+                </CheckboxField>
+              </div>
+              <div className="mt-5 max-w-xs">
                 <Field label="Approximate walking time to the Kotel (minutes)">
                   <input
                     name="walkingMinutesToKotel"
@@ -214,23 +242,6 @@ export default async function HostListingEditPage({
                     className={inputClass}
                   />
                 </Field>
-              </div>
-              <div className="mt-5 grid gap-3 md:grid-cols-2">
-                <CheckboxField name="shabbatElevator" defaultChecked={Boolean(listing.shabbat_elevator)}>
-                  Building has a Shabbos elevator
-                </CheckboxField>
-                <CheckboxField name="physicalKeyEntry" defaultChecked={Boolean(listing.physical_key_entry)}>
-                  Property uses a physical key (no digital keypad or smartlock)
-                </CheckboxField>
-                <CheckboxField name="shabbatClock" defaultChecked={Boolean(listing.shabbat_clock)}>
-                  Apartment has a Shabbos clock or timer for lights
-                </CheckboxField>
-                <CheckboxField name="sukkahBalcony" defaultChecked={Boolean(listing.sukkah_balcony)}>
-                  Has a balcony suitable for a sukkah
-                </CheckboxField>
-                <CheckboxField name="nearSynagogue" defaultChecked={Boolean(listing.near_synagogue)}>
-                  Within 5 minutes walk of a shul
-                </CheckboxField>
               </div>
             </div>
 
@@ -399,10 +410,12 @@ function Field({
 
 function CheckboxField({
   name,
+  value,
   defaultChecked,
   children,
 }: {
   name: string
+  value?: string
   defaultChecked: boolean
   children: React.ReactNode
 }) {
@@ -411,6 +424,7 @@ function CheckboxField({
       <input
         type="checkbox"
         name={name}
+        value={value}
         defaultChecked={defaultChecked}
         className="mt-0.5 rounded border-stone-300"
       />

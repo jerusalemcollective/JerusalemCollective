@@ -2438,7 +2438,7 @@ async function handleSubmit() {
                 <AmenitySelector selectedAmenities={form.amenities} onToggle={toggleAmenity} />
                 <div className="mt-8 border-t border-stone-100 pt-8">
                   <h3 className="text-sm font-bold uppercase tracking-widest text-stone-500">
-                    Jewish lifestyle features
+                    Shabbos &amp; Jewish stay
                   </h3>
                   <div className="mt-4 grid gap-5 md:grid-cols-2">
                     <Field label="Kosher kitchen level">
@@ -2447,7 +2447,7 @@ async function handleSubmit() {
                         onChange={(e) => updateField('kosher_kitchen_level', e.target.value)}
                         className={inputClass}
                       >
-                        <option value="">Select level</option>
+                        <option value="">Not kosher</option>
                         <option value="kosher">Kosher</option>
                         <option value="mehadrin">Mehadrin</option>
                       </select>
@@ -2488,6 +2488,21 @@ async function handleSubmit() {
                       checked={form.near_synagogue}
                       label="Within 5 minutes walk of a shul"
                       onChange={(checked) => updateField('near_synagogue', checked)}
+                    />
+                    <LifestyleCheckbox
+                      checked={form.amenities.includes('Hot plate')}
+                      label="Hot plate"
+                      onChange={() => toggleAmenity('Hot plate')}
+                    />
+                    <LifestyleCheckbox
+                      checked={form.amenities.includes('Hot water urn')}
+                      label="Hot water urn"
+                      onChange={() => toggleAmenity('Hot water urn')}
+                    />
+                    <LifestyleCheckbox
+                      checked={form.amenities.includes('In eruv')}
+                      label="In eruv"
+                      onChange={() => toggleAmenity('In eruv')}
                     />
                   </div>
                 </div>

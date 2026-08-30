@@ -41,19 +41,10 @@ export const STAY_AMENITY_GROUPS = [
   {
     title: 'Kitchen',
     amenities: [
-      'Kosher kitchen',
       'Oven',
       'Microwave',
       'Dishwasher',
       'Coffee maker',
-    ],
-  },
-  {
-    title: 'Shabbos and Jewish stay',
-    amenities: [
-      'Hot plate',
-      'Hot water urn',
-      'In eruv',
     ],
   },
   {
@@ -74,6 +65,12 @@ export const STAY_AMENITY_GROUPS = [
     ],
   },
 ] as const
+
+// The Shabbos amenities render inside the merged "Shabbos & Jewish stay" section
+// (next to the Shabbos booleans), not in the general amenity picker. They still
+// save into the listing's amenities array. Kept in STAY_AMENITIES above so they
+// count as "known" and never fall through to the free-text "Other" field.
+export const SHABBOS_STAY_AMENITIES = ['Hot plate', 'Hot water urn', 'In eruv'] as const
 
 export function slugifyAmenity(value: string) {
   return value.toLowerCase().replaceAll('/', '').replaceAll(' ', '-')

@@ -216,6 +216,23 @@ export function ListingDetailClient({
     nights > 0 && listing.price_usd
       ? nights * listing.price_usd
       : null
+
+  // Everything Shabbos/Jewish in one place — the kosher level, the Shabbos
+  // booleans, and the Shabbos amenities — mirroring the single merged form section.
+  const listingAmenities = listing.amenities || []
+  const jewishStayFeatures = [
+    listing.kosher_kitchen_level
+      ? `Kosher kitchen — ${listing.kosher_kitchen_level === 'mehadrin' ? 'Mehadrin' : 'Kosher'}`
+      : null,
+    listing.shabbat_elevator ? 'Shabbos elevator' : null,
+    listing.shabbat_clock ? 'Shabbos clock / timer' : null,
+    listing.physical_key_entry ? 'Physical-key entry (no digital lock)' : null,
+    listing.sukkah_balcony ? 'Sukkah balcony' : null,
+    listing.near_synagogue ? 'Within 5 minutes of a shul' : null,
+    listingAmenities.includes('Hot plate') ? 'Hot plate' : null,
+    listingAmenities.includes('Hot water urn') ? 'Hot water urn' : null,
+    listingAmenities.includes('In eruv') ? 'In eruv' : null,
+  ].filter((feature): feature is string => Boolean(feature))
   useEffect(() => {
     const supabase = createClient()
     let isActive = true
@@ -736,6 +753,25 @@ export function ListingDetailClient({
                 <div className="py-3">
                   <h2 className="mb-3 text-lg font-bold text-stone-900">Amenities</h2>
                   <AmenityDisplay amenities={listing.amenities} />
+                </div>
+              </>
+            )}
+
+            {jewishStayFeatures.length > 0 && (
+              <>
+                <hr className="border-stone-100" />
+                <div className="py-3">
+                  <h2 className="mb-3 text-lg font-bold text-stone-900">Shabbos &amp; Jewish stay</h2>
+                  <div className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
+                    {jewishStayFeatures.map((feature) => (
+                      <div key={feature} className="flex items-center gap-2.5 text-sm text-stone-800">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c76f55" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0" aria-hidden="true">
+                          <path d="M20 6L9 17l-5-5" />
+                        </svg>
+                        <span>{feature}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </>
             )}

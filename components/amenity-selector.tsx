@@ -1,5 +1,5 @@
 import { Check } from 'lucide-react'
-import { STAY_AMENITY_GROUPS } from '@/lib/stay-amenities'
+import { STAY_AMENITIES, STAY_AMENITY_GROUPS } from '@/lib/stay-amenities'
 
 type AmenitySelectorProps = {
   selectedAmenities?: string[]
@@ -16,7 +16,10 @@ export function AmenitySelector({
 }: AmenitySelectorProps) {
   const selected = selectedAmenities ?? defaultSelectedAmenities
   const selectedSet = new Set(selected)
-  const knownAmenities = new Set<string>(STAY_AMENITY_GROUPS.flatMap((group) => group.amenities))
+  // Base "known" on the full amenity vocabulary, not just the grouped picker, so
+  // amenities shown in dedicated sections (e.g. the Shabbos ones) don't fall
+  // through to the free-text "Other" field.
+  const knownAmenities = new Set<string>(STAY_AMENITIES)
   const customAmenities = selected.filter((amenity) => !knownAmenities.has(amenity)).join(', ')
 
   return (
