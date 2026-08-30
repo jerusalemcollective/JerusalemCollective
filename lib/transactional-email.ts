@@ -569,10 +569,14 @@ export async function sendGuestBookingConfirmedEmail({
           balanceDueDaysBeforeCheckin: Number(listing.balance_due_days_before_checkin ?? 0),
           checkIn: new Date(`${request.check_in}T12:00:00`),
         })
-        const depositDue =
-          listing.deposit_due_days_before_checkin != null
-            ? `due by ${formatEmailDate(minusDaysIso(request.check_in, Number(listing.deposit_due_days_before_checkin)))}`
-            : 'due to secure your booking'
+        let depositDue = 'due to secure your booking'
+        if (listing.deposit_due_days_before_checkin != null) {
+          // Never show a past due date for a just-confirmed booking — clamp to today,
+          // mirroring the balance-due clamp in computeDepositPreview / migration 092.
+          const rawDepositDue = minusDaysIso(request.check_in, Number(listing.deposit_due_days_before_checkin))
+          const todayIso = isoDateLocal(new Date())
+          depositDue = `due by ${formatEmailDate(rawDepositDue < todayIso ? todayIso : rawDepositDue)}`
+        }
         payRows.push(['Deposit', `${moneyLabel(currency, preview.depositAmount)} — ${depositDue}`])
         if (preview.balanceAmount > 0) {
           payRows.push([
