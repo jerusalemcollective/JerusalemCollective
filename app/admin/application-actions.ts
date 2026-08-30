@@ -31,6 +31,8 @@ const applicationEditableFields = [
   'sleeping_setup',
   'price_ils',
   'price_usd',
+  'price',
+  'price_currency',
   'amenities',
   'kosher_kitchen_level',
   'shabbat_elevator',
@@ -59,6 +61,8 @@ type ListingWritePayload = {
   sleeping_setup?: string | null
   price_ils: number | null
   price_usd: number | null
+  price?: number | null
+  price_currency?: string | null
   amenities: string[]
   kosher_kitchen_level?: string | null
   shabbat_elevator?: boolean
@@ -92,6 +96,8 @@ type HostApplicationRecord = {
   sleeping_setup?: string | null
   price_ils: number | null
   price_usd: number | null
+  price?: number | null
+  price_currency?: string | null
   amenities: string[] | null
   kosher_kitchen_level?: string | null
   shabbat_elevator?: boolean | null
@@ -372,6 +378,8 @@ export async function approveAndPublishApplication(formData: FormData) {
     sleeping_setup: hostApplication.sleeping_setup || null,
     price_ils: hostApplication.price_ils,
     price_usd: hostApplication.price_usd,
+    price: hostApplication.price ?? null,
+    price_currency: hostApplication.price_currency ?? null,
     amenities: hostApplication.amenities || [],
     kosher_kitchen_level: hostApplication.kosher_kitchen_level || null,
     shabbat_elevator: Boolean(hostApplication.shabbat_elevator),

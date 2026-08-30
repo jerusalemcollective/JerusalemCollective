@@ -10,6 +10,8 @@ import { allNeighborhoods } from '@/lib/neighborhoods'
 import { HOST_TERMS, HOST_TERMS_LAST_UPDATED, HOST_TERMS_VERSION } from '@/lib/host-terms'
 import { GoogleAddressField } from '@/components/google-address-field'
 import { AmenitySelector } from '@/components/amenity-selector'
+import { HOST_PRICE_CURRENCIES, currencyName, type HostPriceCurrency } from '@/lib/currencies'
+import { toLegacyPrices } from '@/lib/fx'
 
 type PhotoUpload = {
   file: File
@@ -25,8 +27,6 @@ type DocumentUpload = {
 }
 
 type HostType = 'owner' | 'representative'
-
-type CurrencyPreference = 'ILS' | 'USD' | 'Both'
 
 type FormState = {
   host_name: string
@@ -48,9 +48,8 @@ type FormState = {
   bathrooms: string
   sleeps: string
   sleeping_setup: string
-  currency_preference: CurrencyPreference
-  price_ils: string
-  price_usd: string
+  price_currency: HostPriceCurrency
+  price: string
   amenities: string[]
   kosher_kitchen_level: string
   shabbat_elevator: boolean
@@ -736,9 +735,8 @@ apartment_title: '',
   sleeps: '',
   sleeping_setup: '',
 
-  currency_preference: 'ILS',
-  price_ils: '',
-  price_usd: '',
+  price_currency: 'ILS',
+  price: '',
 
 amenities: [],
   kosher_kitchen_level: '',
@@ -1469,11 +1467,8 @@ export default function BecomeAHostPage() {
 
     // Step 4 — Pricing
     if (stepIndex === 4) {
-      if (
-        (!form.price_ils || Number(form.price_ils) <= 0) &&
-        (!form.price_usd || Number(form.price_usd) <= 0)
-      ) {
-        issues.push('Add at least one nightly price.')
+      if (!form.price || Number(form.price) <= 0) {
+        issues.push('Add a nightly price.')
       }
     }
 
@@ -1646,6 +1641,9 @@ async function handleSubmit() {
         .eq('id', accountUser.id)
     }
 
+    // Snapshot the single price into legacy USD/ILS columns (see toLegacyPrices).
+    const legacyPrices = await toLegacyPrices(Number(form.price) || null, form.price_currency)
+
     // First, create the host application to get an ID
     const payload = {
       host_id: hostId,
@@ -1668,9 +1666,11 @@ async function handleSubmit() {
       sleeps: Number(form.sleeps) || null,
       sleeping_setup: form.sleeping_setup.trim() || null,
 
-      currency_preference: form.currency_preference,
-      price_ils: Number(form.price_ils) || null,
-      price_usd: Number(form.price_usd) || null,
+      price: Number(form.price) || null,
+      price_currency: form.price_currency,
+      // Snapshot into the legacy columns so booking/display keep working.
+      price_ils: legacyPrices.price_ils,
+      price_usd: legacyPrices.price_usd,
 
       amenities: form.amenities,
       kosher_kitchen_level: form.kosher_kitchen_level || null,
@@ -2403,42 +2403,35 @@ async function handleSubmit() {
 <StepShell
                 eyebrow="Pricing"
                 title="Set your nightly rate"
-                description="Enter your price per night in ILS, USD, or both."
+                description="Choose the currency you want to be paid in, then set one price per night. Guests see it converted to their own currency automatically."
               >
-                <Field label="Preferred currency">
-                  <select
-                    value={form.currency_preference}
-                    onChange={(e) => {
-                      const value = e.target.value
-                      if (value === 'ILS' || value === 'USD' || value === 'Both') {
-                        updateField('currency_preference', value)
-                      }
-                    }}
-                    className={inputClass}
-                  >
-                    <option value="ILS">ILS</option>
-                    <option value="USD">USD</option>
-                    <option value="Both">Both</option>
-                  </select>
-                </Field>
-
-<div className="mt-5 grid gap-5 md:grid-cols-2">
-                  <Field label="Price per night (ILS)">
-                    <input
-                      value={form.price_ils}
-                      onChange={(e) => updateField('price_ils', e.target.value)}
-                      type="number"
-                      placeholder="Example: 650"
+                <div className="grid gap-5 md:grid-cols-2">
+                  <Field label="Currency">
+                    <select
+                      value={form.price_currency}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        if ((HOST_PRICE_CURRENCIES as readonly string[]).includes(value)) {
+                          updateField('price_currency', value as HostPriceCurrency)
+                        }
+                      }}
                       className={inputClass}
-                    />
+                    >
+                      {HOST_PRICE_CURRENCIES.map((code) => (
+                        <option key={code} value={code}>
+                          {code} — {currencyName(code)}
+                        </option>
+                      ))}
+                    </select>
                   </Field>
 
-                  <Field label="Price per night (USD)">
+                  <Field label="Price per night">
                     <input
-                      value={form.price_usd}
-                      onChange={(e) => updateField('price_usd', e.target.value)}
+                      value={form.price}
+                      onChange={(e) => updateField('price', e.target.value)}
                       type="number"
-                      placeholder="Example: 180"
+                      inputMode="decimal"
+                      placeholder="Example: 650"
                       className={inputClass}
                     />
                   </Field>
@@ -2927,9 +2920,7 @@ async function handleSubmit() {
 
                   <ReviewItem
                     label="Pricing"
-                    value={`₪${form.price_ils || '—'} / $${
-                      form.price_usd || '—'
-                    } · ${form.currency_preference}`}
+                    value={form.price ? `${form.price} ${form.price_currency} / night` : '—'}
                   />
 
                   <ReviewItem
