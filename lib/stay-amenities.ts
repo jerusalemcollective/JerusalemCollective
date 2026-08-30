@@ -27,7 +27,6 @@ export const STAY_AMENITIES = [
 export const STAY_AMENITY_GROUPS = [
   {
     title: 'Everyday comfort',
-    description: 'The essentials guests expect for an easy stay.',
     amenities: [
       'WiFi',
       'Air conditioning',
@@ -41,7 +40,6 @@ export const STAY_AMENITY_GROUPS = [
   },
   {
     title: 'Kitchen',
-    description: 'Cooking and food preparation features.',
     amenities: [
       'Kosher kitchen',
       'Oven',
@@ -52,7 +50,6 @@ export const STAY_AMENITY_GROUPS = [
   },
   {
     title: 'Shabbos and Jewish stay',
-    description: 'Details that matter for Shabbos and yom tov stays.',
     amenities: [
       'Hot plate',
       'Hot water urn',
@@ -61,7 +58,6 @@ export const STAY_AMENITY_GROUPS = [
   },
   {
     title: 'Building and outdoor',
-    description: 'Access, parking, and outdoor space.',
     amenities: [
       'Parking',
       'Elevator',
@@ -71,7 +67,6 @@ export const STAY_AMENITY_GROUPS = [
   },
   {
     title: 'Families',
-    description: 'Helpful extras for guests travelling with children.',
     amenities: [
       'Family friendly',
       'Crib',

@@ -24,10 +24,7 @@ export function AmenitySelector({
       {STAY_AMENITY_GROUPS.map((group) => (
         <section key={group.title} className="rounded-3xl border border-stone-200 bg-white p-4">
           <div className="mb-4 flex items-start justify-between gap-4">
-            <div>
-              <h3 className="text-sm font-bold text-stone-950">{group.title}</h3>
-              <p className="mt-1 text-xs leading-5 text-stone-500">{group.description}</p>
-            </div>
+            <h3 className="text-sm font-bold text-stone-950">{group.title}</h3>
             <span className="shrink-0 rounded-full bg-[#F8F5F2] px-3 py-1 text-xs font-bold text-stone-500">
               {group.amenities.filter((amenity) => selectedSet.has(amenity)).length}/{group.amenities.length}
             </span>
