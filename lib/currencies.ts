@@ -37,6 +37,17 @@ export const CURRENCIES: Currency[] = [
 
 const CURRENCY_CODES = new Set(CURRENCIES.map((currency) => currency.code))
 
+// The currencies a HOST can price (and be paid) in. A focused set — the ones
+// hosts actually use — rather than every display currency. price_currency on a
+// listing must be one of these.
+export const HOST_PRICE_CURRENCIES = ['ILS', 'USD', 'GBP', 'EUR', 'CAD', 'CHF', 'AUD'] as const
+
+export type HostPriceCurrency = (typeof HOST_PRICE_CURRENCIES)[number]
+
+export function isHostPriceCurrency(code: string | null | undefined): code is HostPriceCurrency {
+  return Boolean(code && (HOST_PRICE_CURRENCIES as readonly string[]).includes(code))
+}
+
 export const DEFAULT_CURRENCY = 'USD'
 
 export function isSupportedCurrency(code: string | null | undefined): code is string {
