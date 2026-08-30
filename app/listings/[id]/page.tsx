@@ -85,11 +85,6 @@ const listingDetailListingSchema = z.object({
   walking_minutes_to_kotel: z.number().nullable().optional().transform((value) => value ?? null),
   near_synagogue: z.boolean().nullish().transform((value) => Boolean(value)),
   sukkah_balcony: z.boolean().nullish().transform((value) => Boolean(value)),
-  american_comfort: z.boolean().nullish().transform((value) => Boolean(value)),
-  central_ac: z.boolean().nullish().transform((value) => Boolean(value)),
-  american_washer_dryer: z.boolean().nullish().transform((value) => Boolean(value)),
-  american_mattress: z.boolean().nullish().transform((value) => Boolean(value)),
-  powerful_water_heater: z.boolean().nullish().transform((value) => Boolean(value)),
   min_nights: z.number().nullish().transform((value) => value ?? 1),
   // Deposit config feeds the pre-checkout "pay now / balance later" preview. NOT
   // NULL columns with defaults; the coalesce is a belt-and-braces fallback.
@@ -358,18 +353,10 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
             walking_minutes_to_kotel: null,
             near_synagogue: false,
             sukkah_balcony: false,
-            american_comfort: false,
-            central_ac: false,
-            american_washer_dryer: false,
-            american_mattress: false,
-            powerful_water_heater: false,
             min_nights: 1,
             deposit_type: 'percent',
             deposit_value: 10,
             balance_due_days_before_checkin: 0,
-            included_guests: null,
-            extra_guest_fee_ils: 0,
-            extra_guest_fee_usd: 0,
           }}
           host={null}
           publicHostName={null}

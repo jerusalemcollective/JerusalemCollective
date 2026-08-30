@@ -29,7 +29,6 @@ type ListingRow = {
   price_usd: number | null
   price_ils: number | null
   walking_minutes_to_kotel: number | null
-  american_comfort: boolean | null
   created_at: string
   hosts?: {
     name: string
@@ -108,7 +107,7 @@ export default async function AdminListingsPage({
   const page = Math.max(1, Number(currentSearchParams.page) || 1)
   let listingsQuery = supabase
     .from('listings')
-    .select('id, title, area, host_id, is_published, is_featured, admin_status, archived_at, bedrooms, bathrooms, max_guests, sleeping_setup, amenities, description, house_rules, price_usd, price_ils, walking_minutes_to_kotel, american_comfort, created_at, hosts(name)')
+    .select('id, title, area, host_id, is_published, is_featured, admin_status, archived_at, bedrooms, bathrooms, max_guests, sleeping_setup, amenities, description, house_rules, price_usd, price_ils, walking_minutes_to_kotel, created_at, hosts(name)')
     .order('created_at', { ascending: false })
   let countQuery = supabase.from('listings').select('*', { count: 'exact', head: true })
 
@@ -396,7 +395,6 @@ function listingQaSuggestions(
   if (!listing.walking_minutes_to_kotel && shulDistanceCount === 0) {
     suggestions.push('Add shul or Old City walking distance.')
   }
-  if (!listing.american_comfort) suggestions.push('Confirm American comfort details.')
 
   return suggestions.slice(0, 4)
 }

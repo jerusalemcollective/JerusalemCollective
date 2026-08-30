@@ -29,7 +29,6 @@ type HostListing = {
   description: string | null
   price_usd: number | null
   price_ils: number | null
-  american_comfort: boolean | null
   created_at: string
 }
 
@@ -81,7 +80,7 @@ export default async function HostListingsPage() {
       .order('created_at', { ascending: false }),
     supabase
       .from('listings')
-      .select('id, title, area, is_published, is_featured, bedrooms, bathrooms, max_guests, amenities, description, price_usd, price_ils, american_comfort, created_at')
+      .select('id, title, area, is_published, is_featured, bedrooms, bathrooms, max_guests, amenities, description, price_usd, price_ils, created_at')
       .in('host_id', hostIds)
       .order('created_at', { ascending: false }),
   ])
@@ -110,7 +109,6 @@ export default async function HostListingsPage() {
     description: listing.description,
     price_usd: listing.price_usd,
     price_ils: listing.price_ils,
-    american_comfort: listing.american_comfort,
     created_at: listing.created_at,
   }))
   const applicationIds = hostApplications.map((application) => application.id)
@@ -270,7 +268,6 @@ export default async function HostListingsPage() {
                     suggestions={listingStrengthSuggestions(listing, photoCount)}
                     comparison={comparisonByListing.get(listing.id) || null}
                     bedrooms={listing.bedrooms}
-                    americanComfort={Boolean(listing.american_comfort)}
                     performance={performanceByListing.get(listing.id) || null}
                     isPublished={listing.is_published}
                   />
@@ -328,7 +325,6 @@ function ListingRow({
   suggestions,
   comparison,
   bedrooms,
-  americanComfort,
   performance,
   isPublished,
 }: {
@@ -341,7 +337,6 @@ function ListingRow({
   suggestions: string[]
   comparison: PriceComparison | null
   bedrooms: number | null
-  americanComfort: boolean
   performance: PerformanceInsight | null
   isPublished: boolean
 }) {
@@ -392,7 +387,6 @@ function ListingRow({
             comparison={comparison}
             area={area}
             bedrooms={bedrooms}
-            americanComfort={americanComfort}
           />
           <PerformanceInsightCard performance={performance} />
 
@@ -497,12 +491,10 @@ function PriceInsight({
   comparison,
   area,
   bedrooms,
-  americanComfort,
 }: {
   comparison: PriceComparison | null
   area: string
   bedrooms: number | null
-  americanComfort: boolean
 }) {
   if (!comparison) return null
 
@@ -538,9 +530,7 @@ function PriceInsight({
     comparison.price_position === 'above_market'
       ? `You are ${absoluteDifference}% higher than similar ${bedroomLabel} homes in ${area}.`
       : comparison.price_position === 'below_market'
-        ? americanComfort
-          ? 'You are priced below comparable homes with American comfort.'
-          : `You are ${absoluteDifference}% below similar ${bedroomLabel} homes in ${area}.`
+        ? `You are ${absoluteDifference}% below similar ${bedroomLabel} homes in ${area}.`
         : comparison.price_position === 'in_line'
           ? `You are priced in line with similar ${bedroomLabel} homes in ${area}.`
           : comparison.recommendation

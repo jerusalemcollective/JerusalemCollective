@@ -4,7 +4,7 @@ import { Suspense, useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { BedDouble, BedSingle, CheckCircle2, Link2, Sofa } from 'lucide-react'
+import { BedDouble, BedSingle, Link2, Sofa } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { BookingDateRangePicker } from '@/components/booking-date-range-picker'
 import { MessageHostDialog } from '@/components/message-host-dialog'
@@ -66,11 +66,6 @@ export type ListingDetailListing = {
   walking_minutes_to_kotel: number | null
   near_synagogue: boolean
   sukkah_balcony: boolean
-  american_comfort: boolean
-  central_ac: boolean
-  american_washer_dryer: boolean
-  american_mattress: boolean
-  powerful_water_heater: boolean
 }
 
 export type ListingDetailPhoto = {
@@ -221,13 +216,6 @@ export function ListingDetailClient({
     nights > 0 && listing.price_usd
       ? nights * listing.price_usd
       : null
-  const comfortFeatures = [
-    listing.central_ac ? 'Central air conditioning' : null,
-    listing.american_washer_dryer ? 'American washer and dryer' : null,
-    listing.american_mattress ? 'American-style mattresses' : null,
-    listing.powerful_water_heater ? 'Powerful water heater' : null,
-  ].filter((item): item is string => Boolean(item))
-
   useEffect(() => {
     const supabase = createClient()
     let isActive = true
@@ -675,23 +663,6 @@ export function ListingDetailClient({
                     </span>
                   </div>
                 )}
-                {listing.american_comfort && (
-                  <div className="inline-flex items-center gap-1.5 rounded-full border border-[#c76f55]/30 bg-[#fff4ef] px-3 py-1">
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="#c76f55"
-                      strokeWidth="2.5"
-                    >
-                      <path d="M20 6L9 17l-5-5" />
-                    </svg>
-                    <span className="text-xs font-bold text-[#c76f55]">
-                      American comfort verified
-                    </span>
-                  </div>
-                )}
               </div>
             </div>
 
@@ -759,24 +730,12 @@ export function ListingDetailClient({
               </>
             )}
 
-            {((listing.amenities && listing.amenities.length > 0) || comfortFeatures.length > 0) && (
+            {listing.amenities && listing.amenities.length > 0 && (
               <>
                 <hr className="border-stone-100" />
                 <div className="py-3">
                   <h2 className="mb-3 text-lg font-bold text-stone-900">Amenities</h2>
-                  {listing.amenities && listing.amenities.length > 0 && (
-                    <AmenityDisplay amenities={listing.amenities} />
-                  )}
-                  {comfortFeatures.length > 0 && (
-                    <div className={listing.amenities && listing.amenities.length > 0 ? 'mt-6' : ''}>
-                      <h3 className="text-xs font-bold uppercase tracking-widest text-stone-500">Comfort</h3>
-                      <div className="mt-3 grid gap-x-8 gap-y-2.5 sm:grid-cols-2">
-                        {comfortFeatures.map((feature) => (
-                          <FeaturePill key={feature} label={feature} icon="comfort" />
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  <AmenityDisplay amenities={listing.amenities} />
                 </div>
               </>
             )}
@@ -1202,20 +1161,6 @@ function StarRating({ rating }: { rating: number }) {
           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
         </svg>
       ))}
-    </div>
-  )
-}
-
-function FeaturePill({
-  label,
-}: {
-  label: string
-  icon: string
-}) {
-  return (
-    <div className="flex items-center gap-2.5 text-sm text-stone-700">
-      <CheckCircle2 className="h-4 w-4 shrink-0 text-[#c76f55]" />
-      <span>{label}</span>
     </div>
   )
 }

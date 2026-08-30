@@ -466,8 +466,10 @@ async function loadListings({
     listingsQuery = listingsQuery.eq('sukkah_balcony', true)
   }
 
+  // "Air conditioning" quick-filter is backed by the amenity now that the
+  // separate central_ac field has been retired.
   if (centralAc) {
-    listingsQuery = listingsQuery.eq('central_ac', true)
+    listingsQuery = listingsQuery.contains('amenities', ['Air conditioning'])
   }
 
   if (nearSynagogue) {
