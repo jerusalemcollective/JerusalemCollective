@@ -840,6 +840,9 @@ export default function BecomeAHostPage() {
   const [draftReady, setDraftReady] = useState(false)
   const [restoredDraft, setRestoredDraft] = useState(false)
   const [showMissingStepWarnings, setShowMissingStepWarnings] = useState(false)
+  // The top "some sections still need information" summary only appears once the
+  // host actually tries to submit — not on arrival or while filling things in.
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
@@ -937,7 +940,6 @@ export default function BecomeAHostPage() {
       const parsedDraft = JSON.parse(savedDraft) as Partial<SavedListingDraft>
       const { step: savedStep, saved_at: _savedAt, ...draftFields } = parsedDraft
       setRestoredDraft(true)
-      setShowMissingStepWarnings(true)
       setForm((current) => ({
         ...current,
         ...draftFields,
@@ -1502,6 +1504,7 @@ export default function BecomeAHostPage() {
     const firstIssueStep = stepIssues.findIndex((issues) => issues.length > 0)
     if (firstIssueStep === -1) return false
 
+    setAttemptedSubmit(true)
     setShowMissingStepWarnings(true)
     setStep(firstIssueStep)
     setError(`${steps[firstIssueStep]} needs attention: ${stepIssues[firstIssueStep][0]}`)
@@ -1951,7 +1954,7 @@ async function handleSubmit() {
           </div>
         )}
 
-        {!success && showMissingStepWarnings && incompleteStepNames.length > 0 && (
+        {!success && attemptedSubmit && incompleteStepNames.length > 0 && (
           <div className="mb-8 rounded-3xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-800">
             <p className="font-bold">Some sections still need information</p>
             <p className="mt-1 text-amber-700">
