@@ -2093,12 +2093,12 @@ async function handleSubmit() {
 
                   <div className="md:col-span-2">
                     <Field label="Your address" required>
-                      <input
+                      <GoogleAddressField
                         value={form.host_address}
-                        onChange={(e) => updateField('host_address', e.target.value)}
-                        type="text"
+                        onAddressChange={(val) => updateField('host_address', val)}
                         placeholder="Street, city, country"
                         className={inputClass}
+                        required
                       />
                     </Field>
                   </div>
