@@ -837,6 +837,7 @@ const AGENCY_AGREEMENT_STORAGE_KEY = 'jlm.agencyAgreementAccepted'
 export default function BecomeAHostPage() {
   const [step, setStep] = useState(0)
   const [form, setForm] = useState<FormState>(initialForm)
+  const [sameWhatsapp, setSameWhatsapp] = useState(true)
   const [draftReady, setDraftReady] = useState(false)
   const [restoredDraft, setRestoredDraft] = useState(false)
   const [showMissingStepWarnings, setShowMissingStepWarnings] = useState(false)
@@ -869,6 +870,15 @@ export default function BecomeAHostPage() {
   const [verificationDocError, setVerificationDocError] = useState('')
   const [idDocError, setIdDocError] = useState('')
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
+
+  // Reflect a restored draft: if it stored a WhatsApp number different from the
+  // phone, keep them as separate fields; otherwise the phone doubles as WhatsApp.
+  useEffect(() => {
+    if (restoredDraft) {
+      setSameWhatsapp(!form.whatsapp_number || form.whatsapp_number === form.phone)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restoredDraft])
   const photoSwipeStartRef = useRef<{ index: number; x: number; pointerId: number } | null>(null)
   // F4: reuse the created application + resume photo uploads on retry, so a
   // failed-then-retried submit can't create duplicate applications/photos.
@@ -1404,8 +1414,8 @@ export default function BecomeAHostPage() {
       if (!form.display_name.trim()) {
         issues.push('Add the public display name guests should see.')
       }
-      if (!form.phone.trim() && !form.whatsapp_number.trim()) {
-        issues.push('Add either a phone number or WhatsApp number.')
+      if (!form.phone.trim()) {
+        issues.push('Add a phone number.')
       }
       if (!form.host_address.trim()) {
         issues.push('Add your address.')
@@ -2069,27 +2079,45 @@ async function handleSubmit() {
                     />
                   </Field>
 
-                  <Field label="Phone">
+                  <Field label="Phone" required>
                     <input
                       value={form.phone}
-                      onChange={(e) => updateField('phone', e.target.value)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        updateField('phone', value)
+                        if (sameWhatsapp) updateField('whatsapp_number', value)
+                      }}
                       type="tel"
                       placeholder="+972..."
                       className={inputClass}
                     />
+                    <label className="mt-2 flex items-center gap-2 text-sm text-stone-600">
+                      <input
+                        type="checkbox"
+                        checked={sameWhatsapp}
+                        onChange={(e) => {
+                          const checked = e.target.checked
+                          setSameWhatsapp(checked)
+                          updateField('whatsapp_number', checked ? form.phone : '')
+                        }}
+                      />
+                      Use this number for WhatsApp too
+                    </label>
                   </Field>
 
-                  <Field label="WhatsApp">
-                    <input
-                      value={form.whatsapp_number}
-                      onChange={(e) =>
-                        updateField('whatsapp_number', e.target.value)
-                      }
-                      type="tel"
-                      placeholder="+972..."
-                      className={inputClass}
-                    />
-                  </Field>
+                  {!sameWhatsapp && (
+                    <Field label="WhatsApp">
+                      <input
+                        value={form.whatsapp_number}
+                        onChange={(e) =>
+                          updateField('whatsapp_number', e.target.value)
+                        }
+                        type="tel"
+                        placeholder="+972..."
+                        className={inputClass}
+                      />
+                    </Field>
+                  )}
 
                   <div className="md:col-span-2">
                     <Field label="Your address" required>
