@@ -1507,7 +1507,9 @@ export default function BecomeAHostPage() {
     setAttemptedSubmit(true)
     setShowMissingStepWarnings(true)
     setStep(firstIssueStep)
-    setError(`${steps[firstIssueStep]} needs attention: ${stepIssues[firstIssueStep][0]}`)
+    // The "still needs attention" summary on the step shows the issues; no
+    // separate red banner so the same message doesn't appear twice.
+    setError('')
     window.scrollTo({ top: 0, behavior: 'smooth' })
     return true
   }
@@ -1518,7 +1520,6 @@ export default function BecomeAHostPage() {
     const issues = getStepIssues(step)
     if (issues.length > 0) {
       setShowMissingStepWarnings(true)
-      setError(issues[0])
       return
     }
 
@@ -1548,7 +1549,6 @@ export default function BecomeAHostPage() {
         if (issues.length > 0) {
           setShowMissingStepWarnings(true)
           setStep(i)
-          setError(`${steps[i]} needs attention: ${issues[0]}`)
           window.scrollTo({ top: 0, behavior: 'smooth' })
           return
         }
