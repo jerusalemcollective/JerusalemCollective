@@ -149,10 +149,6 @@ export async function updateHostListing(formData: FormData) {
   const shabbatClock = formData.get('shabbatClock') === 'on'
   const sukkahBalcony = formData.get('sukkahBalcony') === 'on'
   const nearSynagogue = formData.get('nearSynagogue') === 'on'
-  const centralAc = formData.get('centralAc') === 'on'
-  const americanWasherDryer = formData.get('americanWasherDryer') === 'on'
-  const americanMattress = formData.get('americanMattress') === 'on'
-  const powerfulWaterHeater = formData.get('powerfulWaterHeater') === 'on'
 
   if (!listingId) {
     throw new Error('Missing listing id.')
@@ -191,15 +187,6 @@ export async function updateHostListing(formData: FormData) {
       shabbat_clock: shabbatClock,
       sukkah_balcony: sukkahBalcony,
       near_synagogue: nearSynagogue,
-      central_ac: centralAc,
-      american_washer_dryer: americanWasherDryer,
-      american_mattress: americanMattress,
-      powerful_water_heater: powerfulWaterHeater,
-      american_comfort:
-        centralAc &&
-        americanWasherDryer &&
-        americanMattress &&
-        powerfulWaterHeater,
       online_payment_enabled: onlinePaymentEnabled,
       included_guests: includedGuests,
       extra_guest_fee_ils: extraGuestFeeIls,

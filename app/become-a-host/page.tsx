@@ -59,10 +59,6 @@ type FormState = {
   sukkah_balcony: boolean
   near_synagogue: boolean
   walking_minutes_to_kotel: string
-  central_ac: boolean
-  american_washer_dryer: boolean
-  american_mattress: boolean
-  powerful_water_heater: boolean
   description: string
   photo_link: string
   photos: PhotoUpload[]
@@ -748,10 +744,6 @@ amenities: [],
   sukkah_balcony: false,
   near_synagogue: false,
   walking_minutes_to_kotel: '',
-  central_ac: false,
-  american_washer_dryer: false,
-  american_mattress: false,
-  powerful_water_heater: false,
 
 description: '',
   photo_link: '',
@@ -1680,15 +1672,6 @@ async function handleSubmit() {
       sukkah_balcony: form.sukkah_balcony,
       near_synagogue: form.near_synagogue,
       walking_minutes_to_kotel: Number(form.walking_minutes_to_kotel) || null,
-      central_ac: form.central_ac,
-      american_washer_dryer: form.american_washer_dryer,
-      american_mattress: form.american_mattress,
-      powerful_water_heater: form.powerful_water_heater,
-      american_comfort:
-        form.central_ac &&
-        form.american_washer_dryer &&
-        form.american_mattress &&
-        form.powerful_water_heater,
 
       description: form.description || null,
       photo_link: form.photo_link || null,
@@ -2505,36 +2488,6 @@ async function handleSubmit() {
                       checked={form.near_synagogue}
                       label="Within 5 minutes walk of a shul"
                       onChange={(checked) => updateField('near_synagogue', checked)}
-                    />
-                  </div>
-                </div>
-                <div className="mt-8 border-t border-stone-100 pt-8">
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-stone-500">
-                    Comfort
-                  </h3>
-                  <p className="mt-1 text-xs text-stone-500">
-                    North American guests often specifically look for these features. Check all that apply.
-                  </p>
-                  <div className="mt-3 space-y-2">
-                    <LifestyleCheckbox
-                      checked={form.central_ac}
-                      label="Central air conditioning (not wall units)"
-                      onChange={(checked) => updateField('central_ac', checked)}
-                    />
-                    <LifestyleCheckbox
-                      checked={form.american_washer_dryer}
-                      label="Full-size American washer and dryer (not a combo unit)"
-                      onChange={(checked) => updateField('american_washer_dryer', checked)}
-                    />
-                    <LifestyleCheckbox
-                      checked={form.american_mattress}
-                      label="American-style mattresses (thick, quality spring or memory foam)"
-                      onChange={(checked) => updateField('american_mattress', checked)}
-                    />
-                    <LifestyleCheckbox
-                      checked={form.powerful_water_heater}
-                      label="Large boiler / powerful water heater (not a small dud shemesh only)"
-                      onChange={(checked) => updateField('powerful_water_heater', checked)}
                     />
                   </div>
                 </div>

@@ -37,7 +37,7 @@ export default async function HostListingEditPage({
       supabase
         .from('listings')
         .select(
-          'id, title, area, bedrooms, bathrooms, max_guests, sleeping_setup, price_ils, price_usd, included_guests, extra_guest_fee_ils, extra_guest_fee_usd, booking_type, online_payment_enabled, amenities, description, house_rules, welcome_message, check_in_instructions, is_published, shabbat_elevator, physical_key_entry, shabbat_clock, kosher_kitchen_level, walking_minutes_to_kotel, near_synagogue, sukkah_balcony, american_comfort, central_ac, american_washer_dryer, american_mattress, powerful_water_heater, deposit_type, deposit_value, balance_due_days_before_checkin, deposit_due_days_before_checkin, min_nights',
+          'id, title, area, bedrooms, bathrooms, max_guests, sleeping_setup, price_ils, price_usd, included_guests, extra_guest_fee_ils, extra_guest_fee_usd, booking_type, online_payment_enabled, amenities, description, house_rules, welcome_message, check_in_instructions, is_published, shabbat_elevator, physical_key_entry, shabbat_clock, kosher_kitchen_level, walking_minutes_to_kotel, near_synagogue, sukkah_balcony, deposit_type, deposit_value, balance_due_days_before_checkin, deposit_due_days_before_checkin, min_nights',
         )
         .eq('id', id)
         .in('host_id', hostIds)
@@ -234,26 +234,6 @@ export default async function HostListingEditPage({
               </div>
             </div>
 
-            <div className="mt-6 border-t border-stone-100 pt-6">
-              <h3 className="text-sm font-bold text-stone-950">Comfort</h3>
-              <p className="mt-1 text-sm text-stone-600">
-                North American guests often specifically look for these.
-              </p>
-              <div className="mt-4 space-y-2">
-                <CheckboxField name="centralAc" defaultChecked={Boolean(listing.central_ac)}>
-                  Central air conditioning (not wall units)
-                </CheckboxField>
-                <CheckboxField name="americanWasherDryer" defaultChecked={Boolean(listing.american_washer_dryer)}>
-                  Full-size American washer and dryer (not a combo unit)
-                </CheckboxField>
-                <CheckboxField name="americanMattress" defaultChecked={Boolean(listing.american_mattress)}>
-                  American-style mattresses (thick, quality spring or memory foam)
-                </CheckboxField>
-                <CheckboxField name="powerfulWaterHeater" defaultChecked={Boolean(listing.powerful_water_heater)}>
-                  Large boiler / powerful water heater (not a small dud shemesh only)
-                </CheckboxField>
-              </div>
-            </div>
           </EditorSection>
 
           {/* 4. Pricing and booking (incl. deposit) */}

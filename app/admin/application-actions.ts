@@ -39,10 +39,6 @@ const applicationEditableFields = [
   'sukkah_balcony',
   'near_synagogue',
   'walking_minutes_to_kotel',
-  'central_ac',
-  'american_washer_dryer',
-  'american_mattress',
-  'powerful_water_heater',
   'description',
 ] as const
 
@@ -67,11 +63,6 @@ type ListingWritePayload = {
   sukkah_balcony?: boolean
   near_synagogue?: boolean
   walking_minutes_to_kotel?: number | null
-  central_ac?: boolean
-  american_washer_dryer?: boolean
-  american_mattress?: boolean
-  powerful_water_heater?: boolean
-  american_comfort?: boolean
   description: string | null
   booking_type?: string
   is_published: boolean
@@ -100,10 +91,6 @@ type HostApplicationRecord = {
   sukkah_balcony?: boolean | null
   near_synagogue?: boolean | null
   walking_minutes_to_kotel?: number | null
-  central_ac?: boolean | null
-  american_washer_dryer?: boolean | null
-  american_mattress?: boolean | null
-  powerful_water_heater?: boolean | null
   description: string | null
 }
 
@@ -380,15 +367,6 @@ export async function approveAndPublishApplication(formData: FormData) {
     sukkah_balcony: Boolean(hostApplication.sukkah_balcony),
     near_synagogue: Boolean(hostApplication.near_synagogue),
     walking_minutes_to_kotel: hostApplication.walking_minutes_to_kotel ?? null,
-    central_ac: Boolean(hostApplication.central_ac),
-    american_washer_dryer: Boolean(hostApplication.american_washer_dryer),
-    american_mattress: Boolean(hostApplication.american_mattress),
-    powerful_water_heater: Boolean(hostApplication.powerful_water_heater),
-    american_comfort:
-      Boolean(hostApplication.central_ac) &&
-      Boolean(hostApplication.american_washer_dryer) &&
-      Boolean(hostApplication.american_mattress) &&
-      Boolean(hostApplication.powerful_water_heater),
     description: hostApplication.description,
     is_published: true,
   }
