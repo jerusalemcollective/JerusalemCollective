@@ -357,6 +357,9 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
             deposit_type: 'percent',
             deposit_value: 10,
             balance_due_days_before_checkin: 0,
+            included_guests: null,
+            extra_guest_fee_ils: 0,
+            extra_guest_fee_usd: 0,
           }}
           host={null}
           publicHostName={null}

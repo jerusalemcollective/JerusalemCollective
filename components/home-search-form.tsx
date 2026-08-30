@@ -634,17 +634,19 @@ function DateSelector({
       </button>
 
       {showCalendar && (
-        <div
-          role="presentation"
-          onClick={() => setShowCalendar(false)}
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-3 sm:items-center sm:p-6"
-        >
+        <>
+          {/* Click-outside: dimmed sheet backdrop on mobile, transparent catcher on desktop. */}
+          <div
+            role="presentation"
+            onClick={() => setShowCalendar(false)}
+            className="fixed inset-0 z-40 bg-black/45 sm:bg-transparent"
+          />
+          {/* Bottom sheet on mobile; a dropdown anchored under the Dates button on desktop. */}
           <div
             role="dialog"
             aria-modal="true"
             aria-label="Select your dates"
-            onClick={(event) => event.stopPropagation()}
-            className="flex max-h-[88vh] w-full max-w-[380px] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl sm:max-w-[720px]"
+            className="fixed inset-x-3 bottom-3 z-50 mx-auto flex max-h-[85vh] w-auto max-w-[380px] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:left-0 sm:top-full sm:mx-0 sm:mt-2 sm:max-h-none sm:w-[380px] sm:max-w-none"
           >
             <div className="flex items-start justify-between gap-3 border-b border-stone-100 bg-[#fbf8f5] px-4 py-3">
               <div className="min-w-0">
@@ -671,7 +673,7 @@ function DateSelector({
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-3">
+            <div className="overflow-y-auto p-3 sm:overflow-visible">
               <Calendar
                 mode="range"
                 selected={selectedRange}
@@ -685,12 +687,11 @@ function DateSelector({
                     setTimeout(() => setShowCalendar(false), 300)
                   }
                 }}
-                numberOfMonths={2}
+                numberOfMonths={1}
                 disabled={{ before: new Date() }}
                 showOutsideDays={false}
                 className="w-full p-0"
                 classNames={{
-                  months: 'flex flex-col gap-6 md:flex-row md:gap-8',
                   month: 'flex w-full flex-col gap-3',
                   weekday: 'flex-1 text-[10px] font-bold uppercase tracking-wider text-stone-500',
                   week: 'mt-1.5 flex w-full',
@@ -709,7 +710,7 @@ function DateSelector({
               </div>
             </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   )

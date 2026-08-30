@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { syncExternalCalendar } from '@/lib/calendar-sync'
 import { getPaymentRouteSettings } from '@/lib/platform-settings'
+import { toLegacyPrices } from '@/lib/fx'
+import { isHostPriceCurrency } from '@/lib/currencies'
 import {
   calculateShulDistances,
   saveShulDistances,
@@ -117,10 +119,13 @@ export async function updateHostListing(formData: FormData) {
   const bathrooms = bathroomsValue ? Number(bathroomsValue) : null
   const maxGuests = Number(formData.get('maxGuests') || 0)
   const sleepingSetup = String(formData.get('sleepingSetup') || '').trim()
-  const priceIlsValue = String(formData.get('priceIls') || '')
-  const priceUsdValue = String(formData.get('priceUsd') || '')
-  const priceIls = priceIlsValue ? Number(priceIlsValue) : null
-  const priceUsd = priceUsdValue ? Number(priceUsdValue) : null
+  // The host prices in one currency; snapshot into legacy price_ils/price_usd
+  // via FX so the booking engine keeps working (see toLegacyPrices).
+  const priceCurrencyRaw = String(formData.get('priceCurrency') || 'ILS')
+  const priceCurrency = isHostPriceCurrency(priceCurrencyRaw) ? priceCurrencyRaw : 'ILS'
+  const priceValue = String(formData.get('price') || '')
+  const price = priceValue ? Number(priceValue) : null
+  const { price_ils: priceIls, price_usd: priceUsd } = await toLegacyPrices(price, priceCurrency)
   // Extra-guest pricing. included_guests is clamped to [1, maxGuests]; fees are
   // non-negative. A blank included-guests field falls back to maxGuests (i.e. no
   // surcharge). The authoritative charge recomputes from these columns in SQL.
@@ -128,10 +133,11 @@ export async function updateHostListing(formData: FormData) {
   const includedGuests = Number.isFinite(includedGuestsRaw)
     ? Math.min(Math.max(Math.trunc(includedGuestsRaw), 1), maxGuests || Math.trunc(includedGuestsRaw))
     : maxGuests || null
-  const extraGuestFeeIlsRaw = Number(formData.get('extraGuestFeeIls') || '0')
-  const extraGuestFeeUsdRaw = Number(formData.get('extraGuestFeeUsd') || '0')
-  const extraGuestFeeIls = Number.isFinite(extraGuestFeeIlsRaw) ? Math.max(extraGuestFeeIlsRaw, 0) : 0
-  const extraGuestFeeUsd = Number.isFinite(extraGuestFeeUsdRaw) ? Math.max(extraGuestFeeUsdRaw, 0) : 0
+  const extraGuestFeeRaw = Number(formData.get('extraGuestFee') || '0')
+  const extraGuestFee = Number.isFinite(extraGuestFeeRaw) ? Math.max(extraGuestFeeRaw, 0) : 0
+  const extraLegacy = await toLegacyPrices(extraGuestFee || null, priceCurrency)
+  const extraGuestFeeIls = extraLegacy.price_ils ?? 0
+  const extraGuestFeeUsd = extraLegacy.price_usd ?? 0
   const bookingType = String(formData.get('bookingType') || 'request')
   const paymentRoutes = await getPaymentRouteSettings()
   const onlinePaymentEnabled =
@@ -189,6 +195,9 @@ export async function updateHostListing(formData: FormData) {
       near_synagogue: nearSynagogue,
       online_payment_enabled: onlinePaymentEnabled,
       included_guests: includedGuests,
+      price,
+      price_currency: priceCurrency,
+      extra_guest_fee: extraGuestFee,
       extra_guest_fee_ils: extraGuestFeeIls,
       extra_guest_fee_usd: extraGuestFeeUsd,
     })
@@ -309,11 +318,13 @@ export async function updateHostApplication(formData: FormData) {
   const bathrooms = bathroomsValue ? Number(bathroomsValue) : null
   const sleeps = Number(formData.get('sleeps') || 0)
   const sleepingSetup = String(formData.get('sleepingSetup') || '').trim()
-  const priceIlsValue = String(formData.get('priceIls') || '')
-  const priceUsdValue = String(formData.get('priceUsd') || '')
-  const currencyPreference = String(formData.get('currencyPreference') || 'ILS')
-  const priceIls = priceIlsValue ? Number(priceIlsValue) : null
-  const priceUsd = priceUsdValue ? Number(priceUsdValue) : null
+  const priceCurrencyRaw = String(formData.get('priceCurrency') || 'ILS')
+  const priceCurrency = isHostPriceCurrency(priceCurrencyRaw) ? priceCurrencyRaw : 'ILS'
+  const priceValue = String(formData.get('price') || '')
+  const price = priceValue ? Number(priceValue) : null
+  const { price_ils: priceIls, price_usd: priceUsd } = await toLegacyPrices(price, priceCurrency)
+  // The legacy currency_preference column only knows ILS/USD/Both.
+  const currencyPreference = priceCurrency === 'ILS' ? 'ILS' : 'USD'
   const amenities = formData.getAll('amenities').map(String)
   const description = String(formData.get('description') || '')
   const photoLink = String(formData.get('photoLink') || '').trim()
@@ -355,6 +366,17 @@ export async function updateHostApplication(formData: FormData) {
 
   if (error) {
     throw error
+  }
+
+  // Persist the host's chosen currency + single price (the RPC above only
+  // handles the legacy columns).
+  const { error: priceError } = await supabase.rpc('update_host_application_price', {
+    application_uuid: applicationId,
+    new_price: price,
+    new_price_currency: priceCurrency,
+  })
+  if (priceError) {
+    throw priceError
   }
 
   revalidatePath('/host/dashboard')

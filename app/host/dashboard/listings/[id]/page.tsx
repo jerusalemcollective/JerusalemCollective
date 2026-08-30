@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { getPaymentRouteSettings } from '@/lib/platform-settings'
+import { HOST_PRICE_CURRENCIES, currencyName } from '@/lib/currencies'
 import { allNeighborhoods } from '@/lib/neighborhoods'
 import { updateHostListing, deleteHostListing } from '../actions'
 import { ConfirmSubmitButton } from '@/components/confirm-submit-button'
@@ -37,7 +38,7 @@ export default async function HostListingEditPage({
       supabase
         .from('listings')
         .select(
-          'id, title, area, bedrooms, bathrooms, max_guests, sleeping_setup, price_ils, price_usd, included_guests, extra_guest_fee_ils, extra_guest_fee_usd, booking_type, online_payment_enabled, amenities, description, house_rules, welcome_message, check_in_instructions, is_published, shabbat_elevator, physical_key_entry, shabbat_clock, kosher_kitchen_level, walking_minutes_to_kotel, near_synagogue, sukkah_balcony, deposit_type, deposit_value, balance_due_days_before_checkin, deposit_due_days_before_checkin, min_nights',
+          'id, title, area, bedrooms, bathrooms, max_guests, sleeping_setup, price_ils, price_usd, price, price_currency, included_guests, extra_guest_fee_ils, extra_guest_fee_usd, extra_guest_fee, booking_type, online_payment_enabled, amenities, description, house_rules, welcome_message, check_in_instructions, is_published, shabbat_elevator, physical_key_entry, shabbat_clock, kosher_kitchen_level, walking_minutes_to_kotel, near_synagogue, sukkah_balcony, deposit_type, deposit_value, balance_due_days_before_checkin, deposit_due_days_before_checkin, min_nights',
         )
         .eq('id', id)
         .in('host_id', hostIds)
@@ -250,11 +251,27 @@ export default async function HostListingEditPage({
           {/* 4. Pricing and booking (incl. deposit) */}
           <EditorSection title="Pricing and booking">
             <div className="grid gap-4 md:grid-cols-3">
-              <Field label="Price ILS">
-                <input name="priceIls" type="number" min="0" defaultValue={listing.price_ils ?? ''} className={inputClass} />
+              <Field label="Currency">
+                <select
+                  name="priceCurrency"
+                  defaultValue={listing.price_currency || (listing.price_usd != null ? 'USD' : 'ILS')}
+                  className={inputClass}
+                >
+                  {HOST_PRICE_CURRENCIES.map((code) => (
+                    <option key={code} value={code}>
+                      {code} — {currencyName(code)}
+                    </option>
+                  ))}
+                </select>
               </Field>
-              <Field label="Price USD">
-                <input name="priceUsd" type="number" min="0" defaultValue={listing.price_usd ?? ''} className={inputClass} />
+              <Field label="Price per night">
+                <input
+                  name="price"
+                  type="number"
+                  min="0"
+                  defaultValue={listing.price ?? listing.price_usd ?? listing.price_ils ?? ''}
+                  className={inputClass}
+                />
               </Field>
               <Field label="Booking style">
                 <select name="bookingType" defaultValue={listing.booking_type} className={inputClass}>
@@ -263,15 +280,18 @@ export default async function HostListingEditPage({
                 </select>
               </Field>
             </div>
-            <div className="mt-4 grid gap-4 md:grid-cols-3">
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
               <Field label="Price includes up to (guests)">
                 <input name="includedGuests" type="number" min="1" defaultValue={listing.included_guests ?? listing.max_guests ?? ''} className={inputClass} />
               </Field>
-              <Field label="Extra guest fee ILS (per night)">
-                <input name="extraGuestFeeIls" type="number" min="0" defaultValue={listing.extra_guest_fee_ils ?? 0} className={inputClass} />
-              </Field>
-              <Field label="Extra guest fee USD (per night)">
-                <input name="extraGuestFeeUsd" type="number" min="0" defaultValue={listing.extra_guest_fee_usd ?? 0} className={inputClass} />
+              <Field label="Extra guest fee (per night)">
+                <input
+                  name="extraGuestFee"
+                  type="number"
+                  min="0"
+                  defaultValue={listing.extra_guest_fee ?? listing.extra_guest_fee_usd ?? listing.extra_guest_fee_ils ?? 0}
+                  className={inputClass}
+                />
               </Field>
             </div>
             {paymentRoutes.jlmPaymentsEnabled ? (

@@ -244,16 +244,116 @@ export function StaysFilterBar() {
   return (
     <div className="rounded-3xl border border-stone-200 bg-white p-2 shadow-sm">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <button
-          type="button"
-          onClick={() => setShowCalendar(true)}
-          className="flex min-w-0 flex-1 flex-col rounded-2xl px-4 py-2.5 text-left transition hover:bg-stone-50 focus-visible:bg-[#faf8f6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400"
-        >
-          <span className="text-[11px] font-bold uppercase tracking-widest text-stone-900">Dates</span>
-          <span className={`mt-0.5 truncate text-sm ${checkInDate ? 'text-stone-900' : 'text-stone-500'}`}>
-            {dateLabel}
-          </span>
-        </button>
+        <div className="relative min-w-0 flex-1">
+          <button
+            type="button"
+            onClick={() => setShowCalendar(true)}
+            className="flex w-full min-w-0 flex-col rounded-2xl px-4 py-2.5 text-left transition hover:bg-stone-50 focus-visible:bg-[#faf8f6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400"
+          >
+            <span className="text-[11px] font-bold uppercase tracking-widest text-stone-900">Dates</span>
+            <span className={`mt-0.5 truncate text-sm ${checkInDate ? 'text-stone-900' : 'text-stone-500'}`}>
+              {dateLabel}
+            </span>
+          </button>
+
+          {showCalendar && (
+            <>
+              {/* Click-outside: dimmed sheet backdrop on mobile, transparent catcher on desktop. */}
+              <div
+                role="presentation"
+                onClick={() => setShowCalendar(false)}
+                className="fixed inset-0 z-40 bg-black/45 sm:bg-transparent"
+              />
+              {/* Bottom sheet on mobile; a dropdown anchored under the Dates button on desktop. */}
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-label="Select your dates"
+                className="fixed inset-x-3 bottom-3 z-50 mx-auto flex max-h-[85vh] w-auto max-w-[440px] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:left-0 sm:top-full sm:mx-0 sm:mt-2 sm:max-h-none sm:w-[440px] sm:max-w-none"
+              >
+                <div className="flex items-start justify-between gap-3 border-b border-stone-100 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-[#c76f55]">Your dates</p>
+                    <p className="truncate text-sm font-semibold text-stone-900">
+                      {checkInDate ? (
+                        <>
+                          {formatCompactDate(checkInDate)}
+                          {checkOutDate ? ` – ${formatCompactDate(checkOutDate)}` : ''}
+                          <span className="ml-2 text-xs font-normal text-stone-500">
+                            {formatHebrewShortDate(checkInDate)}
+                          </span>
+                        </>
+                      ) : (
+                        'Choose your dates'
+                      )}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowCalendar(false)}
+                    aria-label="Close date picker"
+                    className="shrink-0 rounded-full p-1.5 text-stone-500 transition hover:bg-stone-100 hover:text-stone-900"
+                  >
+                    <CloseIcon />
+                  </button>
+                </div>
+
+                <div className="overflow-y-auto p-3 sm:overflow-visible">
+                  <Calendar
+                    mode="range"
+                    excludeDisabled
+                    selected={selectedRange}
+                    onSelect={(range) => {
+                      if (range?.from && range?.to && range.from.getTime() === range.to.getTime()) {
+                        setCheckInValue(formatDateISO(range.from))
+                        setCheckOutValue('')
+                        return
+                      }
+
+                      setCheckInValue(range?.from ? formatDateISO(range.from) : '')
+                      setCheckOutValue(range?.to ? formatDateISO(range.to) : '')
+                    }}
+                    numberOfMonths={1}
+                    disabled={{ before: new Date() }}
+                    modifiers={{
+                      jewishHoliday: (date) => Boolean(getJewishHoliday(date)),
+                    }}
+                    modifiersClassNames={{
+                      jewishHoliday: 'font-bold text-[#c76f55]',
+                    }}
+                    showOutsideDays={false}
+                    className="w-full p-0"
+                    classNames={{
+                      month: 'flex w-full flex-col gap-3',
+                      weekday: 'flex-1 text-[10px] font-bold uppercase tracking-wider text-stone-500',
+                      week: 'mt-1.5 flex w-full',
+                    }}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between gap-3 border-t border-stone-100 bg-white px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCheckInValue('')
+                      setCheckOutValue('')
+                    }}
+                    className="text-xs font-bold text-stone-500 transition hover:text-stone-800"
+                  >
+                    Clear dates
+                  </button>
+                  <button
+                    type="button"
+                    onClick={applyFilters}
+                    className="rounded-full bg-[#252525] px-5 py-2 text-xs font-bold text-white transition hover:bg-[#111111]"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
 
         <div className="rounded-2xl px-4 py-2 sm:w-44">
           <label
@@ -421,101 +521,6 @@ export function StaysFilterBar() {
         </div>
       )}
 
-      {showCalendar && (
-        <div
-          role="presentation"
-          onClick={() => setShowCalendar(false)}
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-3 sm:items-center sm:p-6"
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="Select your dates"
-            onClick={(event) => event.stopPropagation()}
-            className="flex max-h-[88vh] w-full max-w-[380px] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl"
-          >
-            <div className="flex items-start justify-between gap-3 border-b border-stone-100 px-4 py-3">
-              <div className="min-w-0">
-                <p className="text-[11px] font-bold uppercase tracking-widest text-[#c76f55]">Your dates</p>
-                <p className="truncate text-sm font-semibold text-stone-900">
-                  {checkInDate ? (
-                    <>
-                      {formatCompactDate(checkInDate)}
-                      {checkOutDate ? ` – ${formatCompactDate(checkOutDate)}` : ''}
-                      <span className="ml-2 text-xs font-normal text-stone-500">
-                        {formatHebrewShortDate(checkInDate)}
-                      </span>
-                    </>
-                  ) : (
-                    'Choose your dates'
-                  )}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowCalendar(false)}
-                aria-label="Close date picker"
-                className="shrink-0 rounded-full p-1.5 text-stone-500 transition hover:bg-stone-100 hover:text-stone-900"
-              >
-                <CloseIcon />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-3">
-              <Calendar
-                mode="range"
-                excludeDisabled
-                selected={selectedRange}
-                onSelect={(range) => {
-                  if (range?.from && range?.to && range.from.getTime() === range.to.getTime()) {
-                    setCheckInValue(formatDateISO(range.from))
-                    setCheckOutValue('')
-                    return
-                  }
-
-                  setCheckInValue(range?.from ? formatDateISO(range.from) : '')
-                  setCheckOutValue(range?.to ? formatDateISO(range.to) : '')
-                }}
-                numberOfMonths={1}
-                disabled={{ before: new Date() }}
-                modifiers={{
-                  jewishHoliday: (date) => Boolean(getJewishHoliday(date)),
-                }}
-                modifiersClassNames={{
-                  jewishHoliday: 'font-bold text-[#c76f55]',
-                }}
-                showOutsideDays={false}
-                className="w-full p-0"
-                classNames={{
-                  month: 'flex w-full flex-col gap-3',
-                  weekday: 'flex-1 text-[10px] font-bold uppercase tracking-wider text-stone-500',
-                  week: 'mt-1.5 flex w-full',
-                }}
-              />
-            </div>
-
-            <div className="flex items-center justify-between gap-3 border-t border-stone-100 bg-white px-4 py-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setCheckInValue('')
-                  setCheckOutValue('')
-                }}
-                className="text-xs font-bold text-stone-500 transition hover:text-stone-800"
-              >
-                Clear dates
-              </button>
-              <button
-                type="button"
-                onClick={applyFilters}
-                className="rounded-full bg-[#252525] px-5 py-2 text-xs font-bold text-white transition hover:bg-[#111111]"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
