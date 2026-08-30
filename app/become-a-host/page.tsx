@@ -1668,6 +1668,8 @@ async function handleSubmit() {
 
       price: Number(form.price) || null,
       price_currency: form.price_currency,
+      // Keep the legacy currency_preference column populated (it may be required).
+      currency_preference: form.price_currency === 'ILS' ? 'ILS' : 'USD',
       // Snapshot into the legacy columns so booking/display keep working.
       price_ils: legacyPrices.price_ils,
       price_usd: legacyPrices.price_usd,
@@ -1714,7 +1716,11 @@ async function handleSubmit() {
 
       if (applicationError) {
         console.error(applicationError)
-        setError('Something went wrong. Please try again.')
+        setError(
+          applicationError.message
+            ? `Something went wrong: ${applicationError.message}`
+            : 'Something went wrong. Please try again.',
+        )
         setLoading(false)
         return
       }
