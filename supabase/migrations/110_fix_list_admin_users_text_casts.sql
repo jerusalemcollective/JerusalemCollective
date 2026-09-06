@@ -8,6 +8,10 @@
 --
 -- Recreate identically to 019 but cast every text-typed column to ::text.
 -- Idempotent / re-runnable; paste into the Supabase SQL editor as the owner role.
+--
+-- DROP first: the live function's declared return type differs, and CREATE OR
+-- REPLACE cannot change a function's return type (Postgres 42P13).
+drop function if exists public.list_admin_users();
 
 create or replace function public.list_admin_users()
 returns table (
