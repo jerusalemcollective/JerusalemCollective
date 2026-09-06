@@ -65,6 +65,7 @@ type FormState = {
   uploaded_photo_urls: string[]
   verification_doc: DocumentUpload | null
   verification_doc_type: string
+  right_to_host_attested: boolean
   id_doc: DocumentUpload | null
   id_doc_type: string
   confirmation: boolean
@@ -752,7 +753,8 @@ description: '',
   // Verification document (proof of right to host)
   verification_doc: null, // { file: File, preview: string }
   verification_doc_type: '',
-  
+  right_to_host_attested: false,
+
   // ID document
   id_doc: null, // { file: File, preview: string }
   id_doc_type: '',
@@ -766,16 +768,6 @@ const idDocTypes = [
   { value: 'drivers_license', label: "Driver's license" },
   { value: 'national_id', label: 'National ID card (Teudat Zehut)' },
   { value: 'residence_permit', label: 'Residence permit' },
-]
-
-const verificationDocTypes = [
-  { value: 'utility_bill', label: 'Utility bill (gas, electric, water, council tax, broadband)' },
-  { value: 'mortgage_statement', label: 'Mortgage statement' },
-  { value: 'property_tax', label: 'Property tax or council tax bill' },
-  { value: 'lease_agreement', label: 'Lease agreement (with subletting permission)' },
-  { value: 'authorisation_letter', label: 'Letter of authorisation from property owner' },
-  { value: 'business_registration', label: 'Business registration documents' },
-  { value: 'insurance_document', label: 'Insurance document showing property address' },
 ]
 
 const steps = [
@@ -861,7 +853,6 @@ export default function BecomeAHostPage() {
   const [draggingPhotoIndex, setDraggingPhotoIndex] = useState<number | null>(null)
   const [isPhotoDropActive, setIsPhotoDropActive] = useState(false)
   const [photoUploadError, setPhotoUploadError] = useState('')
-  const [verificationDocError, setVerificationDocError] = useState('')
   const [idDocError, setIdDocError] = useState('')
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
 
@@ -1177,36 +1168,6 @@ export default function BecomeAHostPage() {
     addPhotoFiles(Array.from(event.dataTransfer.files || []))
   }
 
-  function handleVerificationDocChange(event: ChangeEvent<HTMLInputElement>) {
-    setVerificationDocError('')
-    const file = event.target.files?.[0]
-
-    if (!file) return
-
-    const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp']
-    const maxSize = 10 * 1024 * 1024
-
-    if (!validTypes.includes(file.type)) {
-      setVerificationDocError('Please upload a PDF, JPG, PNG, or WebP file.')
-      event.target.value = ''
-      return
-    }
-
-    if (file.size > maxSize) {
-      setVerificationDocError('File is too large. Maximum size is 10MB.')
-      event.target.value = ''
-      return
-    }
-
-    updateField('verification_doc', {
-      file,
-      preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
-      name: file.name,
-      type: file.type,
-    })
-    event.target.value = ''
-  }
-
   function handleIdDocChange(event: ChangeEvent<HTMLInputElement>) {
     setIdDocError('')
     const file = event.target.files?.[0]
@@ -1500,15 +1461,8 @@ export default function BecomeAHostPage() {
 
     // Step 5 — Verification (documents + final confirmation)
     if (stepIndex === 5) {
-      if (!form.verification_doc_type) {
-        issues.push('Select a property verification document type.')
-      }
-      if (!form.verification_doc) {
-        issues.push(
-          restoredDraft
-            ? 'Upload the property verification document again. Uploaded files cannot be restored after signing out.'
-            : 'Upload the property verification document.',
-        )
+      if (!form.right_to_host_attested) {
+        issues.push('Confirm that you are authorised to rent out and list this property.')
       }
       if (!form.id_doc_type) {
         issues.push('Select your ID document type.')
@@ -1712,7 +1666,7 @@ async function handleSubmit() {
       description: form.description || null,
       photo_link: form.photo_link || null,
       
-      verification_doc_type: form.verification_doc_type,
+      verification_doc_type: form.right_to_host_attested ? 'attestation' : null,
       verification_status: 'pending',
       
       id_doc_type: form.id_doc_type,
@@ -2674,119 +2628,20 @@ async function handleSubmit() {
 {step === 5 && (
               <StepShell
                 eyebrow="Verification"
-                title="Verify your right to host"
-                description="Upload a document proving you have the right to rent out this property. This is required before your listing can go live."
+                title="Confirm your right to host"
+                description="Confirm you're authorised to list this property, then verify your identity below."
               >
-                <div className="mb-6 rounded-2xl bg-[#F8F5F2] p-5">
-                  <p className="mb-3 text-sm font-medium text-stone-700">Accepted documents include:</p>
-                  <ul className="space-y-1.5 text-sm text-stone-600">
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1 text-[#c76f55]">•</span>
-                      <span>Utility bill (gas, electric, water, council tax, broadband)</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1 text-[#c76f55]">•</span>
-                      <span>Mortgage statement showing property ownership</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1 text-[#c76f55]">•</span>
-                      <span>Property tax or council tax bill</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1 text-[#c76f55]">•</span>
-                      <span>Lease agreement with subletting permission</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1 text-[#c76f55]">•</span>
-                      <span>Letter of authorisation from property owner</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="mt-1 text-[#c76f55]">•</span>
-                      <span>Business registration or insurance documents</span>
-                    </li>
-                  </ul>
-                  <p className="mt-4 text-xs text-stone-500">
-                    Documents must show your name, the property address, and be dated within the last 12 months.
-                  </p>
-                </div>
-
-                <Field label="Document type" required>
-                  <select
-                    value={form.verification_doc_type}
-                    onChange={(e) => updateField('verification_doc_type', e.target.value)}
-                    className={inputClass}
-                  >
-                    <option value="">Select document type...</option>
-                    {verificationDocTypes.map((type) => (
-                      <option key={type.value} value={type.value}>
-                        {type.label}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-
-                <Field label="Upload document (PDF, JPG, PNG - max 10MB)" required>
-                  <div className="space-y-4">
-                    {!form.verification_doc ? (
-                      <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-stone-300 bg-[#F8F5F2] p-8 transition hover:border-[#c76f55] hover:bg-[#F5F0EB]">
-                        <svg className="mb-3 h-10 w-10 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <span className="text-sm font-medium text-stone-600">Click to upload document</span>
-                        <span className="mt-1 text-xs text-stone-500">PDF, JPG, or PNG up to 10MB</span>
-                        <input
-                          type="file"
-                          accept="application/pdf,image/jpeg,image/png,image/webp"
-                          onChange={handleVerificationDocChange}
-                          className="hidden"
-                        />
-                      </label>
-                    ) : (
-                      <div className="flex items-center gap-4 rounded-2xl border border-stone-200 bg-white p-4">
-                        {form.verification_doc.preview ? (
-                          <img 
-                            src={form.verification_doc.preview} 
-                            alt="Document preview" 
-                            className="h-16 w-16 rounded-lg object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-stone-100">
-                            <svg className="h-8 w-8 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                          </div>
-                        )}
-                        <div className="flex-1">
-                          <p className="font-medium text-stone-900">{form.verification_doc.name}</p>
-                          <p className="text-xs text-stone-500">
-                            {form.verification_doc.type === 'application/pdf' ? 'PDF Document' : 'Image'}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const verificationDoc = form.verification_doc
-                            if (verificationDoc?.preview) {
-                              URL.revokeObjectURL(verificationDoc.preview)
-                            }
-                            setVerificationDocError('')
-                            updateField('verification_doc', null)
-                          }}
-                          className="rounded-full p-2 text-stone-500 transition hover:bg-stone-100 hover:text-red-600"
-                        >
-                          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                    )}
-                    {verificationDocError && (
-                      <div className="rounded-2xl border border-red-100 bg-red-50 p-3 text-sm font-semibold text-red-700">
-                        {verificationDocError}
-                      </div>
-                    )}
-                  </div>
-                </Field>
+                <label className="mb-6 flex cursor-pointer items-start gap-3 rounded-2xl border border-stone-200 bg-[#F8F5F2] p-5">
+                  <input
+                    type="checkbox"
+                    checked={form.right_to_host_attested}
+                    onChange={(e) => updateField('right_to_host_attested', e.target.checked)}
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-stone-300 text-[#c76f55] focus:ring-[#c76f55]"
+                  />
+                  <span className="text-sm leading-6 text-stone-700">
+                    I confirm that I own this property, or I have the owner&apos;s permission to rent it out and list it on JLM Collective. I understand JLM Collective may ask for supporting documents and may remove the listing if this isn&apos;t the case.
+                  </span>
+                </label>
 
                 {/* ID Document Section */}
                 <div className="mt-8 border-t border-stone-200 pt-8">
@@ -2938,12 +2793,8 @@ async function handleSubmit() {
                   />
 
                   <ReviewItem
-                    label="Property Verification"
-                    value={
-                      form.verification_doc
-                        ? `${verificationDocTypes.find(t => t.value === form.verification_doc_type)?.label || form.verification_doc_type} - ${form.verification_doc.name}`
-                        : 'Not provided'
-                    }
+                    label="Right to host"
+                    value={form.right_to_host_attested ? 'Confirmed' : 'Not confirmed'}
                   />
 
                   <ReviewItem
