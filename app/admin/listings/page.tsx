@@ -304,17 +304,19 @@ export default async function AdminListingsPage({
                         </form>
                       ) : (
                         <>
-                          <form action={updateListingVisibility}>
-                            <input type="hidden" name="listingId" value={listing.id} />
-                            <input type="hidden" name="field" value="is_published" />
-                            <input type="hidden" name="value" value={String(!listing.is_published)} />
-                            <ConfirmSubmitButton
-                              message={listing.is_published ? 'Hide this listing from the public site?' : 'Publish this listing to the public site?'}
-                              className="rounded-full border border-stone-300 px-4 py-2 text-xs font-bold text-stone-700 transition hover:border-stone-400"
-                            >
-                              {listing.is_published ? 'Hide' : 'Publish'}
-                            </ConfirmSubmitButton>
-                          </form>
+                          {!listing.is_published && (
+                            <form action={updateListingVisibility}>
+                              <input type="hidden" name="listingId" value={listing.id} />
+                              <input type="hidden" name="field" value="is_published" />
+                              <input type="hidden" name="value" value="true" />
+                              <ConfirmSubmitButton
+                                message="Publish this listing to the public site?"
+                                className="rounded-full border border-stone-300 px-4 py-2 text-xs font-bold text-stone-700 transition hover:border-stone-400"
+                              >
+                                Publish
+                              </ConfirmSubmitButton>
+                            </form>
+                          )}
                           <form action={updateListingVisibility}>
                             <input type="hidden" name="listingId" value={listing.id} />
                             <input type="hidden" name="field" value="is_featured" />
