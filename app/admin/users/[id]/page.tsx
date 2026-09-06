@@ -8,6 +8,7 @@ import {
 } from '@/app/admin/host-actions'
 import { ConfirmSubmitButton } from '@/components/confirm-submit-button'
 import { BooleanBadge } from '@/components/boolean-badge'
+import { AdminUserTabs } from '@/components/admin-user-tabs'
 import { parsePayout, formatPayoutRows } from '@/lib/direct-payment'
 
 type PersonRow = {
@@ -115,177 +116,233 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
   const payoutRows = parsedPayout ? formatPayoutRows(parsedPayout) : []
   const effectiveCommission = commissionOverride ?? defaultCommission
 
+  const initials =
+    (person.full_name || 'U')
+      .split(/\s+/)
+      .map((part) => part[0])
+      .filter(Boolean)
+      .slice(0, 2)
+      .join('')
+      .toUpperCase() || 'U'
+
+  const tabs = [
+    {
+      key: 'overview',
+      label: 'Overview',
+      content: (
+        <section className="rounded-3xl bg-white p-6 shadow-sm">
+          <dl className="grid gap-4 sm:grid-cols-2">
+            <Detail label="Email" value={person.email || 'No email'} />
+            <Detail label="Phone" value={person.phone || 'No phone'} />
+            <Detail label="Joined" value={formatDate(person.created_at)} />
+            <Detail label="Last sign-in" value={formatDate(person.last_sign_in_at)} />
+          </dl>
+        </section>
+      ),
+    },
+    {
+      key: 'guest',
+      label: 'Guest trips',
+      content: (
+        <section className="overflow-hidden rounded-3xl bg-white shadow-sm">
+          {bookings.length === 0 ? (
+            <div className="px-6 py-8 text-center text-stone-500">No trips booked yet.</div>
+          ) : (
+            <div className="divide-y divide-stone-100">
+              {bookings.map((booking) => (
+                <div key={booking.id} className="grid gap-3 px-6 py-4 md:grid-cols-[1.4fr_1fr_0.7fr] md:items-center">
+                  <p className="font-semibold text-stone-900">{oneListing(booking.listings)?.title || 'Stay'}</p>
+                  <p className="text-sm text-stone-600">
+                    {formatDate(booking.check_in)} – {formatDate(booking.check_out)}
+                  </p>
+                  <p className="text-sm font-semibold capitalize text-stone-700">{booking.status || 'booked'}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      ),
+    },
+    ...(person.host_id
+      ? [
+          {
+            key: 'host',
+            label: 'Host',
+            content: (
+              <section className="overflow-hidden rounded-3xl bg-white shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-100 px-6 py-4">
+                  <h3 className="text-lg font-bold text-stone-950">Verification &amp; access</h3>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <BooleanBadge value={Boolean(person.host_is_verified)} yes="Verified" no="Unverified" falseTone="strong" />
+                    {listingBlocked && (
+                      <span className="inline-flex rounded-full bg-rose-100 px-3 py-1 text-xs font-bold text-rose-700">
+                        Listing blocked
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-5 px-6 py-5">
+                  <div className="flex flex-wrap gap-2">
+                    <form action={updateHostVerification}>
+                      <input type="hidden" name="hostId" value={person.host_id ?? ''} />
+                      <input type="hidden" name="value" value={String(!person.host_is_verified)} />
+                      <ConfirmSubmitButton
+                        message="Are you sure?"
+                        className="rounded-full border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-300"
+                      >
+                        {person.host_is_verified ? 'Remove verification' : 'Verify'}
+                      </ConfirmSubmitButton>
+                    </form>
+                    <form action={updateHostListingBlock}>
+                      <input type="hidden" name="hostId" value={person.host_id ?? ''} />
+                      <input type="hidden" name="value" value={String(!listingBlocked)} />
+                      <input type="hidden" name="reason" value="Blocked by platform admin" />
+                      <ConfirmSubmitButton
+                        message={listingBlocked ? 'Allow this host to list again?' : 'Block this host from listing and hide their live listings?'}
+                        className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
+                          listingBlocked
+                            ? 'border border-stone-200 text-stone-700 hover:border-stone-300'
+                            : 'bg-rose-600 text-white hover:bg-rose-700'
+                        }`}
+                      >
+                        {listingBlocked ? 'Unblock listing' : 'Block listing'}
+                      </ConfirmSubmitButton>
+                    </form>
+                  </div>
+
+                  {listingBlocked && listingBlockedReason && (
+                    <p className="rounded-xl bg-rose-50 px-4 py-2 text-sm text-rose-700">Reason: {listingBlockedReason}</p>
+                  )}
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Detail label="Host type" value={person.host_type || 'owner'} />
+                    <Detail
+                      label="Inventory"
+                      value={`${person.listing_count || 0} live · ${person.application_count || 0} submitted`}
+                    />
+                  </div>
+
+                  <div className="rounded-2xl border border-stone-200 p-4">
+                    <p className="text-sm font-semibold text-stone-900">Commission</p>
+                    <p className="mt-1 text-sm text-stone-600">
+                      Effective {formatCommission(effectiveCommission)}
+                      {commissionOverride === null ? ` (default ${formatCommission(defaultCommission)})` : ' (custom rate)'}
+                    </p>
+                    <form action={updateHostCommissionOverride} className="mt-3 flex gap-2">
+                      <input type="hidden" name="hostId" value={person.host_id ?? ''} />
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        name="commissionOverride"
+                        defaultValue={commissionOverride ?? ''}
+                        placeholder="Default"
+                        className="w-32 rounded-full border border-stone-200 px-3 py-1.5 text-xs text-stone-900 outline-none transition placeholder:text-stone-500 focus:border-[#c76f55]"
+                        aria-label="Host commission override"
+                      />
+                      <button
+                        type="submit"
+                        className="rounded-full border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-300"
+                      >
+                        Save
+                      </button>
+                    </form>
+                  </div>
+
+                  <div className="rounded-2xl bg-[#fbfaf8] px-4 py-2 text-xs text-stone-600">
+                    <span className="font-bold uppercase tracking-widest text-stone-500">Payout </span>
+                    {payoutMethod === 'stripe' ? (
+                      <span>Stripe — send from the Stripe dashboard</span>
+                    ) : payoutRows.length > 0 ? (
+                      <span>Manual — {payoutRows.map(([label, value]) => `${label}: ${value}`).join(' · ')}</span>
+                    ) : (
+                      <span className="text-stone-400">Not set</span>
+                    )}
+                  </div>
+
+                  <div>
+                    <p className="text-sm font-bold uppercase tracking-widest text-stone-500">Listings</p>
+                    {listings.length === 0 ? (
+                      <p className="mt-2 text-sm text-stone-500">No listings yet.</p>
+                    ) : (
+                      <div className="mt-2 divide-y divide-stone-100 overflow-hidden rounded-2xl border border-stone-200">
+                        {listings.map((listing) => (
+                          <div key={listing.id} className="grid gap-3 px-4 py-3 md:grid-cols-[1.4fr_1fr_0.7fr] md:items-center">
+                            <Link href={`/admin/listings/${listing.id}`} className="font-semibold text-stone-950 hover:underline">
+                              {listing.title || 'Untitled listing'}
+                            </Link>
+                            <p className="text-sm text-stone-600">{listing.area || 'Unknown area'}</p>
+                            <p className="text-sm font-semibold text-stone-700">
+                              {listing.is_published ? 'Published' : 'Draft'}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
+            ),
+          },
+        ]
+      : []),
+    ...(person.is_admin
+      ? [
+          {
+            key: 'admin',
+            label: 'Admin',
+            content: (
+              <section className="rounded-3xl bg-white p-6 shadow-sm">
+                <dl className="grid gap-4 sm:grid-cols-2">
+                  <Detail label="Admin role" value={person.admin_role || 'admin'} />
+                  <Detail label="Access" value="Full — every admin area" />
+                </dl>
+              </section>
+            ),
+          },
+        ]
+      : []),
+  ]
+
   return (
     <div className="space-y-6">
       <Link href="/admin/users" className="inline-flex text-sm font-semibold text-[#c76f55] hover:underline">
         ← Back to users
       </Link>
 
-      <div>
-        <div className="flex flex-wrap items-center gap-3">
-          <h2 className="text-3xl font-bold tracking-tight text-stone-950">{person.full_name || 'Unnamed user'}</h2>
-          {isHost && <Pill label="Host" />}
-          {isGuest && <Pill label="Guest" muted />}
-          {person.is_admin && <Pill label={person.admin_role || 'admin'} accent />}
+      <div className="flex items-center gap-4">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#c76f55] text-lg font-bold text-white">
+          {initials}
+        </div>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-2xl font-bold tracking-tight text-stone-950">{person.full_name || 'Unnamed user'}</h2>
+            {isGuest && <Pill label="Guest" muted />}
+            {isHost && <Pill label="Host" />}
+            {person.is_admin && <Pill label="Admin" accent />}
+          </div>
+          <p className="text-sm text-stone-500">{person.email || 'No email'}</p>
         </div>
       </div>
 
-      {/* Account details */}
-      <section className="rounded-3xl bg-white p-6 shadow-sm">
-        <h3 className="text-lg font-bold text-stone-950">Account</h3>
-        <dl className="mt-4 grid gap-4 sm:grid-cols-2">
-          <Detail label="Email" value={person.email || 'No email'} />
-          <Detail label="Phone" value={person.phone || 'No phone'} />
-          <Detail label="Joined" value={formatDate(person.created_at)} />
-          <Detail label="Last sign-in" value={formatDate(person.last_sign_in_at)} />
-          <Detail label="Trips booked" value={String(person.booking_count || 0)} />
-          <Detail label="Saved stays" value={String(person.saved_count || 0)} />
-        </dl>
-      </section>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatTile label="Trips booked" value={person.booking_count || 0} />
+        <StatTile label="Saved stays" value={person.saved_count || 0} />
+        {person.host_id && <StatTile label="Live listings" value={person.listing_count || 0} />}
+        {person.host_id && <StatTile label="Submitted" value={person.application_count || 0} />}
+      </div>
 
-      {/* Guest activity */}
-      <section className="overflow-hidden rounded-3xl bg-white shadow-sm">
-        <div className="border-b border-stone-100 px-6 py-4">
-          <h3 className="text-lg font-bold text-stone-950">Trips as a guest</h3>
-        </div>
-        {bookings.length === 0 ? (
-          <div className="px-6 py-8 text-center text-stone-500">No bookings yet.</div>
-        ) : (
-          <div className="divide-y divide-stone-100">
-            {bookings.map((booking) => (
-              <div key={booking.id} className="grid gap-3 px-6 py-4 md:grid-cols-[1.4fr_1fr_0.7fr] md:items-center">
-                <p className="font-semibold text-stone-900">{oneListing(booking.listings)?.title || 'Stay'}</p>
-                <p className="text-sm text-stone-600">
-                  {formatDate(booking.check_in)} – {formatDate(booking.check_out)}
-                </p>
-                <p className="text-sm font-semibold capitalize text-stone-700">{booking.status || 'booked'}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+      <AdminUserTabs tabs={tabs} />
+    </div>
+  )
+}
 
-      {/* Host section */}
-      {person.host_id && (
-        <section className="overflow-hidden rounded-3xl bg-white shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-100 px-6 py-4">
-            <h3 className="text-lg font-bold text-stone-950">Host</h3>
-            <div className="flex flex-wrap items-center gap-2">
-              <BooleanBadge value={Boolean(person.host_is_verified)} yes="Verified" no="Unverified" falseTone="strong" />
-              {listingBlocked && (
-                <span className="inline-flex rounded-full bg-rose-100 px-3 py-1 text-xs font-bold text-rose-700">
-                  Listing blocked
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-5 px-6 py-5">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Detail label="Host type" value={person.host_type || 'owner'} />
-              <Detail
-                label="Inventory"
-                value={`${person.listing_count || 0} live · ${person.application_count || 0} submitted`}
-              />
-            </div>
-
-            {listingBlocked && listingBlockedReason && (
-              <p className="rounded-xl bg-rose-50 px-4 py-2 text-sm text-rose-700">Reason: {listingBlockedReason}</p>
-            )}
-
-            {/* Commission */}
-            <div className="rounded-2xl border border-stone-200 p-4">
-              <p className="text-sm font-semibold text-stone-900">Commission</p>
-              <p className="mt-1 text-sm text-stone-600">
-                Effective {formatCommission(effectiveCommission)}
-                {commissionOverride === null ? ` (default ${formatCommission(defaultCommission)})` : ' (custom rate)'}
-              </p>
-              <form action={updateHostCommissionOverride} className="mt-3 flex gap-2">
-                <input type="hidden" name="hostId" value={person.host_id} />
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  name="commissionOverride"
-                  defaultValue={commissionOverride ?? ''}
-                  placeholder="Default"
-                  className="w-32 rounded-full border border-stone-200 px-3 py-1.5 text-xs text-stone-900 outline-none transition placeholder:text-stone-500 focus:border-[#c76f55]"
-                  aria-label="Host commission override"
-                />
-                <button
-                  type="submit"
-                  className="rounded-full border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-300"
-                >
-                  Save
-                </button>
-              </form>
-            </div>
-
-            {/* Payout */}
-            <div className="rounded-2xl bg-[#fbfaf8] px-4 py-2 text-xs text-stone-600">
-              <span className="font-bold uppercase tracking-widest text-stone-500">Payout </span>
-              {payoutMethod === 'stripe' ? (
-                <span>Stripe — send from the Stripe dashboard</span>
-              ) : payoutRows.length > 0 ? (
-                <span>Manual — {payoutRows.map(([label, value]) => `${label}: ${value}`).join(' · ')}</span>
-              ) : (
-                <span className="text-stone-400">Not set</span>
-              )}
-            </div>
-
-            {/* Host actions */}
-            <div className="flex flex-wrap gap-2">
-              <form action={updateHostVerification}>
-                <input type="hidden" name="hostId" value={person.host_id} />
-                <input type="hidden" name="value" value={String(!person.host_is_verified)} />
-                <ConfirmSubmitButton
-                  message="Are you sure?"
-                  className="rounded-full border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition hover:border-stone-300"
-                >
-                  {person.host_is_verified ? 'Remove verification' : 'Verify'}
-                </ConfirmSubmitButton>
-              </form>
-              <form action={updateHostListingBlock}>
-                <input type="hidden" name="hostId" value={person.host_id} />
-                <input type="hidden" name="value" value={String(!listingBlocked)} />
-                <input type="hidden" name="reason" value="Blocked by platform admin" />
-                <ConfirmSubmitButton
-                  message={listingBlocked ? 'Allow this host to list again?' : 'Block this host from listing and hide their live listings?'}
-                  className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
-                    listingBlocked
-                      ? 'border border-stone-200 text-stone-700 hover:border-stone-300'
-                      : 'bg-rose-600 text-white hover:bg-rose-700'
-                  }`}
-                >
-                  {listingBlocked ? 'Unblock listing' : 'Block listing'}
-                </ConfirmSubmitButton>
-              </form>
-            </div>
-
-            {/* Their listings */}
-            <div>
-              <p className="text-sm font-bold uppercase tracking-widest text-stone-500">Listings</p>
-              {listings.length === 0 ? (
-                <p className="mt-2 text-sm text-stone-500">No listings yet.</p>
-              ) : (
-                <div className="mt-2 divide-y divide-stone-100 overflow-hidden rounded-2xl border border-stone-200">
-                  {listings.map((listing) => (
-                    <div key={listing.id} className="grid gap-3 px-4 py-3 md:grid-cols-[1.4fr_1fr_0.7fr] md:items-center">
-                      <Link href={`/admin/listings/${listing.id}`} className="font-semibold text-stone-950 hover:underline">
-                        {listing.title || 'Untitled listing'}
-                      </Link>
-                      <p className="text-sm text-stone-600">{listing.area || 'Unknown area'}</p>
-                      <p className="text-sm font-semibold text-stone-700">
-                        {listing.is_published ? 'Published' : 'Draft'}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-      )}
+function StatTile({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-2xl bg-white p-4 shadow-sm">
+      <p className="text-xs font-bold uppercase tracking-widest text-stone-500">{label}</p>
+      <p className="mt-1 text-2xl font-bold text-stone-950">{value}</p>
     </div>
   )
 }
