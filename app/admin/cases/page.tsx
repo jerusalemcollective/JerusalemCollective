@@ -1,7 +1,6 @@
 ﻿import Link from 'next/link'
 import { requireAdminPermission } from '@/lib/admin'
 import { CasesList, type SupportCase } from './cases-list'
-import { summarizeSupportCases } from '@/lib/marketplace-rules'
 import { Pagination, normalizePaginationSearchParams, type PaginationSearchParams } from '@/components/pagination'
 import { oneOrNull } from '@/lib/utils/one-or-null'
 
@@ -85,7 +84,6 @@ export default async function AdminCasesPage({
     host: oneOrNull(supportCase.host),
   }))
   const total = count || 0
-  const summary = summarizeSupportCases(cases)
 
   return (
     <div>
@@ -93,20 +91,10 @@ export default async function AdminCasesPage({
         <h2 className="text-3xl font-bold tracking-tight text-stone-950">Disputes & refunds</h2>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <SummaryCard label="Open" value={summary.open} />
-        <SummaryCard label="Under review" value={summary.underReview} />
-        <SummaryCard label="Waiting on guest" value={summary.waitingOnGuest} />
-        <SummaryCard label="Waiting on host" value={summary.waitingOnHost} />
-      </div>
-
-      <div className="mb-6 mt-8 flex flex-wrap gap-2">
+      <div className="mb-6 flex flex-wrap gap-2">
         {[
           { label: 'All', value: 'all' },
           { label: 'Open', value: 'open' },
-          { label: 'Under review', value: 'under_review' },
-          { label: 'Waiting on guest', value: 'waiting_on_guest' },
-          { label: 'Waiting on host', value: 'waiting_on_host' },
           { label: 'Resolved', value: 'resolved' },
           { label: 'Closed', value: 'closed' },
         ].map((option) => (
@@ -125,15 +113,6 @@ export default async function AdminCasesPage({
       </div>
       <CasesList cases={cases} />
       <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} basePath="/admin/cases" searchParams={currentSearchParams} />
-    </div>
-  )
-}
-
-function SummaryCard({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-3xl bg-white p-5 shadow-sm">
-      <p className="text-sm font-semibold text-stone-500">{label}</p>
-      <p className="mt-2 text-3xl font-bold text-stone-950">{value}</p>
     </div>
   )
 }
