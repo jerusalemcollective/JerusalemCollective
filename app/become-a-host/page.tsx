@@ -12,6 +12,7 @@ import { GoogleAddressField } from '@/components/google-address-field'
 import { AmenitySelector } from '@/components/amenity-selector'
 import { HOST_PRICE_CURRENCIES, currencyName, type HostPriceCurrency } from '@/lib/currencies'
 import { toLegacyPrices } from '@/lib/fx'
+import { saveDraftPhotos, loadDraftPhotos, clearDraftPhotos } from '@/lib/listing-draft-photos'
 
 type PhotoUpload = {
   file: File
@@ -830,6 +831,9 @@ export default function BecomeAHostPage() {
   const [sameWhatsapp, setSameWhatsapp] = useState(true)
   const [draftReady, setDraftReady] = useState(false)
   const [restoredDraft, setRestoredDraft] = useState(false)
+  // Guards the photo-persistence effect from saving [] over IndexedDB before the
+  // stored photos have been loaded back on mount.
+  const photosHydratedRef = useRef(false)
   const [showMissingStepWarnings, setShowMissingStepWarnings] = useState(false)
   // The top "some sections still need information" summary only appears once the
   // host actually tries to submit — not on arrival or while filling things in.
@@ -956,6 +960,25 @@ export default function BecomeAHostPage() {
     } finally {
       setDraftReady(true)
     }
+
+    // Photos are File objects and can't live in localStorage, so they're kept in
+    // IndexedDB. Restore them here so a reload no longer wipes the uploads.
+    loadDraftPhotos(listingDraftStorageKey)
+      .then((stored) => {
+        if (stored.length > 0) {
+          setForm((current) => ({
+            ...current,
+            photos: stored.map((item) => ({
+              file: item.file,
+              preview: URL.createObjectURL(item.file),
+              label: item.label,
+            })),
+          }))
+        }
+      })
+      .finally(() => {
+        photosHydratedRef.current = true
+      })
   }, [])
 
   useEffect(() => {
@@ -974,6 +997,21 @@ export default function BecomeAHostPage() {
 
     return () => window.clearTimeout(timer)
   }, [draftReady, form, step, success])
+
+  // Persist the photo files to IndexedDB whenever they change, so a reload keeps
+  // them. Guarded until the initial load finishes so it can't wipe stored photos.
+  useEffect(() => {
+    if (!photosHydratedRef.current || success) return
+    const timer = window.setTimeout(() => {
+      const stored = form.photos.map((photo) => ({ file: photo.file, label: photo.label }))
+      if (stored.length > 0) {
+        void saveDraftPhotos(listingDraftStorageKey, stored)
+      } else {
+        void clearDraftPhotos(listingDraftStorageKey)
+      }
+    }, 400)
+    return () => window.clearTimeout(timer)
+  }, [form.photos, success])
 
   useEffect(() => {
     async function loadHost() {
@@ -1445,11 +1483,7 @@ export default function BecomeAHostPage() {
 
     // Step 2 — Photos
     if (stepIndex === 2 && form.photos.length < minimumPhotoCount) {
-      issues.push(
-        restoredDraft && form.photos.length === 0
-          ? `Upload at least ${minimumPhotoCount} photos again. Uploaded files cannot be restored after signing out.`
-          : `Upload at least ${minimumPhotoCount} photos.`,
-      )
+      issues.push(`Upload at least ${minimumPhotoCount} photos.`)
     }
 
     // Step 3 — Amenities
@@ -1849,6 +1883,7 @@ async function handleSubmit() {
     setLoading(false)
     setUploadProgress(null)
     window.localStorage.removeItem(listingDraftStorageKey)
+    void clearDraftPhotos(listingDraftStorageKey)
     setForm(initialForm)
     setStep(0)
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -1953,28 +1988,12 @@ async function handleSubmit() {
           </div>
         )}
 
-        {!success && attemptedSubmit && incompleteStepNames.length > 0 && (
-          <div className="mb-8 rounded-3xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-800">
-            <p className="font-bold">Some sections still need information</p>
-            <p className="mt-1 text-amber-700">
-              Complete the highlighted sections before submitting your stay.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {incompleteStepNames.map((item) => (
-                <span key={item} className="rounded-full bg-white px-3 py-1 text-xs font-bold text-amber-800">
-                  {item}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
         {!success && (
         <div className="grid gap-8 lg:grid-cols-[260px_1fr]">
           <aside className="hidden lg:block">
             <div className="sticky top-28 rounded-[2rem] bg-white p-4 shadow-sm ring-1 ring-stone-200">
               {steps.map((item, index) => {
-                const hasIssue = showMissingStepWarnings && stepIssues[index]?.length > 0
+                const hasIssue = attemptedSubmit && stepIssues[index]?.length > 0
 
                 return (
                   <button
@@ -2040,7 +2059,7 @@ async function handleSubmit() {
               </div>
             )}
 
-            {showMissingStepWarnings && currentStepIssues.length > 0 && (
+            {attemptedSubmit && currentStepIssues.length > 0 && (
               <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
                 <p className="font-bold">{steps[step]} still needs attention</p>
                 <ul className="mt-2 list-disc space-y-1 pl-5">
@@ -2446,9 +2465,12 @@ async function handleSubmit() {
                         onChange={(e) => updateField('kosher_kitchen_level', e.target.value)}
                         className={inputClass}
                       >
-                        <option value="">Not kosher</option>
+                        <option value="">Not specified</option>
+                        <option value="not_kosher">Not kosher</option>
+                        <option value="kosher_friendly">Kosher-friendly</option>
                         <option value="kosher">Kosher</option>
-                        <option value="mehadrin">Mehadrin</option>
+                        <option value="glatt_kosher">Glatt kosher</option>
+                        <option value="chalav_yisrael">Chalav Yisrael</option>
                       </select>
                     </Field>
                     <Field label="Approximate walking time to the Kotel (minutes)">
