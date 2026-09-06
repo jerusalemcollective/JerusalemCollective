@@ -1,7 +1,7 @@
 'use client'
 
-import Link from 'next/link'
 import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 type ErrorStateProps = {
   error: Error & { digest?: string }
@@ -14,8 +14,10 @@ export function ErrorState({
   error,
   reset,
   title = 'Something went wrong',
-  message = 'We hit an unexpected error. You can try again, or head back to browsing stays.',
+  message = 'We hit an unexpected error. You can try again, or go back to where you were.',
 }: ErrorStateProps) {
+  const router = useRouter()
+
   useEffect(() => {
     // Surface to the browser console / monitoring; digest links to the server log.
     console.error(error)
@@ -34,12 +36,13 @@ export function ErrorState({
           >
             Try again
           </button>
-          <Link
-            href="/stays"
+          <button
+            type="button"
+            onClick={() => router.back()}
             className="inline-flex items-center justify-center rounded-xl border border-stone-200 bg-white px-6 py-3 text-sm font-medium text-stone-700 transition hover:bg-stone-50"
           >
-            Browse stays
-          </Link>
+            Go back
+          </button>
         </div>
       </div>
     </div>

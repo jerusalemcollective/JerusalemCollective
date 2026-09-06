@@ -6,6 +6,16 @@ import { oneOrNull } from '@/lib/utils/one-or-null'
 
 const PAGE_SIZE = 25
 
+// Airbnb-style filter buckets: new -> awaiting the other party -> we're reviewing
+// -> closed. "Awaiting response" covers both waiting states; "Closed" folds in
+// resolved (a resolved case is done). "all" and any unknown value show everything.
+const STATUS_FILTER_GROUPS: Record<string, string[]> = {
+  open: ['open'],
+  awaiting: ['waiting_on_guest', 'waiting_on_host'],
+  under_review: ['under_review'],
+  closed: ['resolved', 'closed'],
+}
+
 type SupportCaseRow = Omit<SupportCase, 'bookings' | 'listings' | 'guest' | 'host'> & {
   bookings?: SupportCase['bookings'] | NonNullable<SupportCase['bookings']>[] | null
   listings?: SupportCase['listings'] | NonNullable<SupportCase['listings']>[] | null
@@ -65,9 +75,10 @@ export default async function AdminCasesPage({
 
   let countQuery = supabase.from('support_cases').select('*', { count: 'exact', head: true })
 
-  if (statusFilter !== 'all') {
-    casesQuery = casesQuery.eq('status', statusFilter)
-    countQuery = countQuery.eq('status', statusFilter)
+  const filterStatuses = STATUS_FILTER_GROUPS[statusFilter]
+  if (filterStatuses) {
+    casesQuery = casesQuery.in('status', filterStatuses)
+    countQuery = countQuery.in('status', filterStatuses)
   }
 
   const [{ data }, { count }] = await Promise.all([
@@ -95,7 +106,8 @@ export default async function AdminCasesPage({
         {[
           { label: 'All', value: 'all' },
           { label: 'Open', value: 'open' },
-          { label: 'Resolved', value: 'resolved' },
+          { label: 'Awaiting response', value: 'awaiting' },
+          { label: 'Under review', value: 'under_review' },
           { label: 'Closed', value: 'closed' },
         ].map((option) => (
           <Link
