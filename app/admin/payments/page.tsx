@@ -1,8 +1,9 @@
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { requireAdmin } from '@/lib/admin'
 import { getPaymentRouteSettings } from '@/lib/platform-settings'
 import { oneOrNull } from '@/lib/utils/one-or-null'
+import { UpdateCommissionForm } from '@/components/update-commission-form'
+import { PaymentRouteControlsForm } from '@/components/payment-route-controls-form'
 
 type PaymentRow = {
   id: string
@@ -57,7 +58,7 @@ export default async function AdminPaymentsPage() {
 
   // Exceptions are queried separately so they surface even if they fall outside
   // the 100 most recent payments.
-  const [{ data }, { data: exceptionData }, paymentRoutes] = await Promise.all([
+  const [{ data }, { data: exceptionData }, paymentRoutes, { data: commissionRow }] = await Promise.all([
     supabase
       .from('booking_payments')
       .select(selectColumns)
@@ -70,7 +71,13 @@ export default async function AdminPaymentsPage() {
       .order('created_at', { ascending: false })
       .limit(50),
     getPaymentRouteSettings(),
+    supabase
+      .from('platform_settings')
+      .select('value')
+      .eq('key', 'commission_percent')
+      .maybeSingle<{ value: string | null }>(),
   ])
+  const currentCommission = commissionRow?.value ?? '0'
 
   const payments: PaymentRow[] = (data || []).map(normalize)
   const exceptions: PaymentRow[] = (exceptionData || []).map(normalize)
@@ -96,15 +103,26 @@ export default async function AdminPaymentsPage() {
         </h1>
       </header>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric title="JLM payments" value={paymentRoutes.jlmPaymentsEnabled ? 'Enabled' : 'Off'} />
-        <Metric title="Direct payments" value={paymentRoutes.directPaymentsEnabled ? 'Enabled' : 'Off'} />
-        <Metric title="Paid gross" value={formatMoney(totalGross)} />
-        <Metric
-          title="Needs review"
-          value={String(exceptions.length)}
-          tone={exceptions.length > 0 ? 'alert' : 'default'}
-        />
+      <section className="mb-6 grid gap-6 lg:grid-cols-2">
+        <div className="rounded-3xl bg-white p-6 shadow-sm">
+          <h2 className="font-bold text-stone-950">Commission rate</h2>
+          <p className="mt-1 text-sm leading-6 text-stone-600">
+            The percentage JLM Collective takes from new bookings. Currently{' '}
+            <strong>{currentCommission}%</strong>. Changing it affects only new bookings.
+          </p>
+          <UpdateCommissionForm currentValue={currentCommission} />
+        </div>
+
+        <div className="rounded-3xl bg-white p-6 shadow-sm">
+          <h2 className="font-bold text-stone-950">Payment routes</h2>
+          <p className="mt-1 text-sm leading-6 text-stone-600">
+            Allow or pause JLM-collected online payments and direct-to-host payment options.
+          </p>
+          <PaymentRouteControlsForm
+            jlmPaymentsEnabled={paymentRoutes.jlmPaymentsEnabled}
+            directPaymentsEnabled={paymentRoutes.directPaymentsEnabled}
+          />
+        </div>
       </section>
 
       {exceptions.length > 0 && (
@@ -166,19 +184,11 @@ export default async function AdminPaymentsPage() {
       )}
 
       <section className="mt-6 rounded-3xl bg-white p-6 shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-bold text-stone-950">Recent payments</h2>
-            <p className="mt-1 text-sm text-stone-600">
-              Same-currency payout is shown by comparing paid currency and host payout currency.
-            </p>
-          </div>
-          <Link
-            href="/admin/settings"
-            className="rounded-full border border-stone-200 px-4 py-2 text-sm font-bold text-stone-700 transition hover:border-stone-300"
-          >
-            Payment switches
-          </Link>
+        <div>
+          <h2 className="text-xl font-bold text-stone-950">Recent payments</h2>
+          <p className="mt-1 text-sm text-stone-600">
+            Same-currency payout is shown by comparing paid currency and host payout currency.
+          </p>
         </div>
 
         <div className="mt-5 overflow-hidden rounded-2xl border border-stone-100">
@@ -240,24 +250,6 @@ export default async function AdminPaymentsPage() {
         </p>
       </section>
     </div>
-  )
-}
-
-function Metric({
-  title,
-  value,
-  tone = 'default',
-}: {
-  title: string
-  value: string
-  tone?: 'default' | 'alert'
-}) {
-  const isAlert = tone === 'alert'
-  return (
-    <article className={`rounded-3xl p-5 shadow-sm ${isAlert ? 'bg-red-50 ring-1 ring-red-200' : 'bg-white'}`}>
-      <p className={`text-sm font-semibold ${isAlert ? 'text-red-700' : 'text-stone-500'}`}>{title}</p>
-      <p className={`mt-2 text-2xl font-bold ${isAlert ? 'text-red-900' : 'text-stone-950'}`}>{value}</p>
-    </article>
   )
 }
 
