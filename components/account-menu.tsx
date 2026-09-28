@@ -74,7 +74,7 @@ export function AccountMenu({ hasStay, isAdmin }: { hasStay: boolean; isAdmin: b
   }, [])
 
   return (
-    <nav className="space-y-1">
+    <nav className="flex gap-1 overflow-x-auto pb-1 md:block md:space-y-1 md:overflow-visible md:pb-0">
       <MenuLink href="/account/bookings" label="My trips" icon={<CalendarDays className="h-5 w-5" />} active={pathname === '/account/bookings'} />
       <MenuLink href="/account/reviews" label="Reviews" icon={<Star className="h-5 w-5" />} active={pathname === '/account/reviews'} />
       <MenuLink href="/account/enquiries" label="Enquiries" icon={<MessageSquare className="h-5 w-5" />} active={pathname === '/account/enquiries'} />
@@ -88,7 +88,7 @@ export function AccountMenu({ hasStay, isAdmin }: { hasStay: boolean; isAdmin: b
       />
       <MenuLink href="/account/support" label="Support" icon={<LifeBuoy className="h-5 w-5" />} active={pathname === '/account/support'} />
 
-      <div className="mt-3 space-y-2 border-t border-stone-200 pt-4">
+      <div className="flex shrink-0 gap-1 md:mt-3 md:block md:space-y-2 md:border-t md:border-stone-200 md:pt-4">
         {hasStay ? (
           <MenuLink href="/choose-dashboard" label="Switch dashboard" icon={<ArrowLeftRight className="h-5 w-5" />} accent />
         ) : (
@@ -120,7 +120,7 @@ function MenuLink({
   return (
     <Link
       href={href}
-      className={`flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-medium transition ${
+      className={`flex shrink-0 items-center gap-3 whitespace-nowrap rounded-lg px-3.5 py-2.5 text-sm font-medium transition ${
         active
           ? 'border-b-2 border-[#c76f55] bg-white font-bold text-[#c76f55] shadow-sm'
           : accent
