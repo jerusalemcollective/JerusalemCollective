@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { requireAdminPermission } from '@/lib/admin'
-import { archiveListing, deleteListing, updateListingVisibility } from '@/app/admin/listing-actions'
+import { archiveListing, updateListingVisibility } from '@/app/admin/listing-actions'
+import { AdminDeleteListingForm } from '@/components/admin-delete-listing-form'
 import { ConfirmSubmitButton } from '@/components/confirm-submit-button'
 import { ListingQualityScore } from '@/components/listing-quality-score'
 import { Pagination, normalizePaginationSearchParams, type PaginationSearchParams } from '@/components/pagination'
@@ -350,15 +351,13 @@ export default async function AdminListingsPage({
                         </form>
                       )}
 
-                      <form action={deleteListing}>
-                        <input type="hidden" name="listingId" value={listing.id} />
-                        <ConfirmSubmitButton
-                          message="Delete this listing permanently? This cannot be undone. If it has bookings or reviews the delete will be refused - archive it instead."
-                          className="rounded-full bg-rose-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-rose-700"
-                        >
-                          Delete
-                        </ConfirmSubmitButton>
-                      </form>
+                      <AdminDeleteListingForm
+                        listingId={listing.id}
+                        confirmMessage="Delete this listing permanently? This cannot be undone. If it has bookings or reviews the delete will be refused - archive it instead."
+                        className="rounded-full bg-rose-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-rose-700"
+                      >
+                        Delete
+                      </AdminDeleteListingForm>
                     </div>
                   </div>
                 </div>
