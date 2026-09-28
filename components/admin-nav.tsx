@@ -25,7 +25,7 @@ export function AdminNav({ adminRole }: { adminRole: AdminRole }) {
     : []
 
   return (
-    <nav className="space-y-1">
+    <nav className="flex gap-1 overflow-x-auto pb-1 lg:block lg:space-y-1 lg:overflow-visible lg:pb-0">
       {[...visibleLinks, ...ownerLinks].map((link) => {
         const isActive =
           link.href === '/admin' ? pathname === link.href : pathname.startsWith(link.href)
@@ -34,7 +34,7 @@ export function AdminNav({ adminRole }: { adminRole: AdminRole }) {
           <Link
             key={link.href}
             href={link.href}
-            className={`block rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
+            className={`block shrink-0 whitespace-nowrap rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
               isActive
                 ? 'bg-stone-950 text-white'
                 : 'text-stone-600 hover:bg-white hover:text-stone-950'

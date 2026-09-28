@@ -408,17 +408,6 @@ export function ListingDetailClient({
 
   return (
     <div className="min-h-screen bg-white pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-0">
-      <header className="border-b border-stone-200 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <Link href="/" className="text-xl font-bold text-[#c76f55]">
-            JLM Collective
-          </Link>
-          <Link href="/stays" className="text-sm font-medium text-stone-600 hover:text-stone-900">
-            Browse stays
-          </Link>
-        </div>
-      </header>
-
       <div className="pb-28 lg:pb-8">
         <div className="mx-auto max-w-6xl px-5 py-8 md:px-8">
         <nav aria-label="Breadcrumb" className="mb-4 flex items-center gap-2 text-sm text-stone-500">
@@ -617,13 +606,11 @@ export function ListingDetailClient({
           )}
         </div>
 
-        <div className="grid gap-10 lg:grid-cols-[1fr_360px] lg:items-start">
-          <div className="space-y-6">
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+          <div className="min-w-0 space-y-6">
             <div>
               <p className="text-sm font-bold uppercase tracking-widest text-[#c76f55]">
-                {listing.title.toLowerCase().includes(listing.area.toLowerCase())
-                  ? 'Jerusalem'
-                  : `${listing.area}, Jerusalem`}
+                {listing.area || 'Jerusalem'}
               </p>
               <h1 className="font-display mt-2 text-3xl font-bold tracking-tight text-stone-950 md:text-4xl">
                 {listing.title}

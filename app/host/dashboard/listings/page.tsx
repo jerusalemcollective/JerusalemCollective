@@ -213,6 +213,7 @@ export default async function HostListingsPage() {
   const needsActionCount = pendingApplications.filter(
     (application) => ['rejected', 'changes_requested'].includes(application.status),
   ).length
+  const hasAnyStays = hostListings.length > 0 || pendingApplications.length > 0
 
   return (
     <div className="min-h-screen bg-[#F8F5F2] px-5 py-8 text-[#252525] md:px-6">
@@ -222,18 +223,20 @@ export default async function HostListingsPage() {
           <div>
             <h1 className="font-display text-3xl font-bold tracking-tight text-stone-950">Listings</h1>
             <p className="mt-2 text-sm text-stone-500">
-              {hostListings.length === 0
+              {!hasAnyStays
                 ? 'No listings yet'
-                : hostListings.length === 1
-                  ? '1 listing'
-                  : `${hostListings.length} listings`}
+                : hostListings.length === 0
+                  ? `${pendingApplications.length} submitted stay${pendingApplications.length === 1 ? '' : 's'}`
+                  : hostListings.length === 1
+                    ? '1 listing'
+                    : `${hostListings.length} listings`}
             </p>
           </div>
           <Link
             href="/become-a-host"
             className="inline-flex w-fit rounded-full bg-stone-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-stone-800"
           >
-            {hostListings.length === 0 ? 'List your first stay' : 'Add another stay'}
+            {hasAnyStays ? 'Add another stay' : 'List your first stay'}
           </Link>
         </header>
 

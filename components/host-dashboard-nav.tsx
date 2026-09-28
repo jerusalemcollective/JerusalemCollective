@@ -27,7 +27,7 @@ export function HostDashboardNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="space-y-1">
+    <nav className="flex gap-1 overflow-x-auto pb-1 md:block md:space-y-1 md:overflow-visible md:pb-0">
       {links.map((link) => {
         const Icon = link.icon
         const isActive =
@@ -39,7 +39,7 @@ export function HostDashboardNav() {
           <Link
             key={link.href}
             href={link.href}
-            className={`flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-medium transition ${
+            className={`flex shrink-0 items-center gap-3 whitespace-nowrap rounded-lg px-3.5 py-2.5 text-sm font-medium transition ${
               isActive
                 ? 'border-b-2 border-[#c76f55] bg-white font-bold text-[#c76f55] shadow-sm'
                 : 'text-stone-600 hover:bg-white hover:text-stone-900 hover:shadow-sm'
@@ -51,10 +51,10 @@ export function HostDashboardNav() {
         )
       })}
 
-      <div className="mt-3 border-t border-stone-200 pt-3">
+      <div className="shrink-0 md:mt-3 md:border-t md:border-stone-200 md:pt-3">
         <Link
           href="/choose-dashboard"
-          className="flex items-center gap-3 rounded-lg border border-[#c76f55] px-3.5 py-2.5 text-sm font-medium text-[#c76f55] transition hover:bg-[#fff4ef]"
+          className="flex items-center gap-3 whitespace-nowrap rounded-lg border border-[#c76f55] px-3.5 py-2.5 text-sm font-medium text-[#c76f55] transition hover:bg-[#fff4ef]"
         >
           <ArrowLeftRight className="h-5 w-5" />
           <span>Switch dashboard</span>

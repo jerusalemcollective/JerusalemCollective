@@ -10,7 +10,17 @@ export function slugifyNeighborhood(name: string): string {
 }
 
 export function findNeighborhoodBySlug(slug: string): string | null {
-  return allNeighborhoods.find((name) => slugifyNeighborhood(name) === slug) || null
+  const canonical = allNeighborhoods.find((name) => slugifyNeighborhood(name) === slug)
+  if (canonical) return canonical
+
+  // Alternate spellings (e.g. "Sharei Chessed") resolve to the canonical
+  // neighbourhood that shares the same description, so older links keep working.
+  const alias = Object.keys(neighborhoodDescriptions).find((name) => slugifyNeighborhood(name) === slug)
+  if (!alias) return null
+  const description = neighborhoodDescriptions[alias]
+  return (
+    allNeighborhoods.find((name) => neighborhoodDescriptions[name] === description) || alias
+  )
 }
 
 const yeminMosheDsc = `One of Jerusalem's most distinctive and romantic neighbourhoods, Yemin Moshe was established in the 19th century as the first Jewish settlement outside the Old City walls. Its stone homes, red-tiled roofs, and flower-filled courtyards sit directly opposite the Old City walls, offering some of the most breathtaking views in Jerusalem. The neighbourhood is quiet, intimate, and beautifully preserved - ideal for couples, artists, and guests seeking an upscale stay in a setting that feels genuinely historic rather than curated. The Montefiore Windmill and the promenade along the valley are steps from your door.`
@@ -117,8 +127,8 @@ export const neighborhoodDescriptions: Record<string, string> = {
   'Yemin Moshe': yeminMosheDsc,
   Talbiya: talbiyaDsc,
   Talbieh: talbiyaDsc,
-  'Sharei Chessed': shareiChessedDsc,
   'Shaarei Chesed': shareiChessedDsc,
+  'Sharei Chessed': shareiChessedDsc,
   "Sha'arei Hesed": shareiChessedDsc,
   Rechavia: rechaviaDsc,
   'German Colony': germanColonyDsc,

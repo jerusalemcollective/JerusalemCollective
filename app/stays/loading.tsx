@@ -3,7 +3,7 @@ export default function StaysLoading() {
     <div className="min-h-screen bg-[#F8F5F2] px-4 py-8">
       <div className="mx-auto max-w-6xl">
         <div className="mb-6 h-14 w-full animate-pulse rounded-2xl bg-white shadow-sm ring-1 ring-stone-100" />
-        <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {Array.from({ length: 6 }).map((_, index) => (
             <div key={index}>
               <div className="aspect-[4/3] animate-pulse rounded-2xl bg-white shadow-sm ring-1 ring-stone-100" />

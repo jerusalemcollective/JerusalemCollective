@@ -355,7 +355,7 @@ export function StaysFilterBar() {
           )}
         </div>
 
-        <div className="rounded-2xl px-4 py-2 sm:w-44">
+        <div className="rounded-2xl px-4 py-2 text-left sm:w-44">
           <label
             htmlFor="stays-guests"
             className="block text-[11px] font-bold uppercase tracking-widest text-stone-900"
