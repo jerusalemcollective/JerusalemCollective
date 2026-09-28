@@ -16,7 +16,12 @@ type PersonRow = {
   last_sign_in_at: string | null
 }
 
-export default async function AdminUsersPage() {
+export default async function AdminUsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ role?: string | string[] }>
+}) {
+  const { role } = await searchParams
   const { supabase } = await requireAdminPermission('users')
 
   const { data, error } = await supabase.rpc('list_platform_people')
@@ -48,7 +53,7 @@ export default async function AdminUsersPage() {
         <h2 className="text-3xl font-bold tracking-tight text-stone-950">Users</h2>
       </div>
 
-      <AdminUsersBrowser people={people} />
+      <AdminUsersBrowser people={people} initialRole={typeof role === 'string' ? role : undefined} />
     </div>
   )
 }
