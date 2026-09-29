@@ -187,6 +187,7 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [isAccepting, setIsAccepting] = useState(false)
+  const [pendingRequestStatus, setPendingRequestStatus] = useState<'accepted' | 'declined' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [guestProfile, setGuestProfile] = useState<GuestProfile | null>(null)
   const [listingFilter, setListingFilter] = useState<string>('all')
@@ -860,6 +861,7 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
 
     const requestId = selectedConversation.request.id
     setSending(true)
+    setPendingRequestStatus(status)
     setError(null)
 
     try {
@@ -880,6 +882,7 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
       setError(err instanceof Error ? err.message : 'Unable to update request.')
     } finally {
       setSending(false)
+      setPendingRequestStatus(null)
     }
   }
 
@@ -988,19 +991,19 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
                     <div className="flex flex-wrap gap-2 md:justify-end">
                       <button
                         type="button"
-                        disabled={sending}
+                        disabled={sending || isAccepting}
                         onClick={() => handleRequestStatus('accepted')}
                         className="rounded-full bg-green-700 px-4 py-2 text-xs font-bold text-white transition hover:bg-green-800 disabled:opacity-50"
                       >
-                        Accept
+                        {pendingRequestStatus === 'accepted' ? 'Accepting...' : 'Accept'}
                       </button>
                       <button
                         type="button"
-                        disabled={sending}
+                        disabled={sending || isAccepting}
                         onClick={() => handleRequestStatus('declined')}
                         className="rounded-full border border-red-200 bg-white px-4 py-2 text-xs font-bold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
                       >
-                        Decline
+                        {pendingRequestStatus === 'declined' ? 'Declining...' : 'Decline'}
                       </button>
                     </div>
                   )}
@@ -1073,7 +1076,7 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
                   <p className="text-sm font-semibold text-stone-900">Ready to confirm this booking?</p>
                   <button
                     type="button"
-                    disabled={isAccepting}
+                    disabled={isAccepting || pendingRequestStatus !== null}
                     onClick={handleAcceptEnquiry}
                     className="rounded-full bg-[#252525] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#111111] disabled:opacity-60"
                   >
