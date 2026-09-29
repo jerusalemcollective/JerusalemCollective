@@ -47,7 +47,7 @@ function LoginForm() {
       router.push(redirect)
       router.refresh()
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : 'An error occurred')
+      setError(friendlyLoginError(error instanceof Error ? error.message : ''))
     } finally {
       setIsLoading(false)
     }
@@ -170,4 +170,14 @@ export default function HostLoginPage() {
       <LoginForm />
     </Suspense>
   )
+}
+
+// Supabase's raw auth messages are terse and technical; show plain wording for
+// the common cases and fall back to the original text for anything else.
+function friendlyLoginError(message: string) {
+  if (/invalid login credentials/i.test(message)) return 'Wrong email or password. Please try again.'
+  if (/email not confirmed/i.test(message)) {
+    return 'Please confirm your email address first. Check your inbox for the link we sent you.'
+  }
+  return message || 'Something went wrong. Please try again.'
 }

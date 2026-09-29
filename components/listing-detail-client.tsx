@@ -1048,11 +1048,7 @@ export function ListingDetailClient({
             <div className="px-6 pb-8">
               <div className="mb-6 flex items-center justify-between">
                 <h3 className="text-xl font-bold text-stone-900">
-                  {listing.online_payment_enabled
-                    ? 'Book this stay'
-                    : listing.booking_type === 'request'
-                      ? 'Request to book'
-                      : 'Message host'}
+                  {listing.online_payment_enabled ? 'Book this stay' : mobileActionLabel}
                 </h3>
                 <button
                   type="button"
