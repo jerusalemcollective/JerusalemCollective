@@ -133,7 +133,7 @@ export default async function StayCollectionPage({
         </div>
 
         {listings.length > 0 ? (
-          <div className="mt-10 grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
+          <div className="mt-10 grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {listings.map((listing, index) => {
               const priceLabel = formatPreferredNightlyPrice(listing)
               return (

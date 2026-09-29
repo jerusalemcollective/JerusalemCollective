@@ -27,8 +27,16 @@ const ROLE_FILTERS = [
 
 // Client-side name/email search + role filter + pagination over the full people
 // list, so typing and switching are instant (no server round-trip per keystroke).
-export function AdminUsersBrowser({ people }: { people: AdminUserRow[] }) {
-  const [role, setRole] = useState('all')
+export function AdminUsersBrowser({
+  people,
+  initialRole = 'all',
+}: {
+  people: AdminUserRow[]
+  initialRole?: string
+}) {
+  const [role, setRole] = useState(
+    ROLE_FILTERS.some((filter) => filter.key === initialRole) ? initialRole : 'all',
+  )
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
 

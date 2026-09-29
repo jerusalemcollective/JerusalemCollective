@@ -1508,6 +1508,7 @@ export default function BecomeAHostPage() {
       return
     }
 
+    setShowMissingStepWarnings(false)
     if (step < steps.length - 1) {
       setStep((current) => current + 1)
       window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -1881,6 +1882,7 @@ async function handleSubmit() {
         </div>
       )}
       <section className="mx-auto max-w-6xl px-6 py-10 md:py-16">
+        {!success && (
         <div className="mb-10 grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
           <div>
             <h1 className="font-display mt-8 max-w-2xl text-4xl font-bold tracking-tight text-stone-950 md:text-6xl">
@@ -1908,6 +1910,7 @@ async function handleSubmit() {
             </div>
           </div>
         </div>
+        )}
 
         {success && (
           <div className="mx-auto max-w-2xl rounded-[2rem] bg-white p-8 text-center shadow-xl ring-1 ring-stone-200 md:p-12">
@@ -2759,9 +2762,9 @@ async function handleSubmit() {
 
                   <ReviewItem
                     label="Rooms"
-                    value={`${form.bedrooms || '—'} bedrooms · ${
+                    value={`${form.bedrooms || '—'} bedroom${Number(form.bedrooms) === 1 ? '' : 's'} · ${
                       form.bathrooms || '—'
-                    } bathrooms · sleeps ${form.sleeps || '—'}`}
+                    } bathroom${Number(form.bathrooms) === 1 ? '' : 's'} · sleeps ${form.sleeps || '—'}`}
                   />
 
                   <ReviewItem
@@ -2848,6 +2851,17 @@ async function handleSubmit() {
                 )}
                 </div>
               </StepShell>
+            )}
+
+            {(attemptedSubmit || showMissingStepWarnings) && currentStepIssues.length > 0 && (
+              <div role="alert" className="mt-10 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                <p className="font-bold">Please complete the missing details before continuing:</p>
+                <ul className="mt-2 list-disc space-y-1 pl-5">
+                  {currentStepIssues.map((issue) => (
+                    <li key={issue}>{issue}</li>
+                  ))}
+                </ul>
+              </div>
             )}
 
             <div className="mt-10 flex flex-col gap-3 border-t border-stone-100 pt-6 sm:flex-row sm:items-center sm:justify-between">

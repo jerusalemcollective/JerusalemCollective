@@ -55,7 +55,7 @@ export default async function AccountLayout({
     <div className="mx-auto max-w-7xl px-4 py-6 md:px-6">
       <h1 className="mb-6 text-2xl font-bold text-stone-900">Guest dashboard</h1>
       <div className="grid gap-6 md:grid-cols-[240px_1fr]">
-        <div className="md:sticky md:top-6 md:self-start">
+        <div className="min-w-0 md:sticky md:top-6 md:self-start">
           <AccountMenu hasStay={hasStay} isAdmin={isAdmin} />
         </div>
         <div className="min-w-0">{children}</div>

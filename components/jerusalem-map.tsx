@@ -320,7 +320,7 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
         <button
           type="button"
           onClick={handleSearchThisArea}
-          className={`absolute left-1/2 top-5 z-20 -translate-x-1/2 rounded-full bg-[#252525] px-5 py-2.5 text-sm font-bold text-white shadow-xl transition hover:bg-[#111111] ${showSidebar ? 'lg:translate-x-[150px]' : ''}`}
+          className={`absolute bottom-6 left-1/2 z-20 -translate-x-1/2 rounded-full bg-[#252525] lg:bottom-auto lg:top-5 px-5 py-2.5 text-sm font-bold text-white shadow-xl transition hover:bg-[#111111] ${showSidebar ? 'lg:translate-x-[150px]' : ''}`}
         >
           Search this map area
         </button>
@@ -333,7 +333,7 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
             setMapAreaListings(null)
             setShowSearchArea(false)
           }}
-          className={`absolute left-1/2 top-20 z-20 -translate-x-1/2 rounded-full bg-white px-4 py-2 text-xs font-bold text-stone-700 shadow-lg ring-1 ring-stone-200 transition hover:bg-stone-50 ${showSidebar ? 'lg:translate-x-[150px]' : ''}`}
+          className={`absolute bottom-20 left-1/2 z-20 -translate-x-1/2 rounded-full bg-white lg:bottom-auto lg:top-20 px-4 py-2 text-xs font-bold text-stone-700 shadow-lg ring-1 ring-stone-200 transition hover:bg-stone-50 ${showSidebar ? 'lg:translate-x-[150px]' : ''}`}
         >
           Showing {displayListings.length} in this area · reset
         </button>

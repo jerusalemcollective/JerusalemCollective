@@ -11,7 +11,7 @@ export function AdminShell({
   return (
     <div className="min-h-screen bg-[#F8F5F2] px-5 py-8 text-[#252525] md:px-6">
       <section className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[210px_1fr]">
-        <aside className="h-fit lg:sticky lg:top-8">
+        <aside className="h-fit min-w-0 lg:sticky lg:top-8">
           <div className="mb-5">
             <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Admin</p>
             <h1 className="font-display mt-2 text-2xl font-bold text-stone-950">Workspace</h1>

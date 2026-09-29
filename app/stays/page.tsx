@@ -149,8 +149,8 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
   return (
     <div className="min-h-screen">
       <div className="sticky top-[var(--header-h)] z-20 border-b border-stone-200 bg-[#F8F5F2]">
-        <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:px-6">
-          <div className="min-w-0 flex-1">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:px-6">
+          <div className="w-full min-w-0 sm:flex-1">
             <Suspense fallback={<div className="h-14 rounded-3xl bg-white shadow-sm" />}>
               <StaysFilterBar />
             </Suspense>
@@ -256,7 +256,7 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
             )
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
+              <div className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                 {listings.map((listing, index) => (
                   <ListingCard
                     key={listing.id}

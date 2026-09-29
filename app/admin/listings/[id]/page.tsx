@@ -1,9 +1,9 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { requireAdminPermission } from '@/lib/admin'
-import { deleteListing, updateAdminListingDetails, updateAdminListingStatus } from '@/app/admin/listing-actions'
+import { updateAdminListingDetails, updateAdminListingStatus } from '@/app/admin/listing-actions'
+import { AdminDeleteListingForm } from '@/components/admin-delete-listing-form'
 import { AdminListingMessageForm } from '@/components/admin-listing-message-form'
-import { ConfirmSubmitButton } from '@/components/confirm-submit-button'
 import { ListingQualityScore } from '@/components/listing-quality-score'
 import { calculateListingScore } from '@/lib/marketplace-rules'
 import { AmenitySelector } from '@/components/amenity-selector'
@@ -416,15 +416,15 @@ export default async function AdminListingDetailPage({
 
           <div className="mt-6 border-t border-stone-100 pt-5">
             <h2 className="text-sm font-bold text-stone-950">Danger zone</h2>
-            <form action={deleteListing} className="mt-3">
-              <input type="hidden" name="listingId" value={listing.id} />
-              <ConfirmSubmitButton
-                message="Remove this listing from the platform? This cannot be undone."
+            <div className="mt-3">
+              <AdminDeleteListingForm
+                listingId={listing.id}
+                confirmMessage="Remove this listing from the platform? This cannot be undone. If it has bookings or reviews the delete will be refused - archive it instead."
                 className="rounded-full bg-rose-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-rose-700"
               >
                 Remove listing
-              </ConfirmSubmitButton>
-            </form>
+              </AdminDeleteListingForm>
+            </div>
           </div>
         </aside>
       </div>

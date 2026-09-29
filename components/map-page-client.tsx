@@ -92,7 +92,7 @@ export function MapPageClient({ listings }: { listings: MapListing[] }) {
             </select>
           </label>
 
-          <details className="group w-full rounded-2xl border border-stone-200 bg-white">
+          <details className="group min-w-0 flex-1 rounded-2xl border border-stone-200 bg-white open:w-full open:flex-none md:w-full md:flex-none">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-stone-800">
               <span>
                 Amenities

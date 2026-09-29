@@ -175,20 +175,67 @@ export async function updateAdminListingDetails(formData: FormData) {
   revalidatePath('/stays')
 }
 
-export async function deleteListing(formData: FormData) {
+export type ListingDeleteState = {
+  status: 'idle' | 'error'
+  message: string
+}
+
+// Returns an error state instead of throwing: in production Next.js replaces
+// thrown server-action errors with a generic error page, so the admin never
+// saw why a delete was refused.
+export async function deleteListing(
+  _previousState: ListingDeleteState,
+  formData: FormData,
+): Promise<ListingDeleteState> {
   const listingId = String(formData.get('listingId') || '')
 
   if (!listingId) {
-    throw new Error('Missing listing id.')
+    return { status: 'error', message: 'Missing listing id.' }
   }
 
   const { supabase } = await requireAdminPermission('listings')
+
+  // Check for history before touching anything. Previously the photos were
+  // deleted first, so a refused delete still left the listing without photos.
+  // booking_requests cascade on delete, so they must be checked explicitly.
+  const historyChecks = [
+    { table: 'bookings', label: 'bookings' },
+    { table: 'booking_requests', label: 'booking requests' },
+    { table: 'reviews', label: 'reviews' },
+  ]
+
+  for (const check of historyChecks) {
+    const { count, error } = await supabase
+      .from(check.table)
+      .select('id', { count: 'exact', head: true })
+      .eq('listing_id', listingId)
+
+    if (error) {
+      return {
+        status: 'error',
+        message: `Could not check this listing's ${check.label}, so nothing was deleted. (${error.message})`,
+      }
+    }
+
+    if ((count || 0) > 0) {
+      return {
+        status: 'error',
+        message: `This listing has ${count} ${check.label}, so it can't be deleted. Use Archive instead - it comes off the site immediately and keeps its history.`,
+      }
+    }
+  }
+
   const { error: photoError } = await supabase
     .from('listing_photos')
     .delete()
     .eq('listing_id', listingId)
 
-  if (photoError) throw photoError
+  if (photoError) {
+    return {
+      status: 'error',
+      message: `The listing photos could not be removed, so nothing was deleted. (${photoError.message})`,
+    }
+  }
 
   await supabase
     .from('listing_unavailable_ranges')
@@ -207,15 +254,18 @@ export async function deleteListing(formData: FormData) {
     .select('id')
 
   if (error) {
-    throw new Error(
-      `This listing could not be deleted, most likely because bookings, enquiries or reviews still reference it. Archive it instead to take it off the site while keeping its history. (${error.message})`,
-    )
+    return {
+      status: 'error',
+      message: `This listing could not be deleted because other records still reference it. Archive it instead. (${error.message})`,
+    }
   }
 
   if (!deleted || deleted.length === 0) {
-    throw new Error(
-      'Nothing was deleted. Your admin account does not have delete permission on listings — run migration 068, which adds the missing policy.',
-    )
+    return {
+      status: 'error',
+      message:
+        'Nothing was deleted. Your admin account does not have delete permission on listings - run migration 068 in Supabase, which adds the missing policy.',
+    }
   }
 
   await logAdminAction(supabase, 'delete_listing', 'listing', listingId)
