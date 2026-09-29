@@ -173,6 +173,7 @@ export async function updateAdminListingDetails(formData: FormData) {
   revalidatePath(`/admin/listings/${listingId}`)
   revalidatePath(`/listings/${listingId}`)
   revalidatePath('/stays')
+  redirect(`/admin/listings/${listingId}?saved=1`)
 }
 
 export type ListingDeleteState = {

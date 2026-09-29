@@ -60,10 +60,13 @@ type ListingReviewRow = {
 
 export default async function AdminListingDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ saved?: string }>
 }) {
   const { id } = await params
+  const { saved } = await searchParams
   const { supabase } = await requireAdminPermission('listings')
   const [{ data: listingData }, { data: messages, error: messagesError }, { data: photos }] = await Promise.all([
     supabase
@@ -289,6 +292,11 @@ export default async function AdminListingDetailPage({
                   className="mt-2 min-h-36 w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
                 />
               </label>
+              {saved === '1' && (
+                <p role="status" className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+                  Listing edits saved.
+                </p>
+              )}
               <button className="rounded-2xl bg-stone-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-stone-800">
                 Save listing edits
               </button>

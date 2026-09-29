@@ -54,6 +54,7 @@ export function ListingPhotoManager({
   const inputRef = useRef<HTMLInputElement | null>(null)
   const [photos, setPhotos] = useState(initialPhotos)
   const [message, setMessage] = useState('')
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null)
   const [isPending, startTransition] = useTransition()
   const [draggingPhotoIndex, setDraggingPhotoIndex] = useState<number | null>(null)
   const photoSwipeStartRef = useRef<{ index: number; x: number; pointerId: number } | null>(null)
@@ -64,60 +65,69 @@ export function ListingPhotoManager({
 
     setMessage('')
     let nextSortOrder = photos.length
+    const fileList = Array.from(files)
+    let processed = 0
+    setUploadProgress({ done: 0, total: fileList.length })
 
-    for (const file of Array.from(files)) {
-      if (!file.type.startsWith('image/')) {
-        setMessage('Please upload image files only.')
-        continue
+    try {
+      for (const file of fileList) {
+        processed += 1
+        setUploadProgress({ done: processed - 1, total: fileList.length })
+        if (!file.type.startsWith('image/')) {
+          setMessage('Please upload image files only.')
+          continue
+        }
+
+        if (file.size > maxListingPhotoSizeMb * 1024 * 1024) {
+          setMessage(`${file.name} is too large. Please use an image under ${maxListingPhotoSizeMb}MB.`)
+          continue
+        }
+
+        const fileExt = getImageExtension(file)
+        const fileName = `photo-${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
+        const storagePath = `listings/${listingId}/${fileName}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('listing-photos')
+          .upload(storagePath, file, {
+            cacheControl: '3600',
+            contentType: file.type || 'image/jpeg',
+            upsert: false,
+          })
+
+        if (uploadError) {
+          setMessage(getUploadFailureMessage(file.name, uploadError.message))
+          continue
+        }
+
+        const { data: publicUrl } = supabase.storage
+          .from('listing-photos')
+          .getPublicUrl(storagePath)
+
+        const { data: insertedPhoto, error: insertError } = await supabase
+          .from('listing_photos')
+          .insert({
+            listing_id: listingId,
+            photo_url: publicUrl.publicUrl,
+            storage_path: storagePath,
+            sort_order: nextSortOrder,
+            is_cover: nextSortOrder === 0,
+          })
+          .select('id, photo_url, storage_path, is_cover, sort_order, label')
+          .single()
+
+        if (insertError) {
+          setMessage(getUploadFailureMessage(file.name, insertError.message))
+          continue
+        }
+
+        if (insertedPhoto) {
+          setPhotos((current) => [...current, insertedPhoto as ListingPhoto])
+          nextSortOrder += 1
+        }
       }
-
-      if (file.size > maxListingPhotoSizeMb * 1024 * 1024) {
-        setMessage(`${file.name} is too large. Please use an image under ${maxListingPhotoSizeMb}MB.`)
-        continue
-      }
-
-      const fileExt = getImageExtension(file)
-      const fileName = `photo-${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
-      const storagePath = `listings/${listingId}/${fileName}`
-
-      const { error: uploadError } = await supabase.storage
-        .from('listing-photos')
-        .upload(storagePath, file, {
-          cacheControl: '3600',
-          contentType: file.type || 'image/jpeg',
-          upsert: false,
-        })
-
-      if (uploadError) {
-        setMessage(getUploadFailureMessage(file.name, uploadError.message))
-        continue
-      }
-
-      const { data: publicUrl } = supabase.storage
-        .from('listing-photos')
-        .getPublicUrl(storagePath)
-
-      const { data: insertedPhoto, error: insertError } = await supabase
-        .from('listing_photos')
-        .insert({
-          listing_id: listingId,
-          photo_url: publicUrl.publicUrl,
-          storage_path: storagePath,
-          sort_order: nextSortOrder,
-          is_cover: nextSortOrder === 0,
-        })
-        .select('id, photo_url, storage_path, is_cover, sort_order, label')
-        .single()
-
-      if (insertError) {
-        setMessage(getUploadFailureMessage(file.name, insertError.message))
-        continue
-      }
-
-      if (insertedPhoto) {
-        setPhotos((current) => [...current, insertedPhoto as ListingPhoto])
-        nextSortOrder += 1
-      }
+    } finally {
+      setUploadProgress(null)
     }
 
     if (inputRef.current) inputRef.current.value = ''
@@ -253,10 +263,15 @@ export function ListingPhotoManager({
           accept="image/*"
           multiple
           className="hidden"
+          disabled={uploadProgress !== null}
           onChange={(event) => void handleUpload(event.target.files)}
         />
         <span className="text-sm font-bold text-stone-800">
-          {isPending ? 'Updating photos...' : 'Add photos'}
+          {uploadProgress
+            ? `Uploading photo ${Math.min(uploadProgress.done + 1, uploadProgress.total)} of ${uploadProgress.total}... please keep this page open`
+            : isPending
+              ? 'Updating photos...'
+              : 'Add photos'}
         </span>
         <span className="mt-1 text-xs text-stone-500">JPG, PNG or WebP up to {maxListingPhotoSizeMb}MB</span>
       </label>
