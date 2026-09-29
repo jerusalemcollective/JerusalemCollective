@@ -17,6 +17,7 @@ import { formatListingPrice, formatPrice, formatCurrencyAmount } from '@/lib/uti
 import { loadEnquiryDraft } from '@/lib/enquiry-draft'
 import { formatDateISO, formatBookingDate } from '@/lib/utils/date'
 import { computeDepositPreview } from '@/lib/utils/deposit'
+import { computeBookingTotal, computeExtraGuests } from '@/lib/utils/pricing'
 
 // Google Maps (@react-google-maps/api) is heavy; load it only in the browser,
 // on demand, so it doesn't ship in or block this high-traffic SEO page.
@@ -211,13 +212,26 @@ export function ListingDetailClient({
             (1000 * 60 * 60 * 24),
         )
       : 0
+  // Mirrors the server RPC (create_pending_booking_payment) so the quoted total
+  // includes any extra-guest surcharge the guest will actually be charged.
+  const extraGuests = computeExtraGuests(guestCount, listing.included_guests, listing.max_guests)
   const totalILS =
     nights > 0 && listing.price_ils
-      ? nights * listing.price_ils
+      ? computeBookingTotal({
+          nightlyPrice: listing.price_ils,
+          nights,
+          extraGuests,
+          extraGuestFee: Number(listing.extra_guest_fee_ils) || 0,
+        })
       : null
   const totalUSD =
     nights > 0 && listing.price_usd
-      ? nights * listing.price_usd
+      ? computeBookingTotal({
+          nightlyPrice: listing.price_usd,
+          nights,
+          extraGuests,
+          extraGuestFee: Number(listing.extra_guest_fee_usd) || 0,
+        })
       : null
 
   // Everything Shabbos/Jewish in one place — the kosher level, the Shabbos
@@ -1319,8 +1333,14 @@ function BookingControls({
   const belowMin = nights > 0 && nights < minNights
   const minNightsMessage = `Minimum stay is ${minNights} nights.`
 
-  const perNightILS = totalILS && nights ? Math.round(totalILS / nights) : null
-  const perNightUSD = totalUSD && nights ? Math.round(totalUSD / nights) : null
+  // Base nightly line excludes the extra-guest surcharge, which gets its own line.
+  const perNightILS = totalILS && nights && listing.price_ils ? Math.round(listing.price_ils) : null
+  const perNightUSD = totalUSD && nights && listing.price_usd ? Math.round(listing.price_usd) : null
+  const baseILS = totalILS && listing.price_ils ? nights * listing.price_ils : null
+  const baseUSD = totalUSD && listing.price_usd ? nights * listing.price_usd : null
+  const extraGuests = computeExtraGuests(guestCount, listing.included_guests, listing.max_guests)
+  const extraILS = totalILS != null && baseILS != null ? Math.round((totalILS - baseILS) * 100) / 100 : 0
+  const extraUSD = totalUSD != null && baseUSD != null ? Math.round((totalUSD - baseUSD) * 100) / 100 : 0
   const formatDual = (ils: number | null, usd: number | null) =>
     [ils ? `₪${ils.toLocaleString()}` : null, usd ? `$${usd.toLocaleString()}` : null]
       .filter(Boolean)
@@ -1356,8 +1376,16 @@ function BookingControls({
               <span>
                 {formatDual(perNightILS, perNightUSD)} {'\u00d7'} {nights} night{nights === 1 ? '' : 's'}
               </span>
-              <span className="text-stone-900">{formatDual(totalILS, totalUSD)}</span>
+              <span className="text-stone-900">{formatDual(baseILS, baseUSD)}</span>
             </div>
+            {(extraILS > 0 || extraUSD > 0) && (
+              <div className="flex items-center justify-between gap-3 text-sm text-stone-600">
+                <span>
+                  {extraGuests} extra guest{extraGuests === 1 ? '' : 's'} {'\u00d7'} {nights} night{nights === 1 ? '' : 's'}
+                </span>
+                <span className="text-stone-900">{formatDual(extraILS || null, extraUSD || null)}</span>
+              </div>
+            )}
             <div className="flex items-center justify-between gap-3 text-sm text-stone-500">
               <span>Booking fees</span>
               <span>None</span>
