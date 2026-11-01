@@ -795,12 +795,14 @@ const idDocTypes = [
 
 const steps = [
   'Contact details',
-  'Stay details',
-  'Photos',
   'Amenities',
+  'Photos',
+  'Stay details',
   'Pricing',
   'Verification',
 ]
+const AMENITIES_STEP = 1
+const STAY_DETAILS_STEP = 3
 
 const minimumPhotoCount = 5
 const maxListingPhotoCount = 20
@@ -1388,7 +1390,7 @@ export default function BecomeAHostPage() {
     }
 
     // Step 1 — Stay details (name, description, location, guests & rooms)
-    if (stepIndex === 1) {
+    if (stepIndex === STAY_DETAILS_STEP) {
       if (!form.apartment_title.trim()) {
         issues.push('Add a name for the stay.')
       }
@@ -1421,7 +1423,7 @@ export default function BecomeAHostPage() {
     }
 
     // Step 3 — Amenities
-    if (stepIndex === 3 && form.amenities.length === 0) {
+    if (stepIndex === AMENITIES_STEP && form.amenities.length === 0) {
       issues.push('Select at least one amenity.')
     }
 
@@ -2145,77 +2147,12 @@ async function handleSubmit() {
               </StepShell>
             )}
 
-              {step === 1 && (
+              {step === STAY_DETAILS_STEP && (
                 <StepShell
                   eyebrow="Stay details"
-                  title="Start with the basics"
-                  description="Add a clear name and description for the stay."
+                  title="Tell us about the home"
+                  description="Where it is, the rooms and beds, then a name and description."
                 >
-                  <div className="mb-6">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                      <p className="text-sm text-stone-600">
-                        Write it in your own words. You can polish it with AI after choosing amenities.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={translateToEnglish}
-                        disabled={translateLoading}
-                        className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-bold text-stone-800 transition hover:border-stone-500 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {translateLoading ? 'Translating...' : 'Translate Hebrew → English'}
-                      </button>
-                    </div>
-
-                    {translateError && (
-                      <p className="mt-4 text-sm text-red-600">{translateError}</p>
-                    )}
-
-                    {translateResult && (
-                      <div className="mt-5 rounded-2xl bg-white p-4 ring-1 ring-stone-200">
-                        <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
-                          English translation
-                        </p>
-                        <h3 className="mt-3 text-lg font-bold text-stone-950" dir="auto">
-                          {translateResult.title}
-                        </h3>
-                        <p className="mt-3 whitespace-pre-line text-sm leading-6 text-stone-700" dir="auto">
-                          {translateResult.description}
-                        </p>
-                        <button
-                          type="button"
-                          onClick={applyTranslation}
-                          className="mt-5 rounded-full border border-stone-300 px-4 py-2 text-sm font-bold text-stone-800 transition hover:border-stone-500"
-                        >
-                          Use this English
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  <Field label="Give your stay a name" required>
-                  <input
-                    value={form.apartment_title}
-                    onChange={(e) =>
-                      updateField('apartment_title', e.target.value)
-                    }
-                    type="text"
-                    dir="auto"
-                    placeholder="Example: Rechavia family apartment"
-                    className={inputClass}
-                  />
-                </Field>
-
-                <Field label="Tell guests what makes this stay useful">
-                  <textarea
-                    value={form.description}
-                    onChange={(e) => updateField('description', e.target.value)}
-                    rows={6}
-                    dir="auto"
-                    placeholder="Example: Bright 3-bedroom apartment, close to shuls, suitable for families, elevator building..."
-                    className={inputClass}
-                  />
-                </Field>
-
                 <div className="mt-8 border-t border-stone-100 pt-8">
                   <h3 className="text-sm font-bold uppercase tracking-widest text-stone-500">
                     Location
@@ -2327,6 +2264,124 @@ async function handleSubmit() {
                     Bedrooms and Sleeps fill in from your rooms. You can change them, e.g. to allow fewer guests than the beds fit.
                   </p>
                 </div>
+                <div className="mt-8 border-t border-stone-100 pt-8">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold uppercase tracking-widest text-stone-500">
+                        Name &amp; description
+                      </h3>
+                      <p className="mt-1 text-xs text-stone-500">
+                        Write a few lines in your own words. Improve with AI tidies them using your rooms and amenities, and never adds anything new.
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={translateToEnglish}
+                      disabled={translateLoading}
+                      className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-bold text-stone-800 transition hover:border-stone-500 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {translateLoading ? 'Translating...' : 'Translate Hebrew → English'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={generateListingCopy}
+                      disabled={aiLoading || !form.description.trim()}
+                      className="shrink-0 rounded-full bg-[#252525] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#111111] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {aiLoading ? 'Improving...' : 'Improve with AI'}
+                    </button>
+                    </div>
+                  </div>
+
+                  {!form.description.trim() && (
+                    <p className="mt-3 text-xs text-stone-500">
+                      Write a few lines below first, then Improve with AI can tidy them up.
+                    </p>
+                  )}
+
+                    {translateError && (
+                    <p className="mt-4 text-sm text-red-600">{translateError}</p>
+                  )}
+
+                  {translateResult && (
+                    <div className="mt-5 rounded-2xl bg-white p-4 ring-1 ring-stone-200">
+                      <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
+                        English translation
+                      </p>
+                      <h3 className="mt-3 text-lg font-bold text-stone-950" dir="auto">
+                        {translateResult.title}
+                      </h3>
+                      <p className="mt-3 whitespace-pre-line text-sm leading-6 text-stone-700" dir="auto">
+                        {translateResult.description}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={applyTranslation}
+                        className="mt-5 rounded-full border border-stone-300 px-4 py-2 text-sm font-bold text-stone-800 transition hover:border-stone-500"
+                      >
+                        Use this English
+                      </button>
+                    </div>
+                  )}
+                  {aiError && (
+                    <p className="mt-4 text-sm text-red-600">{aiError}</p>
+                  )}
+
+                  {aiSuggestion && (
+                    <div className="mt-5 rounded-2xl bg-white p-4 ring-1 ring-stone-200">
+                      <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
+                        Suggested copy
+                      </p>
+                      <h3 className="mt-3 text-lg font-bold text-stone-950">
+                        {aiSuggestion.title}
+                      </h3>
+                      <p className="mt-3 whitespace-pre-line text-sm leading-6 text-stone-700">
+                        {aiSuggestion.description}
+                      </p>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {aiSuggestion.highlights?.map((highlight) => (
+                          <span
+                            key={highlight}
+                            className="rounded-full bg-stone-100 px-3 py-1.5 text-xs font-semibold text-stone-700"
+                          >
+                            {highlight}
+                          </span>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={applyAiSuggestion}
+                        className="mt-5 rounded-full border border-stone-300 px-4 py-2 text-sm font-bold text-stone-800 transition hover:border-stone-500"
+                      >
+                        Use this wording
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="mt-5 grid gap-5">
+                    <Field label="Give your stay a name" required>
+                      <input
+                        value={form.apartment_title}
+                        onChange={(e) => updateField('apartment_title', e.target.value)}
+                        type="text"
+                        dir="auto"
+                        placeholder="Example: Rechavia family apartment"
+                        className={inputClass}
+                      />
+                    </Field>
+                    <Field label="Tell guests what makes this stay useful">
+                      <textarea
+                        value={form.description}
+                        onChange={(e) => updateField('description', e.target.value)}
+                        rows={6}
+                        dir="auto"
+                        placeholder="A few lines in your own words, e.g. bright, close to shuls, good for families"
+                        className={inputClass}
+                      />
+                    </Field>
+                  </div>
+                </div>
               </StepShell>
             )}
 
@@ -2380,7 +2435,7 @@ async function handleSubmit() {
               </StepShell>
             )}
 
-            {step === 3 && (
+            {step === AMENITIES_STEP && (
               <StepShell
                 eyebrow="Amenities"
                 title="What does the stay include?"
@@ -2459,88 +2514,6 @@ async function handleSubmit() {
                   </div>
                 </div>
 
-                <div className="mt-8 border-t border-stone-100 pt-8">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <h3 className="text-sm font-bold uppercase tracking-widest text-stone-500">
-                        Polish your description
-                      </h3>
-                      <p className="mt-1 text-xs text-stone-500">
-                        AI rewrites what you wrote, using the amenities above. It does not add anything new.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={generateListingCopy}
-                      disabled={aiLoading || !form.description.trim()}
-                      className="shrink-0 rounded-full bg-[#252525] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#111111] disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {aiLoading ? 'Improving...' : 'Improve with AI'}
-                    </button>
-                  </div>
-
-                  {!form.description.trim() && (
-                    <p className="mt-3 text-xs text-stone-500">
-                      Add a description in Stay details first.
-                    </p>
-                  )}
-
-                  {aiError && (
-                    <p className="mt-4 text-sm text-red-600">{aiError}</p>
-                  )}
-
-                  {aiSuggestion && (
-                    <div className="mt-5 rounded-2xl bg-white p-4 ring-1 ring-stone-200">
-                      <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
-                        Suggested copy
-                      </p>
-                      <h3 className="mt-3 text-lg font-bold text-stone-950">
-                        {aiSuggestion.title}
-                      </h3>
-                      <p className="mt-3 whitespace-pre-line text-sm leading-6 text-stone-700">
-                        {aiSuggestion.description}
-                      </p>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {aiSuggestion.highlights?.map((highlight) => (
-                          <span
-                            key={highlight}
-                            className="rounded-full bg-stone-100 px-3 py-1.5 text-xs font-semibold text-stone-700"
-                          >
-                            {highlight}
-                          </span>
-                        ))}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={applyAiSuggestion}
-                        className="mt-5 rounded-full border border-stone-300 px-4 py-2 text-sm font-bold text-stone-800 transition hover:border-stone-500"
-                      >
-                        Use this wording
-                      </button>
-                    </div>
-                  )}
-
-                  <div className="mt-5 grid gap-5">
-                    <Field label="Stay name">
-                      <input
-                        value={form.apartment_title}
-                        onChange={(e) => updateField('apartment_title', e.target.value)}
-                        type="text"
-                        dir="auto"
-                        className={inputClass}
-                      />
-                    </Field>
-                    <Field label="Description">
-                      <textarea
-                        value={form.description}
-                        onChange={(e) => updateField('description', e.target.value)}
-                        rows={6}
-                        dir="auto"
-                        className={inputClass}
-                      />
-                    </Field>
-                  </div>
-                </div>
               </StepShell>
             )}
 
