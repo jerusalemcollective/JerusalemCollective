@@ -1,6 +1,7 @@
 ﻿import Link from 'next/link'
 import { requireAdminPermission } from '@/lib/admin'
-import { StatusBadge } from '@/components/status-badge'
+import { enquiryOutcomeLabel, jerusalemToday } from '@/lib/booking-display'
+import { BookingBadge } from '@/app/admin/bookings/booking-badge'
 import { Pagination, normalizePaginationSearchParams, type PaginationSearchParams } from '@/components/pagination'
 import { oneOrNull } from '@/lib/utils/one-or-null'
 
@@ -17,7 +18,15 @@ type EnquiryRow = {
   guests: number
   message: string | null
   conversation_id: string | null
+  booking_id: string | null
   created_at: string
+  booking?: {
+    id: string
+    status: string | null
+    payment_status: string | null
+    check_in: string | null
+    check_out: string | null
+  } | null
   listings?: {
     title: string
     area: string
@@ -30,7 +39,8 @@ type EnquiryRow = {
   } | null
 }
 
-type EnquiryQueryRow = Omit<EnquiryRow, 'listings' | 'guest' | 'hosts'> & {
+type EnquiryQueryRow = Omit<EnquiryRow, 'listings' | 'guest' | 'hosts' | 'booking'> & {
+  booking?: EnquiryRow['booking'] | NonNullable<EnquiryRow['booking']>[] | null
   listings?: EnquiryRow['listings'] | NonNullable<EnquiryRow['listings']>[] | null
   guest?: EnquiryRow['guest'] | NonNullable<EnquiryRow['guest']>[] | null
   hosts?: EnquiryRow['hosts'] | NonNullable<EnquiryRow['hosts']>[] | null
@@ -68,8 +78,9 @@ export default async function AdminEnquiriesPage({
     .from('booking_requests')
     .select(`
       id, listing_id, host_id, guest_id, status, check_in, check_out,
-      guests, message, conversation_id, created_at,
+      guests, message, conversation_id, booking_id, created_at,
       listings(title, area),
+      booking:bookings(id, status, payment_status, check_in, check_out),
       hosts(name),
       guest:profiles!booking_requests_guest_id_fkey(full_name)
     `)
@@ -92,7 +103,9 @@ export default async function AdminEnquiriesPage({
     listings: oneOrNull(enquiry.listings),
     hosts: oneOrNull(enquiry.hosts),
     guest: oneOrNull(enquiry.guest),
+    booking: oneOrNull(enquiry.booking),
   }))
+  const today = jerusalemToday()
   const total = count || 0
   const newCount = enquiries.filter((enquiry: EnquiryRow) => enquiry.status === 'new').length
   const activeCount = enquiries.filter((enquiry: EnquiryRow) => ['new', 'host_replied'].includes(enquiry.status)).length
@@ -140,7 +153,7 @@ export default async function AdminEnquiriesPage({
           >
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <StatusBadge status={enquiry.status} scheme="enquiry" />
+                <BookingBadge {...enquiryOutcomeLabel(enquiry.status, enquiry.booking, today)} />
                 <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
                   {enquiry.listings?.area || 'Jerusalem'}
                 </p>
@@ -170,6 +183,14 @@ export default async function AdminEnquiriesPage({
             </div>
 
             <div className="flex flex-wrap gap-2 lg:justify-end">
+              {(enquiry.booking?.id || enquiry.booking_id) && (
+                <Link
+                  href={`/admin/bookings/${enquiry.booking?.id || enquiry.booking_id}`}
+                  className="rounded-full bg-stone-950 px-3 py-2 text-xs font-bold text-white transition hover:bg-stone-800"
+                >
+                  View booking
+                </Link>
+              )}
               {enquiry.conversation_id && (
                 <span className="rounded-full border border-stone-200 px-3 py-2 text-xs font-bold text-stone-600">
                   Guest-host thread
