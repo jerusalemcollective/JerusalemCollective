@@ -51,6 +51,7 @@ type FormState = {
   apartment_title: string
   area: string
   exact_address: string
+  address_unit: string
   address_latitude: number | null
   address_longitude: number | null
   bedrooms: string
@@ -738,6 +739,7 @@ const initialForm: FormState = {
 apartment_title: '',
   area: '',
   exact_address: '',
+  address_unit: '',
   address_latitude: null,
   address_longitude: null,
 
@@ -1661,7 +1663,7 @@ async function handleSubmit() {
 
       apartment_title: form.apartment_title,
       area: form.area,
-      exact_address: form.exact_address || null,
+      exact_address: fullExactAddress(form) || null,
       latitude: form.address_latitude || null,
       longitude: form.address_longitude || null,
 
@@ -2300,6 +2302,19 @@ async function handleSubmit() {
                         required
                       />
                     </Field>
+
+                    <div className="md:col-start-2">
+                      <Field label="Apartment / floor / entrance">
+                        <input
+                          value={form.address_unit}
+                          onChange={(e) => updateField('address_unit', e.target.value)}
+                          type="text"
+                          dir="auto"
+                          placeholder="Optional, e.g. Apt 5, 2nd floor, entrance B"
+                          className={inputClass}
+                        />
+                      </Field>
+                    </div>
                   </div>
                 </div>
 
@@ -2840,7 +2855,7 @@ async function handleSubmit() {
 
                   <ReviewItem
                     label="Address"
-                    value={form.exact_address || 'Not provided'}
+                    value={fullExactAddress(form) || 'Not provided'}
                   />
 
                   <ReviewItem
@@ -3102,6 +3117,15 @@ function StepShell({
       <div className="mt-8">{children}</div>
     </div>
   )
+}
+
+// The apartment/floor/entrance is typed separately so editing it never clears
+// the Google-validated street address, then saved together with it.
+function fullExactAddress(form: Pick<FormState, 'exact_address' | 'address_unit'>) {
+  const street = form.exact_address.trim()
+  const unit = form.address_unit.trim()
+  if (!street) return ''
+  return unit ? `${street} (${unit})` : street
 }
 
 function Field({
