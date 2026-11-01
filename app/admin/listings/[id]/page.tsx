@@ -14,6 +14,8 @@ import { calculateListingScore } from '@/lib/marketplace-rules'
 import { AmenitySelector } from '@/components/amenity-selector'
 import { oneOrNull } from '@/lib/utils/one-or-null'
 import { createServiceRoleClient } from '@/lib/supabase/service'
+import { StayTermsFields } from '@/components/stay-terms-fields'
+import { STAY_TERMS_COLUMNS, stayTermsFromResult } from '@/lib/stay-terms'
 
 // 'live' is a legacy value from before review and visibility were split; it reads as Ready.
 type ListingAdminStatus = 'needs_work' | 'ready_for_launch' | 'live'
@@ -107,6 +109,12 @@ export default async function AdminListingDetailPage({
     .select('id, reviewer_name, rating, title, content, is_approved, created_at')
     .eq('listing_id', id)
     .order('created_at', { ascending: false })
+
+  // Check-in/out and cancellation (migration 118), read on their own so this page
+  // still loads before the migration has been run.
+  const stayTerms = stayTermsFromResult(
+    await supabase.from('listings').select(STAY_TERMS_COLUMNS.join(', ')).eq('id', id).maybeSingle(),
+  )
 
   // Host <-> guest message threads. conversations/messages are RLS-scoped to the
   // participants, so read them with the service role — this page is admin-gated
@@ -354,6 +362,13 @@ export default async function AdminListingDetailPage({
                   className="mt-2 min-h-36 w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
                 />
               </label>
+              <StayTermsFields
+                terms={stayTerms.terms}
+                available={stayTerms.available}
+                audience="admin"
+                className="border-t border-stone-100 pt-4"
+                unavailableNote="Check-in time, check-out time and cancellation policy can be edited here once database migration 118 has been run."
+              />
               {saved === '1' && (
                 <p role="status" className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
                   Listing edits saved.
