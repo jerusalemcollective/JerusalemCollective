@@ -144,7 +144,6 @@ export async function updatePaymentRouteSettings(formData: FormData) {
   }
 
   revalidatePath('/admin/settings')
-  revalidatePath('/admin/readiness')
   revalidatePath('/admin/payments')
   revalidatePath('/host/dashboard/payments')
   revalidatePath('/', 'layout')

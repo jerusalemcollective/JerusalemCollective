@@ -92,7 +92,6 @@ export async function updateAdminListingStatus(formData: FormData) {
 
   revalidatePath('/admin')
   revalidatePath('/admin/listings')
-  revalidatePath('/admin/readiness')
   revalidatePath(`/admin/listings/${listingId}`)
   revalidatePath(`/listings/${listingId}`)
   revalidatePath('/stays')
@@ -169,7 +168,6 @@ export async function updateAdminListingDetails(formData: FormData) {
 
   revalidatePath('/admin')
   revalidatePath('/admin/listings')
-  revalidatePath('/admin/readiness')
   revalidatePath(`/admin/listings/${listingId}`)
   revalidatePath(`/listings/${listingId}`)
   revalidatePath('/stays')

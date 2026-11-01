@@ -10,7 +10,6 @@ export type AdminPermission =
   | 'guests'
   | 'users'
   | 'reviews'
-  | 'analytics'
   | 'cases'
   | 'messages'
   | 'admins'
@@ -26,10 +25,10 @@ export const ADMIN_ROLE_LABELS: Record<AdminRole, string> = {
 
 export const ADMIN_ROLE_DESCRIPTIONS: Record<AdminRole, string> = {
   owner: 'Full access, including adding and removing admins.',
-  operations: 'Manages applications, listings, hosts, guests, reviews, and analytics.',
+  operations: 'Manages applications, listings, hosts, guests, and reviews.',
   support: 'Handles hosts, guests, support cases, and messages.',
-  content: 'Reviews applications, listings, reviews, and performance.',
-  analyst: 'Views analytics, hosts, and guests without changing admin settings.',
+  content: 'Reviews applications, listings, and reviews.',
+  analyst: 'Views hosts, guests, and users without changing admin settings.',
   none: 'No admin access.',
 }
 
@@ -42,15 +41,14 @@ const ROLE_PERMISSIONS: Record<AdminRole, AdminPermission[]> = {
     'guests',
     'users',
     'reviews',
-    'analytics',
     'cases',
     'messages',
     'admins',
   ],
-  operations: ['overview', 'applications', 'listings', 'hosts', 'guests', 'users', 'reviews', 'analytics', 'messages'],
+  operations: ['overview', 'applications', 'listings', 'hosts', 'guests', 'users', 'reviews', 'messages'],
   support: ['overview', 'hosts', 'guests', 'users', 'cases', 'messages'],
-  content: ['overview', 'applications', 'listings', 'reviews', 'analytics'],
-  analyst: ['overview', 'analytics', 'hosts', 'guests', 'users'],
+  content: ['overview', 'applications', 'listings', 'reviews'],
+  analyst: ['overview', 'hosts', 'guests', 'users'],
   none: [],
 }
 
