@@ -149,18 +149,6 @@ export default async function HostListingEditPage({
 
             <div className="mt-5">
               <Field label="Description">
-                <div className="mb-3 mt-2">
-                  <ListingAiAssistant
-                    formId="host-listing-edit-form"
-                    titleField="title"
-                    areaField="area"
-                    bedroomsField="bedrooms"
-                    bathroomsField="bathrooms"
-                    guestsField="maxGuests"
-                    amenitiesField="amenities"
-                    descriptionField="description"
-                  />
-                </div>
                 <textarea
                   name="description"
                   defaultValue={listing.description || ''}
@@ -263,6 +251,25 @@ export default async function HostListingEditPage({
                     className={inputClass}
                   />
                 </Field>
+              </div>
+            </div>
+
+            <div className="mt-6 border-t border-stone-100 pt-6">
+              <h3 className="text-sm font-bold text-stone-950">Polish your description</h3>
+              <p className="mt-1 text-xs text-stone-500">
+                AI rewrites the title and description in Stay details, using the amenities above. It does not add anything new.
+              </p>
+              <div className="mt-3">
+                <ListingAiAssistant
+                  formId="host-listing-edit-form"
+                  titleField="title"
+                  areaField="area"
+                  bedroomsField="bedrooms"
+                  bathroomsField="bathrooms"
+                  guestsField="maxGuests"
+                  amenitiesField="amenities"
+                  descriptionField="description"
+                />
               </div>
             </div>
 

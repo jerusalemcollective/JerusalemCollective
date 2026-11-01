@@ -66,6 +66,12 @@ export function ListingAiAssistant({
           bathrooms: String(formData.get(bathroomsField) || ''),
           sleeps: String(formData.get(guestsField) || ''),
           amenities: formData.getAll(amenitiesField).map(String),
+          kosher_kitchen_level: String(formData.get('kosherKitchenLevel') || ''),
+          shabbat_elevator: formData.has('shabbatElevator'),
+          shabbat_clock: formData.has('shabbatClock'),
+          sukkah_balcony: formData.has('sukkahBalcony'),
+          near_synagogue: formData.has('nearSynagogue'),
+          walking_minutes_to_kotel: String(formData.get('walkingMinutesToKotel') || ''),
           description: String(formData.get(descriptionField) || ''),
         }),
       })
