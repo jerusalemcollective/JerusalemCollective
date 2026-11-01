@@ -6,15 +6,25 @@ import { oneOrNull } from '@/lib/utils/one-or-null'
 
 type UpcomingBooking = {
   id: string
+  status: string | null
   check_in: string
   check_out: string
   listings: {
     title: string
   } | null
+  profiles: {
+    full_name: string | null
+  } | null
 }
 
-type UpcomingBookingRow = Omit<UpcomingBooking, 'listings'> & {
+type UpcomingBookingRow = Omit<UpcomingBooking, 'listings' | 'profiles'> & {
   listings?: UpcomingBooking['listings'] | NonNullable<UpcomingBooking['listings']>[] | null
+  profiles?: UpcomingBooking['profiles'] | NonNullable<UpcomingBooking['profiles']>[] | null
+}
+
+function isCancelledStatus(status: string | null) {
+  const value = (status || '').toLowerCase()
+  return value === 'cancelled' || value === 'canceled'
 }
 
 type UnreadThread = {
@@ -37,11 +47,12 @@ export default async function HostDashboardPage() {
   ] = await Promise.all([
     supabase
       .from('bookings')
-      .select('id, check_in, check_out, listings(title)')
+      .select('id, status, check_in, check_out, listings(title), profiles!bookings_user_id_fkey(full_name)')
       .in('host_id', hostIds)
       .gte('check_in', today)
       .order('check_in', { ascending: true })
-      .limit(2),
+      // Fetch a few extra so cancelled stays can be dropped and we still show two.
+      .limit(20),
     supabase.from('profiles').select('full_name').in('id', hostIds).limit(1).maybeSingle(),
     supabase
       .from('conversations')
@@ -49,12 +60,17 @@ export default async function HostDashboardPage() {
       .in('participant_2', hostIds),
   ])
 
-  const upcomingBookings: UpcomingBooking[] = (upcomingBookingsData || []).map((booking: UpcomingBookingRow) => ({
-    id: booking.id,
-    check_in: booking.check_in,
-    check_out: booking.check_out,
-    listings: oneOrNull(booking.listings),
-  }))
+  const upcomingBookings: UpcomingBooking[] = (upcomingBookingsData || [])
+    .filter((booking: UpcomingBookingRow) => !isCancelledStatus(booking.status))
+    .slice(0, 2)
+    .map((booking: UpcomingBookingRow) => ({
+      id: booking.id,
+      status: booking.status,
+      check_in: booking.check_in,
+      check_out: booking.check_out,
+      listings: oneOrNull(booking.listings),
+      profiles: oneOrNull(booking.profiles),
+    }))
 
   const fullName = (profileData as { full_name?: string | null } | null)?.full_name || ''
   const firstName = fullName.trim().split(/\s+/)[0] || ''
@@ -139,12 +155,12 @@ export default async function HostDashboardPage() {
   })
 
   return (
-    <div className="min-h-screen bg-[#F8F5F2] px-5 py-8 text-[#252525] md:px-6">
-      <section className="mx-auto max-w-5xl">
+    <div className="min-h-screen overflow-x-hidden bg-[#F8F5F2] px-0 py-2 text-[#252525] sm:px-5 sm:py-8 md:px-6">
+      <section className="mx-auto min-w-0 max-w-5xl">
         <header className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Host dashboard</p>
-            <h1 className="font-display mt-2 text-3xl font-bold tracking-tight text-stone-950">
+            <h1 className="font-display mt-2 break-words text-3xl font-bold tracking-tight text-stone-950">
               {firstName ? `Welcome back, ${firstName}` : 'Welcome back'}
             </h1>
             <p className="mt-1 text-stone-500">Here&apos;s what&apos;s happening with your stays.</p>
@@ -168,15 +184,16 @@ export default async function HostDashboardPage() {
           {upcomingBookings.length === 0 ? (
             <p className="mt-3 text-sm text-stone-500">No upcoming stays &mdash; nothing booked yet.</p>
           ) : (
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div className="mt-4 grid min-w-0 gap-4 sm:grid-cols-2">
               {upcomingBookings.map((booking, index) => {
                 const nights = nightsBetween(booking.check_in, booking.check_out)
+                const guestName = booking.profiles?.full_name?.trim()
                 return (
                   <article
                     key={booking.id}
-                    className="flex items-center gap-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-stone-100"
+                    className="flex min-w-0 items-center gap-3 rounded-3xl bg-white p-4 shadow-sm ring-1 ring-stone-100 sm:gap-4 sm:p-5"
                   >
-                    <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-[#fff4ef] text-[#c76f55]">
+                    <span className="hidden h-16 w-16 shrink-0 place-items-center rounded-2xl bg-[#fff4ef] text-[#c76f55] min-[400px]:grid">
                       <CalendarDays className="h-6 w-6" />
                     </span>
                     <div className="min-w-0 flex-1">
@@ -184,7 +201,10 @@ export default async function HostDashboardPage() {
                         <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Next stay</p>
                       )}
                       <p className="mt-1 truncate font-bold text-stone-950">{booking.listings?.title || 'Stay'}</p>
-                      <p className="mt-0.5 text-sm text-stone-500">
+                      <p className="mt-0.5 truncate text-sm font-semibold text-stone-700">
+                        {guestName ? `Guest: ${guestName}` : 'Guest'}
+                      </p>
+                      <p className="mt-0.5 break-words text-sm text-stone-500">
                         {formatDate(booking.check_in)} – {formatDate(booking.check_out)} · {nights}{' '}
                         {nights === 1 ? 'night' : 'nights'}
                       </p>
@@ -219,7 +239,7 @@ export default async function HostDashboardPage() {
                   <Link
                     key={row.key}
                     href="/host/dashboard/messages"
-                    className="flex items-start gap-4 px-6 py-4 transition hover:bg-stone-50"
+                    className="flex min-w-0 items-start gap-3 px-4 py-4 transition hover:bg-stone-50 sm:gap-4 sm:px-6"
                   >
                     <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#fff4ef] text-sm font-bold text-[#c76f55]">
                       {row.initials}
@@ -255,6 +275,7 @@ function formatDate(value: string) {
   return new Date(`${value}T12:00:00`).toLocaleDateString('en-GB', {
     day: 'numeric',
     month: 'short',
+    year: 'numeric',
   })
 }
 
