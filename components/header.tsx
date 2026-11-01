@@ -369,7 +369,7 @@ export function Header({
           <button
             type="button"
             onClick={() => setMobileOpen((open) => !open)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-700 transition hover:border-stone-400 hover:bg-stone-50 md:hidden"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-700 transition hover:border-stone-400 hover:bg-stone-50 lg:hidden"
             aria-label="Open navigation menu"
             aria-expanded={mobileOpen}
           >
@@ -379,7 +379,7 @@ export function Header({
       </div>
 
       {mobileOpen && (
-        <div className="border-t border-stone-200 bg-white md:hidden">
+        <div className="border-t border-stone-200 bg-white lg:hidden">
           <nav className="divide-y divide-stone-100">
             <Link
               href="/stays"
