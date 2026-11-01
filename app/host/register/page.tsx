@@ -33,8 +33,8 @@ function RegisterForm() {
       return
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters')
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters')
       setIsLoading(false)
       return
     }
@@ -199,7 +199,7 @@ function RegisterForm() {
               </label>
               <Input
                 type="password"
-                placeholder="At least 6 characters"
+                placeholder="At least 8 characters"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
