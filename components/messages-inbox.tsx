@@ -161,6 +161,7 @@ function requestStatusLabel(status: string) {
     accepted: 'Accepted',
     declined: 'Declined',
     closed: 'Closed',
+    cancelled: 'Cancelled',
   }
 
   return labels[status] || status.replaceAll('_', ' ')
@@ -168,7 +169,7 @@ function requestStatusLabel(status: string) {
 
 function requestStatusClass(status: string) {
   if (status === 'accepted') return 'bg-green-100 text-green-700 ring-green-200'
-  if (status === 'declined' || status === 'closed') return 'bg-stone-100 text-stone-600 ring-stone-200'
+  if (status === 'declined' || status === 'closed' || status === 'cancelled') return 'bg-stone-100 text-stone-600 ring-stone-200'
   if (status === 'host_replied') return 'bg-amber-100 text-amber-700 ring-amber-200'
   return 'bg-[#fff4ef] text-[#c76f55] ring-[#f2d2c7]'
 }
@@ -194,6 +195,11 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
   const [statusFilter] = useState<string>('all')
   // A conversation is an "enquiry" when it has a linked booking request.
   const [enquiriesOnly, setEnquiriesOnly] = useState(false)
+  // Accepted requests whose booking was later cancelled (host view): shown as
+  // "Cancelled" rather than "Accepted".
+  const [cancelledRequestIds, setCancelledRequestIds] = useState<Set<string>>(() => new Set())
+  const displayRequestStatus = (request: BookingRequestSummary) =>
+    request.status === 'accepted' && cancelledRequestIds.has(request.id) ? 'cancelled' : request.status
   const router = useRouter()
   const searchParams = useSearchParams()
   const participantIdsKey = participantIds.join('|')
@@ -441,6 +447,38 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
         })
 
         setConversations(hydrated)
+
+        // Host view: an accepted request whose booking was later cancelled
+        // should read "Cancelled". Requests and bookings share listing, guest
+        // and dates (the acceptance RPC copies them across).
+        if (mode === 'host') {
+          const acceptedRequests = requestRows.filter((request) => request.status === 'accepted' && request.listing_id)
+          const acceptedListingIds = Array.from(new Set(acceptedRequests.map((request) => request.listing_id as string)))
+          if (acceptedListingIds.length > 0) {
+            const { data: cancelledBookings } = await supabase
+              .from('bookings')
+              .select('listing_id, user_id, check_in, check_out')
+              .in('listing_id', acceptedListingIds)
+              .in('status', ['cancelled', 'canceled'])
+            const cancelledKeys = new Set(
+              ((cancelledBookings || []) as {
+                listing_id: string
+                user_id: string | null
+                check_in: string
+                check_out: string
+              }[]).map((booking) => `${booking.listing_id}|${booking.user_id}|${booking.check_in}|${booking.check_out}`),
+            )
+            setCancelledRequestIds(
+              new Set(
+                acceptedRequests
+                  .filter((request) =>
+                    cancelledKeys.has(`${request.listing_id}|${request.guest_id}|${request.check_in}|${request.check_out}`),
+                  )
+                  .map((request) => request.id),
+              ),
+            )
+          }
+        }
 
         // Show the contacts list by default; the conversation overlay opens only
         // when a contact is clicked (or a specific conversation is deep-linked).
@@ -964,8 +1002,8 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
                   </p>
                 </div>
                 {selectedConversation.request && (
-                  <span className={`w-fit shrink-0 rounded-full px-3 py-1.5 text-xs font-bold ring-1 ${requestStatusClass(selectedConversation.request.status)}`}>
-                    {requestStatusLabel(selectedConversation.request.status)}
+                  <span className={`w-fit shrink-0 rounded-full px-3 py-1.5 text-xs font-bold ring-1 ${requestStatusClass(displayRequestStatus(selectedConversation.request))}`}>
+                    {requestStatusLabel(displayRequestStatus(selectedConversation.request))}
                   </span>
                 )}
               </div>
@@ -1229,8 +1267,8 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
                   {formatTimestamp(conversation.updated_at)}
                 </span>
                 {conversation.request && (
-                  <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ring-1 ${requestStatusClass(conversation.request.status)}`}>
-                    {requestStatusLabel(conversation.request.status)}
+                  <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ring-1 ${requestStatusClass(displayRequestStatus(conversation.request))}`}>
+                    {requestStatusLabel(displayRequestStatus(conversation.request))}
                   </span>
                 )}
               </span>

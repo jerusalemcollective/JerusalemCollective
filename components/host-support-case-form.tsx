@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 
 export type HostCaseBooking = {
   id: string
+  status?: string | null
   check_in: string
   check_out: string
   title: string
@@ -136,6 +137,7 @@ export function HostSupportCaseForm({ userId, bookings }: { userId: string; book
           {bookings.map((booking) => (
             <option key={booking.id} value={booking.id}>
               {booking.title} ({booking.check_in} to {booking.check_out})
+              {booking.status === 'cancelled' || booking.status === 'canceled' ? ' — Cancelled' : ''}
             </option>
           ))}
         </select>
