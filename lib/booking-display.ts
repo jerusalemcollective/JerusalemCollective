@@ -49,7 +49,7 @@ export function bookingStatusLabel(booking: StatusInput, today: string = jerusal
   if (status === 'pending') return { label: 'Pending payment', tone: 'amber' }
   if (status === 'completed') return { label: 'Completed', tone: 'stone' }
   if (status === 'confirmed') {
-    if (booking.check_out && booking.check_out <= today) return { label: 'Completed', tone: 'stone' }
+    if (booking.check_out && booking.check_out < today) return { label: 'Completed', tone: 'stone' }
     if (booking.check_in && booking.check_in <= today) return { label: 'Staying now', tone: 'blue' }
     return { label: 'Confirmed', tone: 'green' }
   }
