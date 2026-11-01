@@ -14,6 +14,7 @@ import {
 } from '@/components/listing-detail-client'
 import { neighborhoodDescriptions } from '@/lib/neighborhood-pages'
 import { PaymentCancelledBanner } from '@/components/payment-cancelled-banner'
+import { STAY_TERMS_COLUMNS, readStayTerms, stayTermsFromResult } from '@/lib/stay-terms'
 
 type HostRecord = {
   name: string
@@ -384,6 +385,16 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     notFound()
   }
 
+  // Check-in/out and cancellation (migration 118). Read from the select('*') row;
+  // if that row doesn't carry them (explicit column list), fetch them on their
+  // own, tolerating the columns not existing yet.
+  const stayTerms =
+    'cancellation_policy' in listingData
+      ? readStayTerms(listingData as Record<string, unknown>)
+      : stayTermsFromResult(
+          await supabase.from('listings').select(STAY_TERMS_COLUMNS.join(', ')).eq('id', id).maybeSingle(),
+        ).terms
+
   const structuredListing = listingDetailListingSchema.parse(listingData)
   const displayTitle = buildListingDisplayTitle(structuredListing)
   const listing: ListingDetailListing = {
@@ -638,6 +649,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
         shulDistances={shulDistances}
         avgResponseHours={avgResponseHours}
         servicesBarEnabled={servicesBarEnabled}
+        stayTerms={stayTerms}
       />
     </>
   )

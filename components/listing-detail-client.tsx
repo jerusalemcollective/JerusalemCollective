@@ -19,6 +19,13 @@ import { formatDateISO, formatBookingDate } from '@/lib/utils/date'
 import { computeDepositPreview } from '@/lib/utils/deposit'
 import { computeBookingTotal, computeExtraGuests } from '@/lib/utils/pricing'
 import { PayoutCopyRows } from '@/components/payout-copy-rows'
+import {
+  CANCELLATION_AGREED_GUEST_SENTENCE,
+  DIRECT_PAYMENT_REFUND_NOTE,
+  cancellationPreset,
+  stayTimesLine,
+  type StayTerms,
+} from '@/lib/stay-terms'
 
 // Google Maps (@react-google-maps/api) is heavy; load it only in the browser,
 // on demand, so it doesn't ship in or block this high-traffic SEO page.
@@ -156,6 +163,8 @@ type ListingDetailClientProps = {
   }>
   avgResponseHours: number | null
   servicesBarEnabled?: boolean
+  // Check-in/out and cancellation policy (migration 118); null when not loaded.
+  stayTerms?: StayTerms | null
 }
 
 function formatResponseTime(hours: number): string {
@@ -193,7 +202,11 @@ export function ListingDetailClient({
   shulDistances,
   avgResponseHours,
   servicesBarEnabled = true,
+  stayTerms = null,
 }: ListingDetailClientProps) {
+  const stayTimes = stayTimesLine(stayTerms?.check_in_time, stayTerms?.check_out_time)
+  const cancellation = cancellationPreset(stayTerms?.cancellation_policy)
+  const cancellationNotes = stayTerms?.cancellation_policy_notes?.trim() || null
   const [copiedLink, setCopiedLink] = useState(false)
   const [showGallery, setShowGallery] = useState(false)
   const [galleryIndex, setGalleryIndex] = useState(0)
@@ -793,17 +806,43 @@ export function ListingDetailClient({
               </>
             )}
 
-            {listing.house_rules?.trim() && (
+            {(listing.house_rules?.trim() || stayTimes) && (
               <>
                 <hr className="border-stone-100" />
                 <div className="py-3">
                   <h2 className="text-lg font-bold text-stone-950">House rules</h2>
-                  <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-stone-700">
-                    {listing.house_rules}
-                  </p>
+                  {stayTimes && (
+                    <p className="mt-3 text-sm font-semibold leading-7 text-stone-900">{stayTimes}</p>
+                  )}
+                  {listing.house_rules?.trim() && (
+                    <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-stone-700">
+                      {listing.house_rules}
+                    </p>
+                  )}
                 </div>
               </>
             )}
+
+            <hr className="border-stone-100" />
+            <div className="py-3">
+              <h2 className="text-lg font-bold text-stone-950">Cancellation policy</h2>
+              {cancellation ? (
+                <>
+                  <p className="mt-3 text-sm font-semibold text-stone-900">{cancellation.label}</p>
+                  <p className="mt-1 text-sm leading-7 text-stone-700">{cancellation.guestSentence}</p>
+                </>
+              ) : (
+                <p className="mt-3 text-sm leading-7 text-stone-700">{CANCELLATION_AGREED_GUEST_SENTENCE}</p>
+              )}
+              {cancellationNotes && (
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-stone-700" dir="auto">
+                  {cancellationNotes}
+                </p>
+              )}
+              {cancellation && (
+                <p className="mt-2 text-xs leading-5 text-stone-500">{DIRECT_PAYMENT_REFUND_NOTE}</p>
+              )}
+            </div>
 
             {listing.amenities && listing.amenities.length > 0 && (
               <>
@@ -1025,7 +1064,7 @@ export function ListingDetailClient({
                   onEnquiryCreated={handleEnquiryCreated}
                   blockedRanges={availability}
                 />
-                <PaymentClarityNote allowsOnlinePayment={allowsOnlinePayment} instantTransfer={isInstantTransfer} />
+                <PaymentClarityNote allowsOnlinePayment={allowsOnlinePayment} instantTransfer={isInstantTransfer} cancellationSummary={cancellation?.summary} />
                 {avgResponseHours !== null && (
                   <p className="mt-4 text-center text-xs text-stone-500">
                     {formatResponseTime(avgResponseHours)}
@@ -1128,7 +1167,7 @@ export function ListingDetailClient({
                 blockedRanges={availability}
                 mobile
               />
-              <PaymentClarityNote allowsOnlinePayment={allowsOnlinePayment} instantTransfer={isInstantTransfer} />
+              <PaymentClarityNote allowsOnlinePayment={allowsOnlinePayment} instantTransfer={isInstantTransfer} cancellationSummary={cancellation?.summary} />
               <div className="mt-5 space-y-2.5 border-t border-stone-100 pt-5">
                 {[
                   'Personally reviewed by JLM Collective',
@@ -1212,9 +1251,12 @@ function Pricing({ priceIls, priceUsd }: { priceIls: string | null; priceUsd: st
 function PaymentClarityNote({
   allowsOnlinePayment,
   instantTransfer = false,
+  cancellationSummary = null,
 }: {
   allowsOnlinePayment: boolean
   instantTransfer?: boolean
+  // Short preset summary (lib/stay-terms.ts); null = agreed with the host.
+  cancellationSummary?: string | null
 }) {
   return (
     <div className="mt-4 border-t border-stone-100 pt-4 text-center">
@@ -1247,7 +1289,9 @@ function PaymentClarityNote({
         </>
       )}
       <p className="mt-1 text-xs leading-5 text-stone-500">
-        Cancellation and refund terms are agreed with the host before you pay.
+        {cancellationSummary
+          ? `Cancellation: ${cancellationSummary}.`
+          : 'Cancellation and refund terms are agreed with the host before you pay.'}
       </p>
     </div>
   )
