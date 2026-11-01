@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createServiceRoleClient } from '@/lib/supabase/service'
-import { formatPayoutRows, resolveHostPayout } from '@/lib/direct-payment'
+import { formatPayoutRows, legacyPaymentInstructions, resolveHostPayout } from '@/lib/direct-payment'
 import { oneOrNull } from '@/lib/utils/one-or-null'
 import { computeDepositPreview } from '@/lib/utils/deposit'
 
@@ -480,6 +480,126 @@ function moneyLabel(currency: string, amount: number): string {
   return symbol ? `${symbol}${formatted}` : `${formatted} ${currency}`
 }
 
+export type DirectPaymentPlan = {
+  // Host takes payment directly (bank transfer / Zelle) — host_payment_profiles.
+  acceptsDirect: boolean
+  currency: 'USD' | 'ILS' | null
+  // Whole-stay total in the booking currency, and its display label.
+  totalAmount: number | null
+  total: string | null
+  // [label, value] rows: deposit + balance with due dates (only when acceptsDirect).
+  schedule: [string, string][]
+  // [label, value] rows: the host's payout account (only when acceptsDirect).
+  howToPay: [string, string][]
+  // Legacy free-text "how to pay me" note, when the host has no structured account.
+  instructions: string | null
+}
+
+// The direct-payment plan a guest sees once a booking is confirmed: total, the
+// deposit/balance schedule from the LISTING (deposit_type/value + due-days — the
+// same source JLM bookings use, so terms don't change with the payment route) and
+// how to pay the host. Total = nights × the listing's nightly rate in its booking
+// currency (USD if priced in USD, else ILS) unless the caller passes the booking's
+// stored total; the split is computed by computeDepositPreview (mirrors
+// create_pending_booking_payment).
+export function buildDirectPaymentPlan({
+  listing,
+  checkIn,
+  checkOut,
+  paymentProfile,
+  bookingTotal = null,
+}: {
+  listing: Pick<
+    BookingConfirmListingRow,
+    | 'price_usd'
+    | 'price_ils'
+    | 'deposit_type'
+    | 'deposit_value'
+    | 'balance_due_days_before_checkin'
+    | 'deposit_due_days_before_checkin'
+  > | null
+  checkIn: string | null
+  checkOut: string | null
+  paymentProfile: Pick<
+    PaymentProfileEmailRow,
+    'accepts_direct_payment' | 'direct_payment_instructions' | 'payout_details'
+  > | null
+  bookingTotal?: number | null
+}): DirectPaymentPlan {
+  const acceptsDirect = Boolean(paymentProfile?.accepts_direct_payment)
+  const nightly =
+    listing?.price_usd != null
+      ? Number(listing.price_usd)
+      : listing?.price_ils != null
+        ? Number(listing.price_ils)
+        : null
+  const currency: 'USD' | 'ILS' | null =
+    listing?.price_usd != null ? 'USD' : listing?.price_ils != null ? 'ILS' : null
+  const nights =
+    checkIn && checkOut
+      ? Math.round(
+          (new Date(`${checkOut}T12:00:00`).getTime() - new Date(`${checkIn}T12:00:00`).getTime()) /
+            (1000 * 60 * 60 * 24),
+        )
+      : 0
+  const totalAmount =
+    bookingTotal != null && Number.isFinite(bookingTotal)
+      ? bookingTotal
+      : nightly != null && nights > 0
+        ? nightly * nights
+        : null
+
+  const schedule: [string, string][] = []
+  let howToPay: [string, string][] = []
+  let instructions: string | null = null
+
+  if (acceptsDirect) {
+    if (listing && totalAmount != null && nights > 0 && checkIn) {
+      const bookingCurrency = currency || 'ILS'
+      const preview = computeDepositPreview({
+        bookingTotal: totalAmount,
+        depositType: listing.deposit_type || 'percent',
+        depositValue: Number(listing.deposit_value ?? 10),
+        balanceDueDaysBeforeCheckin: Number(listing.balance_due_days_before_checkin ?? 0),
+        checkIn: new Date(`${checkIn}T12:00:00`),
+      })
+      let depositDue = 'due to secure your booking'
+      if (listing.deposit_due_days_before_checkin != null) {
+        // Never show a past due date for a just-confirmed booking — clamp to today,
+        // mirroring the balance-due clamp in computeDepositPreview / migration 092.
+        const rawDepositDue = minusDaysIso(checkIn, Number(listing.deposit_due_days_before_checkin))
+        const todayIso = isoDateLocal(new Date())
+        depositDue = `due by ${formatEmailDate(rawDepositDue < todayIso ? todayIso : rawDepositDue)}`
+      }
+      schedule.push(['Deposit', `${moneyLabel(bookingCurrency, preview.depositAmount)} — ${depositDue}`])
+      if (preview.balanceAmount > 0) {
+        schedule.push([
+          'Balance',
+          `${moneyLabel(bookingCurrency, preview.balanceAmount)} — due by ${formatEmailDate(isoDateLocal(preview.balanceDueDate))}`,
+        ])
+      }
+    }
+
+    // Payout account: host-level column first, legacy nested JSON as a fallback.
+    const payout = resolveHostPayout(
+      paymentProfile?.payout_details,
+      paymentProfile?.direct_payment_instructions,
+    )
+    howToPay = payout ? formatPayoutRows(payout) : []
+    instructions = legacyPaymentInstructions(paymentProfile?.direct_payment_instructions)
+  }
+
+  return {
+    acceptsDirect,
+    currency,
+    totalAmount,
+    total: totalAmount != null && currency ? moneyLabel(currency, totalAmount) : null,
+    schedule,
+    howToPay,
+    instructions,
+  }
+}
+
 // Sent to the guest when a host confirms their request: property details, dates,
 // and the direct-payment plan (deposit + balance due dates, how to pay).
 export async function sendGuestBookingConfirmedEmail({
@@ -537,61 +657,15 @@ export async function sendGuestBookingConfirmedEmail({
     if (listing?.area) detailRows.push(['Area', listing.area])
 
     let paymentHtml = ''
-    if (paymentProfile?.accepts_direct_payment) {
-      const payRows: [string, string][] = []
-
-      // The deposit/balance schedule comes from the LISTING (deposit_type/value +
-      // due-days) — the same source JLM bookings use — so a booking's terms don't
-      // change with the payment route. Total = nights × the listing's nightly rate
-      // in its booking currency (USD if priced in USD, else ILS), and the split is
-      // computed by computeDepositPreview (mirrors create_pending_booking_payment).
-      const nightly =
-        listing?.price_usd != null
-          ? Number(listing.price_usd)
-          : listing?.price_ils != null
-            ? Number(listing.price_ils)
-            : null
-      const currency = listing?.price_usd != null ? 'USD' : 'ILS'
-      const nights =
-        request.check_in && request.check_out
-          ? Math.round(
-              (new Date(`${request.check_out}T12:00:00`).getTime() -
-                new Date(`${request.check_in}T12:00:00`).getTime()) /
-                (1000 * 60 * 60 * 24),
-            )
-          : 0
-
-      if (listing && nightly != null && nights > 0 && request.check_in) {
-        const preview = computeDepositPreview({
-          bookingTotal: nightly * nights,
-          depositType: listing.deposit_type || 'percent',
-          depositValue: Number(listing.deposit_value ?? 10),
-          balanceDueDaysBeforeCheckin: Number(listing.balance_due_days_before_checkin ?? 0),
-          checkIn: new Date(`${request.check_in}T12:00:00`),
-        })
-        let depositDue = 'due to secure your booking'
-        if (listing.deposit_due_days_before_checkin != null) {
-          // Never show a past due date for a just-confirmed booking — clamp to today,
-          // mirroring the balance-due clamp in computeDepositPreview / migration 092.
-          const rawDepositDue = minusDaysIso(request.check_in, Number(listing.deposit_due_days_before_checkin))
-          const todayIso = isoDateLocal(new Date())
-          depositDue = `due by ${formatEmailDate(rawDepositDue < todayIso ? todayIso : rawDepositDue)}`
-        }
-        payRows.push(['Deposit', `${moneyLabel(currency, preview.depositAmount)} — ${depositDue}`])
-        if (preview.balanceAmount > 0) {
-          payRows.push([
-            'Balance',
-            `${moneyLabel(currency, preview.balanceAmount)} — due by ${formatEmailDate(isoDateLocal(preview.balanceDueDate))}`,
-          ])
-        }
-      }
-
-      // Payout account: host-level column first, legacy nested JSON as a fallback.
-      const payout = resolveHostPayout(
-        paymentProfile.payout_details,
-        paymentProfile.direct_payment_instructions,
-      )
-      const payoutRows = payout ? formatPayoutRows(payout) : []
+    const plan = buildDirectPaymentPlan({
+      listing,
+      checkIn: request.check_in,
+      checkOut: request.check_out,
+      paymentProfile,
+    })
+    if (plan.acceptsDirect) {
+      const payRows = plan.schedule
+      const payoutRows = plan.howToPay
       const howToPayHtml =
         payoutRows.length > 0
           ? `<p style="margin:14px 0 2px"><strong>How to pay the host</strong></p>${detailTableHtml(payoutRows)}`
@@ -814,6 +888,199 @@ export async function sendHostBookingConfirmedEmail({
     })
   } catch (error) {
     console.error('Unable to send host booking confirmed email', error)
+    return false
+  }
+}
+
+export type InstantBookingDetails = {
+  requestId: string
+  guestId: string
+  hostId: string | null
+  listingTitle: string
+  listingArea: string | null
+  checkInInstructions: string | null
+  checkIn: string | null
+  checkOut: string | null
+  guests: number
+  guestName: string | null
+  plan: DirectPaymentPlan
+}
+
+// Everything the instant-book (bank transfer) confirmation needs, read once and
+// shared by the API response and both emails. Uses the service role where the
+// guest can't read (host payment profile), falling back to the caller's client.
+// `bookingTotal` is the total the booking row stored (server-computed), so the
+// plan shows exactly what was recorded.
+export async function loadInstantBookingDetails({
+  supabase,
+  requestId,
+  bookingTotal = null,
+}: {
+  supabase: SupabaseClient
+  requestId: string
+  bookingTotal?: number | null
+}): Promise<InstantBookingDetails | null> {
+  const reader = hostReader(supabase)
+  const { data: request } = await reader
+    .from('booking_requests')
+    .select('id, listing_id, host_id, guest_id, check_in, check_out, guests, message')
+    .eq('id', requestId)
+    .maybeSingle<BookingRequestEmailRow>()
+
+  if (!request?.guest_id || !request.listing_id) return null
+
+  const [{ data: listing }, { data: profile }, { data: paymentProfile }] = await Promise.all([
+    reader
+      .from('listings')
+      .select(
+        'id, title, area, check_in_instructions, price_usd, price_ils, deposit_type, deposit_value, balance_due_days_before_checkin, deposit_due_days_before_checkin',
+      )
+      .eq('id', request.listing_id)
+      .maybeSingle<BookingConfirmListingRow>(),
+    reader
+      .from('profiles')
+      .select('full_name')
+      .eq('id', request.guest_id)
+      .maybeSingle<ProfileEmailRow>(),
+    request.host_id
+      ? reader
+          .from('host_payment_profiles')
+          .select('accepts_direct_payment, direct_payment_instructions, preferred_currency, payout_details')
+          .eq('host_id', request.host_id)
+          .maybeSingle<PaymentProfileEmailRow>()
+      : Promise.resolve({ data: null }),
+  ])
+
+  return {
+    requestId: request.id,
+    guestId: request.guest_id,
+    hostId: request.host_id,
+    listingTitle: listing?.title || 'your stay',
+    listingArea: listing?.area || null,
+    checkInInstructions: listing?.check_in_instructions || null,
+    checkIn: request.check_in,
+    checkOut: request.check_out,
+    guests: request.guests || 1,
+    guestName: profile?.full_name || null,
+    plan: buildDirectPaymentPlan({
+      listing,
+      checkIn: request.check_in,
+      checkOut: request.check_out,
+      paymentProfile,
+      bookingTotal,
+    }),
+  }
+}
+
+// Sent to the guest when they book an instant-book listing that is paid by bank
+// transfer to the host. The stay is already confirmed, so this IS their
+// confirmation: dates, total, the payment schedule and how to pay the host.
+export async function sendGuestInstantBookingEmail(details: InstantBookingDetails) {
+  try {
+    const guestEmail = await getAuthUserEmail(details.guestId)
+    if (!guestEmail) {
+      console.error('Skipping instant booking email: guest email not found')
+      return false
+    }
+
+    const areaSuffix = details.listingArea ? ` in ${details.listingArea}` : ''
+    const detailRows: [string, string][] = [
+      ['Dates', `${formatEmailDate(details.checkIn)} to ${formatEmailDate(details.checkOut)}`],
+      ['Guests', String(details.guests)],
+    ]
+    if (details.listingArea) detailRows.push(['Area', details.listingArea])
+    if (details.plan.total) detailRows.push(['Total', details.plan.total])
+
+    const { plan } = details
+    const scheduleHtml =
+      plan.schedule.length > 0
+        ? `<h3 style="font-size:15px;margin:20px 0 6px">Payment schedule</h3>${detailTableHtml(plan.schedule)}`
+        : ''
+    let howToPayHtml = ''
+    if (plan.howToPay.length > 0) {
+      howToPayHtml = `<p style="margin:14px 0 2px"><strong>How to pay the host (bank transfer)</strong></p>${detailTableHtml(plan.howToPay)}`
+    } else if (plan.instructions) {
+      howToPayHtml = `<p style="margin:14px 0 2px"><strong>How to pay the host (bank transfer)</strong></p><p style="margin:0;white-space:pre-line">${escapeHtml(plan.instructions)}</p>`
+    } else {
+      howToPayHtml = `<p style="margin:14px 0 0">The host will send you their bank transfer details.</p>`
+    }
+
+    const checkInHtml = details.checkInInstructions
+      ? `<h3 style="font-size:15px;margin:20px 0 6px">Check-in</h3><p style="margin:0;white-space:pre-line">${escapeHtml(details.checkInInstructions)}</p>`
+      : ''
+
+    const html = `
+    <div style="font-family:Arial,sans-serif;line-height:1.6;color:#292524">
+      <p>Hi ${escapeHtml(details.guestName || 'there')},</p>
+      <p>You're booked! Your stay at <strong>${escapeHtml(details.listingTitle)}</strong>${escapeHtml(areaSuffix)} is confirmed and the host has been notified.</p>
+      ${detailTableHtml(detailRows)}
+      <p style="margin:16px 0 0">You pay the host directly by bank transfer — nothing is charged by JLM Collective.</p>
+      ${scheduleHtml}
+      ${howToPayHtml}
+      ${checkInHtml}
+      <p style="margin:20px 0 0">
+        <a href="${siteUrl}/account/bookings" style="display:inline-block;background:#c76f55;color:#ffffff;text-decoration:none;border-radius:999px;padding:12px 18px;font-weight:700">
+          View your trip
+        </a>
+      </p>
+      <p style="margin-top:16px">JLM Collective</p>
+      <p style="color:#a8a29e;font-size:11px;margin:8px 0 0;line-height:1.5">
+        JLM Collective acts as letting agent for Jerusalem property owners. Bookings are between guests and hosts. JLM Collective is not a party to any booking agreement.
+      </p>
+    </div>
+    `
+
+    return await sendEmail({
+      to: guestEmail,
+      subject: `You're booked at ${details.listingTitle}`,
+      html,
+    })
+  } catch (error) {
+    console.error('Unable to send instant booking email', error)
+    return false
+  }
+}
+
+// Sent to the host when a guest instant-books one of their listings. Not gated on
+// the "Booking confirmed" receipt preference: the host didn't confirm this one
+// themselves, so this is the only way they learn of the booking.
+export async function sendHostNewInstantBookingEmail({
+  supabase,
+  details,
+}: {
+  supabase: SupabaseClient
+  details: InstantBookingDetails
+}) {
+  try {
+    if (!details.hostId) return false
+    const { data: host } = await hostReader(supabase)
+      .from('hosts')
+      .select('id, user_id, name, email')
+      .eq('id', details.hostId)
+      .maybeSingle<HostEmailRow>()
+
+    const hostEmail = await resolveHostEmail(host)
+    if (!hostEmail) {
+      console.error('Skipping host new booking email: no host email for request', details.requestId)
+      return false
+    }
+
+    const guestName = details.guestName || 'A guest'
+    const dates = `${formatEmailDate(details.checkIn)} to ${formatEmailDate(details.checkOut)}`
+    const totalText = details.plan.total ? ` Total: ${details.plan.total}.` : ''
+
+    return await sendEmail({
+      to: hostEmail,
+      subject: `New booking — ${guestName} at ${details.listingTitle}`,
+      html: baseEmailHtml({
+        greeting: `Hi ${escapeHtml(host?.name || 'there')},`,
+        intro: `${guestName} instantly booked ${details.listingTitle}. Dates: ${dates}. Guests: ${details.guests}.${totalText} The dates are now blocked on your calendar. The guest will pay you directly by bank transfer on your deposit schedule — we've emailed them the payment details.`,
+        ctaLabel: 'Open your calendar',
+        ctaUrl: `${siteUrl}/host/dashboard/calendar`,
+      }),
+    })
+  } catch (error) {
+    console.error('Unable to send host new booking email', error)
     return false
   }
 }

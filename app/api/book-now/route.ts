@@ -115,6 +115,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'This stay is not available for online booking.' }, { status: 400 })
   }
 
+  // Card checkout books instantly (the Stripe webhook confirms the stay), so it is
+  // only for instant-book listings. Request-to-book listings need the host to
+  // accept first.
+  if (listing.booking_type !== 'instant') {
+    return NextResponse.json(
+      { error: 'This stay needs the host to accept your request first. Please send a booking request.' },
+      { status: 400 },
+    )
+  }
+
   if (!listing.host_id) {
     return NextResponse.json({ error: 'Host is not available for this listing.' }, { status: 400 })
   }

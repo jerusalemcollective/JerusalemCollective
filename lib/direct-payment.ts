@@ -95,3 +95,20 @@ export function formatPayoutRows(payout: PayoutDetails): [string, string][] {
   }
   return rows
 }
+
+// The host's free-text "how to pay me" note, for profiles saved before the
+// structured schedule/payout JSON existed. Returns null when the column holds the
+// v1 schedule JSON (or nothing), so callers only show genuine prose.
+export function legacyPaymentInstructions(
+  directPaymentInstructions: string | null | undefined,
+): string | null {
+  const text = directPaymentInstructions?.trim()
+  if (!text) return null
+  try {
+    const parsed = JSON.parse(text)
+    if (parsed && typeof parsed === 'object') return null
+  } catch {
+    // not JSON — legacy free text
+  }
+  return text
+}
