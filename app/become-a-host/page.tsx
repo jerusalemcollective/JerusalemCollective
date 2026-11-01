@@ -10,7 +10,7 @@ import { allNeighborhoods } from '@/lib/neighborhoods'
 import { HOST_TERMS, HOST_TERMS_LAST_UPDATED, HOST_TERMS_VERSION } from '@/lib/host-terms'
 import { GoogleAddressField } from '@/components/google-address-field'
 import { useDragSort, moveItem } from '@/components/use-drag-sort'
-import { SleepingSetupBuilder } from '@/components/sleeping-setup-builder'
+import { SleepingSetupBuilder, followRooms } from '@/components/sleeping-setup-builder'
 import { KOSHER_LEVEL_OPTIONS, normalizeKosherLevel } from '@/lib/kosher'
 import { AmenitySelector } from '@/components/amenity-selector'
 import { HOST_PRICE_CURRENCIES, currencyName, type HostPriceCurrency } from '@/lib/currencies'
@@ -842,6 +842,8 @@ const AGENCY_AGREEMENT_STORAGE_KEY = 'jlm.agencyAgreementAccepted'
 export default function BecomeAHostPage() {
   const [step, setStep] = useState(0)
   const [form, setForm] = useState<FormState>(initialForm)
+  // Bedrooms / Sleeps follow the sleeping setup until the host types in them.
+  const [roomNumbersTyped, setRoomNumbersTyped] = useState({ bedrooms: false, sleeps: false })
   const [sameWhatsapp, setSameWhatsapp] = useState(true)
   const [draftReady, setDraftReady] = useState(false)
   const [restoredDraft, setRestoredDraft] = useState(false)
@@ -2247,11 +2249,29 @@ async function handleSubmit() {
                   <h3 className="text-sm font-bold uppercase tracking-widest text-stone-500">
                     Guests &amp; rooms
                   </h3>
-                  <div className="mt-4 grid gap-5 md:grid-cols-3">
+                  <div className="mt-4">
+                    <Field label="Sleeping setup">
+                      <SleepingSetupBuilder
+                        value={form.sleeping_setup}
+                        onChange={(val) => updateField('sleeping_setup', val)}
+                        onSummaryChange={(next) =>
+                          setForm((current) => ({
+                            ...current,
+                            bedrooms: followRooms(current.bedrooms, next.bedrooms, roomNumbersTyped.bedrooms),
+                            sleeps: followRooms(current.sleeps, next.sleeps, roomNumbersTyped.sleeps),
+                          }))
+                        }
+                      />
+                    </Field>
+                  </div>
+                  <div className="mt-5 grid gap-5 md:grid-cols-3">
                     <Field label="Bedrooms">
                       <input
                         value={form.bedrooms}
-                        onChange={(e) => updateField('bedrooms', e.target.value)}
+                        onChange={(e) => {
+                          setRoomNumbersTyped((typed) => ({ ...typed, bedrooms: true }))
+                          updateField('bedrooms', e.target.value)
+                        }}
                         type="number"
                         min="0"
                         className={inputClass}
@@ -2272,21 +2292,19 @@ async function handleSubmit() {
                     <Field label="Sleeps">
                       <input
                         value={form.sleeps}
-                        onChange={(e) => updateField('sleeps', e.target.value)}
+                        onChange={(e) => {
+                          setRoomNumbersTyped((typed) => ({ ...typed, sleeps: true }))
+                          updateField('sleeps', e.target.value)
+                        }}
                         type="number"
                         min="1"
                         className={inputClass}
                       />
                     </Field>
                   </div>
-                  <div className="mt-5">
-                    <Field label="Sleeping setup">
-                      <SleepingSetupBuilder
-                        value={form.sleeping_setup}
-                        onChange={(val) => updateField('sleeping_setup', val)}
-                      />
-                    </Field>
-                  </div>
+                  <p className="mt-2 text-xs text-stone-500">
+                    Bedrooms and Sleeps fill in from your rooms. You can change them, e.g. to allow fewer guests than the beds fit.
+                  </p>
                 </div>
               </StepShell>
             )}

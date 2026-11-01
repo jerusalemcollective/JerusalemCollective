@@ -177,6 +177,16 @@ export default async function HostListingEditPage({
               </Field>
             </div>
 
+            <div className="mt-5">
+              <Field label="Sleeping setup">
+                <SleepingSetupBuilder
+                  name="sleepingSetup"
+                  defaultValue={listing.sleeping_setup || ''}
+                  fillFields={{ bedrooms: 'bedrooms', sleeps: 'maxGuests' }}
+                />
+              </Field>
+            </div>
+
             <div className="mt-5 grid gap-4 md:grid-cols-3">
               <Field label="Bedrooms">
                 <input name="bedrooms" type="number" min="0" defaultValue={listing.bedrooms} className={inputClass} />
@@ -188,12 +198,9 @@ export default async function HostListingEditPage({
                 <input name="maxGuests" type="number" min="1" defaultValue={listing.max_guests} className={inputClass} />
               </Field>
             </div>
-
-            <div className="mt-5">
-              <Field label="Sleeping setup">
-                <SleepingSetupBuilder name="sleepingSetup" defaultValue={listing.sleeping_setup || ''} />
-              </Field>
-            </div>
+            <p className="mt-2 text-xs text-stone-500">
+              Bedrooms and Maximum guests fill in from your rooms. You can change them, e.g. to allow fewer guests than the beds fit.
+            </p>
           </EditorSection>
 
           {/* 2. Photos */}
