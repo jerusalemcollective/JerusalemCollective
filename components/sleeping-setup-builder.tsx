@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 // Room-by-room sleeping setup: one "Add a room" button opens a panel where the
 // host picks the beds in that room; each saved room shows as a card beside it.
@@ -265,6 +265,25 @@ function serializeRooms(rooms: Room[]) {
     .join('\n')
 }
 
+// Rooms named like a living room are not bedrooms; every other room is.
+const NOT_A_BEDROOM = /living|salon|lounge|sitting/i
+
+export type SleepingSummary = { bedrooms: number; sleeps: number }
+
+function summarize(rooms: Room[]): SleepingSummary {
+  return {
+    bedrooms: rooms.filter((room) => !NOT_A_BEDROOM.test(room.name)).length,
+    sleeps: rooms.reduce((total, room) => total + roomSleeps(room.beds), 0),
+  }
+}
+
+// The new value for a Bedrooms/Sleeps box: it follows the rooms until the host
+// types in it themselves (e.g. to allow fewer guests than the beds fit).
+export function followRooms(current: string, next: number, typedByHost: boolean) {
+  if (typedByHost) return current
+  return next > 0 ? String(next) : ''
+}
+
 function plural(count: number, one: string, many: string) {
   return `${count} ${count === 1 ? one : many}`
 }
@@ -276,9 +295,21 @@ type SleepingSetupBuilderProps = {
   // Uncontrolled use inside a server-action form.
   name?: string
   defaultValue?: string
+  // Keep the Bedrooms / Sleeps numbers in step with the rooms: a callback for
+  // React state, or the names of plain inputs in the same <form>.
+  onSummaryChange?: (next: SleepingSummary) => void
+  fillFields?: { bedrooms?: string; sleeps?: string }
 }
 
-export function SleepingSetupBuilder({ value, onChange, name, defaultValue = '' }: SleepingSetupBuilderProps) {
+export function SleepingSetupBuilder({
+  value,
+  onChange,
+  name,
+  defaultValue = '',
+  onSummaryChange,
+  fillFields,
+}: SleepingSetupBuilderProps) {
+  const rootRef = useRef<HTMLDivElement>(null)
   const [rooms, setRooms] = useState<Room[]>(() => parseRooms(value ?? defaultValue))
   const [lastSeenValue, setLastSeenValue] = useState(value)
   const [editing, setEditing] = useState<Editing | null>(null)
@@ -289,6 +320,20 @@ export function SleepingSetupBuilder({ value, onChange, name, defaultValue = '' 
     setLastSeenValue(value)
     if (value !== serializeRooms(rooms)) setRooms(parseRooms(value))
   }
+
+  // In a plain form, remember which number boxes the host typed in.
+  useEffect(() => {
+    const form = rootRef.current?.closest('form')
+    if (!form || !fillFields) return
+    const inputs = [fillFields.bedrooms, fillFields.sleeps]
+      .map((fieldName) => (fieldName ? form.elements.namedItem(fieldName) : null))
+      .filter((input): input is HTMLInputElement => input instanceof HTMLInputElement)
+    const markTyped = (event: Event) => {
+      ;(event.currentTarget as HTMLInputElement).dataset.typedByHost = 'true'
+    }
+    inputs.forEach((input) => input.addEventListener('input', markTyped))
+    return () => inputs.forEach((input) => input.removeEventListener('input', markTyped))
+  }, [fillFields?.bedrooms, fillFields?.sleeps]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!editing) return
@@ -301,9 +346,22 @@ export function SleepingSetupBuilder({ value, onChange, name, defaultValue = '' 
 
   const commit = (nextRooms: Room[]) => {
     const text = serializeRooms(nextRooms)
+    const next = summarize(nextRooms)
     setRooms(nextRooms)
     setLastSeenValue(text)
     onChange?.(text)
+    onSummaryChange?.(next)
+
+    const form = rootRef.current?.closest('form')
+    if (form && fillFields) {
+      ;(['bedrooms', 'sleeps'] as const).forEach((key) => {
+        const fieldName = fillFields[key]
+        const input = fieldName ? form.elements.namedItem(fieldName) : null
+        if (input instanceof HTMLInputElement) {
+          input.value = followRooms(input.value, next[key], input.dataset.typedByHost === 'true')
+        }
+      })
+    }
   }
 
   const changeBed = (key: BedKey, change: (entry: BedEntry) => BedEntry) => {
@@ -340,7 +398,7 @@ export function SleepingSetupBuilder({ value, onChange, name, defaultValue = '' 
   const canSave = editing ? roomBedCount(editing.beds) > 0 : false
 
   return (
-    <div>
+    <div ref={rootRef}>
       {name && <input type="hidden" name={name} value={serializeRooms(rooms)} />}
 
       {rooms.length > 0 && (
