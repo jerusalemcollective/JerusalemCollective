@@ -15,6 +15,13 @@ export function normalizePaginationSearchParams(searchParams: PaginationSearchPa
   )
 }
 
+// Clamp a requested page into range, so ?page=999 shows the last page instead
+// of an empty list (and ?page=0 or junk shows the first).
+export function clampPage(page: number, totalItems: number, pageSize: number) {
+  const lastPage = Math.max(1, Math.ceil(totalItems / pageSize))
+  return Math.min(Math.max(1, Math.floor(page) || 1), lastPage)
+}
+
 function buildUrl(basePath: string, searchParams: Record<string, string>, page: number) {
   const params = new URLSearchParams({ ...searchParams, page: String(page) })
   return `${basePath}?${params.toString()}`
@@ -22,6 +29,7 @@ function buildUrl(basePath: string, searchParams: Record<string, string>, page: 
 
 export function Pagination({ page, totalPages, basePath, searchParams }: PaginationProps) {
   const lastPage = Math.max(1, totalPages)
+  page = Math.min(Math.max(1, page), lastPage)
   const previousPage = Math.max(1, page - 1)
   const nextPage = Math.min(lastPage, page + 1)
   const isFirstPage = page <= 1

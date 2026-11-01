@@ -9,6 +9,16 @@ import {
 import { ConfirmSubmitButton } from '@/components/confirm-submit-button'
 import { BooleanBadge } from '@/components/boolean-badge'
 import { parsePayout, formatPayoutRows } from '@/lib/direct-payment'
+import { oneOrNull } from '@/lib/utils/one-or-null'
+import {
+  bookingGuestName,
+  bookingStatusLabel,
+  formatBookingAmount,
+  formatDateRange,
+  formatGuestCount,
+  jerusalemToday,
+} from '@/lib/booking-display'
+import { BookingBadge } from '@/app/admin/bookings/booking-badge'
 
 type PersonRow = {
   user_id: string
@@ -33,9 +43,18 @@ type BookingRow = {
   id: string
   check_in: string | null
   check_out: string | null
+  guests: number | null
   status: string | null
+  payment_status: string | null
+  total_amount_usd: number | null
+  total_amount_ils: number | null
   listings?: { title: string | null } | { title: string | null }[] | null
+  guest?: { full_name: string | null } | { full_name: string | null }[] | null
 }
+
+const BOOKING_LIST_LIMIT = 20
+const BOOKING_COLUMNS =
+  'id, check_in, check_out, guests, status, payment_status, total_amount_usd, total_amount_ils, listings(title), guest:profiles!bookings_user_id_fkey(full_name)'
 
 type ListingRow = {
   id: string
@@ -51,11 +70,6 @@ function formatDate(value: string | null) {
   return new Date(value).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-function oneListing(value: BookingRow['listings']) {
-  if (Array.isArray(value)) return value[0] || null
-  return value || null
-}
-
 export default async function AdminUserDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: userId } = await params
   const { supabase } = await requireAdminPermission('users')
@@ -69,13 +83,34 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
   const hasGuestActivity = Number(person.booking_count || 0) > 0 || Number(person.saved_count || 0) > 0
   const isGuest = hasGuestActivity || !isHost
 
-  const { data: bookingData } = await supabase
-    .from('bookings')
-    .select('id, check_in, check_out, status, listings(title)')
-    .eq('user_id', userId)
-    .order('check_in', { ascending: false })
-    .limit(10)
-  const bookings = (bookingData || []) as BookingRow[]
+  // Bookings were invisible here because admins had no SELECT policy on
+  // bookings (fixed by migration 114). Guest trips key on bookings.user_id;
+  // bookings on their listings key on bookings.host_id = hosts.id.
+  const [guestBookingsResult, hostBookingsResult] = await Promise.all([
+    supabase
+      .from('bookings')
+      .select(BOOKING_COLUMNS, { count: 'exact' })
+      .eq('user_id', userId)
+      .order('check_in', { ascending: false })
+      .limit(BOOKING_LIST_LIMIT),
+    person.host_id
+      ? supabase
+          .from('bookings')
+          .select(BOOKING_COLUMNS, { count: 'exact' })
+          .eq('host_id', person.host_id)
+          .order('check_in', { ascending: false })
+          .limit(BOOKING_LIST_LIMIT)
+      : Promise.resolve({ data: [], count: 0, error: null }),
+  ])
+  const bookings = (guestBookingsResult.data || []) as BookingRow[]
+  const guestBookingTotal = guestBookingsResult.count ?? bookings.length
+  const hostBookings = (hostBookingsResult.data || []) as BookingRow[]
+  const hostBookingTotal = hostBookingsResult.count ?? hostBookings.length
+  const bookingsError = guestBookingsResult.error?.message || hostBookingsResult.error?.message || null
+  // list_platform_people counts bookings with SECURITY DEFINER, so a non-zero
+  // count with no readable rows means migration 114 hasn't been run.
+  const bookingsHidden = !bookingsError && bookings.length === 0 && Number(person.booking_count || 0) > 0
+  const today = jerusalemToday()
 
   // Host-side data (only when they own a host record).
   let listings: ListingRow[] = []
@@ -145,25 +180,44 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
 
       {/* Guest activity */}
       <section className="overflow-hidden rounded-3xl bg-white shadow-sm">
-        <div className="border-b border-stone-100 px-6 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-100 px-6 py-4">
           <h3 className="text-lg font-bold text-stone-950">Trips as a guest</h3>
+          {guestBookingTotal > bookings.length && (
+            <p className="text-xs text-stone-500">
+              Showing {bookings.length} of {guestBookingTotal}
+            </p>
+          )}
         </div>
-        {bookings.length === 0 ? (
-          <div className="px-6 py-8 text-center text-stone-500">No bookings yet.</div>
-        ) : (
-          <div className="divide-y divide-stone-100">
-            {bookings.map((booking) => (
-              <div key={booking.id} className="grid gap-3 px-6 py-4 md:grid-cols-[1.4fr_1fr_0.7fr] md:items-center">
-                <p className="font-semibold text-stone-900">{oneListing(booking.listings)?.title || 'Stay'}</p>
-                <p className="text-sm text-stone-600">
-                  {formatDate(booking.check_in)} – {formatDate(booking.check_out)}
-                </p>
-                <p className="text-sm font-semibold capitalize text-stone-700">{booking.status || 'booked'}</p>
-              </div>
-            ))}
+        {bookingsError ? (
+          <div className="px-6 py-6 text-sm text-rose-700">Bookings could not be loaded: {bookingsError}</div>
+        ) : bookingsHidden ? (
+          <div className="px-6 py-6 text-sm text-amber-900">
+            This user has {person.booking_count} booking{Number(person.booking_count) === 1 ? '' : 's'}, but admins can’t
+            read bookings yet. Run <code className="rounded bg-amber-100 px-1">114_admin_read_bookings.sql</code> in the
+            Supabase SQL editor.
           </div>
+        ) : (
+          <BookingList bookings={bookings} today={today} empty="No bookings yet." />
         )}
       </section>
+
+      {person.host_id && (
+        <section className="overflow-hidden rounded-3xl bg-white shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-100 px-6 py-4">
+            <h3 className="text-lg font-bold text-stone-950">Bookings on their listings</h3>
+            {hostBookingTotal > hostBookings.length && (
+              <p className="text-xs text-stone-500">
+                Showing {hostBookings.length} of {hostBookingTotal}
+              </p>
+            )}
+          </div>
+          {bookingsError ? (
+            <div className="px-6 py-6 text-sm text-rose-700">Bookings could not be loaded: {bookingsError}</div>
+          ) : (
+            <BookingList bookings={hostBookings} today={today} empty="No bookings on their listings yet." showGuest />
+          )}
+        </section>
+      )}
 
       {/* Host section */}
       {person.host_id && (
@@ -286,6 +340,45 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
           </div>
         </section>
       )}
+    </div>
+  )
+}
+
+function BookingList({
+  bookings,
+  today,
+  empty,
+  showGuest = false,
+}: {
+  bookings: BookingRow[]
+  today: string
+  empty: string
+  showGuest?: boolean
+}) {
+  if (bookings.length === 0) return <div className="px-6 py-8 text-center text-stone-500">{empty}</div>
+  return (
+    <div className="divide-y divide-stone-100">
+      {bookings.map((booking) => (
+        <Link
+          key={booking.id}
+          href={`/admin/bookings/${booking.id}`}
+          className="grid gap-1 px-6 py-4 transition hover:bg-stone-50 md:grid-cols-[1.4fr_1.1fr_0.8fr_auto] md:items-center md:gap-3"
+        >
+          <div className="min-w-0">
+            <p className="truncate font-semibold text-stone-900">{oneOrNull(booking.listings)?.title || 'Listing removed'}</p>
+            {showGuest && (
+              <p className="truncate text-xs text-stone-500">
+                Guest: {bookingGuestName({ full_name: oneOrNull(booking.guest)?.full_name })}
+              </p>
+            )}
+          </div>
+          <p className="text-sm text-stone-600">
+            {formatDateRange(booking.check_in, booking.check_out)} · {formatGuestCount(booking.guests)}
+          </p>
+          <p className="text-sm font-semibold text-stone-800">{formatBookingAmount(booking)}</p>
+          <BookingBadge {...bookingStatusLabel(booking, today)} />
+        </Link>
+      ))}
     </div>
   )
 }

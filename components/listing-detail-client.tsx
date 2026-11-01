@@ -14,10 +14,11 @@ import { AmenityDisplay } from '@/components/amenity-display'
 import { recordListingView } from '@/components/recently-viewed'
 import { recordListingEngagement } from '@/lib/listing-engagement'
 import { formatListingPrice, formatPrice, formatCurrencyAmount } from '@/lib/utils/currency'
-import { loadEnquiryDraft } from '@/lib/enquiry-draft'
+import { clearEnquiryDraft, loadEnquiryDraft, saveEnquiryDraft } from '@/lib/enquiry-draft'
 import { formatDateISO, formatBookingDate } from '@/lib/utils/date'
 import { computeDepositPreview } from '@/lib/utils/deposit'
 import { computeBookingTotal, computeExtraGuests } from '@/lib/utils/pricing'
+import { PayoutCopyRows } from '@/components/payout-copy-rows'
 
 // Google Maps (@react-google-maps/api) is heavy; load it only in the browser,
 // on demand, so it doesn't ship in or block this high-traffic SEO page.
@@ -36,6 +37,34 @@ const GalleryOverlay = dynamic(
 type DateRange = {
   from?: Date
   to?: Date
+}
+
+type GuestEnquiry = {
+  id: string
+  status: string
+  check_in: string | null
+  check_out: string | null
+}
+
+const OPEN_ENQUIRY_STATUSES = ['new', 'host_replied']
+
+// Which of this guest's booking requests matter for the chosen dates.
+// No dates chosen: any open request counts. Dates chosen: only a request for
+// exactly those dates counts — open, or finished (accepted/declined/closed).
+function getEnquiryForDates(enquiries: GuestEnquiry[], dateRange: DateRange) {
+  if (!dateRange.from || !dateRange.to) {
+    return {
+      open: enquiries.find((enquiry) => OPEN_ENQUIRY_STATUSES.includes(enquiry.status)) || null,
+      finished: null,
+    }
+  }
+  const checkIn = formatDateISO(dateRange.from)
+  const checkOut = formatDateISO(dateRange.to)
+  const sameDates = enquiries.filter((enquiry) => enquiry.check_in === checkIn && enquiry.check_out === checkOut)
+  return {
+    open: sameDates.find((enquiry) => OPEN_ENQUIRY_STATUSES.includes(enquiry.status)) || null,
+    finished: sameDates.find((enquiry) => !OPEN_ENQUIRY_STATUSES.includes(enquiry.status)) || null,
+  }
 }
 
 export type ListingDetailListing = {
@@ -174,10 +203,10 @@ export function ListingDetailClient({
   const [bookingDateRange, setBookingDateRange] = useState<DateRange>({})
   const [guestCount, setGuestCount] = useState(1)
   const [existingConversationId, setExistingConversationId] = useState<string | null>(null)
-  // Whether this guest has already made a dated booking request (enquiry) for
-  // this listing. A plain "message host" chat does NOT count — see the button
-  // logic below, which must still let a guest who only messaged make an enquiry.
-  const [hasEnquiry, setHasEnquiry] = useState(false)
+  // This guest's dated booking requests (enquiries) for this listing. A plain
+  // "message host" chat does NOT count — see the button logic below, which must
+  // still let a guest who only messaged make an enquiry.
+  const [enquiries, setEnquiries] = useState<GuestEnquiry[]>([])
   // Start from the server snapshot, then refresh on mount so an ISR-cached page
   // never shows stale availability in the picker.
   const [availability, setAvailability] = useState<ListingBlockedRange[]>(blockedRanges)
@@ -297,16 +326,16 @@ export function ListingDetailClient({
           .maybeSingle(),
         supabase
           .from('booking_requests')
-          .select('id')
+          .select('id, status, check_in, check_out')
           .eq('listing_id', listing.id)
           .eq('guest_id', user.id)
-          .limit(1)
-          .maybeSingle(),
+          .order('created_at', { ascending: false })
+          .limit(50),
       ])
 
       if (isActive) {
         setExistingConversationId(existingConv?.id || null)
-        setHasEnquiry(Boolean(existingRequest?.id))
+        setEnquiries((existingRequest || []) as GuestEnquiry[])
       }
     }
 
@@ -361,19 +390,38 @@ export function ListingDetailClient({
   const priceUsd = formatPrice(listing.price_usd)
   const allowsOnlinePayment = listing.online_payment_enabled
   const isEnquiryOnly = listing.booking_type === 'enquiry'
+  // Instant book paid by bank transfer to the host (no live JLM card payment).
+  const isInstantTransfer = listing.booking_type === 'instant' && !listing.online_payment_enabled
   // Only show "Continue conversation" in place of the primary action when the
   // guest can't take that action any further: enquiry-only listings (chat is the
   // action) or when they've already made a booking request. A guest who merely
   // messaged a request-listing host must still be able to request to book.
+  // A guest can ask again for new dates: only an open request (for the chosen
+  // dates, or any when none are chosen) takes over. Instant-book listings always
+  // keep "Book now" as the main action.
+  const enquiryForDates = getEnquiryForDates(enquiries, bookingDateRange)
+  const hasEnquiry = Boolean(enquiryForDates.open)
+  const alreadyAskedForDates = Boolean(enquiryForDates.finished) && !hasEnquiry
   const showContinueAsPrimary =
-    Boolean(existingConversationId) && !allowsOnlinePayment && (isEnquiryOnly || hasEnquiry)
+    Boolean(existingConversationId) &&
+    !allowsOnlinePayment &&
+    listing.booking_type !== 'instant' &&
+    (isEnquiryOnly || hasEnquiry)
   // Marks that a dated request now exists (flip the button after submitting one).
   const handleEnquiryCreated = (conversationId: string) => {
     setExistingConversationId(conversationId)
-    setHasEnquiry(true)
+    setEnquiries((current) => [
+      {
+        id: `local-${conversationId}`,
+        status: 'new',
+        check_in: bookingDateRange.from ? formatDateISO(bookingDateRange.from) : null,
+        check_out: bookingDateRange.to ? formatDateISO(bookingDateRange.to) : null,
+      },
+      ...current,
+    ])
   }
   const mobileActionLabel =
-    allowsOnlinePayment
+    allowsOnlinePayment || isInstantTransfer
       ? 'Book now'
       : listing.booking_type === 'enquiry'
         ? 'Message host'
@@ -972,11 +1020,12 @@ export function ListingDetailClient({
                   totalUSD={totalUSD}
                   existingConversationId={existingConversationId}
                   hasEnquiry={hasEnquiry}
+                  alreadyAskedForDates={alreadyAskedForDates}
                   onConversationCreated={setExistingConversationId}
                   onEnquiryCreated={handleEnquiryCreated}
                   blockedRanges={availability}
                 />
-                <PaymentClarityNote allowsOnlinePayment={allowsOnlinePayment} />
+                <PaymentClarityNote allowsOnlinePayment={allowsOnlinePayment} instantTransfer={isInstantTransfer} />
                 {avgResponseHours !== null && (
                   <p className="mt-4 text-center text-xs text-stone-500">
                     {formatResponseTime(avgResponseHours)}
@@ -1048,7 +1097,7 @@ export function ListingDetailClient({
             <div className="px-6 pb-8">
               <div className="mb-6 flex items-center justify-between">
                 <h3 className="text-xl font-bold text-stone-900">
-                  {listing.online_payment_enabled ? 'Book this stay' : mobileActionLabel}
+                  {listing.online_payment_enabled || isInstantTransfer ? 'Book this stay' : mobileActionLabel}
                 </h3>
                 <button
                   type="button"
@@ -1073,12 +1122,13 @@ export function ListingDetailClient({
                 totalUSD={totalUSD}
                 existingConversationId={existingConversationId}
                 hasEnquiry={hasEnquiry}
+                alreadyAskedForDates={alreadyAskedForDates}
                 onConversationCreated={setExistingConversationId}
                 onEnquiryCreated={handleEnquiryCreated}
                 blockedRanges={availability}
                 mobile
               />
-              <PaymentClarityNote allowsOnlinePayment={allowsOnlinePayment} />
+              <PaymentClarityNote allowsOnlinePayment={allowsOnlinePayment} instantTransfer={isInstantTransfer} />
               <div className="mt-5 space-y-2.5 border-t border-stone-100 pt-5">
                 {[
                   'Personally reviewed by JLM Collective',
@@ -1159,10 +1209,25 @@ function Pricing({ priceIls, priceUsd }: { priceIls: string | null; priceUsd: st
   )
 }
 
-function PaymentClarityNote({ allowsOnlinePayment }: { allowsOnlinePayment: boolean }) {
+function PaymentClarityNote({
+  allowsOnlinePayment,
+  instantTransfer = false,
+}: {
+  allowsOnlinePayment: boolean
+  instantTransfer?: boolean
+}) {
   return (
     <div className="mt-4 border-t border-stone-100 pt-4 text-center">
-      {allowsOnlinePayment ? (
+      {instantTransfer ? (
+        <>
+          <p className="text-xs leading-5 text-stone-500">
+            No card payment is taken. Your stay is confirmed as soon as you book.
+          </p>
+          <p className="mt-1 text-xs leading-5 text-stone-500">
+            You pay the host directly by bank transfer, on the schedule we email you.
+          </p>
+        </>
+      ) : allowsOnlinePayment ? (
         <>
           <p className="text-xs leading-5 text-stone-500">
             You will review the payment step before anything is charged.
@@ -1284,6 +1349,212 @@ function BookNowButton({
   )
 }
 
+type InstantBookPayment = {
+  acceptsDirect: boolean
+  total: string | null
+  schedule: [string, string][]
+  howToPay: [string, string][]
+  instructions: string | null
+}
+
+type InstantBookSuccess = {
+  checkIn: string
+  checkOut: string
+  guests: number
+  conversationId: string | null
+  payment: InstantBookPayment
+}
+
+function isStringPairs(value: unknown): value is [string, string][] {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (row) => Array.isArray(row) && row.length === 2 && typeof row[0] === 'string' && typeof row[1] === 'string',
+    )
+  )
+}
+
+// Instant book paid by bank transfer to the host (booking_type 'instant' without
+// live JLM card payment). One click confirms the stay via /api/instant-book; the
+// guest then pays the host directly on the schedule shown. Self-contained so the
+// request / card flows above are untouched.
+function InstantBookButton({
+  listing,
+  dateRange,
+  guests,
+  disabled,
+  disabledReason,
+}: {
+  listing: ListingDetailListing
+  dateRange: DateRange
+  guests: number
+  disabled: boolean
+  disabledReason: string
+}) {
+  const [isBooking, setIsBooking] = useState(false)
+  const [bookingError, setBookingError] = useState<string | null>(null)
+  const [booked, setBooked] = useState<InstantBookSuccess | null>(null)
+
+  const handleBook = async () => {
+    if (isBooking) return
+    if (!dateRange.from || !dateRange.to) {
+      setBookingError('Choose check-in and check-out dates first.')
+      return
+    }
+
+    const checkIn = formatDateISO(dateRange.from)
+    const checkOut = formatDateISO(dateRange.to)
+    setIsBooking(true)
+    setBookingError(null)
+
+    try {
+      const response = await fetch('/api/instant-book', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listingId: listing.id, checkIn, checkOut, guests }),
+      })
+
+      if (response.status === 401) {
+        // Keep the chosen dates/guests across the login round trip; the parent
+        // restores them from this draft when the guest comes back.
+        saveEnquiryDraft(listing.id, {
+          message: '',
+          senderName: '',
+          checkIn,
+          checkOut,
+          guests,
+          intent: 'request',
+          quickQuestion: false,
+        })
+        window.location.assign(`/login?redirect=${encodeURIComponent(`/listings/${listing.id}`)}`)
+        return
+      }
+
+      const result = (await response.json().catch(() => ({}))) as {
+        ok?: boolean
+        error?: string
+        conversationId?: string | null
+        payment?: Partial<InstantBookPayment>
+      }
+
+      if (!response.ok || !result.ok) {
+        throw new Error(result.error || 'We couldn’t complete your booking. Please try again.')
+      }
+
+      const payment = result.payment || {}
+      clearEnquiryDraft(listing.id)
+      setBooked({
+        checkIn,
+        checkOut,
+        guests,
+        conversationId: result.conversationId || null,
+        payment: {
+          acceptsDirect: payment.acceptsDirect === true,
+          total: typeof payment.total === 'string' ? payment.total : null,
+          schedule: isStringPairs(payment.schedule) ? payment.schedule : [],
+          howToPay: isStringPairs(payment.howToPay) ? payment.howToPay : [],
+          instructions: typeof payment.instructions === 'string' ? payment.instructions : null,
+        },
+      })
+    } catch (error) {
+      setBookingError(
+        error instanceof Error ? error.message : 'We couldn’t complete your booking. Please try again.',
+      )
+    } finally {
+      setIsBooking(false)
+    }
+  }
+
+  if (booked) {
+    const { payment } = booked
+    const hasTransferDetails = payment.howToPay.length > 0 || Boolean(payment.instructions)
+    return (
+      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-left" role="status">
+        <div className="flex items-center gap-2 text-emerald-800">
+          <CheckCircleIcon />
+          <p className="text-base font-bold">You&rsquo;re booked!</p>
+        </div>
+        <p className="mt-2 text-sm font-semibold text-stone-900">
+          {formatBookingDate(booked.checkIn)} &ndash; {formatBookingDate(booked.checkOut)} &middot;{' '}
+          {booked.guests} guest{booked.guests === 1 ? '' : 's'}
+        </p>
+        <p className="mt-1 text-sm leading-6 text-stone-700">
+          Your stay is confirmed and the host has been notified. We&rsquo;ve emailed you the confirmation.
+        </p>
+
+        <div className="mt-3 rounded-xl bg-white p-3 text-sm ring-1 ring-emerald-100">
+          <p className="text-xs font-bold uppercase tracking-wide text-[#c76f55]">How to pay the host</p>
+          <div className="mt-2 space-y-1.5 text-stone-700">
+            {payment.total && (
+              <div className="flex flex-wrap justify-between gap-x-4">
+                <span className="text-stone-500">Total</span>
+                <span className="font-semibold text-stone-900">{payment.total}</span>
+              </div>
+            )}
+            {payment.schedule.map(([label, value]) => (
+              <div key={label} className="flex flex-wrap justify-between gap-x-4">
+                <span className="text-stone-500">{label}</span>
+                <span className="font-medium">{value}</span>
+              </div>
+            ))}
+            {payment.howToPay.length > 0 && (
+              <div className="border-t border-stone-100 pt-2">
+                <span className="text-stone-500">Bank transfer &mdash; tap any detail to copy</span>
+                <PayoutCopyRows rows={payment.howToPay} />
+              </div>
+            )}
+            {payment.howToPay.length === 0 && payment.instructions && (
+              <p className="whitespace-pre-line border-t border-stone-100 pt-2">{payment.instructions}</p>
+            )}
+            {!hasTransferDetails && (
+              <p className="text-stone-600">The host will send you their bank transfer details.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+          <Link
+            href="/account/bookings"
+            className="flex min-h-11 flex-1 items-center justify-center rounded-full bg-stone-950 px-5 py-0 text-center text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800"
+          >
+            View your trip
+          </Link>
+          <Link
+            href={
+              booked.conversationId
+                ? `/account/messages?conversation=${booked.conversationId}`
+                : '/account/messages'
+            }
+            className="flex min-h-11 flex-1 items-center justify-center rounded-full border border-stone-300 bg-white px-5 py-0 text-center text-sm font-semibold leading-none text-stone-800 transition hover:bg-stone-50"
+          >
+            Message the host
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <button
+        type="button"
+        disabled={disabled || isBooking}
+        onClick={handleBook}
+        className="flex min-h-11 w-full items-center justify-center rounded-full bg-stone-950 px-5 py-0 text-center text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-500 disabled:shadow-none"
+      >
+        {isBooking ? 'Booking...' : 'Book now'}
+      </button>
+      {bookingError && <p className="mt-2 text-center text-xs text-rose-600">{bookingError}</p>}
+      {!bookingError && disabled && (
+        <p className="mt-2 text-center text-xs text-stone-500">{disabledReason}</p>
+      )}
+      <p className="mt-1.5 text-center text-xs text-stone-500">
+        Confirmed instantly · pay the host by bank transfer
+      </p>
+    </div>
+  )
+}
+
 function BookingControls({
   listing,
   dateRange,
@@ -1296,6 +1567,7 @@ function BookingControls({
   totalUSD,
   existingConversationId,
   hasEnquiry,
+  alreadyAskedForDates = false,
   onConversationCreated,
   onEnquiryCreated,
   blockedRanges,
@@ -1312,6 +1584,7 @@ function BookingControls({
   totalUSD: number | null
   existingConversationId: string | null
   hasEnquiry: boolean
+  alreadyAskedForDates?: boolean
   onConversationCreated: (conversationId: string) => void
   onEnquiryCreated: (conversationId: string) => void
   blockedRanges: ListingBlockedRange[]
@@ -1319,10 +1592,15 @@ function BookingControls({
 }) {
   const allowsOnlinePayment = listing.online_payment_enabled
   const isEnquiryOnly = listing.booking_type === 'enquiry'
+  const isInstantTransfer = listing.booking_type === 'instant' && !listing.online_payment_enabled
   // See the matching note in the parent: only take over the primary slot when the
   // guest has nothing further to initiate here (enquiry-only, or already requested).
   const showContinueAsPrimary =
-    Boolean(existingConversationId) && !allowsOnlinePayment && (isEnquiryOnly || hasEnquiry)
+    Boolean(existingConversationId) &&
+    !allowsOnlinePayment &&
+    listing.booking_type !== 'instant' &&
+    (isEnquiryOnly || hasEnquiry)
+  const alreadyAskedMessage = 'You already asked for these dates. Choose different dates, or open your conversation.'
   const hasDates = Boolean(dateRange.from && dateRange.to)
   const dateRequiredMessage = 'Choose dates first.'
   const minNights = listing.min_nights || 1
@@ -1452,7 +1730,16 @@ function BookingControls({
                 disabled={!hasDates || belowMin}
               />
             )}
-            {!allowsOnlinePayment && !isEnquiryOnly && (
+            {isInstantTransfer && (
+              <InstantBookButton
+                listing={listing}
+                dateRange={dateRange}
+                guests={guestCount}
+                disabled={!hasDates || belowMin}
+                disabledReason={belowMin ? minNightsMessage : 'Choose dates to continue'}
+              />
+            )}
+            {!allowsOnlinePayment && !isEnquiryOnly && !isInstantTransfer && (
               <MessageHostDialog
                 listingId={listing.id}
                 listingTitle={listing.title}
@@ -1461,12 +1748,17 @@ function BookingControls({
                 guests={guestCount}
                 intent="request"
                 buttonLabel="Request to book"
-                disabled={!hasDates || belowMin}
-                disabledReason={belowMin ? minNightsMessage : dateRequiredMessage}
+                disabled={!hasDates || belowMin || alreadyAskedForDates}
+                disabledReason={
+                  alreadyAskedForDates ? alreadyAskedMessage : belowMin ? minNightsMessage : dateRequiredMessage
+                }
                 showIcon={false}
                 buttonClassName="flex min-h-11 w-full items-center justify-center rounded-full bg-stone-950 px-5 py-0 text-center text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-500 disabled:shadow-none"
                 onConversationCreated={onEnquiryCreated}
               />
+            )}
+            {!allowsOnlinePayment && !isEnquiryOnly && alreadyAskedForDates && (
+              <p className="text-center text-xs font-semibold text-stone-600">{alreadyAskedMessage}</p>
             )}
             {/* Guest already has a plain chat but hasn't requested to book — keep
                 the request button primary and offer the thread as a secondary link. */}
@@ -1494,7 +1786,7 @@ function BookingControls({
                 onConversationCreated={onConversationCreated}
               />
             )}
-            {!hasDates && !isEnquiryOnly && (
+            {!hasDates && !isEnquiryOnly && !isInstantTransfer && (
               <p className="text-center text-xs text-stone-500">
                 Choose dates to request this stay.
               </p>

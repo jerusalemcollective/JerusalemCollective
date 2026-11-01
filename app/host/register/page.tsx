@@ -42,7 +42,7 @@ function RegisterForm() {
     try {
       // Check env vars are configured
       if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-        throw new Error('Supabase is not configured. Please contact support.')
+        throw new Error('Something went wrong — please try again or contact JLM.')
       }
 
       const supabase = createClient()

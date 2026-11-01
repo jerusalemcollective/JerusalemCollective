@@ -4,14 +4,15 @@ import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { getPaymentRouteSettings } from '@/lib/platform-settings'
 import { HOST_PRICE_CURRENCIES, currencyName } from '@/lib/currencies'
 import { allNeighborhoods } from '@/lib/neighborhoods'
-import { updateHostListing, deleteHostListing } from '../actions'
-import { ConfirmSubmitButton } from '@/components/confirm-submit-button'
+import { updateHostListing } from '../actions'
+import { HostListingVisibilityDelete } from '@/components/host-listing-visibility-delete'
 import { DepositFields } from '@/components/deposit-fields'
 import { MinNightsField } from '@/components/min-nights-field'
 import { ListingAiAssistant } from '@/components/listing-ai-assistant'
 import { AmenitySelector } from '@/components/amenity-selector'
 import { ListingPhotoManager } from '@/components/listing-photo-manager'
-import { StickySaveBar } from '@/components/sticky-save-bar'
+import { SaveStateForm, StickySaveBar } from '@/components/sticky-save-bar'
+import { BookingStyleField } from '@/components/booking-style-field'
 
 type HostPaymentProfile = {
   commission_percent_override: number | null
@@ -33,7 +34,15 @@ export default async function HostListingEditPage({
 }) {
   const { id } = await params
   const { supabase, hostIds } = await requireHostDashboardAccess()
-  const [{ data: listing }, { data: adminMessages }, { data: photos }, paymentRoutes, { data: paymentProfile }] =
+  const [
+    { data: listing },
+    { data: adminMessages },
+    { data: photos },
+    paymentRoutes,
+    { data: paymentProfile },
+    { count: bookingCount },
+    { count: requestCount },
+  ] =
     await Promise.all([
       supabase
         .from('listings')
@@ -60,9 +69,17 @@ export default async function HostListingEditPage({
         .in('host_id', hostIds)
         .limit(1)
         .maybeSingle<HostPaymentProfile>(),
+      // Bookings / requests decide whether Delete is offered (the delete action
+      // checks again on the server before removing anything).
+      supabase.from('bookings').select('id', { count: 'exact', head: true }).eq('listing_id', id),
+      supabase.from('booking_requests').select('id', { count: 'exact', head: true }).eq('listing_id', id),
     ])
 
   if (!listing) notFound()
+
+  // Only decides what to show: the delete action re-checks on the server and
+  // refuses (deleting nothing) if its own check fails.
+  const hasBookingHistory = (bookingCount || 0) > 0 || (requestCount || 0) > 0
 
   const depositCurrency = listing.price_usd != null ? 'USD' : 'ILS'
   const effectiveCommissionPercent = paymentProfile?.commission_percent_override ?? paymentRoutes.commissionPercent
@@ -101,18 +118,15 @@ export default async function HostListingEditPage({
           >
             Messages
           </Link>
-          <form action={deleteHostListing}>
-            <input type="hidden" name="listingId" value={listing.id} />
-            <ConfirmSubmitButton
-              message="Delete this stay permanently? This cannot be undone. If it already has bookings you will be asked to hide it instead, so your records stay intact."
-              className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-bold text-rose-700 transition hover:bg-rose-100"
-            >
-              Delete
-            </ConfirmSubmitButton>
-          </form>
         </div>
 
-        <form id="host-listing-edit-form" action={updateHostListing} className="space-y-6">
+        <HostListingVisibilityDelete
+          listingId={listing.id}
+          isPublished={Boolean(listing.is_published)}
+          hasBookingHistory={hasBookingHistory}
+        />
+
+        <SaveStateForm id="host-listing-edit-form" action={updateHostListing} className="space-y-6">
           <input type="hidden" name="listingId" value={listing.id} />
 
           {/* 1. Stay details — title, description, neighbourhood, capacity */}
@@ -250,7 +264,7 @@ export default async function HostListingEditPage({
 
           {/* 4. Pricing and booking (incl. deposit) */}
           <EditorSection title="Pricing and booking">
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2">
               <Field label="Currency">
                 <select
                   name="priceCurrency"
@@ -273,13 +287,8 @@ export default async function HostListingEditPage({
                   className={inputClass}
                 />
               </Field>
-              <Field label="Booking style">
-                <select name="bookingType" defaultValue={listing.booking_type} className={inputClass}>
-                  <option value="request">Request to book</option>
-                  <option value="instant">Instant book</option>
-                </select>
-              </Field>
             </div>
+            <BookingStyleField defaultValue={listing.booking_type} />
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <Field label="Price includes up to (guests)">
                 <input name="includedGuests" type="number" min="1" defaultValue={listing.included_guests ?? listing.max_guests ?? ''} className={inputClass} />
@@ -303,9 +312,10 @@ export default async function HostListingEditPage({
                   className="mt-1"
                 />
                 <span>
-                  <span className="block font-bold text-stone-950">Allow Book now with JLM payment</span>
+                  <span className="block font-bold text-stone-950">Take card payment through JLM</span>
                   <span className="mt-1 block text-sm leading-6 text-stone-600">
-                    Guests can pay JLM Collective online for this listing. {jlmPaymentDescription}
+                    Guests can pay JLM Collective online for this listing. {jlmPaymentDescription} Card checkout is
+                    used with Instant book; request-to-book stays are paid to you directly after you accept.
                   </span>
                 </span>
               </label>
@@ -392,7 +402,7 @@ export default async function HostListingEditPage({
           </EditorSection>
 
           <StickySaveBar formId="host-listing-edit-form" />
-        </form>
+        </SaveStateForm>
       </section>
     </div>
   )

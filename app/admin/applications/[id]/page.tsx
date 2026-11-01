@@ -4,10 +4,11 @@ import { requireAdminPermission } from '@/lib/admin'
 import { StatusBadge } from '@/components/status-badge'
 import {
   approveAndPublishApplication,
-  rejectApplicationAndReturn,
+  rejectApplication,
   setApplicationIdVerified,
-  unrejectApplicationAndReturn,
+  unrejectApplication,
 } from '@/app/admin/application-actions'
+import { AdminConfirmActionForm } from '@/components/admin-confirm-action-form'
 import { AdminRequestChangesForm } from '@/components/admin-request-changes-form'
 import { MarkApplicationInReview } from '@/components/mark-application-in-review'
 
@@ -68,18 +69,23 @@ export default async function AdminApplicationPage({
   const applicationPhotos = (photos || []) as ApplicationPhoto[]
   const canUnrejectApplication =
     adminApplication.status === 'rejected' && isWithinRejectionWindow(adminApplication.rejected_at)
-  const [propertyDocumentUrl, identityDocumentUrl, { data: hostAddress }] = await Promise.all([
+  const isApproved = adminApplication.status === 'approved'
+  const isRejected = adminApplication.status === 'rejected'
+  const [propertyDocumentUrl, identityDocumentUrl, { data: hostAddress }, { data: linkedListing }] = await Promise.all([
     createDocumentUrl(supabase, adminApplication.verification_doc_path),
     createDocumentUrl(supabase, adminApplication.id_doc_path),
     // The account-holder address is private; read it through the admin definer.
     supabase.rpc('get_profile_address_for_admin', { target_user_id: adminApplication.host_id }),
+    isApproved
+      ? supabase.from('listings').select('id').eq('application_id', adminApplication.id).maybeSingle()
+      : Promise.resolve({ data: null }),
   ])
 
   return (
     <div>
         <MarkApplicationInReview applicationId={adminApplication.id} status={adminApplication.status} />
         <div className="mb-6 flex items-center gap-2 text-sm text-stone-500">
-          <Link href="/admin" className="hover:text-[#c76f55]">Applications</Link>
+          <Link href="/admin/applications" className="hover:text-[#c76f55]">Applications</Link>
           <span>/</span>
           <span className="text-stone-900">{adminApplication.apartment_title}</span>
         </div>
@@ -161,28 +167,40 @@ export default async function AdminApplicationPage({
               <DocumentLink href={identityDocumentUrl} label="Open ID document" fallback="No ID document file available." />
               <InfoRow label="Verification status" value={adminApplication.verification_status || 'pending'} />
               <InfoRow label="ID verified" value={adminApplication.id_verified ? 'Yes' : 'No'} />
-              <form action={setApplicationIdVerified}>
-                <input type="hidden" name="applicationId" value={adminApplication.id} />
-                <input type="hidden" name="verified" value={adminApplication.id_verified ? 'false' : 'true'} />
-                <button
-                  className={`w-full rounded-2xl border px-4 py-3 text-sm font-bold transition ${
-                    adminApplication.id_verified
-                      ? 'border-stone-200 text-stone-700 hover:border-stone-300'
-                      : 'border-green-200 text-green-700 hover:bg-green-50'
-                  }`}
-                >
-                  {adminApplication.id_verified ? 'Mark ID as not verified' : 'Mark ID as verified'}
-                </button>
-              </form>
+              <AdminConfirmActionForm
+                action={setApplicationIdVerified}
+                fields={{ applicationId: adminApplication.id, verified: adminApplication.id_verified ? 'false' : 'true' }}
+                label={adminApplication.id_verified ? 'Mark ID as not verified' : 'Mark ID as verified'}
+                pendingLabel="Saving..."
+                className={`w-full rounded-2xl border px-4 py-3 text-sm font-bold transition ${
+                  adminApplication.id_verified
+                    ? 'border-stone-200 text-stone-700 hover:border-stone-300'
+                    : 'border-green-200 text-green-700 hover:bg-green-50'
+                }`}
+              />
             </InfoSection>
 
             <div className="rounded-3xl bg-white p-6 shadow-sm">
-              <form action={approveAndPublishApplication}>
-                <input type="hidden" name="applicationId" value={adminApplication.id} />
-                <button className="w-full rounded-2xl bg-[#252525] px-5 py-4 text-base font-bold text-white transition hover:bg-[#111111]">
-                  Approve and publish
-                </button>
-              </form>
+              {isApproved ? (
+                <p className="text-sm leading-6 text-stone-700">
+                  This application is approved and its listing has been published.{' '}
+                  {linkedListing?.id && (
+                    <Link href={`/admin/listings/${linkedListing.id}`} className="font-bold text-[#c76f55] hover:underline">
+                      Manage the listing
+                    </Link>
+                  )}
+                </p>
+              ) : (
+                <AdminConfirmActionForm
+                  action={approveAndPublishApplication}
+                  fields={{ applicationId: adminApplication.id }}
+                  label="Approve and publish"
+                  pendingLabel="Approving..."
+                  confirmText="Approve this application and publish the listing on the site? The host will be emailed."
+                  confirmLabel="Yes, approve and publish"
+                  className="w-full rounded-2xl bg-[#252525] px-5 py-4 text-base font-bold text-white transition hover:bg-[#111111]"
+                />
+              )}
             </div>
           </div>
 
@@ -191,23 +209,33 @@ export default async function AdminApplicationPage({
               <h2 className="text-lg font-bold text-stone-950">Actions</h2>
               <div className="mt-4 space-y-3">
                 {canUnrejectApplication && (
-                  <form action={unrejectApplicationAndReturn}>
-                    <input type="hidden" name="applicationId" value={adminApplication.id} />
-                    <button className="w-full rounded-2xl border border-green-200 px-4 py-3 text-sm font-bold text-green-700 transition hover:bg-green-50">
-                      Unreject and continue review
-                    </button>
-                  </form>
+                  <AdminConfirmActionForm
+                    action={unrejectApplication}
+                    fields={{ applicationId: adminApplication.id }}
+                    label="Unreject and continue review"
+                    pendingLabel="Reopening..."
+                    className="w-full rounded-2xl border border-green-200 px-4 py-3 text-sm font-bold text-green-700 transition hover:bg-green-50"
+                  />
                 )}
 
                 <AdminRequestChangesForm applicationId={adminApplication.id} />
 
-                <form action={rejectApplicationAndReturn}>
-                  <input type="hidden" name="applicationId" value={adminApplication.id} />
-                  <button className="w-full rounded-2xl border border-red-200 px-4 py-3 text-sm font-bold text-red-700 transition hover:bg-red-50">
-                    Reject
-                  </button>
-                </form>
-                {adminApplication.status === 'rejected' && (
+                {isApproved ? (
+                  <p className="rounded-2xl bg-stone-50 px-4 py-3 text-xs leading-5 text-stone-500">
+                    To take an approved listing off the site, use Hide from site or Archive on the listing page.
+                  </p>
+                ) : !isRejected && (
+                  <AdminConfirmActionForm
+                    action={rejectApplication}
+                    fields={{ applicationId: adminApplication.id }}
+                    label="Reject"
+                    pendingLabel="Rejecting..."
+                    confirmText="Reject this application? The host will be emailed."
+                    confirmLabel="Yes, reject"
+                    className="w-full rounded-2xl border border-red-200 px-4 py-3 text-sm font-bold text-red-700 transition hover:bg-red-50"
+                  />
+                )}
+                {isRejected && (
                   <p className="rounded-2xl bg-stone-50 px-4 py-3 text-xs leading-5 text-stone-500">
                     Rejected applications stay in the admin queue for 25 hours. During that time you can edit the details or unreject it.
                   </p>

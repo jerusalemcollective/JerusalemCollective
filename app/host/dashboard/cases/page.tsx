@@ -31,6 +31,7 @@ type HostSupportCaseRow = Omit<HostSupportCase, 'listings' | 'guest'> & {
 
 type BookingRow = {
   id: string
+  status: string | null
   check_in: string
   check_out: string
   listings?: { title: string } | { title: string }[] | null
@@ -67,7 +68,7 @@ export default async function HostSupportPage() {
     // Only stays still inside the admin-set reporting window are reportable.
     supabase
       .from('bookings')
-      .select('id, check_in, check_out, listings(title)')
+      .select('id, status, check_in, check_out, listings(title)')
       .in('host_id', hostIds)
       .gte('check_out', reportCutoff)
       .order('check_in', { ascending: false })
@@ -91,6 +92,7 @@ export default async function HostSupportPage() {
 
   const bookings: HostCaseBooking[] = (bookingData || []).map((booking: BookingRow) => ({
     id: booking.id,
+    status: booking.status,
     check_in: booking.check_in,
     check_out: booking.check_out,
     title: oneOrNull(booking.listings)?.title || 'Stay',

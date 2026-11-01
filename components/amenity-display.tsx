@@ -17,7 +17,7 @@ import {
   Wind,
   type LucideIcon,
 } from 'lucide-react'
-import { STAY_AMENITY_GROUPS } from '@/lib/stay-amenities'
+import { STAY_AMENITIES, STAY_AMENITY_GROUPS } from '@/lib/stay-amenities'
 
 // A specific icon per amenity so the list reads at a glance. Anything without a
 // natural icon (towels, iron, elevator, balcony, dishwasher…) falls back to a
@@ -42,14 +42,38 @@ const AMENITY_ICONS: Record<string, LucideIcon> = {
   'High chair': Baby,
 }
 
+// Every amenity we already show somewhere (grouped list, or dedicated sections
+// such as the Shabbos ones). Anything else was typed by the host.
+const KNOWN_AMENITIES = new Set<string>(STAY_AMENITIES)
+
+// Amenities the host typed into "Other amenities". Older listings saved them as
+// one comma-separated item, so split those too, and drop duplicates.
+function getOtherAmenities(amenities: string[]) {
+  const seen = new Set<string>()
+  const others: string[] = []
+  for (const value of amenities) {
+    if (KNOWN_AMENITIES.has(value)) continue
+    for (const part of value.split(',')) {
+      const amenity = part.trim()
+      const key = amenity.toLowerCase()
+      if (!amenity || KNOWN_AMENITIES.has(amenity) || seen.has(key)) continue
+      seen.add(key)
+      others.push(amenity)
+    }
+  }
+  return others
+}
+
 export function AmenityDisplay({ amenities }: { amenities: string[] }) {
   const selectedSet = new Set(amenities)
-  const visibleGroups = STAY_AMENITY_GROUPS
-    .map((group) => ({
-      ...group,
-      amenities: group.amenities.filter((amenity) => selectedSet.has(amenity)),
-    }))
-    .filter((group) => group.amenities.length > 0)
+  const otherAmenities = getOtherAmenities(amenities)
+  const visibleGroups = [
+    ...STAY_AMENITY_GROUPS.map((group) => ({
+      title: group.title as string,
+      amenities: (group.amenities as readonly string[]).filter((amenity) => selectedSet.has(amenity)),
+    })),
+    { title: 'Other amenities', amenities: otherAmenities },
+  ].filter((group) => group.amenities.length > 0)
 
   if (visibleGroups.length === 0) return null
 

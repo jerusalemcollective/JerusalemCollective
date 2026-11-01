@@ -35,7 +35,7 @@ export type CalendarEvent = {
 type HostCalendarBoardProps = {
   listings: ListingOption[]
   events: CalendarEvent[]
-  saveAction: (formData: FormData) => void
+  saveAction: (formData: FormData) => Promise<{ error?: string } | void>
   updateBookingAction: EditAction
   updateRequestAction: EditAction
   acceptRequestAction: EditAction
@@ -154,6 +154,10 @@ export function HostCalendarBoard({
   const startISO = range.from ? formatDateISO(range.from) : ''
   const endISO = range.to ? formatDateISO(range.to) : ''
   const hasRange = Boolean(!isAllListings && selectedListingId && startISO && endISO)
+  // The panel opens after the first click, so the host sees what they picked.
+  const hasStart = Boolean(!isAllListings && selectedListingId && startISO)
+  const bookingNights =
+    range.from && range.to ? Math.round((range.to.getTime() - range.from.getTime()) / 86_400_000) : 0
 
   const clearSelection = () => {
     setRange({})
@@ -166,28 +170,51 @@ export function HostCalendarBoard({
     setError(null)
   }
 
-  // Click-to-select: first click sets the start, second sets the end (ordered),
-  // a third starts a fresh range. Past days and days with events are not selectable.
+  // Click-to-select: first click sets the start, second sets the end, a third
+  // starts a fresh range. Past days are not selectable.
+  // When recording a booking the first click is always check-in and the second
+  // is always check-out — a second click on or before check-in never swaps or
+  // resets the selection; it explains instead.
   const pickDay = (day: Date) => {
     if (day < today) return
     // In the combined view there is no single listing to add dates to.
     if (isAllListings) return
     setError(null)
-    setRange((current) => {
-      if (!current.from || (current.from && current.to)) {
-        return { from: day, to: undefined }
+    const current = range
+    if (!current.from || current.to) {
+      setRange({ from: day, to: undefined })
+      return
+    }
+    if (showBooking) {
+      if (day <= current.from) {
+        setError('Check-out must be at least one day after check-in.')
+        return
       }
-      return current.from <= day ? { from: current.from, to: day } : { from: day, to: current.from }
-    })
+      setRange({ from: current.from, to: day })
+      return
+    }
+    setRange(current.from <= day ? { from: current.from, to: day } : { from: day, to: current.from })
   }
 
   const submit = (kind: 'block' | 'booking') => {
     if (!hasRange) return
-    if (kind === 'booking' && !guestName.trim()) return
+    if (kind === 'booking' && endISO <= startISO) {
+      setError('Check-out must be at least one day after check-in.')
+      return
+    }
+    if (kind === 'booking' && !guestName.trim()) {
+      setError('Please enter the guest name.')
+      return
+    }
 
     // Immediate no-double-booking feedback; the DB also rejects overlaps.
+    // A block's end day is its last blocked day; a booking's check-out day is
+    // turnover day and stays free.
     const overlaps = events.some(
-      (event) => event.listingId === selectedListingId && event.start <= endISO && event.endExclusive > startISO,
+      (event) =>
+        event.listingId === selectedListingId &&
+        (kind === 'booking' ? event.start < endISO : event.start <= endISO) &&
+        event.endExclusive > startISO,
     )
     if (overlaps) {
       setError('Those dates overlap an existing booking or block. Pick free dates.')
@@ -211,10 +238,14 @@ export function HostCalendarBoard({
 
     startTransition(async () => {
       try {
-        await saveAction(formData)
+        const result = await saveAction(formData)
+        if (result && result.error) {
+          setError(result.error)
+          return
+        }
         clearSelection()
       } catch {
-        setError('Could not save — those dates may already be taken.')
+        setError('Could not save — please try again or contact JLM.')
       }
     })
   }
@@ -367,11 +398,17 @@ export function HostCalendarBoard({
         </div>
       </div>
 
-      {hasRange && (
+      {hasStart && (
         <div className="mt-4 rounded-2xl bg-[#F8F5F2] p-4">
           <div className="flex flex-wrap items-center gap-3">
             <p className="text-sm font-semibold text-stone-900">
-              {formatDisplayDate(range.from!)} — {formatDisplayDate(range.to!)}
+              {showBooking
+                ? range.to
+                  ? `Check-in ${formatDisplayDate(range.from!)} — Check-out ${formatDisplayDate(range.to)} · ${bookingNights} ${bookingNights === 1 ? 'night' : 'nights'}`
+                  : `Check-in ${formatDisplayDate(range.from!)} — now click the check-out day`
+                : range.to
+                  ? `${formatDisplayDate(range.from!)} — ${formatDisplayDate(range.to)}`
+                  : `${formatDisplayDate(range.from!)} — now click the last day`}
             </p>
             <div className="ml-auto flex items-center gap-2">
               <button
@@ -384,7 +421,10 @@ export function HostCalendarBoard({
               {!showBooking && (
                 <button
                   type="button"
-                  onClick={() => setShowBooking(true)}
+                  onClick={() => {
+                    setShowBooking(true)
+                    setError(null)
+                  }}
                   className="rounded-full border border-stone-300 px-4 py-2 text-sm font-semibold text-stone-700 transition hover:bg-white"
                 >
                   Record a booking
@@ -393,7 +433,7 @@ export function HostCalendarBoard({
               <button
                 type="button"
                 onClick={() => submit('block')}
-                disabled={pending}
+                disabled={pending || !hasRange}
                 className="rounded-full bg-[#252525] px-5 py-2 text-sm font-bold text-white transition hover:bg-[#111111] disabled:opacity-60"
               >
                 {pending ? 'Saving…' : 'Block these dates'}
@@ -405,6 +445,9 @@ export function HostCalendarBoard({
 
           {showBooking && (
             <div className="mt-3 border-t border-stone-200 pt-3">
+              <p className="mb-2 text-xs font-semibold text-stone-600">
+                The first day you pick is check-in and the second is check-out.
+              </p>
               <div className="grid gap-2 sm:grid-cols-2">
                 <input
                   value={guestName}
@@ -446,7 +489,7 @@ export function HostCalendarBoard({
                 <button
                   type="button"
                   onClick={() => submit('booking')}
-                  disabled={pending || !guestName.trim()}
+                  disabled={pending || !hasRange || !guestName.trim()}
                   className="rounded-full bg-green-700 px-5 py-2 text-sm font-bold text-white transition hover:bg-green-800 disabled:opacity-60"
                 >
                   {pending ? 'Saving…' : 'Save booking'}
@@ -457,7 +500,7 @@ export function HostCalendarBoard({
         </div>
       )}
 
-      {!hasRange && (
+      {!hasStart && (
         <p className="mt-3 text-xs text-stone-500">
           Click a start day then an end day to block dates or record a booking. Click a booking to edit it.
         </p>

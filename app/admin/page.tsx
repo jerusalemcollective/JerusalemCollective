@@ -173,11 +173,6 @@ export default async function AdminOverviewPage() {
               title="Handle disputes"
               detail="Refunds and support cases"
             />
-            <QueueLink
-              href="/admin/analytics"
-              title="Check analytics"
-              detail="Searches, saves, and enquiries"
-            />
           </div>
 
           <h3 className="mt-8 text-xl font-bold text-stone-950">Recent enquiries</h3>

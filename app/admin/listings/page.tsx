@@ -1,11 +1,15 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { requireAdminPermission } from '@/lib/admin'
-import { archiveListing, updateListingVisibility } from '@/app/admin/listing-actions'
-import { AdminDeleteListingForm } from '@/components/admin-delete-listing-form'
-import { ConfirmSubmitButton } from '@/components/confirm-submit-button'
+import { archiveListing, deleteListing, updateListingVisibility } from '@/app/admin/listing-actions'
+import { AdminConfirmActionForm } from '@/components/admin-confirm-action-form'
 import { ListingQualityScore } from '@/components/listing-quality-score'
-import { Pagination, normalizePaginationSearchParams, type PaginationSearchParams } from '@/components/pagination'
+import {
+  Pagination,
+  clampPage,
+  normalizePaginationSearchParams,
+  type PaginationSearchParams,
+} from '@/components/pagination'
 import { calculateListingScore } from '@/lib/marketplace-rules'
 import { oneOrNull } from '@/lib/utils/one-or-null'
 
@@ -53,13 +57,21 @@ type ListingQueryRow = Omit<ListingRow, 'hosts'> & {
 
 // One filter row. Each pill maps to the underlying published/status params, so a
 // single "All" resets everything instead of the old two stacked "All" pills.
+// "Needs work" / "Ready" are the internal review marker, separate from whether
+// guests can see the listing.
 const FILTERS = [
   { label: 'All', value: 'all' },
-  { label: 'Live', value: 'live' },
+  { label: 'On the site', value: 'live' },
   { label: 'Hidden', value: 'hidden' },
-  { label: 'Needs work', value: 'needs_work' },
-  { label: 'Ready for launch', value: 'ready_for_launch' },
+  { label: 'Review: Needs work', value: 'needs_work' },
+  { label: 'Review: Ready', value: 'ready_for_launch' },
 ] as const
+
+// Legacy 'live' review values predate the split and count as Ready.
+const REVIEW_STATUS_VALUES: Record<string, string[]> = {
+  needs_work: ['needs_work'],
+  ready_for_launch: ['ready_for_launch', 'live'],
+}
 
 function buildAdminUrl(
   basePath: string,
@@ -105,30 +117,30 @@ export default async function AdminListingsPage({
           : statusFilter === 'ready_for_launch'
             ? 'ready_for_launch'
             : 'all'
-  const page = Math.max(1, Number(currentSearchParams.page) || 1)
-  let listingsQuery = supabase
-    .from('listings')
-    .select('id, title, area, host_id, is_published, is_featured, admin_status, archived_at, bedrooms, bathrooms, max_guests, sleeping_setup, amenities, description, house_rules, price_usd, price_ils, walking_minutes_to_kotel, created_at, hosts(name)')
-    .order('created_at', { ascending: false })
+  const requestedPage = Math.max(1, Math.floor(Number(currentSearchParams.page)) || 1)
+  const reviewValues = REVIEW_STATUS_VALUES[statusFilter]
+
+  const fetchPage = (pageNumber: number) => {
+    let query = supabase
+      .from('listings')
+      .select('id, title, area, host_id, is_published, is_featured, admin_status, archived_at, bedrooms, bathrooms, max_guests, sleeping_setup, amenities, description, house_rules, price_usd, price_ils, walking_minutes_to_kotel, created_at, hosts(name)')
+      .order('created_at', { ascending: false })
+    if (publishedFilter === 'live') query = query.eq('is_published', true)
+    else if (publishedFilter === 'hidden') query = query.eq('is_published', false)
+    if (reviewValues) query = query.in('admin_status', reviewValues)
+    return query.range((pageNumber - 1) * PAGE_SIZE, pageNumber * PAGE_SIZE - 1)
+  }
+
   let countQuery = supabase.from('listings').select('*', { count: 'exact', head: true })
+  if (publishedFilter === 'live') countQuery = countQuery.eq('is_published', true)
+  else if (publishedFilter === 'hidden') countQuery = countQuery.eq('is_published', false)
+  if (reviewValues) countQuery = countQuery.in('admin_status', reviewValues)
 
-  if (publishedFilter === 'live') {
-    listingsQuery = listingsQuery.eq('is_published', true)
-    countQuery = countQuery.eq('is_published', true)
-  } else if (publishedFilter === 'hidden') {
-    listingsQuery = listingsQuery.eq('is_published', false)
-    countQuery = countQuery.eq('is_published', false)
-  }
-
-  if (['needs_work', 'ready_for_launch'].includes(statusFilter)) {
-    listingsQuery = listingsQuery.eq('admin_status', statusFilter)
-    countQuery = countQuery.eq('admin_status', statusFilter)
-  }
-
-  const [{ data }, { count }] = await Promise.all([
-    listingsQuery.range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1),
-    countQuery,
-  ])
+  // Fetch the requested page alongside the count; only if it was past the end
+  // (e.g. ?page=999) fetch again for the clamped last page.
+  const [firstPageResult, { count }] = await Promise.all([fetchPage(requestedPage), countQuery])
+  const page = clampPage(requestedPage, count || 0, PAGE_SIZE)
+  const { data } = page === requestedPage ? firstPageResult : await fetchPage(page)
 
   const listings: ListingRow[] = (data || []).map((listing: ListingQueryRow) => ({
     ...listing,
@@ -259,14 +271,12 @@ export default async function AdminListingsPage({
                             }`}
                           >
                             <span className={`h-1.5 w-1.5 rounded-full ${listing.is_published ? 'bg-green-600' : 'bg-stone-400'}`} />
-                            {listing.is_published ? 'Live' : 'Hidden'}
+                            {listing.is_published ? 'On the site' : 'Hidden'}
                           </span>
                         )}
-                        {listing.admin_status !== 'live' && (
-                          <span className="rounded-full bg-stone-100 px-2.5 py-1 text-[11px] font-bold text-stone-600">
-                            {adminStatusLabel(listing.admin_status)}
-                          </span>
-                        )}
+                        <span className="rounded-full bg-stone-100 px-2.5 py-1 text-[11px] font-bold text-stone-600">
+                          Review: {reviewStatusLabel(listing.admin_status)}
+                        </span>
                         {listing.is_featured && (
                           <span className="rounded-full bg-[#fff4ef] px-2.5 py-1 text-[11px] font-bold text-[#c76f55]">
                             Featured
@@ -291,44 +301,37 @@ export default async function AdminListingsPage({
                       )}
                     </div>
 
-                    <div className="mt-4 flex flex-wrap gap-2">
+                    <div className="mt-4 flex flex-wrap items-start gap-2">
                       {listing.archived_at ? (
-                        <form action={archiveListing}>
-                          <input type="hidden" name="listingId" value={listing.id} />
-                          <input type="hidden" name="restore" value="true" />
-                          <ConfirmSubmitButton
-                            message="Restore this listing? It will return to the admin list as hidden, so you can review it before publishing."
-                            className="rounded-full bg-[#252525] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#111111]"
-                          >
-                            Restore
-                          </ConfirmSubmitButton>
-                        </form>
+                        <AdminConfirmActionForm
+                          action={archiveListing}
+                          fields={{ listingId: listing.id, restore: 'true' }}
+                          label="Restore"
+                          pendingLabel="Restoring..."
+                          confirmText="Restore this listing? It comes back hidden, so you can check it before showing it."
+                          confirmLabel="Yes, restore"
+                          className="rounded-full bg-[#252525] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#111111]"
+                        />
                       ) : (
                         <>
-                          {!listing.is_published && (
-                            <form action={updateListingVisibility}>
-                              <input type="hidden" name="listingId" value={listing.id} />
-                              <input type="hidden" name="field" value="is_published" />
-                              <input type="hidden" name="value" value="true" />
-                              <ConfirmSubmitButton
-                                message="Publish this listing to the public site?"
-                                className="rounded-full border border-stone-300 px-4 py-2 text-xs font-bold text-stone-700 transition hover:border-stone-400"
-                              >
-                                Publish
-                              </ConfirmSubmitButton>
-                            </form>
-                          )}
-                          <form action={updateListingVisibility}>
-                            <input type="hidden" name="listingId" value={listing.id} />
-                            <input type="hidden" name="field" value="is_featured" />
-                            <input type="hidden" name="value" value={String(!listing.is_featured)} />
-                            <ConfirmSubmitButton
-                              message={listing.is_featured ? 'Remove this listing from the featured set?' : 'Feature this listing on the homepage?'}
-                              className="rounded-full border border-stone-300 px-4 py-2 text-xs font-bold text-stone-700 transition hover:border-stone-400"
-                            >
-                              {listing.is_featured ? 'Unfeature' : 'Feature'}
-                            </ConfirmSubmitButton>
-                          </form>
+                          <AdminConfirmActionForm
+                            action={updateListingVisibility}
+                            fields={{ listingId: listing.id, field: 'is_published', value: String(!listing.is_published) }}
+                            label={listing.is_published ? 'Hide from site' : 'Show on site'}
+                            pendingLabel={listing.is_published ? 'Hiding...' : 'Showing...'}
+                            confirmText={listing.is_published ? 'Hide this listing from guests?' : 'Show this listing to guests?'}
+                            confirmLabel={listing.is_published ? 'Yes, hide it' : 'Yes, show it'}
+                            className="rounded-full border border-stone-300 px-4 py-2 text-xs font-bold text-stone-700 transition hover:border-stone-400"
+                          />
+                          <AdminConfirmActionForm
+                            action={updateListingVisibility}
+                            fields={{ listingId: listing.id, field: 'is_featured', value: String(!listing.is_featured) }}
+                            label={listing.is_featured ? 'Unfeature' : 'Feature'}
+                            pendingLabel="Saving..."
+                            confirmText={listing.is_featured ? 'Remove this listing from the featured set?' : 'Feature this listing on the homepage?'}
+                            confirmLabel={listing.is_featured ? 'Yes, unfeature' : 'Yes, feature'}
+                            className="rounded-full border border-stone-300 px-4 py-2 text-xs font-bold text-stone-700 transition hover:border-stone-400"
+                          />
                         </>
                       )}
 
@@ -340,24 +343,26 @@ export default async function AdminListingsPage({
                       </Link>
 
                       {!listing.archived_at && (
-                        <form action={archiveListing}>
-                          <input type="hidden" name="listingId" value={listing.id} />
-                          <ConfirmSubmitButton
-                            message="Archive this listing? It comes off the public site immediately and keeps its booking history. You can restore it at any time."
-                            className="rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-800 transition hover:bg-amber-100"
-                          >
-                            Archive
-                          </ConfirmSubmitButton>
-                        </form>
+                        <AdminConfirmActionForm
+                          action={archiveListing}
+                          fields={{ listingId: listing.id }}
+                          label="Archive"
+                          pendingLabel="Archiving..."
+                          confirmText="Archive this listing? It comes off the site and keeps its booking history. You can restore it."
+                          confirmLabel="Yes, archive"
+                          className="rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-800 transition hover:bg-amber-100"
+                        />
                       )}
 
-                      <AdminDeleteListingForm
-                        listingId={listing.id}
-                        confirmMessage="Delete this listing permanently? This cannot be undone. If it has bookings or reviews the delete will be refused - archive it instead."
+                      <AdminConfirmActionForm
+                        action={deleteListing}
+                        fields={{ listingId: listing.id }}
+                        label="Delete"
+                        pendingLabel="Deleting..."
+                        confirmText="Delete this listing and its photos forever? This cannot be undone."
+                        confirmLabel="Yes, delete"
                         className="rounded-full bg-rose-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-rose-700"
-                      >
-                        Delete
-                      </AdminDeleteListingForm>
+                      />
                     </div>
                   </div>
                 </div>
@@ -400,8 +405,7 @@ function listingQaSuggestions(
   return suggestions.slice(0, 4)
 }
 
-function adminStatusLabel(status: string | null) {
-  if (status === 'ready_for_launch') return 'Ready'
-  if (status === 'live') return 'Live'
+function reviewStatusLabel(status: string | null) {
+  if (status === 'ready_for_launch' || status === 'live') return 'Ready'
   return 'Needs work'
 }

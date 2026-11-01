@@ -3,9 +3,9 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { requireAdminPermission } from '@/lib/admin'
+import type { AdminActionState } from '@/components/admin-confirm-action-form'
 import { logAdminAction } from '@/lib/audit'
 import { sendHostAdminUpdateEmail } from '@/lib/transactional-email'
-import { APPLICATION_STATUSES, type ApplicationStatus } from '@/lib/constants'
 import { toLegacyPrices } from '@/lib/fx'
 import { isHostPriceCurrency } from '@/lib/currencies'
 import {
@@ -18,9 +18,16 @@ export type RequestChangesState = {
   message: string
 }
 
-export type ApplicationStatusState = {
-  status: 'idle' | 'success' | 'error'
-  message: string
+type AdminSupabase = Awaited<ReturnType<typeof requireAdminPermission>>['supabase']
+
+// An error whose message is already plain enough to show the admin as-is.
+// Anything else is logged and replaced with a generic message.
+class AdminFacingError extends Error {}
+
+function toFailure(error: unknown, fallback: string): AdminActionState {
+  if (error instanceof AdminFacingError) return { status: 'error', message: error.message }
+  console.error(fallback, error)
+  return { status: 'error', message: fallback }
 }
 
 const applicationEditableFields = [
@@ -102,35 +109,6 @@ type HostApplicationRecord = {
   description: string | null
 }
 
-export async function updateApplicationStatusWithFeedback(
-  _previousState: ApplicationStatusState,
-  formData: FormData,
-): Promise<ApplicationStatusState> {
-  const applicationId = String(formData.get('applicationId') || '')
-  const status = String(formData.get('status') || '')
-
-  if (!applicationId || !isApplicationReviewStatus(status)) {
-    return {
-      status: 'error',
-      message: 'This application update is missing required details.',
-    }
-  }
-
-  try {
-    await setApplicationStatus(applicationId, status)
-
-    return {
-      status: 'success',
-      message: status === 'rejected' ? 'Application rejected.' : 'Application marked in review.',
-    }
-  } catch (error) {
-    return {
-      status: 'error',
-      message: error instanceof Error ? error.message : 'Unable to update this application.',
-    }
-  }
-}
-
 export async function requestApplicationChanges(
   _previousState: RequestChangesState,
   formData: FormData,
@@ -146,17 +124,17 @@ export async function requestApplicationChanges(
     }
   }
 
+  const { supabase } = await requireAdminPermission('applications')
+
   try {
-    const { supabase } = await requireAdminPermission('applications')
     const { data: application, error: applicationError } = await supabase
       .from('host_applications')
       .select('id, host_id')
       .eq('id', applicationId)
       .single()
 
-    if (applicationError || !application?.host_id) {
-      throw applicationError || new Error('Application not found.')
-    }
+    if (applicationError) throw applicationError
+    if (!application?.host_id) throw new AdminFacingError('This application no longer exists.')
 
     const updatePayload = {
       status: 'changes_requested',
@@ -212,15 +190,7 @@ export async function requestApplicationChanges(
       message: 'Message sent to the host as JLM Collective.',
     }
   } catch (error) {
-    return {
-      status: 'error',
-      message:
-        error instanceof Error
-          ? error.message
-          : typeof error === 'string'
-            ? error
-            : JSON.stringify(error) || 'Unable to send the message.',
-    }
+    return toFailure(error, 'The message could not be sent. Please try again.')
   }
 }
 
@@ -329,27 +299,46 @@ export async function updateAdminApplicationDetails(formData: FormData) {
   revalidatePath(`/host/dashboard/applications/${applicationId}`)
 }
 
-export async function approveAndPublishApplication(formData: FormData) {
+export async function approveAndPublishApplication(
+  _previousState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
   const applicationId = String(formData.get('applicationId') || '')
 
   if (!applicationId) {
-    throw new Error('Missing application id.')
+    return { status: 'error', message: 'This button is missing the application. Please refresh the page and try again.' }
   }
 
   const { supabase } = await requireAdminPermission('applications')
+
+  try {
+    await approveApplication(supabase, applicationId)
+  } catch (error) {
+    return toFailure(error, 'Could not approve this application. Please try again.')
+  }
+
+  redirect('/admin/applications')
+}
+
+async function approveApplication(supabase: AdminSupabase, applicationId: string) {
   const { data: application, error: applicationError } = await supabase
     .from('host_applications')
     .select('*')
     .eq('id', applicationId)
-    .single()
+    .maybeSingle()
 
-  if (applicationError || !application) {
-    throw applicationError || new Error('Application not found.')
+  if (applicationError) throw applicationError
+  if (!application) throw new AdminFacingError('This application no longer exists.')
+
+  // Guard against a double click or a stale tab re-running the approval
+  // (which would re-publish the listing and email the host again).
+  if (application.status === 'approved') {
+    throw new AdminFacingError('This application is already approved.')
   }
 
   const hostApplication = application as HostApplicationRecord
   if (!hostApplication.host_id) {
-    throw new Error('This application is missing a host id.')
+    throw new AdminFacingError('This application has no host account linked, so it cannot be approved.')
   }
 
   const { data: existingListing, error: existingListingError } = await supabase
@@ -520,30 +509,46 @@ export async function approveAndPublishApplication(formData: FormData) {
   revalidatePath('/host/dashboard/listings')
   revalidatePath(`/host/dashboard/applications/${applicationId}`)
   revalidatePath('/stays')
+  revalidatePath('/')
   revalidatePath(`/listings/${listingId}`)
-  redirect('/admin/applications')
 }
 
-export async function rejectApplicationAndReturn(formData: FormData) {
+export async function rejectApplication(
+  _previousState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
   const applicationId = String(formData.get('applicationId') || '')
 
   if (!applicationId) {
-    throw new Error('Missing application id.')
+    return { status: 'error', message: 'This button is missing the application. Please refresh the page and try again.' }
   }
 
-  await setApplicationStatus(applicationId, 'rejected')
+  try {
+    await setApplicationStatus(applicationId, 'rejected')
+  } catch (error) {
+    return toFailure(error, 'Could not reject this application. Please try again.')
+  }
+
   redirect('/admin/applications')
 }
 
-export async function unrejectApplicationAndReturn(formData: FormData) {
+export async function unrejectApplication(
+  _previousState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
   const applicationId = String(formData.get('applicationId') || '')
 
   if (!applicationId) {
-    throw new Error('Missing application id.')
+    return { status: 'error', message: 'This button is missing the application. Please refresh the page and try again.' }
   }
 
-  await setApplicationStatus(applicationId, 'in_review')
-  redirect(`/admin/applications/${applicationId}`)
+  try {
+    await setApplicationStatus(applicationId, 'in_review')
+  } catch (error) {
+    return toFailure(error, 'Could not reopen this application. Please try again.')
+  }
+
+  return { status: 'success', message: 'Application is back in review.' }
 }
 
 export async function markApplicationInReviewOnOpen(applicationId: string) {
@@ -584,12 +589,15 @@ export async function markApplicationInReviewOnOpen(applicationId: string) {
   revalidatePath(`/admin/applications/${applicationId}`)
 }
 
-export async function setApplicationIdVerified(formData: FormData) {
+export async function setApplicationIdVerified(
+  _previousState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
   const applicationId = String(formData.get('applicationId') || '')
   const verified = String(formData.get('verified') || '') === 'true'
 
   if (!applicationId) {
-    throw new Error('Missing application id.')
+    return { status: 'error', message: 'This button is missing the application. Please refresh the page and try again.' }
   }
 
   const { supabase } = await requireAdminPermission('applications')
@@ -602,11 +610,12 @@ export async function setApplicationIdVerified(formData: FormData) {
     .maybeSingle()
 
   if (error && isMissingColumnError(error, 'id_verified')) {
-    throw new Error('ID verification is not available yet (the id_verified column is missing on the database).')
+    console.error('id_verified column is missing on host_applications', error)
+    return { status: 'error', message: 'ID verification is not set up yet. Ask your developer to add it.' }
   }
-  if (error) throw error
+  if (error) return toFailure(error, 'Could not update ID verification. Please try again.')
   if (!data?.id) {
-    throw new Error('No application was updated. Check that this application still exists.')
+    return { status: 'error', message: 'The application was not changed. Please refresh the page and try again.' }
   }
 
   await logAdminAction(
@@ -619,18 +628,31 @@ export async function setApplicationIdVerified(formData: FormData) {
   revalidatePath('/admin')
   revalidatePath('/admin/applications')
   revalidatePath(`/admin/applications/${applicationId}`)
+
+  return { status: 'success', message: verified ? 'ID marked as verified.' : 'ID marked as not verified.' }
 }
 
-function isApplicationReviewStatus(status: string): status is Extract<ApplicationStatus, 'in_review' | 'rejected'> {
-  return (APPLICATION_STATUSES as readonly string[]).includes(status) &&
-    (status === 'in_review' || status === 'rejected')
-}
-
+// Throws AdminFacingError when the application is already in the target state,
+// so a repeat click or stale tab can't re-reject (and re-email) the host.
 async function setApplicationStatus(
   applicationId: string,
   status: 'in_review' | 'rejected',
 ) {
   const { supabase } = await requireAdminPermission('applications')
+
+  const { data: current, error: currentError } = await supabase
+    .from('host_applications')
+    .select('status')
+    .eq('id', applicationId)
+    .maybeSingle()
+
+  if (currentError) throw currentError
+  if (!current) throw new AdminFacingError('This application no longer exists.')
+  if (current.status === status) {
+    throw new AdminFacingError(
+      status === 'rejected' ? 'This application is already rejected.' : 'This application is already in review.',
+    )
+  }
   const update =
     status === 'rejected'
       ? {
@@ -666,7 +688,7 @@ async function setApplicationStatus(
     if (fallbackError) throw fallbackError
 
     if (!fallbackData?.id) {
-      throw new Error('No application was updated. Check that this application still exists.')
+      throw new AdminFacingError('The application was not changed. Please refresh the page and try again.')
     }
 
     await logAdminAction(supabase, `set_status_${status}`, 'application', applicationId)
@@ -684,7 +706,7 @@ async function setApplicationStatus(
   if (error) throw error
 
   if (!data?.id) {
-    throw new Error('No application was updated. Check that this application still exists.')
+    throw new AdminFacingError('The application was not changed. Please refresh the page and try again.')
   }
 
   await logAdminAction(supabase, `set_status_${status}`, 'application', applicationId)
