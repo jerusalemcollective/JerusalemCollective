@@ -852,7 +852,7 @@ export function ListingDetailClient({
               <>
                 <hr className="border-stone-100" />
                 <div className="py-3">
-                  <h2 className="text-lg font-bold text-stone-950">House rules</h2>
+                  <h2 className="text-lg font-semibold text-stone-950">House rules</h2>
                   {stayTimes && (
                     <p className="mt-3 text-sm font-semibold leading-7 text-stone-900">{stayTimes}</p>
                   )}
