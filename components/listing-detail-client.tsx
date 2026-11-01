@@ -1183,7 +1183,7 @@ export function ListingDetailClient({
               <div className="mt-5 space-y-2.5 border-t border-stone-100 pt-5">
                 {[
                   'Personally reviewed by JLM Collective',
-                  'All hosts are identity verified',
+                  'Every stay is checked before it goes live',
                   'Support available throughout your stay',
                 ].map((point) => (
                   <div key={point} className="flex items-center gap-2.5">
