@@ -1,6 +1,7 @@
 'use client'
 
-import { useRef, useState, useTransition, type PointerEvent } from 'react'
+import { useRef, useState, useTransition } from 'react'
+import { useDragSort, moveItem } from '@/components/use-drag-sort'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
@@ -55,8 +56,6 @@ export function ApplicationPhotoManager({
   const [photos, setPhotos] = useState(initialPhotos)
   const [message, setMessage] = useState('')
   const [isPending, startTransition] = useTransition()
-  const [draggingPhotoIndex, setDraggingPhotoIndex] = useState<number | null>(null)
-  const photoSwipeStartRef = useRef<{ index: number; x: number; pointerId: number } | null>(null)
   const supabase = createClient()
 
   async function handleUpload(files: FileList | null) {
@@ -149,51 +148,20 @@ export function ApplicationPhotoManager({
     startTransition(() => router.refresh())
   }
 
-  async function reorderPhotos(fromIndex: number, toIndex: number) {
-    if (fromIndex === toIndex) return
-
-    const nextPhotos = [...photos]
-    const [photo] = nextPhotos.splice(fromIndex, 1)
-    nextPhotos.splice(toIndex, 0, photo)
-    await persistPhotoOrder(nextPhotos.map((item, itemIndex) => ({
-      ...item,
-      sort_order: itemIndex,
-      is_cover: itemIndex === 0,
-    })))
-  }
-
-  async function dropPhoto(targetIndex: number) {
-    if (draggingPhotoIndex === null) return
-    await reorderPhotos(draggingPhotoIndex, targetIndex)
-    setDraggingPhotoIndex(null)
-  }
-
-  function startPhotoSwipe(index: number, event: PointerEvent<HTMLDivElement>) {
-    photoSwipeStartRef.current = {
-      index,
-      x: event.clientX,
-      pointerId: event.pointerId,
-    }
-    event.currentTarget.setPointerCapture(event.pointerId)
-  }
-
-  async function finishPhotoSwipe(index: number, event: PointerEvent<HTMLDivElement>) {
-    const start = photoSwipeStartRef.current
-    photoSwipeStartRef.current = null
-
-    if (!start || start.index !== index || start.pointerId !== event.pointerId) return
-
-    const deltaX = event.clientX - start.x
-
-    if (Math.abs(deltaX) < 45) return
-
-    const direction = deltaX < 0 ? 1 : -1
-    const targetIndex = index + direction
-
-    if (targetIndex < 0 || targetIndex >= photos.length) return
-
-    await reorderPhotos(index, targetIndex)
-  }
+  // Reorder live while dragging; save the final order once, on drop.
+  const photosRef = useRef(photos)
+  photosRef.current = photos
+  const photoSort = useDragSort({
+    onMove: (fromIndex, toIndex) => setPhotos((current) => moveItem(current, fromIndex, toIndex)),
+    onDrop: () =>
+      void persistPhotoOrder(
+        photosRef.current.map((item, itemIndex) => ({
+          ...item,
+          sort_order: itemIndex,
+          is_cover: itemIndex === 0,
+        })),
+      ),
+  })
 
   async function updatePhotoLabel(photoId: string, label: string) {
     setMessage('')
@@ -269,26 +237,30 @@ export function ApplicationPhotoManager({
       {photos.length > 0 && (
         <div className="mt-5">
           <p className="mb-3 text-xs font-semibold text-stone-500">
-            Drag a photo to the front to make it your cover — it&rsquo;s the photo shown on your listing card.
+            Drag photos to reorder them (on a phone, use the dotted handle). The first photo is your cover, shown on your listing card.
           </p>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {photos.map((photo, index) => (
               <div
                 key={photo.id}
-                draggable
-                onDragStart={() => setDraggingPhotoIndex(index)}
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={() => void dropPhoto(index)}
-                onDragEnd={() => setDraggingPhotoIndex(null)}
-                onPointerDown={(event) => startPhotoSwipe(index, event)}
-                onPointerUp={(event) => void finishPhotoSwipe(index, event)}
-                onPointerCancel={() => {
-                  photoSwipeStartRef.current = null
-                }}
-                className={`touch-pan-y cursor-grab overflow-hidden rounded-2xl bg-[#F8F5F2] active:cursor-grabbing ${draggingPhotoIndex === index ? 'opacity-60' : ''}`}
+                {...photoSort.itemProps(index)}
+                className={`cursor-grab overflow-hidden rounded-2xl bg-[#F8F5F2] transition-shadow active:cursor-grabbing ${
+                  photoSort.draggingIndex === index ? 'opacity-60 shadow-lg ring-2 ring-[#c76f55]' : ''
+                }`}
               >
               <div className="group relative">
-                <img src={photo.photo_url} alt={photo.label || 'Listing photo'} className="aspect-[4/3] w-full object-cover" />
+                <img src={photo.photo_url} alt={photo.label || 'Listing photo'} draggable={false} className="aspect-[4/3] w-full object-cover" />
+                <button
+                  type="button"
+                  {...photoSort.handleProps(index)}
+                  className="absolute bottom-3 right-3 flex h-9 w-9 cursor-grab items-center justify-center rounded-full bg-white/90 text-stone-700 shadow-sm"
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                    <circle cx="5.5" cy="3.5" r="1.4" /><circle cx="10.5" cy="3.5" r="1.4" />
+                    <circle cx="5.5" cy="8" r="1.4" /><circle cx="10.5" cy="8" r="1.4" />
+                    <circle cx="5.5" cy="12.5" r="1.4" /><circle cx="10.5" cy="12.5" r="1.4" />
+                  </svg>
+                </button>
                 <button
                   type="button"
                   onClick={() => void removePhoto(photo)}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import type { User } from '@supabase/supabase-js'
@@ -9,6 +9,7 @@ import { ensureHostProfile } from '@/lib/host-profile'
 import { allNeighborhoods } from '@/lib/neighborhoods'
 import { HOST_TERMS, HOST_TERMS_LAST_UPDATED, HOST_TERMS_VERSION } from '@/lib/host-terms'
 import { GoogleAddressField } from '@/components/google-address-field'
+import { useDragSort, moveItem } from '@/components/use-drag-sort'
 import { SleepingSetupBuilder } from '@/components/sleeping-setup-builder'
 import { KOSHER_LEVEL_OPTIONS, normalizeKosherLevel } from '@/lib/kosher'
 import { AmenitySelector } from '@/components/amenity-selector'
@@ -871,7 +872,6 @@ export default function BecomeAHostPage() {
     title: string
     description: string
   } | null>(null)
-  const [draggingPhotoIndex, setDraggingPhotoIndex] = useState<number | null>(null)
   const [isPhotoDropActive, setIsPhotoDropActive] = useState(false)
   const [photoUploadError, setPhotoUploadError] = useState('')
   const [idDocError, setIdDocError] = useState('')
@@ -885,7 +885,6 @@ export default function BecomeAHostPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restoredDraft])
-  const photoSwipeStartRef = useRef<{ index: number; x: number; pointerId: number } | null>(null)
   // F4: reuse the created application + resume photo uploads on retry, so a
   // failed-then-retried submit can't create duplicate applications/photos.
   const submittedApplicationIdRef = useRef<string | null>(null)
@@ -1117,14 +1116,10 @@ export default function BecomeAHostPage() {
     })
   }
 
-  function reorderPhotos(fromIndex: number, toIndex: number) {
-    if (fromIndex === toIndex) return
-
-    const nextPhotos = [...form.photos]
-    const [photo] = nextPhotos.splice(fromIndex, 1)
-    nextPhotos.splice(toIndex, 0, photo)
-    updateField('photos', nextPhotos)
-  }
+  const photoSort = useDragSort({
+    onMove: (fromIndex, toIndex) =>
+      setForm((current) => ({ ...current, photos: moveItem(current.photos, fromIndex, toIndex) })),
+  })
 
   function addPhotoFiles(files: File[]) {
     setPhotoUploadError('')
@@ -1216,78 +1211,6 @@ export default function BecomeAHostPage() {
       type: file.type,
     })
     event.target.value = ''
-  }
-
-  function dropPhoto(targetIndex: number) {
-    if (draggingPhotoIndex === null) return
-    reorderPhotos(draggingPhotoIndex, targetIndex)
-    setDraggingPhotoIndex(null)
-  }
-
-  function dragPhotoOver(targetIndex: number) {
-    if (draggingPhotoIndex === null || draggingPhotoIndex === targetIndex) return
-    reorderPhotos(draggingPhotoIndex, targetIndex)
-    setDraggingPhotoIndex(targetIndex)
-  }
-
-  function startPhotoSwipe(index: number, event: PointerEvent<HTMLDivElement>) {
-    if (event.target instanceof HTMLElement && event.target.closest('input,button,textarea,select,a')) {
-      return
-    }
-
-    photoSwipeStartRef.current = {
-      index,
-      x: event.clientX,
-      pointerId: event.pointerId,
-    }
-    setDraggingPhotoIndex(index)
-    event.currentTarget.setPointerCapture(event.pointerId)
-  }
-
-  function movePhotoWithPointer(event: PointerEvent<HTMLDivElement>) {
-    const start = photoSwipeStartRef.current
-
-    if (!start || start.pointerId !== event.pointerId) return
-
-    const targetElement = document.elementFromPoint(event.clientX, event.clientY)
-    const photoElement = targetElement instanceof HTMLElement
-      ? targetElement.closest('[data-photo-index]')
-      : null
-    const photoIndexValue = photoElement?.getAttribute('data-photo-index')
-    const targetIndex = photoIndexValue ? Number(photoIndexValue) : Number.NaN
-
-    if (!Number.isInteger(targetIndex) || targetIndex < 0 || targetIndex >= form.photos.length) {
-      return
-    }
-
-    if (targetIndex === start.index) return
-
-    reorderPhotos(start.index, targetIndex)
-    photoSwipeStartRef.current = {
-      ...start,
-      index: targetIndex,
-      x: event.clientX,
-    }
-    setDraggingPhotoIndex(targetIndex)
-  }
-
-  function finishPhotoSwipe(index: number, event: PointerEvent<HTMLDivElement>) {
-    const start = photoSwipeStartRef.current
-    photoSwipeStartRef.current = null
-    setDraggingPhotoIndex(null)
-
-    if (!start || start.index !== index || start.pointerId !== event.pointerId) return
-
-    const deltaX = event.clientX - start.x
-
-    if (Math.abs(deltaX) < 45) return
-
-    const direction = deltaX < 0 ? 1 : -1
-    const targetIndex = index + direction
-
-    if (targetIndex < 0 || targetIndex >= form.photos.length) return
-
-    reorderPhotos(index, targetIndex)
   }
 
   function updatePhotoLabel(index: number, label: string) {
@@ -2639,34 +2562,35 @@ async function handleSubmit() {
                     {form.photos.length > 0 && (
                       <div>
                         <p className="mb-3 text-xs font-semibold text-stone-500">
-                          Drag photos to reorder them. On touch screens, press and drag. Move a photo into the first position to make it the cover.
+                          Drag photos to reorder them. On a phone, drag the dotted handle. The first photo is the cover.
                         </p>
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
                           {form.photos.map((photo, index) => (
                             <div
-                              key={`${photo.preview}-${index}`}
-                              data-photo-index={index}
-                              draggable
-                              onDragStart={() => setDraggingPhotoIndex(index)}
-                              onDragOver={(event) => event.preventDefault()}
-                              onDragEnter={() => dragPhotoOver(index)}
-                              onDrop={() => dropPhoto(index)}
-                              onDragEnd={() => setDraggingPhotoIndex(null)}
-                              onPointerDown={(event) => startPhotoSwipe(index, event)}
-                              onPointerMove={movePhotoWithPointer}
-                              onPointerUp={(event) => finishPhotoSwipe(index, event)}
-                              onPointerCancel={() => {
-                                photoSwipeStartRef.current = null
-                                setDraggingPhotoIndex(null)
-                              }}
-                              className={`touch-pan-y cursor-grab overflow-hidden rounded-xl bg-stone-100 active:cursor-grabbing ${draggingPhotoIndex === index ? 'opacity-60' : ''}`}
+                              key={photo.preview}
+                              {...photoSort.itemProps(index)}
+                              className={`cursor-grab overflow-hidden rounded-xl bg-stone-100 transition-shadow active:cursor-grabbing ${
+                                photoSort.draggingIndex === index ? 'opacity-60 shadow-lg ring-2 ring-[#c76f55]' : ''
+                              }`}
                             >
                             <div className="group relative aspect-square">
                               <img
                                 src={photo.preview}
                                 alt={photo.label || `Upload ${index + 1}`}
+                                draggable={false}
                                 className="h-full w-full object-cover"
                               />
+                              <button
+                                type="button"
+                                {...photoSort.handleProps(index)}
+                                className="absolute bottom-2 left-2 flex h-9 w-9 cursor-grab items-center justify-center rounded-full bg-white/90 text-stone-700 shadow-sm"
+                              >
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                  <circle cx="5.5" cy="3.5" r="1.4" /><circle cx="10.5" cy="3.5" r="1.4" />
+                                  <circle cx="5.5" cy="8" r="1.4" /><circle cx="10.5" cy="8" r="1.4" />
+                                  <circle cx="5.5" cy="12.5" r="1.4" /><circle cx="10.5" cy="12.5" r="1.4" />
+                                </svg>
+                              </button>
                               {index === 0 && (
                                 <span className="absolute left-2 top-2 rounded-full bg-[#c76f55] px-2 py-0.5 text-xs font-bold text-white">
                                   Cover
@@ -2679,7 +2603,8 @@ async function handleSubmit() {
                                   setPhotoUploadError('')
                                   updateField('photos', form.photos.filter((_, i) => i !== index))
                                 }}
-                                className="absolute right-2 top-2 rounded-full bg-white/90 p-1.5 text-stone-600 opacity-0 shadow-sm transition hover:bg-white hover:text-red-600 group-hover:opacity-100"
+                                aria-label="Remove photo"
+                                className="absolute right-2 top-2 rounded-full bg-white/90 p-1.5 text-stone-600 shadow-sm transition hover:bg-white hover:text-red-600 md:opacity-0 md:group-hover:opacity-100"
                               >
                                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
