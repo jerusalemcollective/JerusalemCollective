@@ -26,20 +26,20 @@ function RegisterForm() {
     setError(null)
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match')
+      setError('The two passwords don\u2019t match. Please type them again.')
       setIsLoading(false)
       return
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters')
+      setError('Please use a password with at least 6 characters.')
       setIsLoading(false)
       return
     }
 
     try {
       if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-        throw new Error('Supabase is not configured. Please contact support.')
+        throw new Error('Sign-up isn\u2019t working right now. Please email info@jlmcollective.co and we\u2019ll help.')
       }
 
       const supabase = createClient()
@@ -57,16 +57,16 @@ function RegisterForm() {
       if (error) throw error
 
       if (!data.user) {
-        throw new Error('Failed to create account. Please try again.')
+        throw new Error('We couldn\u2019t create your account. Please try again.')
       }
 
       if (data.user.identities && data.user.identities.length === 0) {
-        throw new Error('An account with this email already exists. Please sign in instead.')
+        throw new Error('You already have an account with this email. Please sign in instead.')
       }
 
       setSuccess(true)
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'An error occurred during signup'
+      const message = error instanceof Error ? error.message : 'We couldn\u2019t create your account. Please try again.'
       setError(message)
       setSuccess(false)
     } finally {
@@ -97,13 +97,13 @@ function RegisterForm() {
             <h1 className="font-display mb-2 text-2xl font-bold text-stone-900">Check your email</h1>
             <p className="mb-6 text-stone-600">
               {"We've sent a confirmation link to "}<strong>{email}</strong>. 
-              Click the link to verify your account.
+              Click the link in it to confirm your account.
             </p>
             <Link
               href="/login"
               className="text-sm font-medium text-[#c76f55] hover:underline"
             >
-              Back to login
+              Back to sign in
             </Link>
           </div>
         </div>
@@ -117,7 +117,7 @@ function RegisterForm() {
         <div className="rounded-3xl bg-white p-8 shadow-sm">
           <h1 className="font-display mb-2 text-2xl font-bold text-stone-900">Create an account</h1>
           <p className="mb-6 text-sm text-stone-600">
-            Join JLM Collective to book unique stays in Jerusalem
+            Join JLM Collective to find and book your Jerusalem stay.
           </p>
 
           <GoogleAuthButton redirect={redirect} label="Sign up with Google" />
