@@ -4,8 +4,8 @@ import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { getPaymentRouteSettings } from '@/lib/platform-settings'
 import { HOST_PRICE_CURRENCIES, currencyName } from '@/lib/currencies'
 import { allNeighborhoods } from '@/lib/neighborhoods'
-import { updateHostListing, deleteHostListing } from '../actions'
-import { ConfirmSubmitButton } from '@/components/confirm-submit-button'
+import { updateHostListing } from '../actions'
+import { HostListingVisibilityDelete } from '@/components/host-listing-visibility-delete'
 import { DepositFields } from '@/components/deposit-fields'
 import { MinNightsField } from '@/components/min-nights-field'
 import { ListingAiAssistant } from '@/components/listing-ai-assistant'
@@ -33,7 +33,15 @@ export default async function HostListingEditPage({
 }) {
   const { id } = await params
   const { supabase, hostIds } = await requireHostDashboardAccess()
-  const [{ data: listing }, { data: adminMessages }, { data: photos }, paymentRoutes, { data: paymentProfile }] =
+  const [
+    { data: listing },
+    { data: adminMessages },
+    { data: photos },
+    paymentRoutes,
+    { data: paymentProfile },
+    { count: bookingCount },
+    { count: requestCount },
+  ] =
     await Promise.all([
       supabase
         .from('listings')
@@ -60,9 +68,17 @@ export default async function HostListingEditPage({
         .in('host_id', hostIds)
         .limit(1)
         .maybeSingle<HostPaymentProfile>(),
+      // Bookings / requests decide whether Delete is offered (the delete action
+      // checks again on the server before removing anything).
+      supabase.from('bookings').select('id', { count: 'exact', head: true }).eq('listing_id', id),
+      supabase.from('booking_requests').select('id', { count: 'exact', head: true }).eq('listing_id', id),
     ])
 
   if (!listing) notFound()
+
+  // Only decides what to show: the delete action re-checks on the server and
+  // refuses (deleting nothing) if its own check fails.
+  const hasBookingHistory = (bookingCount || 0) > 0 || (requestCount || 0) > 0
 
   const depositCurrency = listing.price_usd != null ? 'USD' : 'ILS'
   const effectiveCommissionPercent = paymentProfile?.commission_percent_override ?? paymentRoutes.commissionPercent
@@ -101,16 +117,13 @@ export default async function HostListingEditPage({
           >
             Messages
           </Link>
-          <form action={deleteHostListing}>
-            <input type="hidden" name="listingId" value={listing.id} />
-            <ConfirmSubmitButton
-              message="Delete this stay permanently? This cannot be undone. If it already has bookings you will be asked to hide it instead, so your records stay intact."
-              className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-bold text-rose-700 transition hover:bg-rose-100"
-            >
-              Delete
-            </ConfirmSubmitButton>
-          </form>
         </div>
+
+        <HostListingVisibilityDelete
+          listingId={listing.id}
+          isPublished={Boolean(listing.is_published)}
+          hasBookingHistory={hasBookingHistory}
+        />
 
         <form id="host-listing-edit-form" action={updateHostListing} className="space-y-6">
           <input type="hidden" name="listingId" value={listing.id} />
