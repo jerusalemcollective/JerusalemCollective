@@ -13,6 +13,7 @@ import { RecentlyViewed } from '@/components/recently-viewed'
 import { Pagination, normalizePaginationSearchParams } from '@/components/pagination'
 import { getListingRatings, type ListingRating } from '@/lib/reviews'
 import { ListingCard } from '@/components/listing-card'
+import { approximateCoordinate } from '@/lib/geo-privacy'
 
 const STAYS_PAGE_SIZE = 24
 
@@ -52,8 +53,10 @@ const listingSchema = z.object({
   price_usd: z.number().nullable(),
   booking_type: z.string(),
   is_featured: z.boolean().nullable(),
-  latitude: z.number().nullable().transform((value) => value ?? 31.7683),
-  longitude: z.number().nullable().transform((value) => value ?? 35.2137),
+  // Rounded to ~500 m here, at parse time, so the precise building location
+  // never reaches the browser (map pins or any card that gets the listing).
+  latitude: z.number().nullable().transform((value) => approximateCoordinate(value ?? 31.7683)),
+  longitude: z.number().nullable().transform((value) => approximateCoordinate(value ?? 35.2137)),
   amenities: z.array(z.string()).nullable().transform((value) => value ?? []),
   cover_photo_url: z.string().nullable().optional(),
 })

@@ -2,6 +2,7 @@
 import { z } from 'zod'
 import { MapPageClient, type MapListing } from '@/components/map-page-client'
 import { formatDualCurrencyPrice } from '@/lib/utils/currency'
+import { approximateCoordinate } from '@/lib/geo-privacy'
 
 const listingRowSchema = z.object({
   id: z.string(),
@@ -43,8 +44,9 @@ function toMapListing(listing: ListingRow, coverPhotoUrl: string | null): MapLis
     price_usd: listing.price_usd,
     bedrooms: listing.bedrooms,
     sleeps: listing.max_guests,
-    lat: listing.latitude || 31.7683,
-    lng: listing.longitude || 35.2137,
+    // Pins are rounded to ~500 m: the precise location stays on the server.
+    lat: approximateCoordinate(listing.latitude || 31.7683),
+    lng: approximateCoordinate(listing.longitude || 35.2137),
     amenities: listing.amenities || [],
     cover_photo_url: coverPhotoUrl,
   }
