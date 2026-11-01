@@ -10,6 +10,7 @@ import { DepositFields } from '@/components/deposit-fields'
 import { MinNightsField } from '@/components/min-nights-field'
 import { ListingAiAssistant } from '@/components/listing-ai-assistant'
 import { AmenitySelector } from '@/components/amenity-selector'
+import { SleepingSetupBuilder } from '@/components/sleeping-setup-builder'
 import { ListingPhotoManager } from '@/components/listing-photo-manager'
 import { SaveStateForm, StickySaveBar } from '@/components/sticky-save-bar'
 import { BookingStyleField } from '@/components/booking-style-field'
@@ -201,13 +202,7 @@ export default async function HostListingEditPage({
 
             <div className="mt-5">
               <Field label="Sleeping setup">
-                <textarea
-                  name="sleepingSetup"
-                  rows={5}
-                  defaultValue={listing.sleeping_setup || ''}
-                  placeholder={`Example:\nBedroom 1: king bed\nBedroom 2: two single beds\nLiving room: sofa bed`}
-                  className={`${inputClass} resize-y`}
-                />
+                <SleepingSetupBuilder name="sleepingSetup" defaultValue={listing.sleeping_setup || ''} />
               </Field>
             </div>
           </EditorSection>

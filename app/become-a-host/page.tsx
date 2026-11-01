@@ -9,6 +9,7 @@ import { ensureHostProfile } from '@/lib/host-profile'
 import { allNeighborhoods } from '@/lib/neighborhoods'
 import { HOST_TERMS, HOST_TERMS_LAST_UPDATED, HOST_TERMS_VERSION } from '@/lib/host-terms'
 import { GoogleAddressField } from '@/components/google-address-field'
+import { SleepingSetupBuilder } from '@/components/sleeping-setup-builder'
 import { AmenitySelector } from '@/components/amenity-selector'
 import { HOST_PRICE_CURRENCIES, currencyName, type HostPriceCurrency } from '@/lib/currencies'
 import { toLegacyPrices } from '@/lib/fx'
@@ -2356,12 +2357,9 @@ async function handleSubmit() {
                   </div>
                   <div className="mt-5">
                     <Field label="Sleeping setup">
-                      <textarea
+                      <SleepingSetupBuilder
                         value={form.sleeping_setup}
-                        onChange={(e) => updateField('sleeping_setup', e.target.value)}
-                        rows={5}
-                        placeholder={`Example:\nBedroom 1: king bed\nBedroom 2: two single beds\nLiving room: sofa bed`}
-                        className={`${inputClass} resize-y`}
+                        onChange={(val) => updateField('sleeping_setup', val)}
                       />
                     </Field>
                   </div>
