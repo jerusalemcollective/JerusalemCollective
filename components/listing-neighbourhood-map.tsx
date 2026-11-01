@@ -1,7 +1,10 @@
 'use client'
 
-import { GoogleMap, OverlayView, useJsApiLoader, type Libraries } from '@react-google-maps/api'
+import { CircleF, GoogleMap, useJsApiLoader, type Libraries } from '@react-google-maps/api'
+import { APPROXIMATE_AREA_RADIUS_METRES } from '@/lib/utils/approximate-location'
 
+// latitude/longitude are already snapped on the server (approximateCoordinate),
+// so this map only ever knows the area, never the building.
 type ListingNeighbourhoodMapProps = {
   title: string
   area: string
@@ -25,6 +28,15 @@ const mapOptions: google.maps.MapOptions = {
     { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
     { featureType: 'transit', stylers: [{ visibility: 'off' }] },
   ],
+}
+
+const areaCircleOptions: google.maps.CircleOptions = {
+  clickable: false,
+  fillColor: '#c76f55',
+  fillOpacity: 0.16,
+  strokeColor: '#c76f55',
+  strokeOpacity: 0.55,
+  strokeWeight: 2,
 }
 
 function StaticNeighbourhoodMap({
@@ -62,9 +74,8 @@ function StaticNeighbourhoodMap({
         </svg>
       </div>
       <div className="absolute inset-0 bg-gradient-to-br from-white/18 via-transparent to-[#fff4ef]/32" />
-      <div className="absolute left-1/2 top-1/2 h-14 w-14 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#c76f55]/15 ring-2 ring-[#c76f55]/40" />
-      <div className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#c76f55] shadow-lg ring-4 ring-white" />
-      <div className="absolute left-1/2 top-[calc(50%+2.75rem)] -translate-x-1/2 rounded-2xl bg-white px-4 py-3 text-center shadow-xl ring-1 ring-stone-200">
+      <div className="absolute left-1/2 top-1/2 h-48 w-48 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#c76f55]/15 ring-2 ring-[#c76f55]/40" />
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white px-4 py-3 text-center shadow-xl ring-1 ring-stone-200">
         <p className="max-w-[220px] truncate text-sm font-bold text-stone-950">
           Approximate location
         </p>
@@ -129,18 +140,14 @@ export function ListingNeighbourhoodMap({
         zoom={15}
         options={mapOptions}
       >
-        <OverlayView
-          position={center}
-          mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-        >
-          <div className="-translate-x-1/2 -translate-y-1/2">
-            <div className="h-14 w-14 rounded-full bg-[#c76f55]/15 ring-2 ring-[#c76f55]/40" />
-            <div className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#c76f55] shadow-lg ring-4 ring-white" />
-          </div>
-        </OverlayView>
+        <CircleF
+          center={center}
+          radius={APPROXIMATE_AREA_RADIUS_METRES}
+          options={areaCircleOptions}
+        />
       </GoogleMap>
       <div className="pointer-events-none absolute bottom-4 left-4 rounded-full bg-white/95 px-3 py-1.5 text-xs font-bold text-stone-700 shadow-sm ring-1 ring-stone-200">
-        Approximate location in {area}
+        Approximate area in {area}
       </div>
     </div>
   )
