@@ -116,7 +116,7 @@ export function getYomTovTiles(today: Date = jerusalemToday()): YomTovTile[] {
           slug: 'kosher-kitchen',
           href: '/stays/kosher-kitchen',
           title: 'Kosher kitchen',
-          blurb: 'Kitchens from kosher to glatt and Chalav Yisrael.',
+          blurb: 'Kosher and kosher mehadrin kitchens.',
           hebrewWord: 'כשר',
           timing: null,
           civilDate: null,

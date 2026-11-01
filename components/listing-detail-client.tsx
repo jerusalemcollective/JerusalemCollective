@@ -1,6 +1,7 @@
 'use client'
 
 import { Suspense, useEffect, useRef, useState } from 'react'
+import { normalizeKosherLevel } from '@/lib/kosher'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
@@ -59,11 +60,8 @@ const OPEN_ENQUIRY_STATUSES = ['new', 'host_replied']
 
 // Shabbos-list label for each kosher kitchen level; 'not_kosher' and blank show nothing.
 const KOSHER_KITCHEN_LABELS: Record<string, string> = {
-  kosher_friendly: 'Kosher-friendly kitchen',
   kosher: 'Kosher kitchen',
-  glatt_kosher: 'Kosher kitchen \u2014 Glatt kosher',
-  chalav_yisrael: 'Kosher kitchen \u2014 Chalav Yisrael',
-  mehadrin: 'Kosher kitchen \u2014 Mehadrin',
+  mehadrin: 'Kosher mehadrin kitchen',
 }
 
 // Amenities the Shabbos list already covers, so the general Amenities list
@@ -319,7 +317,7 @@ export function ListingDetailClient({
   // booleans, and the Shabbos amenities — mirroring the single merged form section.
   const listingAmenities = listing.amenities || []
   const jewishStayFeatures = [
-    KOSHER_KITCHEN_LABELS[listing.kosher_kitchen_level ?? ''] ?? null,
+    KOSHER_KITCHEN_LABELS[normalizeKosherLevel(listing.kosher_kitchen_level)] ?? null,
     listing.shabbat_elevator ? 'Shabbos elevator' : null,
     listing.shabbat_clock ? 'Shabbos clock / timer' : null,
     listing.physical_key_entry ? 'Physical-key entry (no digital lock)' : null,

@@ -15,6 +15,7 @@ import { getListingCardExtras, toListingCardData } from '@/lib/listing-cards'
 import { getLiveNeighborhoods, pickFeaturedAreas } from '@/lib/live-areas'
 import { ListingCard, LISTING_GRID_CLASS } from '@/components/listing-card'
 import { approximateCoordinate } from '@/lib/geo-privacy'
+import { KOSHER_COLLECTION_LEVELS } from '@/lib/stay-collections'
 
 const STAYS_PAGE_SIZE = 24
 
@@ -450,9 +451,7 @@ async function loadListings({
   })
 
   if (kosherKitchen) {
-    listingsQuery = listingsQuery
-      .not('kosher_kitchen_level', 'is', null)
-      .neq('kosher_kitchen_level', 'not_kosher')
+    listingsQuery = listingsQuery.in('kosher_kitchen_level', KOSHER_COLLECTION_LEVELS)
   }
 
   if (shabbatElevator) {

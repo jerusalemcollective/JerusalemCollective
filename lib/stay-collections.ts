@@ -81,17 +81,17 @@ export const stayCollections: Record<string, StayCollection> = {
     h1: 'Jerusalem apartments with a kosher kitchen',
     metaTitle: 'Jerusalem Apartments with a Kosher Kitchen | JLM Collective',
     metaDescription:
-      'Jerusalem short-term stays with a kosher kitchen, from kosher to glatt and Chalav Yisrael, within walking distance of shuls and the Kotel.',
+      'Jerusalem short-term stays with a kosher or kosher mehadrin kitchen, within walking distance of shuls and the Kotel.',
     filter: 'kosher',
     intro: [
-      'A kosher kitchen you can trust makes a stay so much easier. These Jerusalem apartments all have one, from kosher to glatt and Chalav Yisrael. We look at each one ourselves before it goes live.',
+      'A kosher kitchen you can trust makes a stay so much easier. These Jerusalem apartments all have one, kosher or kosher mehadrin. We look at each one ourselves before it goes live.',
       'Every listing shows its kosher kitchen level, the walk to the Kotel and nearby shuls, and helpful extras like a Shabbos elevator or Shabbos clock. Message the host to check exactly what the kitchen has.',
       'Whether you\'re coming for a simcha, a chag or a longer stay, these are homes where you can cook and eat with peace of mind.',
     ],
     faqs: [
       {
         q: 'What kosher-kitchen levels are available?',
-        a: 'Stays range from kosher to glatt kosher and Chalav Yisrael / Mehadrin. Each listing shows its level, and you can message the host to check the details.',
+        a: 'Each stay is either kosher or kosher mehadrin, and the listing shows which. You can message the host to check the details.',
       },
       {
         q: 'Can I confirm the kitchen details before booking?',
