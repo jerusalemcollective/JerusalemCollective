@@ -29,21 +29,22 @@ function getImageExtension(file: File) {
 function getUploadFailureMessage(fileName: string, message?: string) {
   const lowerMessage = message?.toLowerCase() || ''
 
-  if (lowerMessage.includes('bucket') || lowerMessage.includes('not found')) {
-    return 'Photo upload storage is not set up yet. Please run the listing photos storage SQL in Supabase.'
-  }
-
-  if (lowerMessage.includes('row-level security') || lowerMessage.includes('permission')) {
-    return 'Adding photos to a live listing is blocked in Supabase. Please run migration 095 (host listing photo insert) in Supabase.'
-  }
+  if (message) console.error(`Listing photo upload failed for ${fileName}:`, message)
 
   if (lowerMessage.includes('size') || lowerMessage.includes('too large')) {
     return `${fileName} is too large. Please use an image under ${maxListingPhotoSizeMb}MB.`
   }
 
-  return message
-    ? `Failed to upload ${fileName}: ${message}`
-    : `Failed to upload ${fileName}. Please try again.`
+  if (
+    lowerMessage.includes('bucket') ||
+    lowerMessage.includes('not found') ||
+    lowerMessage.includes('row-level security') ||
+    lowerMessage.includes('permission')
+  ) {
+    return `Could not add ${fileName} right now. Please contact JLM so we can fix this for you.`
+  }
+
+  return `Could not upload ${fileName}. Please try again.`
 }
 
 export function ListingPhotoManager({
@@ -57,6 +58,7 @@ export function ListingPhotoManager({
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null)
   const [isPending, startTransition] = useTransition()
   const [draggingPhotoIndex, setDraggingPhotoIndex] = useState<number | null>(null)
+  const [removingPhotoId, setRemovingPhotoId] = useState<string | null>(null)
   const photoSwipeStartRef = useRef<{ index: number; x: number; pointerId: number } | null>(null)
   const supabase = createClient()
 
@@ -147,7 +149,8 @@ export function ListingPhotoManager({
     })
 
     if (error) {
-      setMessage(error.message)
+      console.error('Could not reorder listing photos', error)
+      setMessage('Could not save the new photo order. Please try again.')
       return
     }
 
@@ -174,6 +177,11 @@ export function ListingPhotoManager({
   }
 
   function startPhotoSwipe(index: number, event: PointerEvent<HTMLDivElement>) {
+    // Never start a swipe from a button or text field: capturing the pointer on
+    // the card would swallow the click (e.g. the Remove button with a mouse).
+    const target = event.target as HTMLElement | null
+    if (target?.closest('button, input, textarea, select, a, label')) return
+
     photoSwipeStartRef.current = {
       index,
       x: event.clientX,
@@ -212,7 +220,8 @@ export function ListingPhotoManager({
       .eq('id', photoId)
 
     if (error) {
-      setMessage(error.message)
+      console.error('Could not save listing photo label', error)
+      setMessage('Could not save the photo label. Please try again.')
       return
     }
 
@@ -220,15 +229,24 @@ export function ListingPhotoManager({
   }
 
   async function removePhoto(photo: ListingPhoto) {
-    setMessage('')
+    if (!window.confirm('Remove this photo from your listing? This cannot be undone.')) return
 
-    const { error } = await supabase
+    setMessage('')
+    setRemovingPhotoId(photo.id)
+
+    const { data: deletedRows, error } = await supabase
       .from('listing_photos')
       .delete()
       .eq('id', photo.id)
+      .select('id')
 
-    if (error) {
-      setMessage(error.message)
+    setRemovingPhotoId(null)
+
+    // A delete blocked by row-level security returns no error and no rows, so
+    // treat "nothing deleted" as a failure too.
+    if (error || !deletedRows?.length) {
+      console.error('Could not remove listing photo', error ?? 'No rows deleted')
+      setMessage('Could not remove this photo. Please try again, or contact JLM if it keeps happening.')
       return
     }
 
@@ -302,9 +320,10 @@ export function ListingPhotoManager({
                 <button
                   type="button"
                   onClick={() => void removePhoto(photo)}
-                  className="absolute right-3 top-3 rounded-full bg-white px-3 py-1 text-xs font-bold text-stone-800 shadow-sm transition hover:bg-stone-100"
+                  disabled={removingPhotoId !== null}
+                  className="absolute right-3 top-3 rounded-full bg-white px-3 py-1 text-xs font-bold text-stone-800 shadow-sm transition hover:bg-stone-100 disabled:opacity-60"
                 >
-                  Remove
+                  {removingPhotoId === photo.id ? 'Removing...' : 'Remove'}
                 </button>
                 {photo.is_cover ? (
                   <span className="absolute bottom-3 left-3 rounded-full bg-white px-3 py-1 text-xs font-bold text-stone-800 shadow-sm">

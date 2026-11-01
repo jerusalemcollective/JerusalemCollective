@@ -278,7 +278,7 @@ export default async function HostCalendarPage() {
                     </>
                   ) : (
                     <p className="mt-4 rounded-2xl bg-[#F8F5F2] p-4 text-sm text-stone-600">
-                      Your private calendar link will appear after the calendar token migration has been run.
+                      Your private calendar link isn&apos;t ready yet. Please contact JLM if you need it.
                     </p>
                   )}
                 </div>

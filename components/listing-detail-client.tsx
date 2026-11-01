@@ -38,6 +38,34 @@ type DateRange = {
   to?: Date
 }
 
+type GuestEnquiry = {
+  id: string
+  status: string
+  check_in: string | null
+  check_out: string | null
+}
+
+const OPEN_ENQUIRY_STATUSES = ['new', 'host_replied']
+
+// Which of this guest's booking requests matter for the chosen dates.
+// No dates chosen: any open request counts. Dates chosen: only a request for
+// exactly those dates counts — open, or finished (accepted/declined/closed).
+function getEnquiryForDates(enquiries: GuestEnquiry[], dateRange: DateRange) {
+  if (!dateRange.from || !dateRange.to) {
+    return {
+      open: enquiries.find((enquiry) => OPEN_ENQUIRY_STATUSES.includes(enquiry.status)) || null,
+      finished: null,
+    }
+  }
+  const checkIn = formatDateISO(dateRange.from)
+  const checkOut = formatDateISO(dateRange.to)
+  const sameDates = enquiries.filter((enquiry) => enquiry.check_in === checkIn && enquiry.check_out === checkOut)
+  return {
+    open: sameDates.find((enquiry) => OPEN_ENQUIRY_STATUSES.includes(enquiry.status)) || null,
+    finished: sameDates.find((enquiry) => !OPEN_ENQUIRY_STATUSES.includes(enquiry.status)) || null,
+  }
+}
+
 export type ListingDetailListing = {
   id: string
   host_id: string | null
@@ -174,10 +202,10 @@ export function ListingDetailClient({
   const [bookingDateRange, setBookingDateRange] = useState<DateRange>({})
   const [guestCount, setGuestCount] = useState(1)
   const [existingConversationId, setExistingConversationId] = useState<string | null>(null)
-  // Whether this guest has already made a dated booking request (enquiry) for
-  // this listing. A plain "message host" chat does NOT count — see the button
-  // logic below, which must still let a guest who only messaged make an enquiry.
-  const [hasEnquiry, setHasEnquiry] = useState(false)
+  // This guest's dated booking requests (enquiries) for this listing. A plain
+  // "message host" chat does NOT count — see the button logic below, which must
+  // still let a guest who only messaged make an enquiry.
+  const [enquiries, setEnquiries] = useState<GuestEnquiry[]>([])
   // Start from the server snapshot, then refresh on mount so an ISR-cached page
   // never shows stale availability in the picker.
   const [availability, setAvailability] = useState<ListingBlockedRange[]>(blockedRanges)
@@ -297,16 +325,16 @@ export function ListingDetailClient({
           .maybeSingle(),
         supabase
           .from('booking_requests')
-          .select('id')
+          .select('id, status, check_in, check_out')
           .eq('listing_id', listing.id)
           .eq('guest_id', user.id)
-          .limit(1)
-          .maybeSingle(),
+          .order('created_at', { ascending: false })
+          .limit(50),
       ])
 
       if (isActive) {
         setExistingConversationId(existingConv?.id || null)
-        setHasEnquiry(Boolean(existingRequest?.id))
+        setEnquiries((existingRequest || []) as GuestEnquiry[])
       }
     }
 
@@ -365,12 +393,29 @@ export function ListingDetailClient({
   // guest can't take that action any further: enquiry-only listings (chat is the
   // action) or when they've already made a booking request. A guest who merely
   // messaged a request-listing host must still be able to request to book.
+  // A guest can ask again for new dates: only an open request (for the chosen
+  // dates, or any when none are chosen) takes over. Instant-book listings always
+  // keep "Book now" as the main action.
+  const enquiryForDates = getEnquiryForDates(enquiries, bookingDateRange)
+  const hasEnquiry = Boolean(enquiryForDates.open)
+  const alreadyAskedForDates = Boolean(enquiryForDates.finished) && !hasEnquiry
   const showContinueAsPrimary =
-    Boolean(existingConversationId) && !allowsOnlinePayment && (isEnquiryOnly || hasEnquiry)
+    Boolean(existingConversationId) &&
+    !allowsOnlinePayment &&
+    listing.booking_type !== 'instant' &&
+    (isEnquiryOnly || hasEnquiry)
   // Marks that a dated request now exists (flip the button after submitting one).
   const handleEnquiryCreated = (conversationId: string) => {
     setExistingConversationId(conversationId)
-    setHasEnquiry(true)
+    setEnquiries((current) => [
+      {
+        id: `local-${conversationId}`,
+        status: 'new',
+        check_in: bookingDateRange.from ? formatDateISO(bookingDateRange.from) : null,
+        check_out: bookingDateRange.to ? formatDateISO(bookingDateRange.to) : null,
+      },
+      ...current,
+    ])
   }
   const mobileActionLabel =
     allowsOnlinePayment
@@ -972,6 +1017,7 @@ export function ListingDetailClient({
                   totalUSD={totalUSD}
                   existingConversationId={existingConversationId}
                   hasEnquiry={hasEnquiry}
+                  alreadyAskedForDates={alreadyAskedForDates}
                   onConversationCreated={setExistingConversationId}
                   onEnquiryCreated={handleEnquiryCreated}
                   blockedRanges={availability}
@@ -1073,6 +1119,7 @@ export function ListingDetailClient({
                 totalUSD={totalUSD}
                 existingConversationId={existingConversationId}
                 hasEnquiry={hasEnquiry}
+                alreadyAskedForDates={alreadyAskedForDates}
                 onConversationCreated={setExistingConversationId}
                 onEnquiryCreated={handleEnquiryCreated}
                 blockedRanges={availability}
@@ -1296,6 +1343,7 @@ function BookingControls({
   totalUSD,
   existingConversationId,
   hasEnquiry,
+  alreadyAskedForDates = false,
   onConversationCreated,
   onEnquiryCreated,
   blockedRanges,
@@ -1312,6 +1360,7 @@ function BookingControls({
   totalUSD: number | null
   existingConversationId: string | null
   hasEnquiry: boolean
+  alreadyAskedForDates?: boolean
   onConversationCreated: (conversationId: string) => void
   onEnquiryCreated: (conversationId: string) => void
   blockedRanges: ListingBlockedRange[]
@@ -1322,7 +1371,11 @@ function BookingControls({
   // See the matching note in the parent: only take over the primary slot when the
   // guest has nothing further to initiate here (enquiry-only, or already requested).
   const showContinueAsPrimary =
-    Boolean(existingConversationId) && !allowsOnlinePayment && (isEnquiryOnly || hasEnquiry)
+    Boolean(existingConversationId) &&
+    !allowsOnlinePayment &&
+    listing.booking_type !== 'instant' &&
+    (isEnquiryOnly || hasEnquiry)
+  const alreadyAskedMessage = 'You already asked for these dates. Choose different dates, or open your conversation.'
   const hasDates = Boolean(dateRange.from && dateRange.to)
   const dateRequiredMessage = 'Choose dates first.'
   const minNights = listing.min_nights || 1
@@ -1461,12 +1514,17 @@ function BookingControls({
                 guests={guestCount}
                 intent="request"
                 buttonLabel="Request to book"
-                disabled={!hasDates || belowMin}
-                disabledReason={belowMin ? minNightsMessage : dateRequiredMessage}
+                disabled={!hasDates || belowMin || alreadyAskedForDates}
+                disabledReason={
+                  alreadyAskedForDates ? alreadyAskedMessage : belowMin ? minNightsMessage : dateRequiredMessage
+                }
                 showIcon={false}
                 buttonClassName="flex min-h-11 w-full items-center justify-center rounded-full bg-stone-950 px-5 py-0 text-center text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-500 disabled:shadow-none"
                 onConversationCreated={onEnquiryCreated}
               />
+            )}
+            {!allowsOnlinePayment && !isEnquiryOnly && alreadyAskedForDates && (
+              <p className="text-center text-xs font-semibold text-stone-600">{alreadyAskedMessage}</p>
             )}
             {/* Guest already has a plain chat but hasn't requested to book — keep
                 the request button primary and offer the thread as a secondary link. */}

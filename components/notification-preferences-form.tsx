@@ -47,6 +47,7 @@ export function NotificationPreferencesForm({
   )
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleToggle = (key: keyof NotificationPrefs) => {
     setPrefs((current) => ({
@@ -54,10 +55,13 @@ export function NotificationPreferencesForm({
       [key]: !current[key],
     }))
     setSaved(false)
+    setError(null)
   }
 
   const handleSave = async () => {
     setSaving(true)
+    setSaved(false)
+    setError(null)
 
     try {
       const supabase = createClient()
@@ -65,24 +69,39 @@ export function NotificationPreferencesForm({
         data: { user },
       } = await supabase.auth.getUser()
 
-      if (!user) return
+      if (!user) {
+        setError('Please sign in again, then save your preferences.')
+        return
+      }
 
-      const { data: host } = await supabase
+      const { data: host, error: hostError } = await supabase
         .from('hosts')
         .select('id')
         .or(`id.eq.${user.id},user_id.eq.${user.id}`)
         .limit(1)
         .maybeSingle()
 
-      if (host) {
-        await supabase
-          .from('hosts')
-          .update(prefs)
-          .eq('id', host.id)
+      if (hostError || !host) {
+        throw hostError ?? new Error('No host record found for this user')
+      }
+
+      // Only say "Saved" once the database confirms a row changed: an update
+      // blocked by row-level security returns no error and no rows.
+      const { data: updatedRows, error: updateError } = await supabase
+        .from('hosts')
+        .update(prefs)
+        .eq('id', host.id)
+        .select('id')
+
+      if (updateError || !updatedRows?.length) {
+        throw updateError ?? new Error('No host rows were updated')
       }
 
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
+    } catch (saveError) {
+      console.error('Could not save notification preferences', saveError)
+      setError('Could not save your preferences — please try again or contact JLM.')
     } finally {
       setSaving(false)
     }
@@ -125,6 +144,11 @@ export function NotificationPreferencesForm({
       >
         {saving ? 'Saving...' : saved ? 'Saved ✓' : 'Save preferences'}
       </button>
+      {error && (
+        <p role="alert" className="text-sm font-semibold text-rose-600">
+          {error}
+        </p>
+      )}
     </div>
   )
 }

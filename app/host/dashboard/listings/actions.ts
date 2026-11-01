@@ -1,116 +1,205 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { redirect, unstable_rethrow } from 'next/navigation'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { syncExternalCalendar } from '@/lib/calendar-sync'
 import { getPaymentRouteSettings } from '@/lib/platform-settings'
 import { toLegacyPrices } from '@/lib/fx'
 import { isHostPriceCurrency } from '@/lib/currencies'
+import type { SaveFormState } from '@/components/sticky-save-bar'
 import {
   calculateShulDistances,
   saveShulDistances,
 } from '@/lib/shul-distances'
+
+// The "Other amenities" box submits one comma-separated string under the same
+// field name as the checkboxes. Store each amenity as its own item (trimmed,
+// de-duplicated) so guests see them as a proper list.
+function readAmenities(formData: FormData) {
+  const seen = new Set<string>()
+  const amenities: string[] = []
+  for (const value of formData.getAll('amenities')) {
+    for (const part of String(value).split(',')) {
+      const amenity = part.trim()
+      const key = amenity.toLowerCase()
+      if (!amenity || seen.has(key)) continue
+      seen.add(key)
+      amenities.push(amenity)
+    }
+  }
+  return amenities
+}
 
 type ExternalCalendarState = {
   status: string
   message: string
 }
 
-export async function setHostListingVisibility(formData: FormData) {
+export type HostListingActionState = {
+  status: 'idle' | 'success' | 'error'
+  message: string
+}
+
+export async function setHostListingVisibility(
+  _prev: HostListingActionState,
+  formData: FormData,
+): Promise<HostListingActionState> {
   const listingId = String(formData.get('listingId') || '')
   const rawValue = String(formData.get('value') || '')
 
   if (!listingId || !['true', 'false'].includes(rawValue)) {
-    throw new Error('Invalid listing visibility update.')
+    return { status: 'error', message: 'Something went wrong — please refresh the page and try again.' }
   }
 
-  const { supabase, hostIds } = await requireHostDashboardAccess()
+  const publish = rawValue === 'true'
 
-  const { data, error } = await supabase
-    .from('listings')
-    .update({ is_published: rawValue === 'true' })
-    .eq('id', listingId)
-    .in('host_id', hostIds)
-    .select('id')
+  try {
+    const { supabase, hostIds } = await requireHostDashboardAccess()
 
-  if (error) throw error
+    const { data, error } = await supabase
+      .from('listings')
+      .update({ is_published: publish })
+      .eq('id', listingId)
+      .in('host_id', hostIds)
+      .select('id')
 
-  // Row-level security refusals return no error, they just change nothing.
-  if (!data || data.length === 0) {
-    throw new Error(
-      'That listing could not be updated. If this keeps happening the host update policy is missing on the listings table (migration 069).',
-    )
+    if (error) throw error
+
+    // Row-level security refusals return no error, they just change nothing.
+    if (!data || data.length === 0) {
+      throw new Error('No listing rows were updated (host update policy on listings, migration 069).')
+    }
+
+    revalidatePath('/host/dashboard')
+    revalidatePath('/host/dashboard/listings')
+    revalidatePath(`/host/dashboard/listings/${listingId}`)
+    revalidatePath(`/listings/${listingId}`)
+    revalidatePath('/stays')
+    revalidatePath('/')
+
+    return {
+      status: 'success',
+      message: publish
+        ? 'Your stay is now showing on the site.'
+        : 'Your stay is now hidden from the site.',
+    }
+  } catch (error) {
+    unstable_rethrow(error)
+    console.error('Could not change listing visibility', error)
+    return {
+      status: 'error',
+      message: 'Could not change whether your stay is shown — please try again or contact JLM.',
+    }
   }
-
-  revalidatePath('/host/dashboard')
-  revalidatePath('/host/dashboard/listings')
-  revalidatePath(`/host/dashboard/listings/${listingId}`)
-  revalidatePath(`/listings/${listingId}`)
-  revalidatePath('/stays')
 }
 
-export async function deleteHostListing(formData: FormData) {
+const hasHistoryMessage =
+  'This stay has bookings or booking requests, so it can\'t be deleted — your records depend on it. Use "Hide from site" instead: it comes off the site straight away. Contact JLM if you need it removed completely.'
+
+export async function deleteHostListing(
+  _prev: HostListingActionState,
+  formData: FormData,
+): Promise<HostListingActionState> {
   const listingId = String(formData.get('listingId') || '')
 
   if (!listingId) {
-    throw new Error('Missing listing id.')
+    return { status: 'error', message: 'Something went wrong — please refresh the page and try again.' }
   }
 
-  const { supabase, hostIds } = await requireHostDashboardAccess()
+  try {
+    const { supabase, hostIds } = await requireHostDashboardAccess()
 
-  // Confirm the listing belongs to this host before touching anything.
-  const { data: owned } = await supabase
-    .from('listings')
-    .select('id')
-    .eq('id', listingId)
-    .in('host_id', hostIds)
-    .maybeSingle()
+    // Confirm the listing belongs to this host before touching anything.
+    const { data: owned, error: ownedError } = await supabase
+      .from('listings')
+      .select('id')
+      .eq('id', listingId)
+      .in('host_id', hostIds)
+      .maybeSingle()
 
-  if (!owned) {
-    throw new Error('That listing was not found on your account.')
+    if (ownedError) throw ownedError
+    if (!owned) {
+      return { status: 'error', message: 'That stay was not found on your account.' }
+    }
+
+    // A stay with bookings or requests must not be destroyed: the booking and
+    // payment history depends on it. Check BEFORE deleting anything, and if the
+    // check itself fails, do not delete.
+    const [bookingCheck, requestCheck] = await Promise.all([
+      supabase
+        .from('bookings')
+        .select('id', { count: 'exact', head: true })
+        .eq('listing_id', listingId),
+      supabase
+        .from('booking_requests')
+        .select('id', { count: 'exact', head: true })
+        .eq('listing_id', listingId),
+    ])
+
+    if (bookingCheck.error) throw bookingCheck.error
+    if (requestCheck.error) throw requestCheck.error
+
+    if ((bookingCheck.count || 0) > 0 || (requestCheck.count || 0) > 0) {
+      return { status: 'error', message: hasHistoryMessage }
+    }
+
+    const { error: photosError } = await supabase.from('listing_photos').delete().eq('listing_id', listingId)
+    if (photosError) throw photosError
+    const { error: rangesError } = await supabase
+      .from('listing_unavailable_ranges')
+      .delete()
+      .eq('listing_id', listingId)
+    if (rangesError) throw rangesError
+
+    const { data: deleted, error } = await supabase
+      .from('listings')
+      .delete()
+      .eq('id', listingId)
+      .in('host_id', hostIds)
+      .select('id')
+
+    if (error) throw error
+    if (!deleted || deleted.length === 0) {
+      throw new Error('No listing rows were deleted (host delete policy on listings, migration 069).')
+    }
+
+    revalidatePath('/host/dashboard')
+    revalidatePath('/host/dashboard/listings')
+    revalidatePath('/stays')
+    revalidatePath('/')
+  } catch (error) {
+    unstable_rethrow(error)
+    console.error('Could not delete listing', error)
+    return {
+      status: 'error',
+      message: 'Could not delete this stay. You can hide it from the site instead, or contact JLM.',
+    }
   }
 
-  // A listing with bookings must not be destroyed: the booking and payment
-  // history depends on it. Hide it instead.
-  const { count: bookingCount } = await supabase
-    .from('booking_requests')
-    .select('id', { count: 'exact', head: true })
-    .eq('listing_id', listingId)
-
-  if ((bookingCount || 0) > 0) {
-    throw new Error(
-      'This listing has booking history, so it cannot be deleted. Hide it instead - it comes off the site immediately and your records stay intact. Contact JLM Collective if you need it removed entirely.',
-    )
-  }
-
-  await supabase.from('listing_photos').delete().eq('listing_id', listingId)
-  await supabase.from('listing_unavailable_ranges').delete().eq('listing_id', listingId)
-
-  const { data: deleted, error } = await supabase
-    .from('listings')
-    .delete()
-    .eq('id', listingId)
-    .in('host_id', hostIds)
-    .select('id')
-
-  if (error) {
-    throw new Error(
-      `This listing could not be deleted because other records still reference it. Hide it instead. (${error.message})`,
-    )
-  }
-
-  if (!deleted || deleted.length === 0) {
-    throw new Error(
-      'Nothing was deleted. The host delete policy is missing on the listings table (migration 069).',
-    )
-  }
-
-  revalidatePath('/host/dashboard')
-  revalidatePath('/host/dashboard/listings')
-  revalidatePath('/stays')
+  redirect('/host/dashboard/listings')
 }
 
-export async function updateHostListing(formData: FormData) {
+// The listing editor's save. Returns a result instead of throwing so the save
+// bar only says "All changes saved" once the server has confirmed it.
+export async function updateHostListing(
+  _prev: SaveFormState,
+  formData: FormData,
+): Promise<SaveFormState> {
+  try {
+    await saveHostListing(formData)
+    return { status: 'success', message: 'All changes saved.' }
+  } catch (error) {
+    unstable_rethrow(error)
+    console.error('Could not save host listing', error)
+    return {
+      status: 'error',
+      message: 'Could not save your changes — please try again or contact JLM.',
+    }
+  }
+}
+
+async function saveHostListing(formData: FormData) {
   const listingId = String(formData.get('listingId') || '')
   const title = String(formData.get('title') || '')
   const area = String(formData.get('area') || '')
@@ -142,7 +231,7 @@ export async function updateHostListing(formData: FormData) {
   const paymentRoutes = await getPaymentRouteSettings()
   const onlinePaymentEnabled =
     paymentRoutes.jlmPaymentsEnabled && formData.get('onlinePaymentEnabled') === 'on'
-  const amenities = formData.getAll('amenities').map(String)
+  const amenities = readAmenities(formData)
   const description = String(formData.get('description') || '')
   const houseRules = String(formData.get('houseRules') || '').trim() || null
   const welcomeMessage = String(formData.get('welcomeMessage') || '').trim() || null
@@ -297,6 +386,7 @@ export async function updateHostListing(formData: FormData) {
   revalidatePath(`/host/dashboard/listings/${listingId}`)
   revalidatePath(`/listings/${listingId}`)
   revalidatePath('/stays')
+  revalidatePath('/')
 }
 
 export async function updateHostApplication(formData: FormData) {
@@ -325,7 +415,7 @@ export async function updateHostApplication(formData: FormData) {
   const { price_ils: priceIls, price_usd: priceUsd } = await toLegacyPrices(price, priceCurrency)
   // The legacy currency_preference column only knows ILS/USD/Both.
   const currencyPreference = priceCurrency === 'ILS' ? 'ILS' : 'USD'
-  const amenities = formData.getAll('amenities').map(String)
+  const amenities = readAmenities(formData)
   const description = String(formData.get('description') || '')
   const photoLink = String(formData.get('photoLink') || '').trim()
   const verificationDocType = String(formData.get('verificationDocType') || '').trim()

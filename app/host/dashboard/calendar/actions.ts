@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { unstable_rethrow } from 'next/navigation'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { sendManualBookingGuestEmail } from '@/lib/transactional-email'
 
@@ -130,7 +131,7 @@ export async function addManualBooking(formData: FormData) {
     throw new Error('Choose a stay and the check-in and check-out dates.')
   }
   if (endDate <= startDate) {
-    throw new Error('Check-out must be after check-in.')
+    throw new Error('Check-out must be at least one day after check-in.')
   }
 
   const { supabase, host, hostIds } = await requireHostDashboardAccess()
@@ -182,13 +183,42 @@ export async function addManualBooking(formData: FormData) {
   revalidatePath(`/listings/${listingId}`)
 }
 
+const overlapMessage = 'Those dates overlap another booking or blocked dates on this stay.'
+
 // One entry point for the calendar board: block dates, or add a manual booking.
-export async function saveCalendarEntry(formData: FormData) {
+// Returns { error } instead of throwing, so the board can show a plain message.
+export async function saveCalendarEntry(formData: FormData): Promise<{ error?: string }> {
   const mode = String(formData.get('mode') || 'block')
-  if (mode === 'booking') {
-    return addManualBooking(formData)
+  try {
+    if (mode === 'booking') {
+      await addManualBooking(formData)
+    } else {
+      await blockDateRange(formData)
+    }
+    return {}
+  } catch (error) {
+    // Let Next.js redirects / not-found pass through.
+    unstable_rethrow(error)
+
+    const code =
+      error && typeof error === 'object' && 'code' in error
+        ? String((error as { code?: unknown }).code || '')
+        : ''
+
+    // 23P01 = exclusion constraint (overlapping ranges), 23505 = unique violation.
+    if (code === '23P01' || code === '23505') {
+      return { error: overlapMessage }
+    }
+
+    // Our own validation errors (plain Error, no database code) are already
+    // written for the host.
+    if (!code && error instanceof Error) {
+      return { error: error.message }
+    }
+
+    console.error('Could not save calendar entry', error)
+    return { error: 'Could not save — please try again or contact JLM.' }
   }
-  return blockDateRange(formData)
 }
 
 type EditState = { ok?: boolean; error?: string }
