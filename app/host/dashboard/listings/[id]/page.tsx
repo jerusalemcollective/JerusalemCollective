@@ -12,6 +12,7 @@ import { ListingAiAssistant } from '@/components/listing-ai-assistant'
 import { AmenitySelector } from '@/components/amenity-selector'
 import { ListingPhotoManager } from '@/components/listing-photo-manager'
 import { SaveStateForm, StickySaveBar } from '@/components/sticky-save-bar'
+import { BookingStyleField } from '@/components/booking-style-field'
 
 type HostPaymentProfile = {
   commission_percent_override: number | null
@@ -263,7 +264,7 @@ export default async function HostListingEditPage({
 
           {/* 4. Pricing and booking (incl. deposit) */}
           <EditorSection title="Pricing and booking">
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2">
               <Field label="Currency">
                 <select
                   name="priceCurrency"
@@ -286,13 +287,8 @@ export default async function HostListingEditPage({
                   className={inputClass}
                 />
               </Field>
-              <Field label="Booking style">
-                <select name="bookingType" defaultValue={listing.booking_type} className={inputClass}>
-                  <option value="request">Request to book</option>
-                  <option value="instant">Instant book</option>
-                </select>
-              </Field>
             </div>
+            <BookingStyleField defaultValue={listing.booking_type} />
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <Field label="Price includes up to (guests)">
                 <input name="includedGuests" type="number" min="1" defaultValue={listing.included_guests ?? listing.max_guests ?? ''} className={inputClass} />
@@ -316,9 +312,10 @@ export default async function HostListingEditPage({
                   className="mt-1"
                 />
                 <span>
-                  <span className="block font-bold text-stone-950">Allow Book now with JLM payment</span>
+                  <span className="block font-bold text-stone-950">Take card payment through JLM</span>
                   <span className="mt-1 block text-sm leading-6 text-stone-600">
-                    Guests can pay JLM Collective online for this listing. {jlmPaymentDescription}
+                    Guests can pay JLM Collective online for this listing. {jlmPaymentDescription} Card checkout is
+                    used with Instant book; request-to-book stays are paid to you directly after you accept.
                   </span>
                 </span>
               </label>

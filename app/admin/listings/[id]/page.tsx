@@ -282,14 +282,14 @@ export default async function AdminListingDetailPage({
                 <EditField label="Price USD" name="priceUsd" type="number" min="0" defaultValue={String(listing.price_usd ?? '')} />
               </div>
               <label className="block">
-                <span className="text-xs font-bold uppercase tracking-widest text-stone-500">Booking type</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-stone-500">Booking style (payment method is separate)</span>
                 <select
                   name="bookingType"
                   defaultValue={listing.booking_type || 'request'}
                   className="mt-2 w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
                 >
-                  <option value="request">Request to book</option>
-                  <option value="instant">Instant book</option>
+                  <option value="request">Request to book (host accepts first)</option>
+                  <option value="instant">Instant book (confirmed when the guest books)</option>
                   {listing.booking_type === 'enquiry' && <option value="enquiry">Enquiry only</option>}
                 </select>
               </label>
