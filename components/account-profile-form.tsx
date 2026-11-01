@@ -57,7 +57,7 @@ export function AccountProfileForm({ user, profile, hasStay }: AccountProfileFor
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
     } catch {
-      setError('Failed to save changes')
+      setError('We couldn’t save your changes. Please try again.')
     } finally {
       setIsSaving(false)
     }
@@ -144,7 +144,7 @@ export function AccountProfileForm({ user, profile, hasStay }: AccountProfileFor
 
         {success && (
           <div role="status" className="rounded-lg bg-green-50 p-3 text-sm text-green-600">
-            Changes saved successfully
+            Saved. Your details are up to date.
           </div>
         )}
 
