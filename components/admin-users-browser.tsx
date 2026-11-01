@@ -95,41 +95,60 @@ export function AdminUsersBrowser({
         ))}
       </div>
 
-      <div className="overflow-hidden border-y border-stone-200">
-        <div className="grid gap-4 border-b border-stone-200 py-4 text-xs font-bold uppercase tracking-widest text-stone-500 md:grid-cols-[1.1fr_1fr_0.8fr_0.9fr_0.5fr_0.5fr]">
-          <span>Name</span>
-          <span>Email</span>
-          <span>Phone</span>
-          <span>Roles</span>
-          <span>Trips</span>
-          <span>Saves</span>
-        </div>
-
-        {paged.length === 0 ? (
-          <div className="py-12 text-center text-stone-500">No users match.</div>
-        ) : (
-          <div className="divide-y divide-stone-200">
+      {paged.length === 0 ? (
+        <div className="border-y border-stone-200 py-12 text-center text-stone-500">No users match.</div>
+      ) : (
+        <>
+          {/* Phones: one card per person */}
+          <ul className="space-y-3 md:hidden">
             {paged.map((person) => (
-              <Link
-                key={person.user_id}
-                href={`/admin/users/${person.user_id}`}
-                className="grid gap-4 py-5 transition hover:bg-stone-50 md:grid-cols-[1.1fr_1fr_0.8fr_0.9fr_0.5fr_0.5fr] md:items-center"
-              >
-                <p className="font-bold text-stone-950">{person.full_name || 'Unnamed user'}</p>
-                <p className="truncate text-sm text-stone-700">{person.email || 'No email'}</p>
-                <p className="text-sm text-stone-700">{person.phone || 'No phone'}</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {person.isHost && <RolePill label="Host" />}
-                  {person.isGuest && <RolePill label="Guest" muted />}
-                  {person.isAdmin && <RolePill label="Admin" accent />}
+              <li key={person.user_id} className="rounded-2xl bg-white p-4 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-bold text-stone-950">{person.full_name || 'Unnamed user'}</p>
+                    <p className="truncate text-sm text-stone-600">{person.email || 'No email'}</p>
+                  </div>
+                  <Link
+                    href={`/admin/users/${person.user_id}`}
+                    className="shrink-0 rounded-full bg-stone-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-stone-800"
+                  >
+                    Manage
+                  </Link>
                 </div>
-                <p className="text-sm text-stone-700">{person.booking_count}</p>
-                <p className="text-sm text-stone-700">{person.saved_count}</p>
-              </Link>
+                <RolePills person={person} className="mt-3" />
+              </li>
             ))}
+          </ul>
+
+          {/* Larger screens: table */}
+          <div className="hidden overflow-hidden border-y border-stone-200 md:block">
+            <div className="grid grid-cols-[1.1fr_1fr_0.8fr_0.9fr_0.5fr_0.5fr] gap-4 border-b border-stone-200 py-4 text-xs font-bold uppercase tracking-widest text-stone-500">
+              <span>Name</span>
+              <span>Email</span>
+              <span>Phone</span>
+              <span>Roles</span>
+              <span>Trips</span>
+              <span>Saves</span>
+            </div>
+            <div className="divide-y divide-stone-200">
+              {paged.map((person) => (
+                <Link
+                  key={person.user_id}
+                  href={`/admin/users/${person.user_id}`}
+                  className="grid grid-cols-[1.1fr_1fr_0.8fr_0.9fr_0.5fr_0.5fr] items-center gap-4 py-5 transition hover:bg-stone-50"
+                >
+                  <p className="font-bold text-stone-950">{person.full_name || 'Unnamed user'}</p>
+                  <p className="truncate text-sm text-stone-700">{person.email || 'No email'}</p>
+                  <p className="text-sm text-stone-700">{person.phone || 'No phone'}</p>
+                  <RolePills person={person} />
+                  <p className="text-sm text-stone-700">{person.booking_count}</p>
+                  <p className="text-sm text-stone-700">{person.saved_count}</p>
+                </Link>
+              ))}
+            </div>
           </div>
-        )}
-      </div>
+        </>
+      )}
 
       {totalPages > 1 && (
         <div className="mt-6 flex items-center justify-between">
@@ -155,6 +174,16 @@ export function AdminUsersBrowser({
         </div>
       )}
     </>
+  )
+}
+
+function RolePills({ person, className = '' }: { person: AdminUserRow; className?: string }) {
+  return (
+    <div className={`flex flex-wrap gap-1.5 ${className}`}>
+      {person.isAdmin && <RolePill label="Admin" accent />}
+      {person.isHost && <RolePill label="Host" />}
+      {person.isGuest && <RolePill label="Guest" muted />}
+    </div>
   )
 }
 
