@@ -10,7 +10,7 @@ import { BookingDateRangePicker } from '@/components/booking-date-range-picker'
 import { MessageHostDialog } from '@/components/message-host-dialog'
 import dynamic from 'next/dynamic'
 import { SaveListingButton } from '@/components/save-listing-button'
-import { AmenityDisplay } from '@/components/amenity-display'
+import { AmenityDisplay, getVisibleAmenityGroups } from '@/components/amenity-display'
 import { recordListingView } from '@/components/recently-viewed'
 import { recordListingEngagement } from '@/lib/listing-engagement'
 import { formatListingPrice, formatCurrencyAmount } from '@/lib/utils/currency'
@@ -49,6 +49,34 @@ type GuestEnquiry = {
 }
 
 const OPEN_ENQUIRY_STATUSES = ['new', 'host_replied']
+
+// Shabbos-list label for each kosher kitchen level; 'not_kosher' and blank show nothing.
+const KOSHER_KITCHEN_LABELS: Record<string, string> = {
+  kosher_friendly: 'Kosher-friendly kitchen',
+  kosher: 'Kosher kitchen',
+  glatt_kosher: 'Kosher kitchen \u2014 Glatt kosher',
+  chalav_yisrael: 'Kosher kitchen \u2014 Chalav Yisrael',
+  mehadrin: 'Kosher kitchen \u2014 Mehadrin',
+}
+
+// Amenities the Shabbos list already covers, so the general Amenities list
+// never repeats them. The Shabbos amenities and the retired 'Kosher kitchen'
+// amenity always go; host-typed names for the Shabbos booleans go when that
+// item is shown in the Shabbos list.
+type ShabbosFeatureField =
+  | 'shabbat_elevator'
+  | 'shabbat_clock'
+  | 'physical_key_entry'
+  | 'sukkah_balcony'
+  | 'near_synagogue'
+const ALWAYS_SHABBOS_AMENITIES = ['Kosher kitchen', 'Hot plate', 'Hot water urn', 'In eruv']
+const SHABBOS_FEATURE_ALIASES: Record<ShabbosFeatureField, string[]> = {
+  shabbat_elevator: ['Shabbos elevator', 'Shabbat elevator'],
+  shabbat_clock: ['Shabbos clock', 'Shabbat clock', 'Shabbos timer', 'Shabbat timer'],
+  physical_key_entry: ['Physical key entry', 'Physical-key entry'],
+  sukkah_balcony: ['Sukkah balcony', 'Sukkah'],
+  near_synagogue: ['Near shul', 'Near synagogue'],
+}
 
 // Which of this guest's booking requests matter for the chosen dates.
 // No dates chosen: any open request counts. Dates chosen: only a request for
@@ -277,9 +305,7 @@ export function ListingDetailClient({
   // booleans, and the Shabbos amenities — mirroring the single merged form section.
   const listingAmenities = listing.amenities || []
   const jewishStayFeatures = [
-    listing.kosher_kitchen_level
-      ? `Kosher kitchen — ${listing.kosher_kitchen_level === 'mehadrin' ? 'Mehadrin' : 'Kosher'}`
-      : null,
+    KOSHER_KITCHEN_LABELS[listing.kosher_kitchen_level ?? ''] ?? null,
     listing.shabbat_elevator ? 'Shabbos elevator' : null,
     listing.shabbat_clock ? 'Shabbos clock / timer' : null,
     listing.physical_key_entry ? 'Physical-key entry (no digital lock)' : null,
@@ -289,6 +315,14 @@ export function ListingDetailClient({
     listingAmenities.includes('Hot water urn') ? 'Hot water urn' : null,
     listingAmenities.includes('In eruv') ? 'In eruv' : null,
   ].filter((feature): feature is string => Boolean(feature))
+  const hiddenAmenities = [
+    ...ALWAYS_SHABBOS_AMENITIES,
+    ...jewishStayFeatures,
+    ...(Object.keys(SHABBOS_FEATURE_ALIASES) as ShabbosFeatureField[]).flatMap((field) =>
+      listing[field] ? SHABBOS_FEATURE_ALIASES[field] : [],
+    ),
+  ]
+  const hasGeneralAmenities = getVisibleAmenityGroups(listingAmenities, hiddenAmenities).length > 0
   useEffect(() => {
     const supabase = createClient()
     let isActive = true
@@ -813,12 +847,12 @@ export function ListingDetailClient({
               </>
             )}
 
-            {listing.amenities && listing.amenities.length > 0 && (
+            {hasGeneralAmenities && (
               <>
                 <hr className="border-stone-100" />
                 <div className="py-3">
                   <h2 className="mb-3 text-lg font-bold text-stone-900">Amenities</h2>
-                  <AmenityDisplay amenities={listing.amenities} />
+                  <AmenityDisplay amenities={listingAmenities} hide={hiddenAmenities} />
                 </div>
               </>
             )}
