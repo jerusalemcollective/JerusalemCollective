@@ -16,18 +16,21 @@ export type AdminApplicationRow = {
 const PAGE_SIZE = 25
 const OPEN_STATUSES = ['new', 'in_review', 'changes_requested']
 
-// "In review" covers both in_review and changes_requested — a change request is
-// still mid-review, just waiting on the host.
+// "Open" (the default) is everything still waiting on a decision. "In review"
+// covers both in_review and changes_requested — a change request is still
+// mid-review, just waiting on the host. "All" shows every application.
 const FILTERS = [
-  { label: 'All', value: 'all' },
+  { label: 'Open', value: 'open' },
   { label: 'New', value: 'new' },
   { label: 'In review', value: 'in_review' },
   { label: 'Approved', value: 'approved' },
   { label: 'Rejected', value: 'rejected' },
+  { label: 'All', value: 'all' },
 ]
 
 function matchesFilter(status: string, filter: string): boolean {
-  if (filter === 'all') return OPEN_STATUSES.includes(status)
+  if (filter === 'all') return true
+  if (filter === 'open') return OPEN_STATUSES.includes(status)
   if (filter === 'in_review') return status === 'in_review' || status === 'changes_requested'
   return status === filter
 }
@@ -35,7 +38,7 @@ function matchesFilter(status: string, filter: string): boolean {
 // Client-side filtering + pagination so switching chips is instant — no server
 // round-trip (the previous URL-param chips re-ran auth + queries on every click).
 export function AdminApplicationsBrowser({ applications }: { applications: AdminApplicationRow[] }) {
-  const [filter, setFilter] = useState('all')
+  const [filter, setFilter] = useState('open')
   const [page, setPage] = useState(1)
 
   const filtered = applications.filter((application) => matchesFilter(application.status, filter))
