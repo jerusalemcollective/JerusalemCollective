@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from 'react'
 import { useDragSort, moveItem } from '@/components/use-drag-sort'
+import { requestPhotoLabel } from '@/lib/photo-labels'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
@@ -56,6 +57,7 @@ export function ApplicationPhotoManager({
   const [photos, setPhotos] = useState(initialPhotos)
   const [message, setMessage] = useState('')
   const [isPending, startTransition] = useTransition()
+  const [labellingIds, setLabellingIds] = useState<string[]>([])
   const supabase = createClient()
 
   async function handleUpload(files: FileList | null) {
@@ -63,6 +65,7 @@ export function ApplicationPhotoManager({
 
     setMessage('')
     let nextSortOrder = photos.length
+    const uploaded: ApplicationPhoto[] = []
 
     for (const file of Array.from(files)) {
       if (!file.type.startsWith('image/')) {
@@ -115,12 +118,29 @@ export function ApplicationPhotoManager({
 
       if (insertedPhoto) {
         setPhotos((current) => [...current, insertedPhoto as ApplicationPhoto])
+        uploaded.push(insertedPhoto as ApplicationPhoto)
         nextSortOrder += 1
       }
     }
 
     if (inputRef.current) inputRef.current.value = ''
     startTransition(() => router.refresh())
+    void autoLabel(uploaded)
+  }
+
+  // Suggest a label for each photo that has none. Hosts can change it; a photo
+  // they have labelled meanwhile is left alone.
+  async function autoLabel(targets: ApplicationPhoto[]) {
+    const unlabelled = targets.filter((photo) => !photo.label?.trim())
+    for (const photo of unlabelled) {
+      setLabellingIds((ids) => [...ids, photo.id])
+      const label = await requestPhotoLabel({ url: photo.photo_url })
+      setLabellingIds((ids) => ids.filter((id) => id !== photo.id))
+      const current = photosRef.current.find((item) => item.id === photo.id)
+      if (label && current && !current.label?.trim()) {
+        await updatePhotoLabel(photo.id, label)
+      }
+    }
   }
 
   async function persistPhotoOrder(nextPhotos: ApplicationPhoto[]) {
@@ -239,6 +259,16 @@ export function ApplicationPhotoManager({
           <p className="mb-3 text-xs font-semibold text-stone-500">
             Drag photos to reorder them (on a phone, use the dotted handle). The first photo is your cover, shown on your listing card.
           </p>
+          {photos.some((photo) => !photo.label?.trim()) && (
+            <button
+              type="button"
+              onClick={() => void autoLabel(photos)}
+              disabled={labellingIds.length > 0}
+              className="mb-3 rounded-full border border-stone-300 bg-white px-4 py-2 text-xs font-bold text-stone-800 transition hover:border-stone-500 disabled:opacity-60"
+            >
+              {labellingIds.length > 0 ? 'Labelling photos…' : 'Label photos without a label'}
+            </button>
+          )}
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {photos.map((photo, index) => (
               <div
@@ -280,9 +310,13 @@ export function ApplicationPhotoManager({
               </div>
               <div className="space-y-2 p-3">
                 <input
-                  defaultValue={photo.label || ''}
+                  value={photo.label || ''}
+                  onChange={(event) => {
+                    const label = event.target.value
+                    setPhotos((current) => current.map((item) => (item.id === photo.id ? { ...item, label } : item)))
+                  }}
                   onBlur={(event) => void updatePhotoLabel(photo.id, event.target.value)}
-                  placeholder="Photo label, e.g. Bedroom 1"
+                  placeholder={labellingIds.includes(photo.id) ? 'Labelling…' : 'Photo label, e.g. Bedroom 1'}
                   className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs text-stone-900 outline-none transition placeholder:text-stone-500 focus:border-[#c76f55]"
                 />
               </div>

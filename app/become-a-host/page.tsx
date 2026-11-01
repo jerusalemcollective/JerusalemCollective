@@ -10,6 +10,7 @@ import { allNeighborhoods } from '@/lib/neighborhoods'
 import { HOST_TERMS, HOST_TERMS_LAST_UPDATED, HOST_TERMS_VERSION } from '@/lib/host-terms'
 import { GoogleAddressField } from '@/components/google-address-field'
 import { useDragSort, moveItem } from '@/components/use-drag-sort'
+import { requestPhotoLabel, shrinkImageForLabel } from '@/lib/photo-labels'
 import { SleepingSetupBuilder } from '@/components/sleeping-setup-builder'
 import { KOSHER_LEVEL_OPTIONS, normalizeKosherLevel } from '@/lib/kosher'
 import { AmenitySelector } from '@/components/amenity-selector'
@@ -842,6 +843,7 @@ const AGENCY_AGREEMENT_STORAGE_KEY = 'jlm.agencyAgreementAccepted'
 export default function BecomeAHostPage() {
   const [step, setStep] = useState(0)
   const [form, setForm] = useState<FormState>(initialForm)
+  const [labellingPreviews, setLabellingPreviews] = useState<string[]>([])
   const [sameWhatsapp, setSameWhatsapp] = useState(true)
   const [draftReady, setDraftReady] = useState(false)
   const [restoredDraft, setRestoredDraft] = useState(false)
@@ -1166,10 +1168,29 @@ export default function BecomeAHostPage() {
 
     if (nextPhotos.length > 0) {
       updateField('photos', [...form.photos, ...nextPhotos])
+      void autoLabelPhotos(nextPhotos)
     }
 
     if (messages.length > 0) {
       setPhotoUploadError(messages.join(' '))
+    }
+  }
+
+  // Suggest a label for each new photo. The host can change it, and a label
+  // they type before the suggestion arrives is never overwritten.
+  async function autoLabelPhotos(targets: PhotoUpload[]) {
+    for (const photo of targets) {
+      setLabellingPreviews((previews) => [...previews, photo.preview])
+      const data = await shrinkImageForLabel(photo.file)
+      const label = data ? await requestPhotoLabel({ data }) : null
+      setLabellingPreviews((previews) => previews.filter((preview) => preview !== photo.preview))
+      if (!label) continue
+      setForm((current) => ({
+        ...current,
+        photos: current.photos.map((item) =>
+          item.preview === photo.preview && !item.label.trim() ? { ...item, label } : item,
+        ),
+      }))
     }
   }
 
@@ -2615,7 +2636,7 @@ async function handleSubmit() {
                               <input
                                 value={photo.label}
                                 onChange={(event) => updatePhotoLabel(index, event.target.value)}
-                                placeholder="Photo label, e.g. Bedroom 1"
+                                placeholder={labellingPreviews.includes(photo.preview) ? 'Labelling…' : 'Photo label, e.g. Bedroom 1'}
                                 className="w-full rounded-xl border border-stone-200 px-3 py-2 text-xs text-stone-900 outline-none transition placeholder:text-stone-500 focus:border-[#c76f55]"
                               />
                             </div>
