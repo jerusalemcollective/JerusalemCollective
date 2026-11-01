@@ -24,6 +24,7 @@ const kosherLevelLabels: Record<string, string> = {
   kosher: 'Kosher',
   glatt_kosher: 'Glatt kosher',
   chalav_yisrael: 'Chalav Yisrael',
+  mehadrin: 'Mehadrin',
 }
 
 type AnthropicContentBlock = {
