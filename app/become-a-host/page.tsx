@@ -2118,6 +2118,7 @@ async function handleSubmit() {
                         value={form.host_address}
                         onAddressChange={(val) => updateField('host_address', val)}
                         placeholder="Street, city, country"
+                        worldwide
                         className={inputClass}
                         required
                       />
