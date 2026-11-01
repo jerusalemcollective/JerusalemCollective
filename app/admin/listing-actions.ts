@@ -33,6 +33,8 @@ function revalidateListingPaths(listingId?: string) {
 }
 
 // Plain message for the admin; the technical detail goes to the server log.
+// Actions return this instead of throwing: in production Next.js replaces
+// thrown server-action errors with a generic error page.
 function failure(message: string, error?: unknown): AdminActionState {
   if (error) console.error(message, error)
   return { status: 'error', message }
