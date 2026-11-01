@@ -11,9 +11,11 @@ import { createPublicClient } from '@/lib/supabase/public'
 import { allNeighborhoods, defaultExploreNeighborhoods } from '@/lib/neighborhoods'
 import { getLiveNeighborhoods, pickFeaturedAreas } from '@/lib/live-areas'
 import { StaysFilterBar } from '@/components/stays-filter-bar'
+import { MobileSearchSheet } from '@/components/mobile-search-sheet'
 import { StaysNeighborhoodNav } from '@/components/stays-neighborhood-nav'
 import { RecentlyViewed } from '@/components/recently-viewed-home'
 import { HomeFeaturedStays, HomeFeaturedStaysSkeleton } from '@/components/home-featured-stays'
+import { getYomTovTiles } from '@/lib/yom-tov'
 
 // Public, global content only (featured listings + neighbourhoods; the
 // recently-viewed strip is client-side). Cache it via ISR instead of
@@ -87,6 +89,7 @@ async function getHomepageData() {
 
 export default async function JLMCollectiveHomePage() {
   const { liveNeighborhoods, popularNeighborhoods } = await getHomepageData()
+  const yomTovTiles = getYomTovTiles()
 
   return (
     <div className="min-h-screen bg-[#F8F5F2] text-[#2D2D2D] antialiased">
@@ -115,8 +118,10 @@ export default async function JLMCollectiveHomePage() {
             </h1>
 
             <div className="mx-auto mt-6 max-w-4xl">
-              <Suspense fallback={<div className="h-16 rounded-3xl bg-white shadow-sm" />}>
-                <StaysFilterBar />
+              <Suspense fallback={<div className="h-14 rounded-full bg-white shadow-sm md:h-16 md:rounded-3xl" />}>
+                <MobileSearchSheet>
+                  <StaysFilterBar />
+                </MobileSearchSheet>
               </Suspense>
             </div>
           </div>
@@ -133,9 +138,69 @@ export default async function JLMCollectiveHomePage() {
           </div>
         </section>
 
+        {yomTovTiles.length > 0 && (
+          <section id="yom-tov" aria-labelledby="yom-tov-heading" className="mx-auto max-w-7xl scroll-mt-[var(--header-h)] pt-9">
+            <div className="px-6">
+              <h2 id="yom-tov-heading" className="text-2xl font-semibold tracking-tight text-stone-950">
+                Yom Tov &amp; kosher stays
+              </h2>
+            </div>
+            {/* Sideways scroll on phones; three columns from sm. */}
+            <ul className="mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-6 px-6 pb-2 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:pb-0">
+              {yomTovTiles.map((tile, index) => {
+                const featured = index === 0
+                return (
+                  <li key={tile.slug} className="w-[78%] shrink-0 snap-start sm:w-auto">
+                    <Link
+                      href={tile.href}
+                      className={`relative flex h-full flex-col overflow-hidden rounded-2xl p-5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:ring-offset-2 ${
+                        featured
+                          ? 'bg-[#c76f55] text-white shadow-sm hover:bg-[#b9644b]'
+                          : 'border border-stone-200 bg-white text-stone-950 shadow-sm hover:border-stone-300'
+                      }`}
+                    >
+                      <span
+                        aria-hidden="true"
+                        lang="he"
+                        dir="rtl"
+                        className={`pointer-events-none absolute -bottom-3 right-3 select-none text-7xl font-bold leading-none ${
+                          featured ? 'text-white/15' : 'text-[#c76f55]/10'
+                        }`}
+                      >
+                        {tile.hebrewWord}
+                      </span>
+                      <span
+                        className={`relative text-[11px] font-bold uppercase tracking-widest ${
+                          featured ? 'text-white' : 'text-[#c76f55]'
+                        }`}
+                      >
+                        {tile.timing ?? 'All year'}
+                      </span>
+                      <span className="font-heading relative mt-2 text-lg font-semibold">{tile.title}</span>
+                      <span className={`relative mt-1 text-sm leading-6 ${featured ? 'text-white' : 'text-stone-600'}`}>
+                        {tile.blurb}
+                      </span>
+                      {tile.civilDate && tile.hebrewDate ? (
+                        <span className={`relative mt-4 text-xs leading-5 ${featured ? 'text-white' : 'text-stone-500'}`}>
+                          Begins {tile.civilDate}
+                          <span className="block">{tile.hebrewDate}</span>
+                        </span>
+                      ) : (
+                        <span className={`relative mt-4 text-xs leading-5 ${featured ? 'text-white' : 'text-stone-500'}`}>
+                          Every stay shows its kitchen level
+                        </span>
+                      )}
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          </section>
+        )}
+
         <section id="stays" className="mx-auto max-w-7xl px-6 pt-9">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="font-display text-2xl font-bold tracking-tight text-stone-950">
+            <h2 className="text-2xl font-semibold tracking-tight text-stone-950">
               Featured stays
             </h2>
             <Link
@@ -160,7 +225,7 @@ export default async function JLMCollectiveHomePage() {
           <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-3 border-t border-stone-200 pt-8 text-sm text-stone-600">
             <span className="inline-flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-[#c76f55]" aria-hidden="true" />
-              Verified hosts
+              Personally reviewed stays
             </span>
             <span className="inline-flex items-center gap-2">
               <MapPin className="h-4 w-4 text-[#c76f55]" aria-hidden="true" />
@@ -181,7 +246,7 @@ export default async function JLMCollectiveHomePage() {
           <div className="overflow-hidden rounded-2xl border border-stone-200 bg-[#252525] shadow-sm">
             <div className="flex flex-col gap-4 p-5 text-white md:flex-row md:items-center md:justify-between md:p-6">
               <div>
-                <h2 className="font-display text-lg font-bold tracking-tight">Have a Jerusalem stay to list?</h2>
+                <h2 className="text-lg font-semibold tracking-tight">Have a Jerusalem stay to list?</h2>
                 <p className="mt-1 max-w-xl text-xs leading-5 text-stone-300">
                   Add your property, set your details, and submit it for approval.
                 </p>

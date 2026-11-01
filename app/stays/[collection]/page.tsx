@@ -95,7 +95,7 @@ export default async function StayCollectionPage({
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#F8F5F2]">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLd(JSON.stringify(faqJsonLd)) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLd(JSON.stringify(breadcrumbJsonLd)) }} />
 
@@ -134,7 +134,7 @@ export default async function StayCollectionPage({
             ))}
           </div>
         ) : (
-          <div className="mt-12 rounded-3xl bg-[#F8F5F2] p-8 text-center">
+          <div className="mt-12 rounded-3xl border border-stone-200 bg-white p-8 text-center">
             <p className="text-stone-600">
               No matching stays are live right now. Browse all stays or message us and we will help you find one.
             </p>
@@ -148,7 +148,7 @@ export default async function StayCollectionPage({
         )}
 
         <section className="mt-16 border-t border-stone-200 pt-10">
-          <h2 className="font-display text-2xl font-bold text-stone-950">Frequently asked questions</h2>
+          <h2 className="text-2xl font-semibold text-stone-950">Frequently asked questions</h2>
           <div className="mt-6 max-w-2xl divide-y divide-stone-200 border-y border-stone-200">
             {collection.faqs.map((faq) => (
               <details key={faq.q} className="group py-4">

@@ -135,7 +135,7 @@ export default async function HostPaymentsPage({
         )}
 
         <div className="mb-6 rounded-3xl bg-[#fdece5] p-6">
-          <h2 className="font-display text-xl font-bold text-stone-950">Money from your bookings</h2>
+          <h2 className="text-xl font-semibold text-stone-950">Money from your bookings</h2>
           {payouts.length === 0 ? (
             <p className="mt-3 text-sm text-stone-600">No payments yet.</p>
           ) : (

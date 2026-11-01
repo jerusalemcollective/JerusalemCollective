@@ -65,7 +65,7 @@ export default async function NeighbourhoodsIndexPage() {
     .sort((a, b) => a.name.localeCompare(b.name))
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#F8F5F2]">
       <div className="mx-auto max-w-6xl px-5 py-10 md:px-8">
         <nav aria-label="Breadcrumb" className="mb-2 flex items-center gap-2 text-sm text-stone-500">
           <Link href="/stays" className="hover:text-[#c76f55]">
@@ -85,7 +85,7 @@ export default async function NeighbourhoodsIndexPage() {
         </p>
 
         {neighbourhoods.length === 0 ? (
-          <div className="mt-10 rounded-3xl bg-[#F8F5F2] p-8 text-center">
+          <div className="mt-10 rounded-3xl border border-stone-200 bg-white p-8 text-center">
             <p className="font-heading text-lg font-semibold text-stone-950">No neighbourhoods have stays yet</p>
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-stone-600">
               We&apos;re curating our first Jerusalem stays. Check back soon, or send an enquiry and our
@@ -106,7 +106,7 @@ export default async function NeighbourhoodsIndexPage() {
                 href={`/neighbourhoods/${neighbourhood.slug}`}
                 className="group rounded-2xl border border-stone-200 bg-white p-5 transition hover:border-[#c76f55] hover:shadow-sm"
               >
-                <p className="font-display text-lg font-bold text-stone-950 transition group-hover:text-[#c76f55]">
+                <p className="font-heading text-lg font-semibold text-stone-950 transition group-hover:text-[#c76f55]">
                   {neighbourhood.name}
                 </p>
                 <p className="mt-2 line-clamp-3 text-sm leading-6 text-stone-600">{neighbourhood.teaser}</p>

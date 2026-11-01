@@ -19,10 +19,12 @@ const hebrewDatePartsFormatter = new Intl.DateTimeFormat('en-u-ca-hebrew', {
 })
 
 // Intl's Hebrew month transliterations don't match the spellings commonly used
-// here (e.g. it emits "Heshvan" for what is usually written "Cheshvan"). Remap the
-// month names to the preferred spellings wherever a month is shown.
+// here (e.g. it emits "Heshvan" and "Tishri" for what are usually written
+// "Cheshvan" and "Tishrei"). Remap the month names to the preferred spellings
+// wherever a month is shown.
 const HEBREW_MONTH_SPELLING_FIXES: [RegExp, string][] = [
   [/\bHeshvan\b/g, 'Cheshvan'],
+  [/\bTishri\b/g, 'Tishrei'],
 ]
 
 function fixHebrewMonthSpelling(text: string) {
@@ -67,9 +69,9 @@ function getHebrewMonthYearParts(date: Date) {
 export function getJewishHoliday(date: Date) {
   const { day, month } = getHebrewDateParts(date)
 
-  if (month === 'Tishri' && [1, 2].includes(day)) return 'Rosh Hashanah'
-  if (month === 'Tishri' && day === 10) return 'Yom Kippur'
-  if (month === 'Tishri' && day >= 15 && day <= 21) return 'Sukkot'
+  if (month === 'Tishrei' && [1, 2].includes(day)) return 'Rosh Hashanah'
+  if (month === 'Tishrei' && day === 10) return 'Yom Kippur'
+  if (month === 'Tishrei' && day >= 15 && day <= 21) return 'Sukkot'
   if (month === 'Nisan' && day >= 15 && day <= 22) return 'Pesach'
   if (month === 'Sivan' && [6, 7].includes(day)) return 'Shavuot'
   if ((month === 'Adar' || month === 'Adar II') && day === 14) return 'Purim'
@@ -83,7 +85,7 @@ function getHebrewDateParts(date: Date) {
 
   return {
     day: Number(parts.find((part) => part.type === 'day')?.value || 0),
-    month: parts.find((part) => part.type === 'month')?.value || '',
+    month: fixHebrewMonthSpelling(parts.find((part) => part.type === 'month')?.value || ''),
     year: parts.find((part) => part.type === 'year')?.value || '',
   }
 }

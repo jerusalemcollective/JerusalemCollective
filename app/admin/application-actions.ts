@@ -502,12 +502,14 @@ async function approveApplication(supabase: AdminSupabase, applicationId: string
 
   if (photoUpdateError) throw photoUpdateError
 
+  // Approval does not touch id_verified or hosts.is_verified: the "Verified
+  // host" badge means an admin has checked the host's ID, which is recorded
+  // separately with "Mark ID as verified" (setApplicationIdVerified).
   const { error: approvalError } = await supabase
     .from('host_applications')
     .update({
       status: 'approved',
       verification_status: 'approved',
-      id_verified: true,
     })
     .eq('id', applicationId)
 
@@ -521,13 +523,6 @@ async function approveApplication(supabase: AdminSupabase, applicationId: string
   } else if (approvalError) {
     throw approvalError
   }
-
-  const { error: hostVerificationError } = await supabase
-    .from('hosts')
-    .update({ is_verified: true })
-    .eq('id', hostApplication.host_id)
-
-  if (hostVerificationError) throw hostVerificationError
 
   await logAdminAction(supabase, 'approve_application', 'application', applicationId)
   await sendHostAdminUpdateEmail({
@@ -643,7 +638,7 @@ export async function setApplicationIdVerified(
     .from('host_applications')
     .update({ id_verified: verified })
     .eq('id', applicationId)
-    .select('id')
+    .select('id, host_id')
     .maybeSingle()
 
   if (error && isMissingColumnError(error, 'id_verified')) {
@@ -662,11 +657,39 @@ export async function setApplicationIdVerified(
     applicationId,
   )
 
+  // The public "Verified host" badge (hosts.is_verified) follows the ID check:
+  // on when an ID is checked, off only when none of the host's applications
+  // still has a checked ID.
+  const hostId = (data as { host_id?: string | null }).host_id
+  let hostMessage = ''
+  if (hostId) {
+    try {
+      const hostVerified = verified || (await hostHasCheckedId(supabase, hostId))
+      const { error: hostError } = await supabase
+        .from('hosts')
+        .update({ is_verified: hostVerified })
+        .eq('id', hostId)
+      if (hostError) throw hostError
+      revalidatePath(`/hosts/${hostId}`)
+      revalidatePath('/listings/[id]', 'page')
+      revalidatePath('/admin/hosts')
+      if (!verified && hostVerified) {
+        hostMessage = ' The host keeps the Verified host badge because another of their applications has a checked ID.'
+      }
+    } catch (hostError) {
+      console.error('Could not update the host verified badge', hostError)
+      hostMessage = ' The Verified host badge could not be updated — set it from the host’s page in Admin → Users.'
+    }
+  }
+
   revalidatePath('/admin')
   revalidatePath('/admin/applications')
   revalidatePath(`/admin/applications/${applicationId}`)
 
-  return { status: 'success', message: verified ? 'ID marked as verified.' : 'ID marked as not verified.' }
+  return {
+    status: 'success',
+    message: (verified ? 'ID marked as verified.' : 'ID marked as not verified.') + hostMessage,
+  }
 }
 
 // Throws AdminFacingError when the application is already in the target state,
@@ -805,6 +828,17 @@ async function notifyHostOfApplicationStatus(
     ctaPath: `/host/dashboard/applications/${applicationId}`,
     ctaLabel: 'View update',
   })
+}
+
+async function hostHasCheckedId(supabase: AdminSupabase, hostId: string) {
+  const { data, error } = await supabase
+    .from('host_applications')
+    .select('id')
+    .eq('host_id', hostId)
+    .eq('id_verified', true)
+    .limit(1)
+  if (error) throw error
+  return (data ?? []).length > 0
 }
 
 function isMissingOptionalApplicationColumnError(error: unknown) {

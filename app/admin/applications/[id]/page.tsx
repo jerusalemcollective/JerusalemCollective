@@ -178,6 +178,11 @@ export default async function AdminApplicationPage({
                     : 'border-green-200 text-green-700 hover:bg-green-50'
                 }`}
               />
+              <p className="text-xs leading-5 text-stone-500">
+                Only mark the ID as verified after you have opened the ID document and checked it
+                matches the host. This also turns on the public &ldquo;Verified host&rdquo; badge.
+                Approving the application does not verify the host.
+              </p>
             </InfoSection>
 
             <div className="rounded-3xl bg-white p-6 shadow-sm">

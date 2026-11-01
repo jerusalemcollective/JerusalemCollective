@@ -269,7 +269,7 @@ export function HostCalendarBoard({
             ‹
           </button>
           <div className="text-center">
-            <h2 className="font-display text-2xl font-bold tracking-tight text-stone-950">
+            <h2 className="text-2xl font-semibold tracking-tight text-stone-950">
               {viewMonth.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
             </h2>
             <p className="text-sm font-semibold text-[#c76f55]" dir="rtl">

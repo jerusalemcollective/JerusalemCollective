@@ -211,7 +211,7 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
           {listings.length === 0 ? (
             totalPublished === 0 ? (
               <div className="py-16 text-center">
-                <p className="font-display text-2xl font-bold text-stone-950">
+                <p className="font-heading text-2xl font-semibold text-stone-950">
                   New Jerusalem stays are coming soon
                 </p>
                 <p className="mx-auto mt-3 max-w-md leading-7 text-stone-600">
