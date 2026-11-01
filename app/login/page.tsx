@@ -48,7 +48,7 @@ function LoginForm() {
         <div className="rounded-3xl bg-white p-8 shadow-sm">
           <h1 className="font-display mb-2 text-2xl font-bold text-stone-900">Welcome back</h1>
           <p className="mb-6 text-sm text-stone-600">
-            Sign in to your account
+            Sign in to see your trips and messages.
           </p>
 
           {sessionExpired && (
@@ -122,7 +122,7 @@ function LoginForm() {
               href={`/register?redirect=${encodeURIComponent(redirect)}`}
               className="font-medium text-[#c76f55] hover:underline"
             >
-              Create one
+              Create one, it&apos;s free
             </Link>
           </div>
         </div>
@@ -153,9 +153,10 @@ export default function LoginPage() {
 // Supabase's raw auth messages are terse and technical; show plain wording for
 // the common cases and fall back to the original text for anything else.
 function friendlyLoginError(message: string) {
-  if (/invalid login credentials/i.test(message)) return 'Wrong email or password. Please try again.'
+  if (/invalid login credentials/i.test(message)) return 'That email and password don\u2019t match. Please try again, or reset your password.'
   if (/email not confirmed/i.test(message)) {
-    return 'Please confirm your email address first. Check your inbox for the link we sent you.'
+    return 'Please confirm your email first. Look in your inbox for the link we sent you.'
   }
+  if (/rate limit|too many/i.test(message)) return 'Too many tries. Please wait a few minutes and try again.'
   return message || 'Something went wrong. Please try again.'
 }

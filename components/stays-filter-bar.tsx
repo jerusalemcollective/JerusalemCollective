@@ -258,18 +258,19 @@ export function StaysFilterBar() {
 
           {showCalendar && (
             <>
-              {/* Click-outside: dimmed sheet backdrop on mobile, transparent catcher on desktop. */}
+              {/* Click-outside: dimmed sheet backdrop below md, transparent catcher from md up. */}
               <div
                 role="presentation"
                 onClick={() => setShowCalendar(false)}
-                className="fixed inset-0 z-40 bg-black/45 sm:bg-transparent"
+                className="fixed inset-0 z-40 bg-black/45 md:bg-transparent"
               />
-              {/* Bottom sheet on mobile; a dropdown anchored under the Dates button on desktop. */}
+              {/* Bottom sheet below md (so it can never fall off-screen inside the mobile
+                  search sheet); a dropdown anchored under the Dates button from md up. */}
               <div
                 role="dialog"
                 aria-modal="true"
                 aria-label="Select your dates"
-                className="fixed inset-x-3 bottom-3 z-50 mx-auto flex max-h-[85vh] w-auto max-w-[440px] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:left-0 sm:top-full sm:mx-0 sm:mt-2 sm:max-h-none sm:w-[440px] sm:max-w-none"
+                className="fixed inset-x-3 bottom-3 z-50 mx-auto flex max-h-[85vh] w-auto max-w-[440px] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl md:absolute md:inset-x-auto md:bottom-auto md:left-0 md:top-full md:mx-0 md:mt-2 md:max-h-none md:w-[440px] md:max-w-none"
               >
                 <div className="flex items-start justify-between gap-3 border-b border-stone-100 px-4 py-3">
                   <div className="min-w-0">
@@ -298,7 +299,7 @@ export function StaysFilterBar() {
                   </button>
                 </div>
 
-                <div className="overflow-y-auto p-3 sm:overflow-visible">
+                <div className="overflow-y-auto p-3 md:overflow-visible">
                   <Calendar
                     mode="range"
                     excludeDisabled

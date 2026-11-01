@@ -13,7 +13,7 @@ export function CancelBookingButton({ bookingId }: { bookingId: string }) {
       disabled={isPending}
       onClick={() => {
         const confirmed = window.confirm(
-          'Cancel this booking? For paid stays, please contact the host about a refund.',
+          'Cancel this booking? If you’ve already paid, please message the host about a refund.',
         )
         if (!confirmed) return
         startTransition(async () => {
@@ -21,7 +21,7 @@ export function CancelBookingButton({ bookingId }: { bookingId: string }) {
           if (result.ok) {
             toast.success('Booking cancelled')
           } else {
-            toast.error(result.error || 'Could not cancel booking')
+            toast.error(result.error || 'We couldn’t cancel this booking. Please try again, or email info@jlmcollective.co.')
           }
         })
       }}

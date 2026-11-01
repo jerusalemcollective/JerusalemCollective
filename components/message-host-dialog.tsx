@@ -38,23 +38,36 @@ type MessageHostDialogProps = {
   onConversationCreated?: (conversationId: string) => void
 }
 
+// Plain words for the reasons the server can give for not sending a request.
+const friendlyServerMessage = (message: string) => {
+  const lower = message.toLowerCase()
+  if (lower.includes('not authenticated')) return 'Please sign in again, then send your message.'
+  if (lower.includes('no longer available')) return 'Sorry, those dates have just been taken. Please choose other dates.'
+  if (lower.includes('check-out must be after check-in')) return 'Your check-out date needs to be after your check-in date.'
+  if (lower.includes('guest count')) return 'Please choose at least 1 guest.'
+  if (lower.includes('listing not available') || lower.includes('host not available') || lower.includes('listing is required')) {
+    return 'Sorry, this stay can\u2019t take requests right now. Please try another stay.'
+  }
+  return message
+}
+
 const getErrorMessage = (error: unknown) => {
   if (typeof error === 'string') return error
   if (error instanceof Error) {
     const message = error.message.toLowerCase()
     if (message.includes('network') || message.includes('fetch')) {
-      return 'Could not connect - please check your internet connection and try again.'
+      return 'We couldn\u2019t connect. Please check your internet connection and try again.'
     }
     if (message.includes('duplicate') || message.includes('already')) {
-      return 'You have already sent an enquiry for this property. Check your messages.'
+      return 'You\u2019ve already asked the host about this stay. You\u2019ll find it in your messages.'
     }
-    return error.message
+    return friendlyServerMessage(error.message)
   }
   if (typeof error === 'object' && error !== null && 'message' in error) {
     const message = String(error.message || '')
-    return message || 'We could not send your enquiry. Please try again or contact us on WhatsApp.'
+    return friendlyServerMessage(message) || 'Your message didn\u2019t send. Please try again, or email us at info@jlmcollective.co.'
   }
-  return 'We could not send your enquiry. Please try again or contact us on WhatsApp.'
+  return 'Your message didn\u2019t send. Please try again, or email us at info@jlmcollective.co.'
 }
 
 export function MessageHostDialog({
@@ -77,7 +90,7 @@ export function MessageHostDialog({
   const [internalOpen, setInternalOpen] = useState(false)
   const [message, setMessage] = useState(
     intent === 'request' && !quickQuestion
-      ? 'Hi, I would like to request this stay for my dates. Please let me know if it is available.'
+      ? 'Hi, we\u2019d love to book this stay for our dates. Could you let me know if it\u2019s free?'
       : '',
   )
   const [loading, setLoading] = useState(false)
@@ -96,17 +109,17 @@ export function MessageHostDialog({
     ? 'Ask a quick question'
     : isRequest
       ? 'Request to book'
-      : 'Message host'
+      : 'Message the host'
   const eyebrow = quickQuestion
     ? 'Quick question'
     : isRequest
       ? 'Booking request'
-      : 'Message host'
+      : 'Message the host'
   const successTitle = isRequest && !quickQuestion ? 'Request sent' : 'Message sent'
   const successDescription =
     isRequest && !quickQuestion
-      ? 'Your booking request has been sent to the host. No payment is due unless the host confirms.'
-      : 'Your message has been sent to the host. You will receive an email when they reply.'
+      ? 'We\u2019ve sent your booking request to the host. You won\u2019t pay anything unless the host says yes.'
+      : 'We\u2019ve sent your message to the host. We\u2019ll email you when they reply.'
 
   const setDialogOpen = (nextOpen: boolean) => {
     if (controlledOpen === undefined) {
@@ -175,7 +188,7 @@ export function MessageHostDialog({
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
         </svg>
-        Messaging unavailable
+        Messages aren&apos;t available for this stay
       </button>
     ) : null
   }
@@ -215,7 +228,7 @@ export function MessageHostDialog({
       }
 
       if (isRequest && !quickQuestion && (!checkIn || !checkOut)) {
-        setError('Please choose check-in and check-out dates first.')
+        setError('Please choose your check-in and check-out dates first.')
         return
       }
 
@@ -234,7 +247,7 @@ export function MessageHostDialog({
         requestId = enquiry.requestId
         createdConversationId = enquiry.conversationId
         if (!createdConversationId) {
-          throw new Error('Unable to create the conversation. Please try again.')
+          throw new Error('We couldn\u2019t start your conversation with the host. Please try again.')
         }
         await recordListingEngagement(supabase, listingId, 'booking_request')
       } else {
@@ -245,7 +258,7 @@ export function MessageHostDialog({
           listingId,
         )
         if (!createdConversationId) {
-          throw new Error('Unable to create the conversation. Please try again.')
+          throw new Error('We couldn\u2019t start your conversation with the host. Please try again.')
         }
         await sendConversationMessage(
           supabase,
@@ -304,7 +317,7 @@ export function MessageHostDialog({
     setConversationId(null)
     setMessage(
       intent === 'request' && !quickQuestion
-        ? 'Hi, I would like to request this stay for my dates. Please let me know if it is available.'
+        ? 'Hi, we\u2019d love to book this stay for our dates. Could you let me know if it\u2019s free?'
         : '',
     )
     setError(null)
@@ -330,7 +343,7 @@ export function MessageHostDialog({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
           )}
-          {buttonLabel || 'Message host'}
+          {buttonLabel || 'Message the host'}
         </button>
       )}
 
@@ -378,22 +391,22 @@ export function MessageHostDialog({
                         step: '1',
                         text:
                           isRequest && !quickQuestion
-                            ? 'The host reviews your dates and confirms whether the stay is available.'
-                            : 'The host reviews your message and replies — usually within a few hours.',
+                            ? 'The host looks at your dates and lets you know if the stay is free.'
+                            : 'The host reads your message and replies here.',
                       },
                       {
                         step: '2',
                         text:
                           isRequest && !quickQuestion
-                            ? 'You can message back and forth to confirm any details.'
-                            : 'You can message back and forth to confirm details.',
+                            ? 'You can message each other to sort out any details.'
+                            : 'You can message each other to sort out any details.',
                       },
                       {
                         step: '3',
                         text:
                           isRequest && !quickQuestion
-                            ? 'Once the host accepts, your dates are blocked on the calendar.'
-                            : 'Once you are both happy, the host can confirm the booking.',
+                            ? 'Once the host says yes, your dates are held for you.'
+                            : 'When you\u2019re both happy, the host can confirm the booking.',
                       },
                     ].map(({ step, text }) => (
                       <div key={step} className="flex items-start gap-3">
@@ -432,7 +445,7 @@ export function MessageHostDialog({
                     onClick={closeDialog}
                     className="w-full rounded-full border border-stone-200 px-5 py-3 text-sm font-semibold text-stone-600 transition hover:border-stone-300 hover:text-stone-950"
                   >
-                    Back to listing
+                    Back to the stay
                   </button>
                 </div>
               </div>
@@ -449,8 +462,8 @@ export function MessageHostDialog({
                     {isRequest && !quickQuestion && (
                       <p className="mt-2 text-sm text-stone-600">
                         {checkInDisplay && checkOutDisplay
-                          ? `${checkInDisplay} to ${checkOutDisplay} | ${guests} guest${guests === 1 ? '' : 's'}`
-                          : 'Choose your dates before sending the request.'}
+                          ? `${checkInDisplay} to ${checkOutDisplay} · ${guests} guest${guests === 1 ? '' : 's'}`
+                          : 'Choose your dates first, then send your request.'}
                       </p>
                     )}
                   </div>
@@ -488,8 +501,8 @@ export function MessageHostDialog({
                       quickQuestion
                         ? 'e.g. Is there a Shabbos lift? Is the kitchen kosher?'
                         : isRequest
-                        ? 'Add anything the host should know about your stay...'
-                        : 'Hi, is this stay available for my dates?'
+                        ? 'Tell the host a little about your family and your stay...'
+                        : 'Hi, is this stay free for our dates?'
                     }
                     className="mt-2 min-h-36 w-full resize-none rounded-2xl border border-stone-200 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
                   />

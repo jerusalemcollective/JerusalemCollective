@@ -13,6 +13,14 @@ import { AmenitySelector } from '@/components/amenity-selector'
 import { HOST_PRICE_CURRENCIES, currencyName, type HostPriceCurrency } from '@/lib/currencies'
 import { toLegacyPrices } from '@/lib/fx'
 import { saveDraftPhotos, loadDraftPhotos, clearDraftPhotos } from '@/lib/listing-draft-photos'
+import { StayTermsFields } from '@/components/stay-terms-fields'
+import {
+  cancellationPreset,
+  isCancellationPolicy,
+  parseStayTime,
+  stayTimesLine,
+  writeWithStayTermsFallback,
+} from '@/lib/stay-terms'
 
 type PhotoUpload = {
   file: File
@@ -51,6 +59,11 @@ type FormState = {
   sleeping_setup: string
   price_currency: HostPriceCurrency
   price: string
+  // Optional stay terms ('' = not set; migration 118).
+  check_in_time: string
+  check_out_time: string
+  cancellation_policy: string
+  cancellation_policy_notes: string
   amenities: string[]
   kosher_kitchen_level: string
   shabbat_elevator: boolean
@@ -735,6 +748,10 @@ apartment_title: '',
 
   price_currency: 'ILS',
   price: '',
+  check_in_time: '',
+  check_out_time: '',
+  cancellation_policy: '',
+  cancellation_policy_notes: '',
 
 amenities: [],
   kosher_kitchen_level: '',
@@ -1678,13 +1695,24 @@ async function handleSubmit() {
       status: 'new',
     }
 
+    // Stay terms go in only when filled in, and the insert is retried without
+    // them if migration 118 hasn't added the columns yet.
+    const checkInTime = parseStayTime(form.check_in_time)
+    const checkOutTime = parseStayTime(form.check_out_time)
+    const cancellationNotes = form.cancellation_policy_notes.trim()
+    const stayTermsPayload = {
+      ...(checkInTime ? { check_in_time: checkInTime } : {}),
+      ...(checkOutTime ? { check_out_time: checkOutTime } : {}),
+      ...(isCancellationPolicy(form.cancellation_policy) ? { cancellation_policy: form.cancellation_policy } : {}),
+      ...(cancellationNotes ? { cancellation_policy_notes: cancellationNotes.slice(0, 2000) } : {}),
+    }
+
     let applicationId = submittedApplicationIdRef.current
     if (!applicationId) {
-      const { data: applicationData, error: applicationError } = await supabase
-        .from('host_applications')
-        .insert([payload])
-        .select('id')
-        .single()
+      const { data: applicationData, error: applicationError } = await writeWithStayTermsFallback(
+        { ...payload, ...stayTermsPayload },
+        (row) => supabase.from('host_applications').insert([row]).select('id').single(),
+      )
 
       if (applicationError) {
         console.error(applicationError)
@@ -2401,6 +2429,16 @@ async function handleSubmit() {
                     />
                   </Field>
                 </div>
+
+                <StayTermsFields
+                  value={{
+                    check_in_time: form.check_in_time,
+                    check_out_time: form.check_out_time,
+                    cancellation_policy: form.cancellation_policy,
+                    cancellation_policy_notes: form.cancellation_policy_notes,
+                  }}
+                  onChange={(field, value) => updateField(field, value)}
+                />
               </StepShell>
             )}
 
@@ -2775,6 +2813,16 @@ async function handleSubmit() {
                   <ReviewItem
                     label="Pricing"
                     value={form.price ? `${form.price} ${form.price_currency} / night` : '—'}
+                  />
+
+                  <ReviewItem
+                    label="Check-in and check-out"
+                    value={stayTimesLine(form.check_in_time, form.check_out_time) || 'Not set'}
+                  />
+
+                  <ReviewItem
+                    label="Cancellation policy"
+                    value={cancellationPreset(form.cancellation_policy)?.label || 'Agreed with me per booking'}
                   />
 
                   <ReviewItem

@@ -3,13 +3,13 @@ import { ogImages, ogTwitterImages } from '@/lib/og'
 
 export const metadata = {
   title: 'Trust & Safety Policy',
-  description: 'Trust & Safety Policy for JLM Collective - our standards, review process, and how we protect users.',
+  description: 'How JLM Collective checks listings, what we expect from guests and hosts, and how to tell us about a concern.',
   alternates: {
     canonical: '/trust-and-safety',
   },
   openGraph: {
     title: 'Trust & Safety Policy | JLM Collective',
-    description: 'JLM Collective standards, review process, and user protection policies.',
+    description: 'How JLM Collective checks listings, what we expect from guests and hosts, and how to tell us about a concern.',
     url: '/trust-and-safety',
     siteName: 'JLM Collective',
     type: 'website',
@@ -19,7 +19,7 @@ export const metadata = {
     card: 'summary_large_image',
     images: ogTwitterImages('Trust & Safety'),
     title: 'Trust & Safety Policy | JLM Collective',
-    description: 'JLM Collective standards, review process, and user protection policies.',
+    description: 'How JLM Collective checks listings, what we expect from guests and hosts, and how to tell us about a concern.',
   },
 }
 
@@ -38,17 +38,17 @@ export default function TrustAndSafetyPage() {
 
           <div className="space-y-10">
             <section className="rounded-3xl bg-[#F8F5F2] p-6">
-              <h2 className="font-display text-xl font-bold text-stone-950">
+              <h2 className="text-xl font-semibold text-stone-950">
                 How we work
               </h2>
               <p className="mt-3 text-base leading-8 text-stone-700">
-                JLM Collective is a Jerusalem letting agency. We act as agent for property owners, reviewing, verifying, and marketing their properties to guests on their behalf.
+                JLM Collective is a Jerusalem letting agency. We act as agent for property owners. On their behalf, we review and verify their properties and offer them to guests.
               </p>
               <p className="mt-4 text-base leading-8 text-stone-700">
-                When you book through JLM Collective your booking agreement is with the property owner. JLM Collective facilitates the booking as their appointed agent and supports you throughout your stay.
+                When you book through JLM Collective, your booking agreement is with the property owner. JLM Collective arranges the booking as their appointed agent and is here to support you throughout your stay.
               </p>
               <p className="mt-4 text-base leading-8 text-stone-700">
-                Payments are collected by JLM Collective on behalf of the property owner when a booking is confirmed through our service.
+                When a booking is confirmed through our service, JLM Collective collects the payment on behalf of the property owner.
               </p>
             </section>
 
@@ -59,7 +59,7 @@ export default function TrustAndSafetyPage() {
                 JLM Collective is designed to help guests find short-term stays and to help owners, hosts, representatives and managing agents submit stays for listing.
               </p>
               <p className="mt-4 text-stone-700 leading-relaxed">
-                Trust is central to our service. This Trust &amp; Safety Policy explains the standards we expect from users, how we review listings, and the steps we may take to protect guests, hosts and the JLM Collective letting agency.
+                Trust matters to everything we do. This Trust &amp; Safety Policy explains the standards we expect from users, how we review listings, and the steps we may take to protect guests, hosts and the JLM Collective letting agency.
               </p>
               <p className="mt-4 text-stone-700 leading-relaxed">
                 This policy should be read together with our <Link href="/terms" className="text-[#c76f55] hover:underline">Terms of Service</Link> and <Link href="/privacy" className="text-[#c76f55] hover:underline">Privacy Policy</Link>.

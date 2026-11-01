@@ -1,26 +1,18 @@
 ﻿import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import Image from 'next/image'
 import { createPublicClient } from '@/lib/supabase/public'
 import {
   findNeighborhoodBySlug,
   neighborhoodDescriptions,
 } from '@/lib/neighborhood-pages'
-import { formatPreferredNightlyPrice } from '@/lib/utils/currency'
-
-type NeighborhoodListing = {
-  id: string
-  title: string
-  area: string
-  bedrooms: number | null
-  max_guests: number | null
-  price_ils: number | null
-  price_usd: number | null
-  booking_type: string | null
-  is_featured: boolean | null
-  cover_photo_url: string | null
-}
+import { ListingCard, LISTING_GRID_CLASS } from '@/components/listing-card'
+import {
+  getListingCardExtras,
+  LISTING_CARD_COLUMNS,
+  toListingCardData,
+  type ListingCardRow,
+} from '@/lib/listing-cards'
 
 export const revalidate = 86400
 
@@ -39,7 +31,7 @@ export async function generateMetadata({
     }
   }
 
-  const description = `Browse verified short-term stays in ${name}, Jerusalem. Curated by JLM Collective.`
+  const description = `Short-term stays in ${name}, Jerusalem, each one checked by the JLM Collective team.`
 
   // Don't index a neighbourhood page with neither editorial content nor live
   // listings — it reads as thin/near-duplicate and drags site-quality signals.
@@ -99,23 +91,13 @@ export default async function NeighbourhoodPage({
   const supabase = createPublicClient()
   const { data: listingsData } = await supabase
     .from('listings')
-    .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, is_featured, cover_photo_url')
+    .select(LISTING_CARD_COLUMNS)
     .eq('is_published', true)
     .eq('area', name)
     .order('is_featured', { ascending: false })
 
-  const listings: NeighborhoodListing[] = (listingsData || []).map((listing: NeighborhoodListing) => ({
-    id: listing.id,
-    title: listing.title,
-    area: listing.area,
-    bedrooms: listing.bedrooms,
-    max_guests: listing.max_guests,
-    price_ils: listing.price_ils,
-    price_usd: listing.price_usd,
-    booking_type: listing.booking_type,
-    is_featured: listing.is_featured,
-    cover_photo_url: listing.cover_photo_url,
-  }))
+  const listings = (listingsData || []) as ListingCardRow[]
+  const extras = await getListingCardExtras(supabase, listings.map((listing) => listing.id))
   const description = neighborhoodDescriptions[name] || null
 
   const breadcrumbJsonLd = {
@@ -134,7 +116,7 @@ export default async function NeighbourhoodPage({
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#F8F5F2]">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -182,7 +164,7 @@ export default async function NeighbourhoodPage({
           </p>
         ) : (
           <p className="mt-4 text-base text-stone-500">
-            Verified stays in {name}, Jerusalem {'\u2014'} curated by JLM Collective.
+            Stays in {name}, Jerusalem, each one checked by our team.
           </p>
         )}
 
@@ -191,58 +173,20 @@ export default async function NeighbourhoodPage({
             href={`/stays?neighborhood=${encodeURIComponent(name)}`}
             className="text-sm font-semibold text-[#c76f55] hover:underline"
           >
-            View all {name} listings {'\u2192'}
+            See all stays in {name} {'→'}
           </Link>
         </div>
 
         {listings.length > 0 ? (
-          <div className="mt-10 grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
-            {listings.map((listing) => {
-              const coverPhotoUrl = listing.cover_photo_url
-
-              return (
-                <Link key={listing.id} href={`/listings/${listing.id}`} className="group block">
-                  <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-stone-100 shadow-sm transition-shadow duration-200 group-hover:shadow-md">
-                    {coverPhotoUrl ? (
-                      <Image
-                        src={coverPhotoUrl}
-                        alt={listing.title}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-stone-100" />
-                    )}
-                  </div>
-                  <div className="mt-3 space-y-0.5">
-                    <p className="line-clamp-1 font-semibold leading-snug text-stone-950">
-                      {listing.title}
-                    </p>
-                    <p className="text-sm text-stone-500">
-                      {[
-                        listing.bedrooms ? `${listing.bedrooms} bed` : null,
-                        listing.max_guests ? `sleeps ${listing.max_guests}` : null,
-                      ]
-                        .filter(Boolean)
-                        .join(' \u00b7 ')}
-                    </p>
-                    <p className="pt-1 text-sm font-semibold text-stone-950">
-                      {formatPreferredNightlyPrice(listing)}
-                      {(listing.price_usd || listing.price_ils) && (
-                        <span className="font-normal text-stone-500"> / night</span>
-                      )}
-                    </p>
-                  </div>
-                </Link>
-              )
-            })}
+          <div className={`mt-10 ${LISTING_GRID_CLASS}`}>
+            {listings.map((listing, index) => (
+              <ListingCard key={listing.id} priority={index < 4} listing={toListingCardData(listing, extras)} />
+            ))}
           </div>
         ) : (
           <div className="mt-16 text-center">
             <p className="text-stone-500">
-              No listings available in {name} right now.
+              There are no stays in {name} on the site right now.
             </p>
             <Link
               href="/stays"

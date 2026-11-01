@@ -80,48 +80,51 @@ export function StaysNeighborhoodNav({
         />
       ))}
 
-      <div className="relative" ref={dropdownRef}>
-        <button
-          type="button"
-          onClick={() => setIsOpen((open) => !open)}
-          className="rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-[#c76f55] hover:text-[#c76f55]"
-        >
-          More areas
-        </button>
+      {/* Callers pass only areas with published stays; with none, skip the menu. */}
+      {neighborhoods.some((area) => area !== 'All') && (
+        <div className="relative" ref={dropdownRef}>
+          <button
+            type="button"
+            onClick={() => setIsOpen((open) => !open)}
+            className="rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-[#c76f55] hover:text-[#c76f55]"
+          >
+            More areas
+          </button>
 
-        {isOpen && (
-          <div className="absolute left-0 top-full z-40 mt-2 w-72 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl">
-            <div className="border-b border-stone-100 p-3">
-              <input
-                type="text"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search neighbourhood"
-                className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
-              />
+          {isOpen && (
+            <div className="absolute left-0 top-full z-40 mt-2 w-72 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl">
+              <div className="border-b border-stone-100 p-3">
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search neighbourhood"
+                  className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
+                />
+              </div>
+              <div className="max-h-72 overflow-y-auto p-2">
+                {filteredAreas.map((area) => (
+                  <Link
+                    key={area}
+                    href={buildNeighborhoodHref(baseQuery, area)}
+                    onClick={() => {
+                      setIsOpen(false)
+                      trackNeighborhoodSearch(area, selectedArea)
+                    }}
+                    className={`block rounded-xl px-3 py-2 text-sm font-semibold transition ${
+                      selectedArea === area
+                        ? 'bg-stone-950 text-white'
+                        : 'text-stone-700 hover:bg-stone-50 hover:text-[#c76f55]'
+                    }`}
+                  >
+                    {area}
+                  </Link>
+                ))}
+              </div>
             </div>
-            <div className="max-h-72 overflow-y-auto p-2">
-              {filteredAreas.map((area) => (
-                <Link
-                  key={area}
-                  href={buildNeighborhoodHref(baseQuery, area)}
-                  onClick={() => {
-                    setIsOpen(false)
-                    trackNeighborhoodSearch(area, selectedArea)
-                  }}
-                  className={`block rounded-xl px-3 py-2 text-sm font-semibold transition ${
-                    selectedArea === area
-                      ? 'bg-stone-950 text-white'
-                      : 'text-stone-700 hover:bg-stone-50 hover:text-[#c76f55]'
-                  }`}
-                >
-                  {area}
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

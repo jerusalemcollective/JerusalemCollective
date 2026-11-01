@@ -1,5 +1,6 @@
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { oneOrNull } from '@/lib/utils/one-or-null'
+import { readListingExactAddresses } from '@/lib/listing-private-details'
 
 type HostCalendarRow = {
   id: string
@@ -8,7 +9,6 @@ type HostCalendarRow = {
 
 type BookingListing = {
   title: string | null
-  exact_address: string | null
   area: string | null
 }
 
@@ -20,6 +20,7 @@ type HostBookingRow = {
   id: string
   check_in: string
   check_out: string
+  listing_id: string | null
   listings: BookingListing | BookingListing[] | null
   profiles: BookingGuest | BookingGuest[] | null
 }
@@ -56,12 +57,22 @@ export async function GET(
   const hostRecord = host as HostCalendarRow
   const { data: bookings } = await supabase
     .from('bookings')
-    .select('id, check_in, check_out, listings(title, exact_address, area), profiles!bookings_user_id_fkey(full_name)')
+    .select('id, check_in, check_out, listing_id, listings(title, area), profiles!bookings_user_id_fkey(full_name)')
     .in('host_id', [hostRecord.id])
     .order('check_in', { ascending: true })
 
-  const events = ((bookings || []) as HostBookingRow[]).map((booking) => {
+  const bookingRows = (bookings || []) as HostBookingRow[]
+  // This feed is the host's own (token-authed), so the private address is
+  // included. Service role: read from listing_private_details directly.
+  const { addresses, error: addressError } = await readListingExactAddresses(
+    supabase,
+    bookingRows.map((booking) => booking.listing_id).filter((id): id is string => Boolean(id)),
+  )
+  if (addressError) console.error('Could not load listing addresses for host calendar', hostRecord.id, addressError)
+
+  const events = bookingRows.map((booking) => {
     const listing = oneOrNull(booking.listings)
+    const exactAddress = booking.listing_id ? addresses.get(booking.listing_id) : undefined
     const guest = oneOrNull(booking.profiles)
 
     return [
@@ -70,7 +81,7 @@ export async function GET(
       `DTSTART;VALUE=DATE:${booking.check_in.replaceAll('-', '')}`,
       `DTEND;VALUE=DATE:${booking.check_out.replaceAll('-', '')}`,
       `SUMMARY:${escapeIcsText(`Guest stay - ${listing?.title || 'Your property'}`)}`,
-      `LOCATION:${escapeIcsText(listing?.exact_address || listing?.area || 'Jerusalem')}`,
+      `LOCATION:${escapeIcsText(exactAddress || listing?.area || 'Jerusalem')}`,
       `DESCRIPTION:${escapeIcsText(`Guest: ${guest?.full_name || 'Guest'}. Managed via JLM Collective - jlmcollective.co`)}`,
       'END:VEVENT',
     ].join('\r\n')

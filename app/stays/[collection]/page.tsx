@@ -2,20 +2,14 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { createPublicClient } from '@/lib/supabase/public'
-import { findStayCollection } from '@/lib/stay-collections'
-import { ListingCard } from '@/components/listing-card'
-import { formatPreferredNightlyPrice } from '@/lib/utils/currency'
-
-type CollectionListing = {
-  id: string
-  title: string
-  area: string
-  bedrooms: number | null
-  max_guests: number | null
-  price_ils: number | null
-  price_usd: number | null
-  cover_photo_url: string | null
-}
+import { KOSHER_COLLECTION_LEVELS, findStayCollection } from '@/lib/stay-collections'
+import { ListingCard, LISTING_GRID_CLASS } from '@/components/listing-card'
+import {
+  getListingCardExtras,
+  LISTING_CARD_COLUMNS,
+  toListingCardData,
+  type ListingCardRow,
+} from '@/lib/listing-cards'
 
 export const revalidate = 3600
 
@@ -67,18 +61,19 @@ export default async function StayCollectionPage({
   const supabase = createPublicClient()
   let query = supabase
     .from('listings')
-    .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, cover_photo_url')
+    .select(LISTING_CARD_COLUMNS)
     .eq('is_published', true)
     .order('is_featured', { ascending: false })
 
   if (collection.filter === 'kosher') {
-    query = query.in('kosher_kitchen_level', ['kosher', 'glatt_kosher', 'chalav_yisrael'])
+    query = query.in('kosher_kitchen_level', KOSHER_COLLECTION_LEVELS)
   } else if (collection.filter === 'sukkah') {
     query = query.eq('sukkah_balcony', true)
   }
 
   const { data: listingsData } = await query
-  const listings = (listingsData || []) as CollectionListing[]
+  const listings = (listingsData || []) as ListingCardRow[]
+  const extras = await getListingCardExtras(supabase, listings.map((listing) => listing.id))
 
   const faqJsonLd = {
     '@context': 'https://schema.org',
@@ -100,7 +95,7 @@ export default async function StayCollectionPage({
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#F8F5F2]">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLd(JSON.stringify(faqJsonLd)) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLd(JSON.stringify(breadcrumbJsonLd)) }} />
 
@@ -133,34 +128,15 @@ export default async function StayCollectionPage({
         </div>
 
         {listings.length > 0 ? (
-          <div className="mt-10 grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {listings.map((listing, index) => {
-              const priceLabel = formatPreferredNightlyPrice(listing)
-              return (
-                <ListingCard
-                  key={listing.id}
-                  priority={index < 4}
-                  listing={{
-                    id: listing.id,
-                    title: listing.title,
-                    area: listing.area,
-                    bedrooms: listing.bedrooms,
-                    max_guests: listing.max_guests,
-                    coverPhotoUrl: listing.cover_photo_url ?? null,
-                    rating: null,
-                    priceLabel,
-                    priceUsd: listing.price_usd,
-                    priceIls: listing.price_ils,
-                    hasPrice: Boolean(listing.price_ils || listing.price_usd),
-                  }}
-                />
-              )
-            })}
+          <div className={`mt-10 ${LISTING_GRID_CLASS}`}>
+            {listings.map((listing, index) => (
+              <ListingCard key={listing.id} priority={index < 4} listing={toListingCardData(listing, extras)} />
+            ))}
           </div>
         ) : (
-          <div className="mt-12 rounded-3xl bg-[#F8F5F2] p-8 text-center">
+          <div className="mt-12 rounded-3xl border border-stone-200 bg-white p-8 text-center">
             <p className="text-stone-600">
-              No matching stays are live right now. Browse all stays or message us and we will help you find one.
+              There are no stays like this on the site right now. Have a look at all our stays, or email us at info@jlmcollective.co and we'll help you find one.
             </p>
             <Link
               href="/stays"
@@ -172,7 +148,7 @@ export default async function StayCollectionPage({
         )}
 
         <section className="mt-16 border-t border-stone-200 pt-10">
-          <h2 className="font-display text-2xl font-bold text-stone-950">Frequently asked questions</h2>
+          <h2 className="text-2xl font-semibold text-stone-950">Frequently asked questions</h2>
           <div className="mt-6 max-w-2xl divide-y divide-stone-200 border-y border-stone-200">
             {collection.faqs.map((faq) => (
               <details key={faq.q} className="group py-4">

@@ -69,10 +69,10 @@ export default async function AccountSupportPage() {
   return (
     <div className="min-h-screen bg-[#F8F5F2] px-5 py-10 text-[#252525] md:px-6">
       <section className="mx-auto max-w-5xl">
-        <Breadcrumb items={[{ label: 'Account', href: '/account' }, { label: 'Support' }]} />
+        <Breadcrumb items={[{ label: 'Account', href: '/account' }, { label: 'Help' }]} />
 
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <h1 className="font-display text-3xl font-bold tracking-tight text-stone-950">Support</h1>
+          <h1 className="font-display text-3xl font-bold tracking-tight text-stone-950">Help</h1>
           <ContactJlmButton />
         </div>
 

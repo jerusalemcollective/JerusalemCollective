@@ -7,7 +7,7 @@ export async function cancelBooking(
   bookingId: string,
 ): Promise<{ ok: boolean; error?: string }> {
   if (!bookingId) {
-    return { ok: false, error: 'Missing booking.' }
+    return { ok: false, error: 'We couldn’t find that booking. Please refresh the page and try again.' }
   }
 
   const supabase = await createClient()
@@ -16,7 +16,7 @@ export async function cancelBooking(
   } = await supabase.auth.getUser()
 
   if (!user) {
-    return { ok: false, error: 'You need to be signed in.' }
+    return { ok: false, error: 'Please sign in again to cancel this booking.' }
   }
 
   // cancel_guest_booking is SECURITY DEFINER and verifies ownership against
@@ -26,7 +26,11 @@ export async function cancelBooking(
   })
 
   if (error) {
-    return { ok: false, error: error.message }
+    console.error('cancel_guest_booking failed', error)
+    return {
+      ok: false,
+      error: 'We couldn’t cancel this booking. Please try again, or email info@jlmcollective.co and we’ll help.',
+    }
   }
 
   revalidatePath('/account/bookings')

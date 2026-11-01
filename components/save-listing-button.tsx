@@ -83,7 +83,7 @@ export function SaveListingButton({ listingId }: { listingId: string }) {
       const message =
         error && typeof error === 'object' && 'message' in error
           ? String((error as { message: unknown }).message)
-          : 'Could not update your saved list. Please try again.'
+          : 'We couldn’t update your saved stays. Please try again.'
       console.error('Save listing failed:', error)
       toast.error(message)
     }

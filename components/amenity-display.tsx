@@ -48,7 +48,7 @@ const KNOWN_AMENITIES = new Set<string>(STAY_AMENITIES)
 
 // Amenities the host typed into "Other amenities". Older listings saved them as
 // one comma-separated item, so split those too, and drop duplicates.
-function getOtherAmenities(amenities: string[]) {
+function getOtherAmenities(amenities: string[], hidden: Set<string>) {
   const seen = new Set<string>()
   const others: string[] = []
   for (const value of amenities) {
@@ -56,7 +56,7 @@ function getOtherAmenities(amenities: string[]) {
     for (const part of value.split(',')) {
       const amenity = part.trim()
       const key = amenity.toLowerCase()
-      if (!amenity || KNOWN_AMENITIES.has(amenity) || seen.has(key)) continue
+      if (!amenity || KNOWN_AMENITIES.has(amenity) || hidden.has(key) || seen.has(key)) continue
       seen.add(key)
       others.push(amenity)
     }
@@ -64,16 +64,25 @@ function getOtherAmenities(amenities: string[]) {
   return others
 }
 
-export function AmenityDisplay({ amenities }: { amenities: string[] }) {
+// `hide` lists amenities shown elsewhere on the page (e.g. the Shabbos list),
+// matched case-insensitively, so nothing appears twice.
+export function getVisibleAmenityGroups(amenities: string[], hide: readonly string[] = []) {
+  const hidden = new Set(hide.map((amenity) => amenity.trim().toLowerCase()))
   const selectedSet = new Set(amenities)
-  const otherAmenities = getOtherAmenities(amenities)
-  const visibleGroups = [
+  const otherAmenities = getOtherAmenities(amenities, hidden)
+  return [
     ...STAY_AMENITY_GROUPS.map((group) => ({
       title: group.title as string,
-      amenities: (group.amenities as readonly string[]).filter((amenity) => selectedSet.has(amenity)),
+      amenities: (group.amenities as readonly string[]).filter(
+        (amenity) => selectedSet.has(amenity) && !hidden.has(amenity.toLowerCase()),
+      ),
     })),
     { title: 'Other amenities', amenities: otherAmenities },
   ].filter((group) => group.amenities.length > 0)
+}
+
+export function AmenityDisplay({ amenities, hide = [] }: { amenities: string[]; hide?: readonly string[] }) {
+  const visibleGroups = getVisibleAmenityGroups(amenities, hide)
 
   if (visibleGroups.length === 0) return null
 

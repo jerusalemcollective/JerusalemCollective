@@ -6,18 +6,20 @@ import {
 } from '@/lib/neighborhoods'
 import { slugifyNeighborhood } from '@/lib/neighborhood-pages'
 import { ogImages, ogTwitterImages } from '@/lib/og'
+import { ListingPrice } from '@/components/listing-price'
+import { formatListingPrice } from '@/lib/utils/currency'
 
 export const metadata = {
   title: 'Explore Jerusalem stays',
   description:
-    'Discover Jerusalem neighbourhoods, practical stay collections, and featured places before searching all stays.',
+    'Get to know Jerusalem’s neighbourhoods, find stays for Pesach, Sukkot or a kosher kitchen, and see a few of our favourite homes.',
   alternates: {
     canonical: '/explore',
   },
   openGraph: {
     title: 'Explore Jerusalem stays | JLM Collective',
     description:
-      'Discover Jerusalem neighbourhoods, practical stay collections, and featured places before searching all stays.',
+      'Get to know Jerusalem’s neighbourhoods, find stays for Pesach, Sukkot or a kosher kitchen, and see a few of our favourite homes.',
     url: '/explore',
     type: 'website',
     ...ogImages('Explore Jerusalem stays'),
@@ -46,17 +48,17 @@ type Listing = {
 const collectionCards = [
   {
     title: 'Family stays',
-    description: 'Room to spread out, practical layouts, and stays suited to longer visits.',
+    description: 'Room to spread out, sensible layouts and homes that work for longer visits.',
     href: '/stays',
   },
   {
     title: 'Sukkah',
-    description: 'Browse stays with a balcony suitable for a sukkah.',
+    description: 'Homes with a balcony big enough for a sukkah.',
     href: '/stays/sukkot',
   },
   {
     title: 'Near shuls',
-    description: 'Useful choices for guests who want easy local access.',
+    description: 'Stays a short walk from a shul.',
     href: '/stays?nearSynagogue=1',
   },
 ]
@@ -64,17 +66,17 @@ const collectionCards = [
 const seasonalCards = [
   {
     title: 'Pesach stays',
-    description: 'Verified Jerusalem apartments for Pesach — book early.',
+    description: 'Family apartments for Pesach. They go early, so ask soon.',
     href: '/stays/pesach',
   },
   {
     title: 'Sukkot stays',
-    description: 'Apartments with a balcony suitable for a sukkah.',
+    description: 'Apartments with room for a sukkah on the balcony.',
     href: '/stays/sukkot',
   },
   {
     title: 'Kosher kitchen',
-    description: 'Stays with a kosher kitchen you can rely on.',
+    description: 'Homes with a kosher kitchen you can trust.',
     href: '/stays/kosher-kitchen',
   },
 ]
@@ -130,7 +132,7 @@ export default async function ExplorePage() {
             Find the part of Jerusalem that fits your stay
           </h1>
           <p className="mt-3 max-w-2xl text-base leading-7 text-stone-600">
-            Start with popular neighbourhoods, practical collections, or seasonal needs. When you are ready to compare actual homes, move into all stays.
+            Start with a neighbourhood, a chag, or what you need from a home. When you&apos;re ready to compare places, have a look at all our stays.
           </p>
           <Link
             href="/stays"
@@ -145,14 +147,14 @@ export default async function ExplorePage() {
             <div>
               <h2 className="text-xl font-bold text-stone-950">Popular neighbourhoods</h2>
               <p className="mt-1 text-sm text-stone-600">
-                Based on what guests are searching for most.
+                The areas guests are searching for most.
               </p>
             </div>
             <Link
               href="/neighbourhoods"
               className="shrink-0 text-sm font-bold text-[#c76f55] transition hover:text-[#a95b45]"
             >
-              Explore more neighbourhoods {'→'}
+              See more neighbourhoods {'→'}
             </Link>
           </div>
 
@@ -175,9 +177,9 @@ export default async function ExplorePage() {
 
         <section className="mt-10">
           <div className="mb-4">
-            <h2 className="text-xl font-bold text-stone-950">Browse by what matters</h2>
+            <h2 className="text-xl font-bold text-stone-950">Find what you need</h2>
             <p className="mt-1 text-sm text-stone-600">
-              A smaller, cleaner set of useful starting points.
+              A few good places to start.
             </p>
           </div>
 
@@ -190,9 +192,9 @@ export default async function ExplorePage() {
 
         <section className="mt-10">
           <div className="mb-4">
-            <h2 className="text-xl font-bold text-stone-950">Seasonal planning</h2>
+            <h2 className="text-xl font-bold text-stone-950">Yom Tov and kosher stays</h2>
             <p className="mt-1 text-sm text-stone-600">
-              Useful when timing matters as much as location.
+              For when the chag matters as much as the location.
             </p>
           </div>
 
@@ -208,17 +210,17 @@ export default async function ExplorePage() {
             <div>
               <h2 className="text-xl font-bold text-stone-950">Featured stays</h2>
               <p className="mt-1 text-sm text-stone-600">
-                A few strong listings to begin with.
+                A few homes we think you&apos;ll like.
               </p>
             </div>
             <Link href="/stays" className="text-sm font-semibold text-[#c76f55] hover:underline">
-              View all stays
+              See all stays
             </Link>
           </div>
 
           {featuredStays.length === 0 ? (
             <div className="rounded-3xl bg-white p-6 text-sm text-stone-600 shadow-sm">
-              Featured stays will appear here once listings are live.
+              Our featured stays will show here soon.
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-3">
@@ -233,10 +235,21 @@ export default async function ExplorePage() {
                   </p>
                   <h3 className="mt-3 text-xl font-bold text-stone-950">{stay.title}</h3>
                   <p className="mt-2 text-sm text-stone-600">
-                    {stay.bedrooms} bedrooms | sleeps {stay.max_guests}
+                    {stay.bedrooms} bedroom{stay.bedrooms === 1 ? '' : 's'} · sleeps {stay.max_guests}
                   </p>
                   <p className="mt-4 text-sm font-semibold text-stone-900">
-                    {stay.price_ils ? `₪${stay.price_ils.toLocaleString()}` : 'Price on request'}
+                    {stay.price_usd != null || stay.price_ils != null ? (
+                      <>
+                        <ListingPrice
+                          priceUsd={stay.price_usd}
+                          priceIls={stay.price_ils}
+                          fallback={formatListingPrice(stay)}
+                        />
+                        <span className="font-normal text-stone-500"> / night</span>
+                      </>
+                    ) : (
+                      'Price on request'
+                    )}
                   </p>
                 </Link>
               ))}

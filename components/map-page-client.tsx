@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic'
 import { filterListings } from '@/lib/marketplace-rules'
 import { STAY_AMENITY_GROUPS } from '@/lib/stay-amenities'
 import { formatPreferredNightlyPrice } from '@/lib/utils/currency'
+import { ListingPrice } from '@/components/listing-price'
 
 export type MapListing = {
   id: string
@@ -176,12 +177,22 @@ export function MapPageClient({ listings }: { listings: MapListing[] }) {
                 {selectedListing.bedrooms} bedrooms · sleeps {selectedListing.sleeps}
               </p>
               <div className="mt-3 flex items-center justify-between gap-3">
-                <p className="font-bold text-stone-950">{formatMapListingPrice(selectedListing)}</p>
+                <p className="font-bold text-stone-950">
+                  {selectedListing.price_usd != null || selectedListing.price_ils != null ? (
+                    <ListingPrice
+                      priceUsd={selectedListing.price_usd ?? null}
+                      priceIls={selectedListing.price_ils ?? null}
+                      fallback={formatMapListingPrice(selectedListing)}
+                    />
+                  ) : (
+                    formatMapListingPrice(selectedListing)
+                  )}
+                </p>
                 <Link
                   href={`/listings/${selectedListing.id}`}
                   className="rounded-full bg-[#252525] px-4 py-2 text-sm font-bold text-white hover:bg-[#111111]"
                 >
-                  View listing
+                  View stay
                 </Link>
               </div>
             </div>

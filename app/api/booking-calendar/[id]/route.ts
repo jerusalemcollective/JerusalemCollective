@@ -1,10 +1,15 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { oneOrNull } from '@/lib/utils/one-or-null'
+import { readListingExactAddress } from '@/lib/listing-private-details'
+
+// The street address is only for guests whose stay is actually booked. The
+// same rule is enforced in the database by RLS on listing_private_details
+// (migration 120); this check also covers the pre-migration fallback.
+const ADDRESS_VISIBLE_STATUSES = new Set(['confirmed', 'completed'])
 
 type BookingListing = {
   title: string | null
-  exact_address: string | null
   area: string | null
 }
 
@@ -13,6 +18,8 @@ type BookingCalendarRow = {
   check_in: string | null
   check_out: string | null
   user_id: string
+  listing_id: string | null
+  status: string | null
   listings: BookingListing | BookingListing[] | null
 }
 
@@ -32,7 +39,7 @@ export async function GET(
 
   const { data, error } = await supabase
     .from('bookings')
-    .select('id, check_in, check_out, user_id, listings(title, exact_address, area)')
+    .select('id, check_in, check_out, user_id, listing_id, status, listings(title, area)')
     .eq('id', id)
     .single()
 
@@ -52,7 +59,13 @@ export async function GET(
 
   const listing = oneOrNull(booking.listings)
   const title = listing?.title || 'JLM Collective Stay'
-  const location = listing?.exact_address || listing?.area || 'Jerusalem'
+  let exactAddress: string | null = null
+  if (booking.listing_id && booking.status && ADDRESS_VISIBLE_STATUSES.has(booking.status)) {
+    const { address, error: addressError } = await readListingExactAddress(supabase, booking.listing_id)
+    if (addressError) console.error('Could not load listing address for calendar file', booking.id, addressError)
+    exactAddress = address
+  }
+  const location = exactAddress || listing?.area || 'Jerusalem'
   const icsContent = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',

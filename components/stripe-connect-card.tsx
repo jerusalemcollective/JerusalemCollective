@@ -47,7 +47,7 @@ export function StripeConnectCard({ chargesEnabled, payoutsEnabled, hasAccount }
 
   return (
     <section className="mb-8 rounded-3xl bg-white p-6 shadow-sm">
-      <h2 className="font-display text-xl font-bold text-stone-950">Get paid by Stripe</h2>
+      <h2 className="text-xl font-semibold text-stone-950">Get paid by Stripe</h2>
       {syncing ? (
         <p className="mt-2 text-sm text-stone-600">Checking your Stripe status…</p>
       ) : ready ? (

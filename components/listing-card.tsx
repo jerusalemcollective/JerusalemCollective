@@ -1,9 +1,17 @@
 import Link from 'next/link'
-import Image from 'next/image'
 import { slugifyNeighborhood } from '@/lib/neighborhood-pages'
 import { ListingRatingBadge } from '@/components/listing-rating'
 import { ListingPrice } from '@/components/listing-price'
+import { ListingCardPhotos } from '@/components/listing-card-photos'
 import type { ListingRating } from '@/lib/reviews'
+
+// Shared grid for every listing-card list: one big card per row on phones, then
+// 2 / 3 / 4 columns. The skeleton uses the same class so loading never jumps.
+export const LISTING_GRID_CLASS =
+  'grid grid-cols-1 gap-x-5 gap-y-9 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
+
+// Photo frame shared with the skeleton.
+export const LISTING_CARD_PHOTO_CLASS = 'aspect-[20/19] overflow-hidden rounded-2xl'
 
 export type ListingCardData = {
   id: string
@@ -12,6 +20,9 @@ export type ListingCardData = {
   bedrooms: number | null
   max_guests: number | null
   coverPhotoUrl: string | null
+  // Up to 5 photos in display order (see lib/listing-cards). Falls back to the
+  // cover photo when absent.
+  photoUrls?: string[]
   rating?: ListingRating | null
   // priceLabel is the server-rendered fallback; when the raw USD/ILS prices are
   // provided the card shows them in the guest's preferred currency (live FX).
@@ -21,8 +32,8 @@ export type ListingCardData = {
   hasPrice: boolean
 }
 
-// One card used across the homepage, the stays search, and collection pages so
-// they can't drift apart. Callers format the price themselves and pass it in.
+// One card used by every listing grid so they can't drift apart. Build the
+// props with toListingCardData (lib/listing-cards) rather than by hand.
 export function ListingCard({
   listing,
   priority = false,
@@ -30,40 +41,33 @@ export function ListingCard({
   listing: ListingCardData
   priority?: boolean
 }) {
+  const href = `/listings/${listing.id}?from=stays`
+  const photoUrls = listing.photoUrls?.length
+    ? listing.photoUrls
+    : listing.coverPhotoUrl
+      ? [listing.coverPhotoUrl]
+      : []
+
   return (
     <div className="group">
-      <Link href={`/listings/${listing.id}?from=stays`} className="block">
-        <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-stone-100 shadow-sm transition-shadow duration-200 group-hover:shadow-md">
-          {listing.coverPhotoUrl ? (
-            <Image
-              src={listing.coverPhotoUrl}
-              alt={listing.title}
-              fill
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              {...(priority ? { priority: true } : { loading: 'lazy' as const })}
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-[#F8F5F2]">
-              <div className="text-center">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#c76f55]">JLM Collective</p>
-                <p className="mt-1 text-xs text-stone-600">Photo coming soon</p>
-              </div>
-            </div>
-          )}
-        </div>
-      </Link>
+      <div className={`relative bg-stone-100 shadow-sm transition-shadow duration-200 group-hover:shadow-md ${LISTING_CARD_PHOTO_CLASS}`}>
+        <ListingCardPhotos href={href} title={listing.title} photoUrls={photoUrls} priority={priority} />
+      </div>
 
-      <div className="mt-3 space-y-0.5">
-        <Link
-          href={`/neighbourhoods/${slugifyNeighborhood(listing.area)}`}
-          className="block text-[11px] font-bold uppercase tracking-widest text-[#c76f55] hover:underline"
-        >
-          {listing.area}
-        </Link>
-        <Link href={`/listings/${listing.id}?from=stays`} className="block space-y-0.5">
-          <p className="line-clamp-1 font-semibold leading-snug text-stone-950">{listing.title}</p>
+      <div className="mt-3 space-y-1">
+        <div className="flex items-center justify-between gap-3">
+          <Link
+            href={`/neighbourhoods/${slugifyNeighborhood(listing.area)}`}
+            className="min-w-0 truncate text-[11px] font-bold uppercase tracking-widest text-[#c76f55] hover:underline"
+          >
+            {listing.area}
+          </Link>
           <ListingRatingBadge rating={listing.rating ?? null} />
+        </div>
+        <Link href={href} className="block space-y-0.5">
+          <p className="line-clamp-2 font-semibold leading-snug text-stone-950" title={listing.title}>
+            {listing.title}
+          </p>
           <p className="text-sm text-stone-500">
             {[
               listing.bedrooms ? `${listing.bedrooms} bed` : null,
@@ -72,7 +76,7 @@ export function ListingCard({
               .filter(Boolean)
               .join(' · ')}
           </p>
-          <p className="pt-1 text-sm font-semibold text-stone-950">
+          <p className="pt-1 text-[15px] font-semibold text-stone-950">
             {listing.priceUsd != null || listing.priceIls != null ? (
               <ListingPrice
                 priceUsd={listing.priceUsd ?? null}

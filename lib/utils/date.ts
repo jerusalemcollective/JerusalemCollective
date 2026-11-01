@@ -10,10 +10,10 @@ export function formatWaitTime(
   )
   if (hours < 1) return 'Sent just now'
   if (hours < 24) {
-    return `Sent ${hours} hour${hours === 1 ? '' : 's'} ago — awaiting reply`
+    return `Sent ${hours} hour${hours === 1 ? '' : 's'} ago. Waiting for the host to reply.`
   }
   const days = Math.floor(hours / 24)
-  return `Sent ${days} day${days === 1 ? '' : 's'} ago — awaiting reply`
+  return `Sent ${days} day${days === 1 ? '' : 's'} ago. Waiting for the host to reply.`
 }
 
 export function shouldShowSimilarStaysLink(

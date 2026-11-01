@@ -31,11 +31,11 @@ export async function startBalanceCheckout(
   siteUrl: string,
 ): Promise<BalanceCheckoutResult> {
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY
-  if (!stripeSecretKey) return { ok: false, error: 'Online payments are not configured yet.', status: 503 }
+  if (!stripeSecretKey) return { ok: false, error: 'Online payment isn’t available yet. Please email info@jlmcollective.co and we’ll help you pay.', status: 503 }
 
   const paymentRoutes = await getPaymentRouteSettings()
   if (!paymentRoutes.jlmPaymentsEnabled) {
-    return { ok: false, error: 'Online payments are not available right now.', status: 503 }
+    return { ok: false, error: 'Online payment isn’t available right now. Please try again later.', status: 503 }
   }
 
   // Guests can only read their own booking_payments (RLS), so this both fetches and
@@ -54,21 +54,21 @@ export async function startBalanceCheckout(
       status: string | null
     }>()
 
-  if (!payment) return { ok: false, error: 'Booking not found.', status: 404 }
+  if (!payment) return { ok: false, error: 'We couldn’t find this booking. Please check you’re signed in to the right account.', status: 404 }
 
   const balanceMajor = Number(payment.balance_amount)
   if (payment.balance_status !== 'due' || !Number.isFinite(balanceMajor) || balanceMajor <= 0) {
-    return { ok: false, error: 'There is no balance due on this booking.', status: 400 }
+    return { ok: false, error: 'There’s nothing left to pay on this booking.', status: 400 }
   }
 
   // The balance is only payable after the deposit has settled and the booking is
   // confirmed (finalize sets status='paid' + booking_id).
   if (payment.status !== 'paid' || !payment.booking_id) {
-    return { ok: false, error: 'This booking is not ready for a balance payment yet.', status: 400 }
+    return { ok: false, error: 'This booking isn’t ready for the balance payment yet. Please try again later.', status: 400 }
   }
 
   const currency = String(payment.currency || '').toLowerCase()
-  if (!currency) return { ok: false, error: 'This booking has no payment currency.', status: 400 }
+  if (!currency) return { ok: false, error: 'We couldn’t work out the payment for this booking. Please email info@jlmcollective.co and we’ll sort it out.', status: 400 }
 
   const { data: booking } = await supabase
     .from('bookings')
@@ -77,7 +77,7 @@ export async function startBalanceCheckout(
     .maybeSingle<{ status: string | null; listings: { title: string } | { title: string }[] | null }>()
 
   if (booking?.status === 'cancelled' || booking?.status === 'completed') {
-    return { ok: false, error: 'This booking is cancelled, so no balance is due.', status: 400 }
+    return { ok: false, error: 'This booking was cancelled, so there’s nothing to pay.', status: 400 }
   }
 
   let listingTitle = 'your stay'
@@ -111,13 +111,13 @@ export async function startBalanceCheckout(
 
   const stripeSession = (await stripeResponse.json().catch(() => ({}))) as unknown
   if (!stripeResponse.ok || !isRecord(stripeSession)) {
-    return { ok: false, error: 'Could not start the balance payment.', status: 502 }
+    return { ok: false, error: 'Something went wrong on our side and we couldn’t open the payment page. Please try again in a moment.', status: 502 }
   }
 
   const checkoutUrl = typeof stripeSession.url === 'string' ? stripeSession.url : null
   const checkoutSessionId = typeof stripeSession.id === 'string' ? stripeSession.id : null
   if (!checkoutUrl || !checkoutSessionId) {
-    return { ok: false, error: 'Checkout did not return a payment link.', status: 502 }
+    return { ok: false, error: 'Something went wrong on our side and we couldn’t open the payment page. Please try again in a moment.', status: 502 }
   }
 
   const { error: attachError } = await supabase.rpc('attach_balance_checkout_session', {
@@ -125,7 +125,10 @@ export async function startBalanceCheckout(
     checkout_session_id: checkoutSessionId,
   })
 
-  if (attachError) return { ok: false, error: attachError.message, status: 400 }
+  if (attachError) {
+    console.error('[balance-checkout] could not attach checkout session', attachError)
+    return { ok: false, error: 'Something went wrong on our side and we couldn’t open the payment page. Please try again in a moment.', status: 400 }
+  }
 
   return { ok: true, checkoutUrl }
 }

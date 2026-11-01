@@ -18,11 +18,11 @@ export async function POST(request: Request) {
   const email = typeof body.email === 'string' ? body.email.trim() : ''
 
   if (!['catering', 'cleaning'].includes(serviceType)) {
-    return NextResponse.json({ error: 'Invalid service type.' }, { status: 400 })
+    return NextResponse.json({ error: 'Please choose which service you need.' }, { status: 400 })
   }
 
   if (!name || !email.includes('@')) {
-    return NextResponse.json({ error: 'Name and email are required.' }, { status: 400 })
+    return NextResponse.json({ error: 'Please add your name and email so we can reply.' }, { status: 400 })
   }
 
   const apiKey = process.env.RESEND_API_KEY

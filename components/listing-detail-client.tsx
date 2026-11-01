@@ -10,15 +10,24 @@ import { BookingDateRangePicker } from '@/components/booking-date-range-picker'
 import { MessageHostDialog } from '@/components/message-host-dialog'
 import dynamic from 'next/dynamic'
 import { SaveListingButton } from '@/components/save-listing-button'
-import { AmenityDisplay } from '@/components/amenity-display'
+import { AmenityDisplay, getVisibleAmenityGroups } from '@/components/amenity-display'
 import { recordListingView } from '@/components/recently-viewed'
 import { recordListingEngagement } from '@/lib/listing-engagement'
-import { formatListingPrice, formatPrice, formatCurrencyAmount } from '@/lib/utils/currency'
+import { formatListingPrice, formatCurrencyAmount } from '@/lib/utils/currency'
+import { ListingPrice } from '@/components/listing-price'
+import { useCurrency } from '@/components/currency-provider'
 import { clearEnquiryDraft, loadEnquiryDraft, saveEnquiryDraft } from '@/lib/enquiry-draft'
 import { formatDateISO, formatBookingDate } from '@/lib/utils/date'
 import { computeDepositPreview } from '@/lib/utils/deposit'
 import { computeBookingTotal, computeExtraGuests } from '@/lib/utils/pricing'
 import { PayoutCopyRows } from '@/components/payout-copy-rows'
+import {
+  CANCELLATION_AGREED_GUEST_SENTENCE,
+  DIRECT_PAYMENT_REFUND_NOTE,
+  cancellationPreset,
+  stayTimesLine,
+  type StayTerms,
+} from '@/lib/stay-terms'
 
 // Google Maps (@react-google-maps/api) is heavy; load it only in the browser,
 // on demand, so it doesn't ship in or block this high-traffic SEO page.
@@ -47,6 +56,34 @@ type GuestEnquiry = {
 }
 
 const OPEN_ENQUIRY_STATUSES = ['new', 'host_replied']
+
+// Shabbos-list label for each kosher kitchen level; 'not_kosher' and blank show nothing.
+const KOSHER_KITCHEN_LABELS: Record<string, string> = {
+  kosher_friendly: 'Kosher-friendly kitchen',
+  kosher: 'Kosher kitchen',
+  glatt_kosher: 'Kosher kitchen \u2014 Glatt kosher',
+  chalav_yisrael: 'Kosher kitchen \u2014 Chalav Yisrael',
+  mehadrin: 'Kosher kitchen \u2014 Mehadrin',
+}
+
+// Amenities the Shabbos list already covers, so the general Amenities list
+// never repeats them. The Shabbos amenities and the retired 'Kosher kitchen'
+// amenity always go; host-typed names for the Shabbos booleans go when that
+// item is shown in the Shabbos list.
+type ShabbosFeatureField =
+  | 'shabbat_elevator'
+  | 'shabbat_clock'
+  | 'physical_key_entry'
+  | 'sukkah_balcony'
+  | 'near_synagogue'
+const ALWAYS_SHABBOS_AMENITIES = ['Kosher kitchen', 'Hot plate', 'Hot water urn', 'In eruv']
+const SHABBOS_FEATURE_ALIASES: Record<ShabbosFeatureField, string[]> = {
+  shabbat_elevator: ['Shabbos elevator', 'Shabbat elevator'],
+  shabbat_clock: ['Shabbos clock', 'Shabbat clock', 'Shabbos timer', 'Shabbat timer'],
+  physical_key_entry: ['Physical key entry', 'Physical-key entry'],
+  sukkah_balcony: ['Sukkah balcony', 'Sukkah'],
+  near_synagogue: ['Near shul', 'Near synagogue'],
+}
 
 // Which of this guest's booking requests matter for the chosen dates.
 // No dates chosen: any open request counts. Dates chosen: only a request for
@@ -116,6 +153,7 @@ export type ListingDetailHost = {
   id: string
   is_verified: boolean | null
   profile_photo_url: string | null
+  bio: string | null
 }
 
 export type ListingDetailReview = {
@@ -156,13 +194,16 @@ type ListingDetailClientProps = {
   }>
   avgResponseHours: number | null
   servicesBarEnabled?: boolean
+  // Check-in/out and cancellation policy (migration 118); null when not loaded.
+  stayTerms?: StayTerms | null
 }
 
 function formatResponseTime(hours: number): string {
-  if (hours < 1) return 'Usually responds within an hour'
-  if (hours < 3) return 'Usually responds within a few hours'
-  if (hours < 24) return 'Usually responds same day'
-  return 'Usually responds within 1-2 days'
+  if (hours < 1) return 'Usually replies within an hour'
+  if (hours < 3) return 'Usually replies within a few hours'
+  if (hours < 24) return 'Usually replies the same day'
+  if (hours < 48) return 'Usually replies within a day or two'
+  return 'Usually replies within a few days'
 }
 
 function getListingPhotoAlt(
@@ -193,7 +234,11 @@ export function ListingDetailClient({
   shulDistances,
   avgResponseHours,
   servicesBarEnabled = true,
+  stayTerms = null,
 }: ListingDetailClientProps) {
+  const stayTimes = stayTimesLine(stayTerms?.check_in_time, stayTerms?.check_out_time)
+  const cancellation = cancellationPreset(stayTerms?.cancellation_policy)
+  const cancellationNotes = stayTerms?.cancellation_policy_notes?.trim() || null
   const [copiedLink, setCopiedLink] = useState(false)
   const [showGallery, setShowGallery] = useState(false)
   const [galleryIndex, setGalleryIndex] = useState(0)
@@ -263,13 +308,18 @@ export function ListingDetailClient({
         })
       : null
 
+  // Every price on the page is shown in the guest's chosen currency, converted
+  // from the one currency the stay is charged in (USD when set, else ILS — the
+  // same rule the checkout uses).
+  const chargeCurrency: ChargeCurrency | null = listing.price_usd ? 'USD' : listing.price_ils ? 'ILS' : null
+  const nightlyPrice = listing.price_usd || listing.price_ils || null
+  const bookingTotal = totalUSD ?? totalILS
+
   // Everything Shabbos/Jewish in one place — the kosher level, the Shabbos
   // booleans, and the Shabbos amenities — mirroring the single merged form section.
   const listingAmenities = listing.amenities || []
   const jewishStayFeatures = [
-    listing.kosher_kitchen_level
-      ? `Kosher kitchen — ${listing.kosher_kitchen_level === 'mehadrin' ? 'Mehadrin' : 'Kosher'}`
-      : null,
+    KOSHER_KITCHEN_LABELS[listing.kosher_kitchen_level ?? ''] ?? null,
     listing.shabbat_elevator ? 'Shabbos elevator' : null,
     listing.shabbat_clock ? 'Shabbos clock / timer' : null,
     listing.physical_key_entry ? 'Physical-key entry (no digital lock)' : null,
@@ -279,6 +329,14 @@ export function ListingDetailClient({
     listingAmenities.includes('Hot water urn') ? 'Hot water urn' : null,
     listingAmenities.includes('In eruv') ? 'In eruv' : null,
   ].filter((feature): feature is string => Boolean(feature))
+  const hiddenAmenities = [
+    ...ALWAYS_SHABBOS_AMENITIES,
+    ...jewishStayFeatures,
+    ...(Object.keys(SHABBOS_FEATURE_ALIASES) as ShabbosFeatureField[]).flatMap((field) =>
+      listing[field] ? SHABBOS_FEATURE_ALIASES[field] : [],
+    ),
+  ]
+  const hasGeneralAmenities = getVisibleAmenityGroups(listingAmenities, hiddenAmenities).length > 0
   useEffect(() => {
     const supabase = createClient()
     let isActive = true
@@ -382,12 +440,10 @@ export function ListingDetailClient({
   }
 
   const avgRating =
-    reviews.length >= 2
+    reviews.length > 0
       ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
       : null
   const maxGuests = listing.max_guests || 6
-  const priceIls = formatPrice(listing.price_ils)
-  const priceUsd = formatPrice(listing.price_usd)
   const allowsOnlinePayment = listing.online_payment_enabled
   const isEnquiryOnly = listing.booking_type === 'enquiry'
   // Instant book paid by bank transfer to the host (no live JLM card payment).
@@ -424,7 +480,7 @@ export function ListingDetailClient({
     allowsOnlinePayment || isInstantTransfer
       ? 'Book now'
       : listing.booking_type === 'enquiry'
-        ? 'Message host'
+        ? 'Message the host'
         : 'Request to book'
 
   const handleMobilePhotoDragStart = (event: PointerLikeEvent) => {
@@ -469,7 +525,7 @@ export function ListingDetailClient({
   }
 
   return (
-    <div className="min-h-screen bg-white pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-0">
+    <div className="min-h-screen bg-[#F8F5F2] pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-0">
       <div className="pb-28 lg:pb-8">
         <div className="mx-auto max-w-6xl px-5 py-8 md:px-8">
         <nav aria-label="Breadcrumb" className="mb-4 flex items-center gap-2 text-sm text-stone-500">
@@ -498,7 +554,7 @@ export function ListingDetailClient({
                 type="button"
                 onClick={handleShare}
                 className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-[#c76f55] hover:text-[#c76f55]"
-                aria-label="Share listing"
+                aria-label="Share this stay"
               >
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
@@ -659,7 +715,7 @@ export function ListingDetailClient({
               )}
             </>
           ) : (
-            <div className="flex aspect-[4/3] items-center justify-center rounded-3xl bg-[#F8F5F2] ring-1 ring-stone-100">
+            <div className="flex aspect-[4/3] items-center justify-center rounded-3xl bg-white ring-1 ring-stone-200">
               <div className="text-center">
                 <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">JLM Collective</p>
                 <p className="mt-2 text-sm text-stone-500">Photos coming soon</p>
@@ -746,9 +802,9 @@ export function ListingDetailClient({
 
             {listing.description && (
               <>
-                <hr className="border-stone-100" />
+                <hr className="border-stone-200" />
                 <div className="py-3">
-                  <h2 className="mb-3 text-lg font-bold text-stone-900">About this stay</h2>
+                  <h2 className="mb-3 text-lg font-semibold text-stone-900">About this stay</h2>
                   <p className="whitespace-pre-line text-base leading-8 text-stone-700">{listing.description}</p>
                 </div>
               </>
@@ -756,9 +812,9 @@ export function ListingDetailClient({
 
             {listing.sleeping_setup?.trim() && (
               <>
-                <hr className="border-stone-100" />
+                <hr className="border-stone-200" />
                 <div className="py-3">
-                  <h2 className="mb-3 text-lg font-bold text-stone-900">Room by room</h2>
+                  <h2 className="mb-3 text-lg font-semibold text-stone-900">Room by room</h2>
                   <div className="flex snap-x snap-mandatory gap-3.5 overflow-x-auto pb-2">
                     {listing.sleeping_setup
                       .split('\n')
@@ -793,31 +849,57 @@ export function ListingDetailClient({
               </>
             )}
 
-            {listing.house_rules?.trim() && (
+            {(listing.house_rules?.trim() || stayTimes) && (
               <>
                 <hr className="border-stone-100" />
                 <div className="py-3">
-                  <h2 className="text-lg font-bold text-stone-950">House rules</h2>
-                  <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-stone-700">
-                    {listing.house_rules}
-                  </p>
+                  <h2 className="text-lg font-semibold text-stone-950">House rules</h2>
+                  {stayTimes && (
+                    <p className="mt-3 text-sm font-semibold leading-7 text-stone-900">{stayTimes}</p>
+                  )}
+                  {listing.house_rules?.trim() && (
+                    <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-stone-700">
+                      {listing.house_rules}
+                    </p>
+                  )}
                 </div>
               </>
             )}
 
-            {listing.amenities && listing.amenities.length > 0 && (
+            <hr className="border-stone-200" />
+            <div className="py-3">
+              <h2 className="text-lg font-semibold text-stone-950">Cancellation policy</h2>
+              {cancellation ? (
+                <>
+                  <p className="mt-3 text-sm font-semibold text-stone-900">{cancellation.label}</p>
+                  <p className="mt-1 text-sm leading-7 text-stone-700">{cancellation.guestSentence}</p>
+                </>
+              ) : (
+                <p className="mt-3 text-sm leading-7 text-stone-700">{CANCELLATION_AGREED_GUEST_SENTENCE}</p>
+              )}
+              {cancellationNotes && (
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-stone-700" dir="auto">
+                  {cancellationNotes}
+                </p>
+              )}
+              {cancellation && (
+                <p className="mt-2 text-xs leading-5 text-stone-500">{DIRECT_PAYMENT_REFUND_NOTE}</p>
+              )}
+            </div>
+
+            {hasGeneralAmenities && (
               <>
-                <hr className="border-stone-100" />
+                <hr className="border-stone-200" />
                 <div className="py-3">
-                  <h2 className="mb-3 text-lg font-bold text-stone-900">Amenities</h2>
-                  <AmenityDisplay amenities={listing.amenities} />
+                  <h2 className="mb-3 text-lg font-semibold text-stone-900">Amenities</h2>
+                  <AmenityDisplay amenities={listingAmenities} hide={hiddenAmenities} />
                 </div>
               </>
             )}
 
             {jewishStayFeatures.length > 0 && (
               <>
-                <hr className="border-stone-100" />
+                <hr className="border-stone-200" />
                 <div className="py-3">
                   <h2 className="mb-3 text-lg font-bold text-stone-900">Shabbos &amp; Jewish stay</h2>
                   <div className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
@@ -836,10 +918,10 @@ export function ListingDetailClient({
 
             {listing.area && (
               <>
-                <hr className="border-stone-100" />
+                <hr className="border-stone-200" />
                 <div className="py-3">
                   <div className="flex items-center justify-between gap-4">
-                    <h2 className="font-display text-xl font-bold text-stone-950">
+                    <h2 className="text-xl font-semibold text-stone-950">
                       About {listing.area}
                     </h2>
                   </div>
@@ -849,7 +931,7 @@ export function ListingDetailClient({
                     </p>
                   ) : (
                     <p className="mt-3 text-sm text-stone-500">
-                      {listing.area} is one of Jerusalem&apos;s most sought-after neighbourhoods for short-term stays.
+                      Want to know more about {listing.area}? Message the host and ask.
                     </p>
                   )}
                   {shulDistances.length > 0 && (
@@ -877,9 +959,9 @@ export function ListingDetailClient({
 
             {listing.latitude !== null && listing.longitude !== null && (
               <>
-                <hr className="border-stone-100" />
+                <hr className="border-stone-200" />
                 <div className="py-3">
-                  <h2 className="font-display text-xl font-bold text-stone-950">
+                  <h2 className="text-xl font-semibold text-stone-950">
                     Location
                   </h2>
                   <div className="mt-4 overflow-hidden rounded-3xl border border-stone-200 bg-[#F8F5F2] shadow-sm">
@@ -896,13 +978,13 @@ export function ListingDetailClient({
 
             {servicesBarEnabled && listing.host_id && (
               <>
-                <hr className="border-stone-100" />
+                <hr className="border-stone-200" />
                 <div className="py-3">
-                  <h2 className="text-lg font-bold text-stone-950">Enhance your stay</h2>
+                  <h2 className="text-lg font-semibold text-stone-950">Extras for your stay</h2>
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
                     <Link
                       href="/services/catering"
-                      className="flex items-center gap-3 rounded-2xl border border-stone-200 bg-[#F8F5F2] px-4 py-4 transition hover:border-[#c76f55] hover:bg-white"
+                      className="flex items-center gap-3 rounded-2xl border border-stone-200 bg-white px-4 py-4 transition hover:border-[#c76f55]"
                     >
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c76f55" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" />
@@ -911,20 +993,20 @@ export function ListingDetailClient({
                       </svg>
                       <div>
                         <p className="text-sm font-bold text-stone-950">Catering & meals</p>
-                        <p className="text-xs text-stone-500">Shabbos packages, custom menus</p>
+                        <p className="text-xs text-stone-500">Shabbos meals and menus made for you</p>
                       </div>
                     </Link>
 
                     <Link
                       href="/services/cleaning"
-                      className="flex items-center gap-3 rounded-2xl border border-stone-200 bg-[#F8F5F2] px-4 py-4 transition hover:border-[#c76f55] hover:bg-white"
+                      className="flex items-center gap-3 rounded-2xl border border-stone-200 bg-white px-4 py-4 transition hover:border-[#c76f55]"
                     >
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c76f55" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
                       </svg>
                       <div>
                         <p className="text-sm font-bold text-stone-950">Housekeeping</p>
-                        <p className="text-xs text-stone-500">Mid-stay cleaning arranged</p>
+                        <p className="text-xs text-stone-500">A clean during your stay</p>
                       </div>
                     </Link>
                   </div>
@@ -932,25 +1014,21 @@ export function ListingDetailClient({
               </>
             )}
 
-            <hr className="border-stone-100" />
-            <div id="reviews" className="scroll-mt-24 py-8">
-              <h2 className="mb-3 text-lg font-bold text-stone-900">Reviews ({reviews.length})</h2>
-              {reviews.length === 0 ? (
-                <p className="text-sm text-stone-500">No reviews yet.</p>
-              ) : (
-                <>
-                  {avgRating !== null && (
-                    <div className="mb-6 flex items-center gap-3">
-                      <StarRating rating={Math.round(avgRating)} />
-                      <span className="text-sm font-bold text-stone-950">{avgRating.toFixed(1)}</span>
-                      <span className="text-sm text-stone-500">
-                        ({reviews.length} review{reviews.length === 1 ? '' : 's'})
-                      </span>
-                    </div>
-                  )}
+            {reviews.length > 0 && avgRating !== null && (
+              <>
+                <hr className="border-stone-200" />
+                <div id="reviews" className="scroll-mt-24 py-8">
+                  <h2 className="mb-3 text-lg font-semibold text-stone-900">Reviews</h2>
+                  <div className="mb-6 flex items-center gap-3">
+                    <StarRating rating={Math.round(avgRating)} />
+                    <span className="text-sm font-bold text-stone-950">{avgRating.toFixed(1)}</span>
+                    <span className="text-sm text-stone-500">
+                      ({reviews.length} review{reviews.length === 1 ? '' : 's'})
+                    </span>
+                  </div>
                   <div className="space-y-3">
                     {reviews.map((review) => (
-                      <div key={review.id} className="rounded-xl bg-[#F8F5F2] p-4">
+                      <div key={review.id} className="rounded-xl bg-white p-4 ring-1 ring-stone-200">
                         <div className="mb-2 flex items-center justify-between">
                           <p className="text-sm font-semibold text-stone-900">{review.reviewer_name}</p>
                           <StarRating rating={review.rating} />
@@ -959,15 +1037,15 @@ export function ListingDetailClient({
                       </div>
                     ))}
                   </div>
-                </>
-              )}
-            </div>
+                </div>
+              </>
+            )}
 
             {similarListings.length > 0 && (
               <>
-                <hr className="border-stone-100" />
+                <hr className="border-stone-200" />
                 <div className="py-3">
-                  <h2 className="mb-4 text-xl font-bold text-stone-950">You might also like</h2>
+                  <h2 className="mb-4 text-xl font-semibold text-stone-950">You might also like</h2>
                   <div className="grid gap-4 md:grid-cols-3">
                     {similarListings.map((similarListing) => (
                       <Link
@@ -983,11 +1061,23 @@ export function ListingDetailClient({
                           {similarListing.bedrooms || 0} bedrooms {'\u00b7'} sleeps {similarListing.max_guests || 0}
                         </p>
                         <p className="mt-4 text-sm font-semibold text-stone-900">
-                          {formatListingPrice(similarListing)}
+                          {similarListing.price_usd || similarListing.price_ils ? (
+                            <>
+                              <ListingPrice
+                                priceUsd={similarListing.price_usd || null}
+                                priceIls={similarListing.price_usd ? null : similarListing.price_ils || null}
+                                fallback={formatListingPrice(similarListing)}
+                              />
+                              <span className="font-normal text-stone-500"> / night</span>
+                            </>
+                          ) : (
+                            formatListingPrice(similarListing)
+                          )}
                         </p>
                       </Link>
                     ))}
                   </div>
+                  <SimilarStaysPriceNote listings={similarListings} />
                 </div>
               </>
             )}
@@ -996,17 +1086,14 @@ export function ListingDetailClient({
           <div className="hidden lg:block">
             <div className="lg:sticky lg:top-8">
               <div className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-xl shadow-stone-200/60">
-                <div className="mb-5 flex items-baseline gap-1.5">
-                  <span className="text-2xl font-bold text-stone-950">
-                    {listing.price_usd
-                      ? `$${Number(listing.price_usd).toLocaleString()}`
-                      : listing.price_ils
-                        ? `\u20aa${Number(listing.price_ils).toLocaleString()}`
-                        : 'Price on request'}
-                  </span>
-                  {(listing.price_usd || listing.price_ils) && (
-                    <span className="text-sm text-stone-500">/ night</span>
-                  )}
+                <div className="mb-5">
+                  <PriceSummary
+                    chargeCurrency={chargeCurrency}
+                    nightlyPrice={nightlyPrice}
+                    total={bookingTotal}
+                    nights={nights}
+                    guests={guestCount}
+                  />
                 </div>
                 <BookingControls
                   listing={listing}
@@ -1025,7 +1112,7 @@ export function ListingDetailClient({
                   onEnquiryCreated={handleEnquiryCreated}
                   blockedRanges={availability}
                 />
-                <PaymentClarityNote allowsOnlinePayment={allowsOnlinePayment} instantTransfer={isInstantTransfer} />
+                <PaymentClarityNote allowsOnlinePayment={allowsOnlinePayment} instantTransfer={isInstantTransfer} cancellationSummary={cancellation?.summary} />
                 {avgResponseHours !== null && (
                   <p className="mt-4 text-center text-xs text-stone-500">
                     {formatResponseTime(avgResponseHours)}
@@ -1040,17 +1127,15 @@ export function ListingDetailClient({
 
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-stone-200 bg-white px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 shadow-lg lg:hidden">
         <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-lg font-bold text-stone-950">
-              {listing.price_usd
-                ? `$${Number(listing.price_usd).toLocaleString()}`
-                : listing.price_ils
-                  ? `\u20aa${Number(listing.price_ils).toLocaleString()}`
-                  : 'Price on request'}
-            </p>
-            {(listing.price_usd || listing.price_ils) && (
-              <p className="text-xs text-stone-500">per night</p>
-            )}
+          <div className="min-w-0">
+            <PriceSummary
+              chargeCurrency={chargeCurrency}
+              nightlyPrice={nightlyPrice}
+              total={bookingTotal}
+              nights={nights}
+              guests={guestCount}
+              compact
+            />
           </div>
           {showContinueAsPrimary ? (
             <Link
@@ -1108,7 +1193,13 @@ export function ListingDetailClient({
                 </button>
               </div>
               <div className="mb-6 rounded-xl bg-[#F8F5F2] p-4">
-                <Pricing priceIls={priceIls} priceUsd={priceUsd} />
+                <PriceSummary
+                  chargeCurrency={chargeCurrency}
+                  nightlyPrice={nightlyPrice}
+                  total={bookingTotal}
+                  nights={nights}
+                  guests={guestCount}
+                />
               </div>
               <BookingControls
                 listing={listing}
@@ -1128,12 +1219,12 @@ export function ListingDetailClient({
                 blockedRanges={availability}
                 mobile
               />
-              <PaymentClarityNote allowsOnlinePayment={allowsOnlinePayment} instantTransfer={isInstantTransfer} />
+              <PaymentClarityNote allowsOnlinePayment={allowsOnlinePayment} instantTransfer={isInstantTransfer} cancellationSummary={cancellation?.summary} />
               <div className="mt-5 space-y-2.5 border-t border-stone-100 pt-5">
                 {[
-                  'Personally reviewed by JLM Collective',
-                  'All hosts are identity verified',
-                  'Support available throughout your stay',
+                  'Checked in person by JLM Collective',
+                  'Every stay is checked before it goes live',
+                  'Real people to help if something isn\u2019t right',
                 ].map((point) => (
                   <div key={point} className="flex items-center gap-2.5">
                     <svg
@@ -1197,14 +1288,125 @@ function BackToSearchLink() {
   )
 }
 
-function Pricing({ priceIls, priceUsd }: { priceIls: string | null; priceUsd: string | null }) {
+type ChargeCurrency = 'USD' | 'ILS'
+
+// One amount in the guest's chosen currency, converted from the currency the
+// stay is charged in. When the guest already uses the charge currency, show
+// the exact figure (pennies included) rather than the rounded conversion.
+function Money({ amount, currency }: { amount: number; currency: ChargeCurrency }) {
+  const { currency: guestCurrency, ready } = useCurrency()
+  const exact = formatCurrencyAmount(currency, amount)
+
+  if (ready && guestCurrency === currency) return <>{exact}</>
+
   return (
-    <div className="mb-6">
-      <p className="text-2xl font-bold text-stone-900">
-        {priceIls ? `\u20aa${priceIls}` : priceUsd ? `$${priceUsd}` : 'Price on request'}
-        {(priceIls || priceUsd) && <span className="ml-1 text-base font-normal text-stone-500">/ night</span>}
+    <ListingPrice
+      priceUsd={currency === 'USD' ? amount : null}
+      priceIls={currency === 'ILS' ? amount : null}
+      fallback={exact}
+    />
+  )
+}
+
+// True once rates have loaded and the guest's currency is not the one the
+// stay is charged in — converted figures are then only approximate.
+function useShowsConvertedPrices(chargeCurrency: ChargeCurrency | null) {
+  const { currency, ready } = useCurrency()
+  return Boolean(chargeCurrency) && ready && currency !== chargeCurrency
+}
+
+function ConvertedPriceNote({
+  chargeCurrency,
+  className = 'mt-2 text-xs leading-5 text-stone-500',
+}: {
+  chargeCurrency: ChargeCurrency | null
+  className?: string
+}) {
+  const showsConverted = useShowsConvertedPrices(chargeCurrency)
+  if (!showsConverted || !chargeCurrency) return null
+
+  return (
+    <p className={className}>
+      Converted from {chargeCurrency} at today&apos;s rate, so figures are approximate. You pay in {chargeCurrency}.
+    </p>
+  )
+}
+
+function SimilarStaysPriceNote({ listings }: { listings: SimilarListing[] }) {
+  const { currency, ready } = useCurrency()
+  const converted =
+    ready &&
+    listings.some((similarListing) => {
+      const listingCurrency = similarListing.price_usd ? 'USD' : similarListing.price_ils ? 'ILS' : null
+      return listingCurrency !== null && listingCurrency !== currency
+    })
+  if (!converted) return null
+
+  return <p className="mt-3 text-xs text-stone-500">Prices are converted to {currency} and are approximate.</p>
+}
+
+// Nightly price before dates are chosen; the total for the stay once they are,
+// with the nights, guests and nightly rate underneath.
+function PriceSummary({
+  chargeCurrency,
+  nightlyPrice,
+  total,
+  nights,
+  guests,
+  compact = false,
+}: {
+  chargeCurrency: ChargeCurrency | null
+  nightlyPrice: number | null
+  total: number | null
+  nights: number
+  guests: number
+  compact?: boolean
+}) {
+  const showsConverted = useShowsConvertedPrices(chargeCurrency)
+
+  if (!chargeCurrency || !nightlyPrice) {
+    return (
+      <p className={`${compact ? 'text-lg' : 'text-2xl'} font-bold text-stone-950`}>Price on request</p>
+    )
+  }
+
+  if (total !== null && nights > 0) {
+    return (
+      <div>
+        <p className={`${compact ? 'text-lg' : 'text-2xl'} font-bold text-stone-950`}>
+          {compact && showsConverted && <span aria-label="approximately">{'\u2248 '}</span>}
+          <Money amount={total} currency={chargeCurrency} />
+          <span className={`ml-1 ${compact ? 'text-xs' : 'text-sm'} font-normal text-stone-500`}>total</span>
+        </p>
+        <p className={`${compact ? 'truncate text-xs' : 'mt-0.5 text-sm'} text-stone-500`}>
+          {nights} night{nights === 1 ? '' : 's'} {'\u00b7'} {guests} guest{guests === 1 ? '' : 's'} {'\u00b7'}{' '}
+          <Money amount={nightlyPrice} currency={chargeCurrency} /> / night
+        </p>
+        {!compact && <ConvertedPriceNote chargeCurrency={chargeCurrency} />}
+      </div>
+    )
+  }
+
+  if (compact) {
+    return (
+      <div>
+        <p className="text-lg font-bold text-stone-950">
+          <Money amount={nightlyPrice} currency={chargeCurrency} />
+        </p>
+        <p className="text-xs text-stone-500">per night{showsConverted ? ' · approx.' : ''}</p>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <p className="flex items-baseline gap-1.5">
+        <span className="text-2xl font-bold text-stone-950">
+          <Money amount={nightlyPrice} currency={chargeCurrency} />
+        </span>
+        <span className="text-sm text-stone-500">/ night</span>
       </p>
-      {priceIls && priceUsd && <p className="text-sm text-stone-500">~${priceUsd} USD / night</p>}
+      <ConvertedPriceNote chargeCurrency={chargeCurrency} />
     </div>
   )
 }
@@ -1212,42 +1414,47 @@ function Pricing({ priceIls, priceUsd }: { priceIls: string | null; priceUsd: st
 function PaymentClarityNote({
   allowsOnlinePayment,
   instantTransfer = false,
+  cancellationSummary = null,
 }: {
   allowsOnlinePayment: boolean
   instantTransfer?: boolean
+  // Short preset summary (lib/stay-terms.ts); null = agreed with the host.
+  cancellationSummary?: string | null
 }) {
   return (
     <div className="mt-4 border-t border-stone-100 pt-4 text-center">
       {instantTransfer ? (
         <>
           <p className="text-xs leading-5 text-stone-500">
-            No card payment is taken. Your stay is confirmed as soon as you book.
+            You don&rsquo;t pay by card here. Your stay is booked as soon as you tap Book now.
           </p>
           <p className="mt-1 text-xs leading-5 text-stone-500">
-            You pay the host directly by bank transfer, on the schedule we email you.
+            You pay the host by bank transfer, on the dates we email you.
           </p>
         </>
       ) : allowsOnlinePayment ? (
         <>
           <p className="text-xs leading-5 text-stone-500">
-            You will review the payment step before anything is charged.
+            You&rsquo;ll see the payment details before anything is charged.
           </p>
           <p className="mt-1 text-xs leading-5 text-stone-500">
-            Your stay is confirmed once payment is complete.
+            Your stay is booked once your payment goes through.
           </p>
         </>
       ) : (
         <>
           <p className="text-xs leading-5 text-stone-500">
-            No payment is taken when you send a request.
+            Sending a request is free. You won&rsquo;t pay anything yet.
           </p>
           <p className="mt-1 text-xs leading-5 text-stone-500">
-            Your stay is confirmed only after the host accepts your dates and the agreed payment step is complete.
+            Your stay is booked once the host says yes to your dates and you&rsquo;ve paid as agreed.
           </p>
         </>
       )}
       <p className="mt-1 text-xs leading-5 text-stone-500">
-        Cancellation and refund terms are agreed with the host before you pay.
+        {cancellationSummary
+          ? `Cancellation: ${cancellationSummary}.`
+          : 'You\u2019ll agree cancellation and refund terms with the host before you pay.'}
       </p>
     </div>
   )
@@ -1288,7 +1495,7 @@ function BookNowButton({
 
   const handleBookNow = async () => {
     if (!dateRange.from || !dateRange.to) {
-      setPaymentError('Choose check-in and check-out dates first.')
+      setPaymentError('Please choose your check-in and check-out dates first.')
       return
     }
 
@@ -1312,7 +1519,7 @@ function BookNowButton({
       }
 
       if (!response.ok || !result.checkoutUrl) {
-        throw new Error(result.error || 'Could not start checkout.')
+        throw new Error(result.error || 'We couldn\u2019t open the payment page. Please try again.')
       }
 
       window.location.href = result.checkoutUrl
@@ -1320,7 +1527,7 @@ function BookNowButton({
       setPaymentError(
         error instanceof Error
           ? error.message
-          : 'Could not start checkout.',
+          : 'We couldn\u2019t open the payment page. Please try again.',
       )
     } finally {
       setIsStartingPayment(false)
@@ -1335,14 +1542,14 @@ function BookNowButton({
         onClick={handleBookNow}
         className="flex min-h-11 w-full items-center justify-center rounded-full bg-stone-950 px-5 py-0 text-center text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-500 disabled:shadow-none"
       >
-        {isStartingPayment ? 'Opening checkout...' : 'Book now'}
+        {isStartingPayment ? 'Opening payment...' : 'Book now'}
       </button>
       {paymentError && (
         <p className="mt-2 text-center text-xs text-rose-600">{paymentError}</p>
       )}
       {!paymentError && (
         <p className="mt-2 text-center text-xs text-stone-500">
-          {disabled ? 'Choose dates to continue' : 'Deposit due at checkout'}
+          {disabled ? 'Choose your dates to book' : 'You\u2019ll pay the deposit on the next page'}
         </p>
       )}
     </div>
@@ -1398,7 +1605,7 @@ function InstantBookButton({
   const handleBook = async () => {
     if (isBooking) return
     if (!dateRange.from || !dateRange.to) {
-      setBookingError('Choose check-in and check-out dates first.')
+      setBookingError('Please choose your check-in and check-out dates first.')
       return
     }
 
@@ -1479,7 +1686,7 @@ function InstantBookButton({
           {booked.guests} guest{booked.guests === 1 ? '' : 's'}
         </p>
         <p className="mt-1 text-sm leading-6 text-stone-700">
-          Your stay is confirmed and the host has been notified. We&rsquo;ve emailed you the confirmation.
+          Your stay is booked and we&rsquo;ve let the host know. We&rsquo;re also emailing you the details.
         </p>
 
         <div className="mt-3 rounded-xl bg-white p-3 text-sm ring-1 ring-emerald-100">
@@ -1499,7 +1706,7 @@ function InstantBookButton({
             ))}
             {payment.howToPay.length > 0 && (
               <div className="border-t border-stone-100 pt-2">
-                <span className="text-stone-500">Bank transfer &mdash; tap any detail to copy</span>
+                <span className="text-stone-500">Bank transfer: tap any detail to copy it</span>
                 <PayoutCopyRows rows={payment.howToPay} />
               </div>
             )}
@@ -1507,7 +1714,7 @@ function InstantBookButton({
               <p className="whitespace-pre-line border-t border-stone-100 pt-2">{payment.instructions}</p>
             )}
             {!hasTransferDetails && (
-              <p className="text-stone-600">The host will send you their bank transfer details.</p>
+              <p className="text-stone-600">The host will send you their bank details.</p>
             )}
           </div>
         </div>
@@ -1549,7 +1756,7 @@ function InstantBookButton({
         <p className="mt-2 text-center text-xs text-stone-500">{disabledReason}</p>
       )}
       <p className="mt-1.5 text-center text-xs text-stone-500">
-        Confirmed instantly · pay the host by bank transfer
+        Booked straight away · pay the host by bank transfer
       </p>
     </div>
   )
@@ -1600,31 +1807,27 @@ function BookingControls({
     !allowsOnlinePayment &&
     listing.booking_type !== 'instant' &&
     (isEnquiryOnly || hasEnquiry)
-  const alreadyAskedMessage = 'You already asked for these dates. Choose different dates, or open your conversation.'
+  const alreadyAskedMessage = 'You\u2019ve already asked about these dates. Choose other dates, or open your messages with the host.'
   const hasDates = Boolean(dateRange.from && dateRange.to)
-  const dateRequiredMessage = 'Choose dates first.'
+  const dateRequiredMessage = 'Choose your dates first.'
   const minNights = listing.min_nights || 1
   const belowMin = nights > 0 && nights < minNights
-  const minNightsMessage = `Minimum stay is ${minNights} nights.`
+  const minNightsMessage = `This stay needs at least ${minNights} nights.`
 
-  // Base nightly line excludes the extra-guest surcharge, which gets its own line.
-  const perNightILS = totalILS && nights && listing.price_ils ? Math.round(listing.price_ils) : null
-  const perNightUSD = totalUSD && nights && listing.price_usd ? Math.round(listing.price_usd) : null
-  const baseILS = totalILS && listing.price_ils ? nights * listing.price_ils : null
-  const baseUSD = totalUSD && listing.price_usd ? nights * listing.price_usd : null
-  const extraGuests = computeExtraGuests(guestCount, listing.included_guests, listing.max_guests)
-  const extraILS = totalILS != null && baseILS != null ? Math.round((totalILS - baseILS) * 100) / 100 : 0
-  const extraUSD = totalUSD != null && baseUSD != null ? Math.round((totalUSD - baseUSD) * 100) / 100 : 0
-  const formatDual = (ils: number | null, usd: number | null) =>
-    [ils ? `₪${ils.toLocaleString()}` : null, usd ? `$${usd.toLocaleString()}` : null]
-      .filter(Boolean)
-      .join(' / ') || 'Price on request'
-
-  // Pre-checkout deposit/balance preview. Single currency — the one Stripe actually
-  // charges (USD when set, else ILS) — derived from the computed total so currency
-  // and amount can never disagree. Only when a real online booking is possible.
-  const bookingCurrency: 'USD' | 'ILS' = totalUSD != null ? 'USD' : 'ILS'
+  // Pre-checkout breakdown and deposit/balance preview. Single currency — the
+  // one Stripe actually charges (USD when set, else ILS) — derived from the
+  // computed total so currency and amount can never disagree. Shown to the
+  // guest converted into their chosen currency via <Money>.
+  const bookingCurrency: ChargeCurrency = totalUSD != null ? 'USD' : 'ILS'
   const bookingTotal = totalUSD != null ? totalUSD : totalILS
+  const nightlyPrice = bookingCurrency === 'USD' ? listing.price_usd : listing.price_ils
+  // Base nightly line excludes the extra-guest surcharge, which gets its own line.
+  const baseTotal = bookingTotal != null && nightlyPrice ? nights * nightlyPrice : null
+  const extraGuests = computeExtraGuests(guestCount, listing.included_guests, listing.max_guests)
+  const extraTotal =
+    bookingTotal != null && baseTotal != null ? Math.round((bookingTotal - baseTotal) * 100) / 100 : 0
+
+  // The deposit preview only shows when a real online booking is possible.
   const depositPreview =
     allowsOnlinePayment && !belowMin && nights > 0 && bookingTotal && dateRange.from
       ? computeDepositPreview({
@@ -1644,39 +1847,49 @@ function BookingControls({
           setDateRange={setDateRange}
           blockedRanges={blockedRanges}
         />
-        {nights > 0 && (
+        {nights > 0 && bookingTotal != null && nightlyPrice && baseTotal != null && (
           <div className="mt-3 space-y-2 rounded-2xl border border-stone-200 bg-[#F8F5F2] px-4 py-3">
             <div className="flex items-center justify-between gap-3 text-sm text-stone-600">
               <span>
-                {formatDual(perNightILS, perNightUSD)} {'\u00d7'} {nights} night{nights === 1 ? '' : 's'}
+                <Money amount={nightlyPrice} currency={bookingCurrency} /> {'\u00d7'} {nights} night{nights === 1 ? '' : 's'}
               </span>
-              <span className="text-stone-900">{formatDual(baseILS, baseUSD)}</span>
+              <span className="text-stone-900">
+                <Money amount={baseTotal} currency={bookingCurrency} />
+              </span>
             </div>
-            {(extraILS > 0 || extraUSD > 0) && (
+            {extraTotal > 0 && (
               <div className="flex items-center justify-between gap-3 text-sm text-stone-600">
                 <span>
                   {extraGuests} extra guest{extraGuests === 1 ? '' : 's'} {'\u00d7'} {nights} night{nights === 1 ? '' : 's'}
                 </span>
-                <span className="text-stone-900">{formatDual(extraILS || null, extraUSD || null)}</span>
+                <span className="text-stone-900">
+                  <Money amount={extraTotal} currency={bookingCurrency} />
+                </span>
               </div>
             )}
             <div className="flex items-center justify-between gap-3 text-sm text-stone-500">
-              <span>Booking fees</span>
+              <span>Booking fee</span>
               <span>None</span>
             </div>
             <div className="flex items-center justify-between gap-3 border-t border-stone-200 pt-2 text-sm font-bold text-stone-950">
               <span>Total</span>
-              <span>{formatDual(totalILS, totalUSD)}</span>
+              <span>
+                <Money amount={bookingTotal} currency={bookingCurrency} />
+              </span>
             </div>
             {depositPreview && depositPreview.balanceStatus === 'due' && (
               <>
                 <div className="flex items-center justify-between gap-3 text-sm font-bold text-stone-950">
                   <span>Pay now</span>
-                  <span>{formatCurrencyAmount(bookingCurrency, depositPreview.depositAmount)}</span>
+                  <span>
+                    <Money amount={depositPreview.depositAmount} currency={bookingCurrency} />
+                  </span>
                 </div>
                 <div className="flex items-center justify-between gap-3 text-sm text-stone-600">
                   <span>Balance on {formatBookingDate(formatDateISO(depositPreview.balanceDueDate))}</span>
-                  <span>{formatCurrencyAmount(bookingCurrency, depositPreview.balanceAmount)}</span>
+                  <span>
+                    <Money amount={depositPreview.balanceAmount} currency={bookingCurrency} />
+                  </span>
                 </div>
               </>
             )}
@@ -1688,7 +1901,7 @@ function BookingControls({
               <path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
             </svg>
             <span>
-              Minimum stay is {minNights} nights &mdash; add {minNights - nights} more night
+              This stay needs at least {minNights} nights. Please add {minNights - nights} more night
               {minNights - nights === 1 ? '' : 's'}.
             </span>
           </div>
@@ -1736,7 +1949,7 @@ function BookingControls({
                 dateRange={dateRange}
                 guests={guestCount}
                 disabled={!hasDates || belowMin}
-                disabledReason={belowMin ? minNightsMessage : 'Choose dates to continue'}
+                disabledReason={belowMin ? minNightsMessage : 'Choose your dates to book'}
               />
             )}
             {!allowsOnlinePayment && !isEnquiryOnly && !isInstantTransfer && (
@@ -1780,7 +1993,7 @@ function BookingControls({
                 hostId={listing.host_id}
                 guests={guestCount}
                 intent="message"
-                buttonLabel="Message host"
+                buttonLabel="Message the host"
                 showIcon={false}
                 buttonClassName="flex min-h-11 w-full items-center justify-center rounded-full bg-stone-950 px-5 py-0 text-center text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800"
                 onConversationCreated={onConversationCreated}
@@ -1788,7 +2001,7 @@ function BookingControls({
             )}
             {!hasDates && !isEnquiryOnly && !isInstantTransfer && (
               <p className="text-center text-xs text-stone-500">
-                Choose dates to request this stay.
+                Choose your dates to send a booking request.
               </p>
             )}
           </div>
@@ -1817,28 +2030,33 @@ function HostCard({
 
   return (
     <div className="mt-6 border-t border-stone-100 pt-6">
-      <Link href={`/hosts/${host.id}`} className="flex items-center gap-3 rounded-xl p-2 transition hover:bg-stone-50">
-        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-stone-200">
+      <Link href={`/hosts/${host.id}`} className="flex items-start gap-4 rounded-xl p-2 transition hover:bg-stone-50">
+        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-stone-200">
           {host.profile_photo_url ? (
-            <Image src={host.profile_photo_url} alt={publicHostName} width={48} height={48} className="h-full w-full object-cover" />
+            <Image src={host.profile_photo_url} alt={publicHostName} width={64} height={64} className="h-full w-full object-cover" />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#c76f55] to-[#a85a45] text-lg font-bold text-white">
+            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#c76f55] to-[#a85a45] text-2xl font-bold text-white">
               {publicHostName.charAt(0).toUpperCase()}
             </div>
           )}
         </div>
-        <div className="flex-1">
-          <p className="text-sm font-semibold text-stone-900">Hosted by {publicHostName}</p>
-          <div className="flex items-center gap-2 text-xs text-stone-500">
-            {host.is_verified && (
+        <div className="min-w-0 flex-1">
+          <p className="text-base font-semibold text-stone-900">Hosted by {publicHostName}</p>
+          {host.is_verified && (
+            <div className="mt-0.5 flex items-center gap-2 text-xs text-stone-500">
               <span className="flex items-center gap-1 text-green-600">
                 <CheckCircleIcon />
                 Verified host
               </span>
-            )}
-          </div>
+            </div>
+          )}
+          <p className="mt-1.5 line-clamp-3 text-sm leading-6 text-stone-600">
+            {host.bio || `Got a question before you book? Send ${publicHostName} a message.`}
+          </p>
         </div>
-        <ChevronRightIcon />
+        <span className="mt-5 shrink-0">
+          <ChevronRightIcon />
+        </span>
       </Link>
       {/* Talk to the host without committing to dates — a plain message,
           separate from "Request to book" (which carries the dates). */}
@@ -1849,7 +2067,7 @@ function HostCard({
           hostId={hostUserId}
           guests={guests}
           intent="message"
-          buttonLabel="Message host"
+          buttonLabel="Message the host"
           buttonClassName="flex w-full items-center justify-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2.5 text-sm font-semibold text-stone-700 transition hover:border-[#c76f55] hover:text-[#c76f55]"
         />
       </div>

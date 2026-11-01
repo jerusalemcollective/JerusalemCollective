@@ -10,10 +10,10 @@ export default function AuthErrorPage() {
           className="mx-auto h-10 w-auto"
         />
         <h1 className="font-display mt-8 text-2xl font-bold text-stone-950">
-          We could not verify that link
+          That link didn&apos;t work
         </h1>
         <p className="mt-3 text-sm leading-6 text-stone-500">
-          The confirmation link may have expired or already been used. Try signing in, or create the account again if needed.
+          The link may be old or already used. Try signing in. If that doesn&apos;t work, you can create your account again.
         </p>
         <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
           <Link

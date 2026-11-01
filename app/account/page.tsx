@@ -171,7 +171,7 @@ export default async function GuestDashboardPage() {
 
       <div>
         <h2 className="text-xl font-bold text-stone-900">Welcome back, {firstName}</h2>
-        <p className="mt-0.5 text-sm text-stone-500">Here&rsquo;s what&rsquo;s happening with your trips.</p>
+        <p className="mt-0.5 text-sm text-stone-500">Here&rsquo;s where your trips are up to.</p>
       </div>
 
       {/* Next trip */}
@@ -202,12 +202,12 @@ export default async function GuestDashboardPage() {
             <CalendarDays className="h-6 w-6 text-stone-400" />
           </div>
           <p className="font-semibold text-stone-900">No upcoming trips</p>
-          <p className="mt-1 text-sm text-stone-600">When you book a stay, it will show up here.</p>
+          <p className="mt-1 text-sm text-stone-600">When you book a stay, you&rsquo;ll see it here.</p>
           <Link
             href="/stays"
             className="mt-4 inline-flex rounded-lg bg-[#252525] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#111111]"
           >
-            Browse stays
+            Find a stay
           </Link>
         </div>
       )}

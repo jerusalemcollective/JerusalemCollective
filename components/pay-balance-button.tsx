@@ -22,13 +22,13 @@ export function PayBalanceButton({ bookingPaymentId, label }: PayBalanceButtonPr
       })
       const data = (await response.json().catch(() => ({}))) as { checkoutUrl?: string; error?: string }
       if (!response.ok || !data.checkoutUrl) {
-        setError(data.error || 'Could not start the payment. Please try again.')
+        setError(data.error || 'We couldn’t open the payment page. Please try again.')
         setLoading(false)
         return
       }
       window.location.href = data.checkoutUrl
     } catch {
-      setError('Could not start the payment. Please try again.')
+      setError('We couldn’t open the payment page. Please try again.')
       setLoading(false)
     }
   }

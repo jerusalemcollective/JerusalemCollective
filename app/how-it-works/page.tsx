@@ -6,14 +6,14 @@ export const revalidate = 86400
 export const metadata = {
   title: 'How It Works',
   description:
-    'How to find and book a verified Jerusalem stay through JLM Collective \u2014 simple, personal, and transparent.',
+    'How to find and book a Jerusalem stay with JLM Collective, step by step: find a home, message the host, agree the details and pay.',
   alternates: {
     canonical: '/how-it-works',
   },
   openGraph: {
     title: 'How It Works | JLM Collective',
     description:
-      'How to find and book a verified Jerusalem stay through JLM Collective \u2014 simple, personal, and transparent.',
+      'How to find and book a Jerusalem stay with JLM Collective, step by step: find a home, message the host, agree the details and pay.',
     url: '/how-it-works',
     type: 'website',
     ...ogImages('How JLM Collective works'),
@@ -26,65 +26,65 @@ export const metadata = {
 
 const steps = [
   {
-    title: 'Browse verified stays',
+    title: 'Find a stay you like',
     description:
-      'Every listing on JLM Collective has been personally reviewed by our team. Browse by neighbourhood, dates, amenities, or what matters most to you.',
+      'Our team looks at every home on JLM Collective before it goes live. Search by neighbourhood, dates, or what you need for Shabbos and Yom Tov.',
   },
   {
     title: 'Message the host',
     description:
-      'Send a free message to the host with your dates and any questions. No commitment required. Most hosts reply within a few hours.',
+      'Send the host your dates and any questions. It\u2019s free, and it doesn\u2019t commit you to anything.',
   },
   {
-    title: 'Confirm the details',
+    title: 'Agree the details',
     description:
-      'Once you are both happy, the host confirms availability and you agree the details together.',
+      'When you\u2019re both happy, the host confirms your dates and you agree the details together. Some stays can be booked straight away.',
   },
   {
-    title: 'Arrange payment',
+    title: 'Pay',
     description:
-      'Once the booking details are confirmed, we guide the payment step. Where online payment is available, JLM Collective collects payment as agent for the host; some hosts may arrange payment directly.',
+      'Once your booking details are agreed, we\u2019ll show you how to pay. Where you can pay online, JLM Collective takes the payment as agent for the host. Some hosts ask you to pay them directly.',
   },
   {
-    title: 'Receive check-in details',
+    title: 'Get your check-in details',
     description:
-      'The host sends full check-in instructions before your arrival so you know exactly what to expect.',
+      'Before you arrive, the host sends you full check-in instructions, so you know just what to expect.',
   },
   {
     title: 'Arrive and enjoy',
     description:
-      'We are available throughout your stay if you need anything at all.',
+      'If you need anything during your stay, email us at info@jlmcollective.co.',
   },
 ]
 
 const faqs: { q: string; a: string }[] = [
   {
     q: 'Are the apartments kosher?',
-    a: 'Many of our Jerusalem stays have kosher kitchens, and each listing shows its kosher level so you can filter for exactly what you keep.',
+    a: 'Many of our Jerusalem stays have kosher kitchens. Each listing shows its kosher level, so you can find one that fits what you keep.',
   },
   {
     q: 'How close are the stays to the Kotel?',
-    a: 'Listings show an approximate walking time to the Kotel and to nearby shuls, so you can choose a stay within comfortable walking distance for Shabbos and Yom Tov.',
+    a: 'Listings show roughly how long it takes to walk to the Kotel and to nearby shuls. That way you can choose somewhere that\u2019s an easy walk on Shabbos and Yom Tov.',
   },
   {
     q: 'Do you have stays with a sukkah balcony?',
-    a: 'Yes. You can filter for apartments with a balcony suitable for a sukkah, which are in high demand around Sukkot — book early.',
+    a: 'Yes. You can search for apartments with a balcony that can take a sukkah. Lots of families want them for Sukkot, so it\u2019s worth booking early.',
   },
   {
     q: 'Is there availability for Pesach and the chagim?',
-    a: 'Jerusalem fills up fast around Pesach, Sukkot and the Yamim Noraim. Browse available stays for your dates and message the host to confirm before the peak season sells out.',
+    a: 'Jerusalem fills up fast around Pesach, Sukkot and the Yamim Noraim. Search for your dates and message the host to check, before the busy season gets booked up.',
   },
   {
     q: 'Can I message a host before I book?',
-    a: 'Yes — messaging a host is free and there is no commitment. Ask about availability, the neighbourhood, or anything about the stay, and most hosts reply within a few hours.',
+    a: 'Yes. Messaging a host is free and doesn\u2019t commit you to anything. Ask about the dates, the neighbourhood or anything else about the stay.',
   },
   {
     q: 'How does payment work, and is my deposit refundable?',
-    a: 'Where online payment is available, JLM Collective collects the deposit as agent for the host and you pay the balance securely through the site on the host\u2019s schedule; some hosts arrange payment directly. Cancellation and refund terms are set per booking, so check with the host before you pay.',
+    a: 'Where you can pay online, JLM Collective takes the deposit as agent for the host. You then pay the balance safely through the site on the host\u2019s schedule. Some hosts arrange payment directly. Cancellation and refund terms are set for each booking, so check them with the host before you pay.',
   },
   {
     q: 'Are the hosts verified?',
-    a: 'Every property is personally reviewed before we agree to represent it, and hosts are identity-verified, so you can book with confidence.',
+    a: 'We look at every home ourselves before we agree to list it. Hosts whose ID our team has checked show a Verified host badge on their profile and listings.',
   },
 ]
 
@@ -94,7 +94,7 @@ function escapeJsonLd(value: string) {
 
 export default function HowItWorksPage() {
   return (
-    <div className="bg-white">
+    <div className="bg-[#F8F5F2]">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -158,7 +158,7 @@ export default function HowItWorksPage() {
 
       <section className="py-16">
         <div className="mx-auto max-w-3xl px-5 md:px-8">
-          <h2 className="font-display text-2xl font-bold text-stone-950">
+          <h2 className="text-2xl font-semibold text-stone-950">
             Frequently asked questions
           </h2>
           <div className="mt-6 divide-y divide-stone-200 border-y border-stone-200">
@@ -177,16 +177,16 @@ export default function HowItWorksPage() {
         </div>
       </section>
 
-      <section className="bg-[#F8F5F2] py-16">
+      <section className="border-t border-stone-200 py-16">
         <div className="mx-auto max-w-3xl px-5 md:px-8">
-          <h2 className="font-display text-2xl font-bold text-stone-950">
-            Why JLM Collective
+          <h2 className="text-2xl font-semibold text-stone-950">
+            Why book with us
           </h2>
           <div className="mt-6 space-y-4">
             {[
-              'Every property reviewed before we agree to represent it',
-              'Local specialists who know every neighbourhood',
-              'Dedicated agent support throughout your stay',
+              'We look at every home before we agree to list it',
+              'A local team who know Jerusalem\u2019s neighbourhoods',
+              'Real people to help if something isn\u2019t right',
             ].map((point) => (
               <div key={point} className="flex items-center gap-3">
                 <svg
@@ -211,7 +211,7 @@ export default function HowItWorksPage() {
               href="/stays"
               className="inline-flex rounded-full bg-[#252525] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#111111]"
             >
-              Browse stays
+              Find a stay
             </Link>
           </div>
         </div>

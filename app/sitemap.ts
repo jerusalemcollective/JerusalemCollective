@@ -104,16 +104,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   try {
     const supabase = await createClient()
-    const [{ data: listings }, { data: hosts }] = await Promise.all([
-      supabase
-        .from('listings')
-        .select('id, area, updated_at')
-        .eq('is_published', true),
-      supabase
-        .from('hosts')
-        .select('id, updated_at')
-        .eq('is_verified', true),
-    ])
+    const { data: listings } = await supabase
+      .from('listings')
+      .select('id, area, host_id, updated_at')
+      .eq('is_published', true)
 
     const areasWithListings = new Set((listings || []).map((listing) => listing.area))
     const neighborhoodPages: MetadataRoute.Sitemap = allNeighborhoods
@@ -127,9 +121,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     }))
 
-    const hostPages: MetadataRoute.Sitemap = (hosts || []).map((host) => ({
-      url: `${siteUrl}/hosts/${host.id}`,
-      lastModified: host.updated_at ? new Date(host.updated_at) : new Date(),
+    // Every host with a published stay has a public profile worth indexing —
+    // not only ID-verified ones. lastModified is their most recent stay update.
+    const hostLastModified = new Map<string, Date>()
+    for (const listing of listings || []) {
+      if (!listing.host_id) continue
+      const updated = listing.updated_at ? new Date(listing.updated_at) : new Date()
+      const current = hostLastModified.get(listing.host_id)
+      if (!current || updated > current) hostLastModified.set(listing.host_id, updated)
+    }
+    const hostPages: MetadataRoute.Sitemap = Array.from(hostLastModified, ([hostId, lastModified]) => ({
+      url: `${siteUrl}/hosts/${hostId}`,
+      lastModified,
       changeFrequency: 'monthly',
       priority: 0.5,
     }))

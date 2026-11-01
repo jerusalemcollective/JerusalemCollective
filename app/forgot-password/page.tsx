@@ -32,7 +32,7 @@ function ForgotPasswordForm() {
       if (error) throw error
       setSent(true)
     } catch (submitError: unknown) {
-      setError(submitError instanceof Error ? submitError.message : 'Unable to send reset email.')
+      setError(submitError instanceof Error ? submitError.message : 'We couldn\u2019t send the email. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -44,13 +44,13 @@ function ForgotPasswordForm() {
         <div className="rounded-3xl bg-white p-8 shadow-sm">
           <h1 className="font-display mb-2 text-2xl font-bold text-stone-900">Reset your password</h1>
           <p className="mb-6 text-sm text-stone-600">
-            Enter the email address used for your JLM Collective account.
+            Type the email you use for JLM Collective and we&apos;ll send you a link to choose a new password.
           </p>
 
           {sent ? (
             <div className="space-y-4">
               <div className="rounded-xl bg-green-50 p-4 text-sm leading-6 text-green-700">
-                If an account exists for that email, we have sent a password reset link.
+                If there&apos;s an account with that email, we&apos;ve sent you a link to reset your password. Check your inbox.
               </div>
               <Link
                 href={`/login?redirect=${encodeURIComponent(redirect)}`}

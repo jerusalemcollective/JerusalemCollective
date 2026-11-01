@@ -3,6 +3,13 @@ import Image from 'next/image'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { createPublicClient } from '@/lib/supabase/public'
+import { ListingCard, LISTING_GRID_CLASS } from '@/components/listing-card'
+import {
+  getListingCardExtras,
+  LISTING_CARD_COLUMNS,
+  toListingCardData,
+  type ListingCardRow,
+} from '@/lib/listing-cards'
 
 type HostRow = {
   id: string
@@ -13,18 +20,6 @@ type HostRow = {
   is_verified: boolean | null
   host_type: string | null
   bio: string | null
-}
-
-type ListingWithPhoto = {
-  id: string
-  title: string
-  area: string
-  bedrooms: number
-  max_guests: number
-  price_ils: number | null
-  price_usd: number | null
-  booking_type: string
-  cover_photo_url: string | null
 }
 
 type ReviewRow = {
@@ -72,7 +67,7 @@ export async function generateMetadata({
 
   return {
     title: `${displayName} Host`,
-    description: `View ${displayName}'s listings on JLM Collective, curated Jerusalem stays.`,
+    description: `See ${displayName}'s Jerusalem stays and reviews on JLM Collective.`,
     alternates: {
       canonical: `/hosts/${id}`,
     },
@@ -105,7 +100,7 @@ export default async function HostProfilePage({ params }: HostPageProps) {
         .single(),
       supabase
         .from('listings')
-        .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, cover_photo_url')
+        .select(LISTING_CARD_COLUMNS)
         .eq('host_id', hostId)
         .eq('is_published', true),
       supabase
@@ -130,17 +125,8 @@ export default async function HostProfilePage({ params }: HostPageProps) {
     host_type: hostData.host_type,
     bio: hostData.bio,
   }
-  const listings: ListingWithPhoto[] = (listingsData || []).map((listing: ListingWithPhoto) => ({
-    id: listing.id,
-    title: listing.title,
-    area: listing.area,
-    bedrooms: listing.bedrooms,
-    max_guests: listing.max_guests,
-    price_ils: listing.price_ils,
-    price_usd: listing.price_usd,
-    booking_type: listing.booking_type,
-    cover_photo_url: listing.cover_photo_url ?? null,
-  }))
+  const listings = (listingsData || []) as ListingCardRow[]
+  const extras = await getListingCardExtras(supabase, listings.map((listing) => listing.id))
   const reviews: ReviewRow[] = (reviewsData || []).map((review: ReviewRow) => ({
     id: review.id,
     reviewer_name: review.reviewer_name,
@@ -157,7 +143,7 @@ export default async function HostProfilePage({ params }: HostPageProps) {
 
   return (
     <div className="min-h-screen bg-[#F8F5F2]">
-      <header className="border-b border-stone-200 bg-white">
+      <header className="border-b border-stone-200">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <Link href="/" className="text-xl font-bold text-[#c76f55]">JLM Collective</Link>
           <Link href="/stays" className="text-sm font-medium text-stone-600 hover:text-stone-900">Browse stays</Link>
@@ -182,17 +168,17 @@ export default async function HostProfilePage({ params }: HostPageProps) {
               {host.is_verified && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
                   <CheckIcon className="h-3.5 w-3.5" />
-                  Verified Host
+                  Verified host
                 </span>
               )}
             </div>
             <p className="mb-4 text-stone-500">
-              {host.host_type === 'property_manager' ? 'Property Manager' : host.host_type === 'agency' ? 'Rental Agency' : 'Individual Host'}
+              {host.host_type === 'property_manager' ? 'Property manager' : host.host_type === 'agency' ? 'Letting agency' : 'Host'}
             </p>
             <div className="mb-4 flex flex-wrap justify-center gap-6 text-sm sm:justify-start">
               <div>
                 <span className="font-bold text-stone-900">{listings.length}</span>
-                <span className="ml-1 text-stone-500">{listings.length === 1 ? 'listing' : 'listings'}</span>
+                <span className="ml-1 text-stone-500">{listings.length === 1 ? 'stay' : 'stays'}</span>
               </div>
               <div>
                 <span className="font-bold text-stone-900">{reviews.length}</span>
@@ -210,38 +196,13 @@ export default async function HostProfilePage({ params }: HostPageProps) {
         </div>
 
         <section className="mb-12">
-          <h2 className="mb-6 text-xl font-bold text-stone-900">{host.name}&apos;s Listings</h2>
+          <h2 className="mb-6 text-xl font-bold text-stone-900">Stays from {publicName}</h2>
           {listings.length === 0 ? (
-            <p className="text-stone-500">No listings yet.</p>
+            <p className="text-stone-500">No stays on the site yet.</p>
           ) : (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className={LISTING_GRID_CLASS}>
               {listings.map((listing) => (
-                <Link key={listing.id} href={`/listings/${listing.id}`} className="group overflow-hidden rounded-2xl bg-white shadow-sm transition hover:shadow-md">
-                  <div className="relative aspect-[4/3] bg-stone-200">
-                    {listing.cover_photo_url ? (
-                      <Image
-                        src={listing.cover_photo_url}
-                        alt={listing.title}
-                        width={600}
-                        height={450}
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 400px"
-                        loading="lazy"
-                        className="h-full w-full object-cover transition group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="h-full w-full bg-gradient-to-br from-stone-200 via-stone-100 to-stone-300" />
-                    )}
-                  </div>
-                  <div className="p-4">
-                    <h3 className="mb-1 font-bold text-stone-900 group-hover:text-[#c76f55]">{listing.title}</h3>
-                    <p className="mb-2 text-sm text-stone-500">{listing.area}</p>
-                    <p className="text-sm text-stone-600">{listing.bedrooms} bed · {listing.max_guests} guests</p>
-                    <p className="mt-2 font-bold text-stone-900">
-                      {listing.price_ils ? `₪${listing.price_ils.toLocaleString()}` : 'Price on request'}
-                      {listing.price_ils && <span className="ml-1 font-normal text-stone-500">/ night</span>}
-                    </p>
-                  </div>
-                </Link>
+                <ListingCard key={listing.id} listing={toListingCardData(listing, extras)} />
               ))}
             </div>
           )}
@@ -260,7 +221,7 @@ export default async function HostProfilePage({ params }: HostPageProps) {
                       <p className="font-bold text-stone-900">{review.reviewer_name}</p>
                       {review.stay_date && (
                         <p className="text-sm text-stone-500">
-                          Stayed {new Date(review.stay_date).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                          Stayed {new Date(review.stay_date).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
                         </p>
                       )}
                     </div>

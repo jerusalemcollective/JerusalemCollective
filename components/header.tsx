@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { Menu, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { YOM_TOV_LINKS } from '@/lib/yom-tov-links'
 
 const JLMLogo = ({ variant = 'terracotta', className = '' }) => {
   const src = variant === 'terracotta' 
@@ -209,6 +210,9 @@ export function Header({
           <Link href="/stays" className={navLinkClass('/stays')}>
             Stays
           </Link>
+          <Link href="/#yom-tov" className="text-stone-600 transition hover:text-[#c76f55]">
+            Yom Tov
+          </Link>
           <Link href="/explore" className={navLinkClass('/explore')}>
             Explore
           </Link>
@@ -274,7 +278,7 @@ export function Header({
                   <div role="menu" className="absolute right-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl">
                     {/* User Info */}
                     <div className="border-b border-stone-100 px-4 py-3">
-                      <p className="font-semibold text-stone-900">{user.fullName || 'User'}</p>
+                      <p className="font-semibold text-stone-900">{user.fullName || 'Your account'}</p>
                       <p className="text-sm text-stone-500">{user.email}</p>
                     </div>
 
@@ -298,7 +302,7 @@ export function Header({
                         <svg className="h-4 w-4 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
                         </svg>
-                        My Trips
+                        My trips
                       </Link>
                     </div>
 
@@ -324,7 +328,7 @@ export function Header({
                           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                           </svg>
-                          Become a Host
+                          Become a host
                         </Link>
                       )}
                       <Link
@@ -369,7 +373,7 @@ export function Header({
           <button
             type="button"
             onClick={() => setMobileOpen((open) => !open)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-700 transition hover:border-stone-400 hover:bg-stone-50 md:hidden"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-700 transition hover:border-stone-400 hover:bg-stone-50 lg:hidden"
             aria-label="Open navigation menu"
             aria-expanded={mobileOpen}
           >
@@ -379,7 +383,7 @@ export function Header({
       </div>
 
       {mobileOpen && (
-        <div className="border-t border-stone-200 bg-white md:hidden">
+        <div className="border-t border-stone-200 bg-white lg:hidden">
           <nav className="divide-y divide-stone-100">
             <Link
               href="/stays"
@@ -388,6 +392,31 @@ export function Header({
             >
               Stays
             </Link>
+            <div className="px-5 py-4">
+              <Link
+                href="/#yom-tov"
+                onClick={() => setMobileOpen(false)}
+                className="font-heading block font-semibold text-stone-900"
+              >
+                Yom Tov &amp; kosher stays
+              </Link>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {YOM_TOV_LINKS.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setMobileOpen(false)}
+                    className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+                      pathname === link.href
+                        ? 'border-[#c76f55] text-[#c76f55]'
+                        : 'border-stone-200 text-stone-700 hover:border-stone-300'
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
             <Link
               href="/explore"
               onClick={() => setMobileOpen(false)}

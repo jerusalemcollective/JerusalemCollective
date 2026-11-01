@@ -411,8 +411,8 @@ export async function sendGuestNewMessageEmail({
 
     const hostName = host?.display_name || host?.name || 'The host'
     const guestName = guest?.full_name || 'there'
-    const listingTitle = listing?.title || 'your enquiry'
-    const messagePreview = message?.content || 'New message received.'
+    const listingTitle = listing?.title || 'your stay'
+    const messagePreview = message?.content || 'You have a new message.'
 
     return await sendEmail({
       to: guestEmail,
@@ -420,7 +420,7 @@ export async function sendGuestNewMessageEmail({
       html: baseEmailHtml({
         greeting: `Hi ${escapeHtml(guestName)},`,
         intro: `${hostName} sent you a new message about ${listingTitle}: ${messagePreview}`,
-        ctaLabel: 'Open message',
+        ctaLabel: 'Read and reply',
         ctaUrl: `${siteUrl}/account/messages?conversation=${conversationId}`,
       }),
     })
@@ -563,7 +563,7 @@ export function buildDirectPaymentPlan({
         balanceDueDaysBeforeCheckin: Number(listing.balance_due_days_before_checkin ?? 0),
         checkIn: new Date(`${checkIn}T12:00:00`),
       })
-      let depositDue = 'due to secure your booking'
+      let depositDue = 'due to hold your booking'
       if (listing.deposit_due_days_before_checkin != null) {
         // Never show a past due date for a just-confirmed booking — clamp to today,
         // mirroring the balance-due clamp in computeDepositPreview / migration 092.
@@ -571,11 +571,11 @@ export function buildDirectPaymentPlan({
         const todayIso = isoDateLocal(new Date())
         depositDue = `due by ${formatEmailDate(rawDepositDue < todayIso ? todayIso : rawDepositDue)}`
       }
-      schedule.push(['Deposit', `${moneyLabel(bookingCurrency, preview.depositAmount)} — ${depositDue}`])
+      schedule.push(['Deposit', `${moneyLabel(bookingCurrency, preview.depositAmount)}, ${depositDue}`])
       if (preview.balanceAmount > 0) {
         schedule.push([
           'Balance',
-          `${moneyLabel(bookingCurrency, preview.balanceAmount)} — due by ${formatEmailDate(isoDateLocal(preview.balanceDueDate))}`,
+          `${moneyLabel(bookingCurrency, preview.balanceAmount)}, due by ${formatEmailDate(isoDateLocal(preview.balanceDueDate))}`,
         ])
       }
     }
@@ -674,7 +674,7 @@ export async function sendGuestBookingConfirmedEmail({
       if (payRows.length > 0 || howToPayHtml) {
         const scheduleHtml =
           payRows.length > 0
-            ? `<h3 style="font-size:15px;margin:20px 0 6px">Payment schedule</h3>${detailTableHtml(payRows)}`
+            ? `<h3 style="font-size:15px;margin:20px 0 6px">When to pay</h3>${detailTableHtml(payRows)}`
             : ''
         paymentHtml = `${scheduleHtml}${howToPayHtml}`
       }
@@ -687,7 +687,7 @@ export async function sendGuestBookingConfirmedEmail({
     const html = `
     <div style="font-family:Arial,sans-serif;line-height:1.6;color:#292524">
       <p>Hi ${escapeHtml(guestName)},</p>
-      <p>Great news — your booking at <strong>${escapeHtml(listingTitle)}</strong>${escapeHtml(areaSuffix)} is confirmed.</p>
+      <p>Good news! The host has said yes, and your booking at <strong>${escapeHtml(listingTitle)}</strong>${escapeHtml(areaSuffix)} is confirmed.</p>
       ${detailTableHtml(detailRows)}
       ${paymentHtml}
       ${checkInHtml}
@@ -786,7 +786,7 @@ export async function sendGuestPaidBookingConfirmedEmail({
     if (hasBalance) {
       detailRows.push([
         'Balance',
-        `${moneyLabel(currency, balanceMajor)} — due by ${formatEmailDate(paymentRow.balance_due_date)}`,
+        `${moneyLabel(currency, balanceMajor)}, due by ${formatEmailDate(paymentRow.balance_due_date)}`,
       ])
       // One-click: signs the guest in and opens the Stripe checkout for this exact
       // booking's balance (falls back to the bookings page if a link can't be made).
@@ -798,13 +798,13 @@ export async function sendGuestPaidBookingConfirmedEmail({
         </a>
       </p>`
     } else {
-      balanceHtml = `<p style="margin:16px 0 0">Your stay is paid in full — nothing more to pay.</p>`
+      balanceHtml = `<p style="margin:16px 0 0">Your stay is paid in full. There’s nothing more to pay.</p>`
     }
 
     const html = `
     <div style="font-family:Arial,sans-serif;line-height:1.6;color:#292524">
       <p>Hi there,</p>
-      <p>Your payment went through and your stay at <strong>${escapeHtml(listingTitle)}</strong>${escapeHtml(areaSuffix)} is confirmed.</p>
+      <p>Thank you, your payment went through. Your stay at <strong>${escapeHtml(listingTitle)}</strong>${escapeHtml(areaSuffix)} is booked.</p>
       ${detailTableHtml(detailRows)}
       ${balanceHtml}
       <p style="margin:20px 0 0">
@@ -994,7 +994,7 @@ export async function sendGuestInstantBookingEmail(details: InstantBookingDetail
     const { plan } = details
     const scheduleHtml =
       plan.schedule.length > 0
-        ? `<h3 style="font-size:15px;margin:20px 0 6px">Payment schedule</h3>${detailTableHtml(plan.schedule)}`
+        ? `<h3 style="font-size:15px;margin:20px 0 6px">When to pay</h3>${detailTableHtml(plan.schedule)}`
         : ''
     let howToPayHtml = ''
     if (plan.howToPay.length > 0) {
@@ -1002,7 +1002,7 @@ export async function sendGuestInstantBookingEmail(details: InstantBookingDetail
     } else if (plan.instructions) {
       howToPayHtml = `<p style="margin:14px 0 2px"><strong>How to pay the host (bank transfer)</strong></p><p style="margin:0;white-space:pre-line">${escapeHtml(plan.instructions)}</p>`
     } else {
-      howToPayHtml = `<p style="margin:14px 0 0">The host will send you their bank transfer details.</p>`
+      howToPayHtml = `<p style="margin:14px 0 0">The host will send you their bank details.</p>`
     }
 
     const checkInHtml = details.checkInInstructions
@@ -1012,9 +1012,9 @@ export async function sendGuestInstantBookingEmail(details: InstantBookingDetail
     const html = `
     <div style="font-family:Arial,sans-serif;line-height:1.6;color:#292524">
       <p>Hi ${escapeHtml(details.guestName || 'there')},</p>
-      <p>You're booked! Your stay at <strong>${escapeHtml(details.listingTitle)}</strong>${escapeHtml(areaSuffix)} is confirmed and the host has been notified.</p>
+      <p>You're booked! Your stay at <strong>${escapeHtml(details.listingTitle)}</strong>${escapeHtml(areaSuffix)} is confirmed, and we've let the host know.</p>
       ${detailTableHtml(detailRows)}
-      <p style="margin:16px 0 0">You pay the host directly by bank transfer — nothing is charged by JLM Collective.</p>
+      <p style="margin:16px 0 0">You pay the host directly by bank transfer. JLM Collective doesn't charge you anything.</p>
       ${scheduleHtml}
       ${howToPayHtml}
       ${checkInHtml}
@@ -1257,20 +1257,21 @@ export async function sendSupportCaseStatusEmail({
         ? `${report.currency || ''} ${report.approved_refund_amount.toLocaleString()}`.trim()
         : null
 
-    const lines = [`Your report about ${escapeHtml(listingTitle)} is now marked "${escapeHtml(statusLabel)}".`]
-    if (report.resolution_notes) lines.push(`JLM Collective's note: ${escapeHtml(report.resolution_notes)}`)
+    // baseEmailHtml escapes the intro, so these parts go in as plain text.
+    const lines = [`There's an update on your report about ${listingTitle}. It's now marked "${statusLabel}".`]
+    if (report.resolution_notes) lines.push(`A note from JLM Collective: ${report.resolution_notes}`)
     if (amount) {
       // Be honest about how money actually moves: online bookings can be
       // refunded through Stripe; direct-payment bookings are settled between the
       // host and guest, so JLM records the decision but does not refund itself.
       lines.push(
         paidOnline
-          ? `Approved amount: ${escapeHtml(amount)}. This will be refunded through the original online payment.`
-          : `Approved amount: ${escapeHtml(amount)}. This booking was paid directly, so JLM Collective will arrange settlement with the host — it is not refunded automatically.`,
+          ? `Approved amount: ${amount}. This will be refunded to the card or account you paid with.`
+          : `Approved amount: ${amount}. This booking was paid directly to the host, so JLM Collective will arrange settlement with the host. It is not refunded automatically.`,
       )
     }
     const intro = lines.join(' ')
-    const subject = `Update on your report — ${listingTitle}`
+    const subject = `An update on your report about ${listingTitle}`
 
     const guestEmail = report.guest_id ? await getAuthUserEmail(report.guest_id) : null
 
@@ -1342,10 +1343,10 @@ export async function sendGuestBalanceReminderEmail({
 
   return await sendEmail({
     to: guestEmail,
-    subject: `Balance due for ${listingTitle}`,
+    subject: `Your balance for ${listingTitle} is due`,
     html: baseEmailHtml({
       greeting: 'Hi there,',
-      intro: `The remaining balance of ${balanceLabel} for your stay at ${listingTitle} is due by ${dueDateLabel}. Pay it securely by card using the button below.`,
+      intro: `Just a reminder: the balance of ${balanceLabel} for your stay at ${listingTitle} is due by ${dueDateLabel}. You can pay it safely by card with the button below.`,
       ctaUrl,
       ctaLabel: 'Pay your balance',
     }),
@@ -1541,7 +1542,7 @@ function baseEmailHtml({
           ${escapeHtml(ctaLabel)}
         </a>
       </p>
-      ${showSignInHint ? '<p style="color:#78716c;font-size:13px">You may need to sign in before viewing the update.</p>' : ''}
+      ${showSignInHint ? '<p style="color:#78716c;font-size:13px">You may need to sign in first.</p>' : ''}
       <p>JLM Collective</p>
       <p style="color:#a8a29e;font-size:11px;margin:8px 0 0;line-height:1.5">
         JLM Collective acts as letting agent for Jerusalem property owners. Bookings are between guests and hosts. JLM Collective is not a party to any booking agreement.

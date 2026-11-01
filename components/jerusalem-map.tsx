@@ -4,7 +4,19 @@ import React, { useState, useCallback, useEffect, useMemo, Component, ReactNode 
 import { GoogleMap, useJsApiLoader, OverlayView, type Libraries } from '@react-google-maps/api'
 import Link from 'next/link'
 import Image from 'next/image'
-import { formatListingPrice } from '@/lib/utils/currency'
+import { formatPreferredNightlyPrice } from '@/lib/utils/currency'
+import { ListingPrice } from '@/components/listing-price'
+
+// Nightly price in the guest's chosen currency (pins, sidebar and popup).
+function MapPrice({ listing }: { listing: { price_ils?: number | null; price_usd?: number | null } }) {
+  return (
+    <ListingPrice
+      priceUsd={listing.price_usd ?? null}
+      priceIls={listing.price_ils ?? null}
+      fallback={formatPreferredNightlyPrice(listing)}
+    />
+  )
+}
 
 interface Listing {
   id: string
@@ -53,8 +65,8 @@ function MapFallback() {
   return (
     <div className="flex h-[calc(100vh-90px)] w-full items-center justify-center bg-[#F8F5F2]">
       <div className="max-w-md rounded-3xl border border-stone-200 bg-white p-6 text-center shadow-xl">
-        <h2 className="text-xl font-bold text-stone-950">Map temporarily unavailable</h2>
-        <p className="mt-2 text-sm text-stone-500">The map could not be loaded. You can still browse listings in list view.</p>
+        <h2 className="text-xl font-bold text-stone-950">The map didn&apos;t load</h2>
+        <p className="mt-2 text-sm text-stone-500">Sorry about that. You can still see every stay in the list.</p>
         <Link href="/stays" className="mt-5 inline-flex rounded-full bg-[#252525] px-5 py-3 text-sm font-bold text-white hover:bg-[#111111]">
           Browse stays
         </Link>
@@ -187,8 +199,8 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
     return (
       <div className="flex h-[calc(100vh-90px)] w-full items-center justify-center bg-[#F8F5F2]">
         <div className="max-w-md rounded-3xl border border-stone-200 bg-white p-6 text-center shadow-xl">
-          <h2 className="text-xl font-bold text-stone-950">Map preview needs a Google Maps key</h2>
-          <p className="mt-2 text-sm text-stone-500">Listings still work, and the live map will appear once the key is configured.</p>
+          <h2 className="text-xl font-bold text-stone-950">The map isn&apos;t available right now</h2>
+          <p className="mt-2 text-sm text-stone-500">You can still see every stay in the list.</p>
           <Link href="/stays" className="mt-5 inline-flex rounded-full bg-[#252525] px-5 py-3 text-sm font-bold text-white hover:bg-[#111111]">
             Browse stays
           </Link>
@@ -213,7 +225,7 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
         <div className="mb-5">
           <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Search by map</p>
           <h1 className="font-display mt-2 text-2xl font-bold text-stone-950">Jerusalem stays</h1>
-          <p className="mt-2 text-sm text-stone-500">Browse verified apartments by location, area, and price.</p>
+          <p className="mt-2 text-sm text-stone-500">Find a stay by where it is on the map.</p>
         </div>
 
         <div className="mb-5 grid grid-cols-3 gap-2">
@@ -225,7 +237,7 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
         <div className="space-y-4">
           {displayListings.length === 0 ? (
             <div className="rounded-2xl border border-stone-200 bg-[#F8F5F2] p-5 text-sm text-stone-500">
-              No listings in this map area.
+              No stays in this part of the map. Try zooming out.
             </div>
           ) : displayListings.map((listing) => (
             <button
@@ -254,7 +266,7 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
               <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">{listing.area}</p>
               <h3 className="mt-1 font-bold text-stone-950">{listing.title}</h3>
               <p className="mt-1 text-sm text-stone-500">{listing.bedrooms} bedrooms · sleeps {listing.sleeps}</p>
-              <p className="mt-2 font-bold text-stone-950">{formatListingPrice(listing)}</p>
+              <p className="mt-2 font-bold text-stone-950"><MapPrice listing={listing} /></p>
             </button>
           ))}
         </div>
@@ -287,7 +299,7 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
                     : 'bg-white text-[#252525] ring-stone-200'
                 }`}
               >
-                {formatListingPrice(listing)}
+                <MapPrice listing={listing} />
                 <span className="pointer-events-none absolute left-1/2 top-full mt-2 hidden -translate-x-1/2 whitespace-nowrap rounded-lg bg-stone-950 px-2 py-1 text-xs font-semibold text-white shadow-lg group-hover:block">
                   {listing.title}
                 </span>
@@ -335,7 +347,7 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
           }}
           className={`absolute bottom-20 left-1/2 z-20 -translate-x-1/2 rounded-full bg-white lg:bottom-auto lg:top-20 px-4 py-2 text-xs font-bold text-stone-700 shadow-lg ring-1 ring-stone-200 transition hover:bg-stone-50 ${showSidebar ? 'lg:translate-x-[150px]' : ''}`}
         >
-          Showing {displayListings.length} in this area · reset
+          Showing {displayListings.length} here · show all
         </button>
       )}
 
@@ -368,7 +380,7 @@ function JerusalemMapInner({ listings, onListingSelect }: JerusalemMapProps) {
           <h3 className="mt-1 text-lg font-bold text-stone-950">{selectedListing.title}</h3>
           <p className="mt-1 text-sm text-stone-500">{selectedListing.bedrooms} bedrooms · sleeps {selectedListing.sleeps}</p>
           <div className="mt-4 flex items-center justify-between">
-            <p className="font-bold text-stone-950">{formatListingPrice(selectedListing)}</p>
+            <p className="font-bold text-stone-950"><MapPrice listing={selectedListing} /></p>
             <a href={`/listings/${selectedListing.id}?from=stays`} className="rounded-full bg-[#252525] px-4 py-2 text-sm font-bold text-white hover:bg-[#111111]">
               View stay
             </a>

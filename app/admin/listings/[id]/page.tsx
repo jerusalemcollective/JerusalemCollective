@@ -14,6 +14,9 @@ import { calculateListingScore } from '@/lib/marketplace-rules'
 import { AmenitySelector } from '@/components/amenity-selector'
 import { oneOrNull } from '@/lib/utils/one-or-null'
 import { createServiceRoleClient } from '@/lib/supabase/service'
+import { StayTermsFields } from '@/components/stay-terms-fields'
+import { STAY_TERMS_COLUMNS, stayTermsFromResult } from '@/lib/stay-terms'
+import { readListingExactAddress } from '@/lib/listing-private-details'
 
 // 'live' is a legacy value from before review and visibility were split; it reads as Ready.
 type ListingAdminStatus = 'needs_work' | 'ready_for_launch' | 'live'
@@ -43,7 +46,7 @@ type AdminListingDetail = {
   } | null
 }
 
-type AdminListingDetailRow = Omit<AdminListingDetail, 'hosts'> & {
+type AdminListingDetailRow = Omit<AdminListingDetail, 'hosts' | 'exact_address'> & {
   hosts?: AdminListingDetail['hosts'] | NonNullable<AdminListingDetail['hosts']>[] | null
 }
 
@@ -75,10 +78,15 @@ export default async function AdminListingDetailPage({
   const { id } = await params
   const { saved } = await searchParams
   const { supabase } = await requireAdminPermission('listings')
-  const [{ data: listingData }, { data: messages, error: messagesError }, { data: photos }] = await Promise.all([
+  const [
+    { data: listingData },
+    { data: messages, error: messagesError },
+    { data: photos },
+    { address: exactAddress, error: exactAddressError },
+  ] = await Promise.all([
     supabase
       .from('listings')
-      .select('id, title, area, exact_address, host_id, is_published, is_featured, admin_status, archived_at, online_payment_enabled, bedrooms, bathrooms, max_guests, sleeping_setup, booking_type, amenities, description, price_usd, price_ils, hosts(name)')
+      .select('id, title, area, host_id, is_published, is_featured, admin_status, archived_at, online_payment_enabled, bedrooms, bathrooms, max_guests, sleeping_setup, booking_type, amenities, description, price_usd, price_ils, hosts(name)')
       .eq('id', id)
       .single(),
     supabase
@@ -90,14 +98,23 @@ export default async function AdminListingDetailPage({
       .from('listing_photos')
       .select('id')
       .eq('listing_id', id),
+    // Private: listing_private_details, readable by admins and the host only.
+    readListingExactAddress(supabase, id),
   ])
 
   if (!listingData) notFound()
   if (messagesError) console.error('Could not load listing admin messages', id, messagesError)
+  // Fail loudly: rendering the edit form with an empty address box would let a
+  // save erase the stored address.
+  if (exactAddressError) {
+    console.error('Could not load listing exact address', id, exactAddressError)
+    throw new Error('Could not load this listing\'s address. Please refresh the page.')
+  }
 
   const listingRow: AdminListingDetailRow = listingData
   const listing: AdminListingDetail = {
     ...listingRow,
+    exact_address: exactAddress,
     hosts: oneOrNull(listingRow.hosts),
   }
 
@@ -107,6 +124,12 @@ export default async function AdminListingDetailPage({
     .select('id, reviewer_name, rating, title, content, is_approved, created_at')
     .eq('listing_id', id)
     .order('created_at', { ascending: false })
+
+  // Check-in/out and cancellation (migration 118), read on their own so this page
+  // still loads before the migration has been run.
+  const stayTerms = stayTermsFromResult(
+    await supabase.from('listings').select(STAY_TERMS_COLUMNS.join(', ')).eq('id', id).maybeSingle(),
+  )
 
   // Host <-> guest message threads. conversations/messages are RLS-scoped to the
   // participants, so read them with the service role — this page is admin-gated
@@ -354,6 +377,13 @@ export default async function AdminListingDetailPage({
                   className="mt-2 min-h-36 w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
                 />
               </label>
+              <StayTermsFields
+                terms={stayTerms.terms}
+                available={stayTerms.available}
+                audience="admin"
+                className="border-t border-stone-100 pt-4"
+                unavailableNote="Check-in time, check-out time and cancellation policy can be edited here once database migration 118 has been run."
+              />
               {saved === '1' && (
                 <p role="status" className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
                   Listing edits saved.

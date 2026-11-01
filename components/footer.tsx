@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { slugifyNeighborhood } from '@/lib/neighborhood-pages'
+import { YOM_TOV_LINKS } from '@/lib/yom-tov-links'
 
 const POPULAR_NEIGHBOURHOODS = [
   'Rechavia',
@@ -39,7 +40,7 @@ export function Footer() {
               <JLMLogo variant="black" className="h-10 w-auto md:h-12" />
             </Link>
             <p className="mt-3 max-w-xs text-sm leading-6 text-stone-500">
-              JLM Collective is a specialist Jerusalem letting agency. We market and let verified Jerusalem properties on behalf of property owners.
+              JLM Collective is a Jerusalem letting agency. We advertise and let homes we&apos;ve checked, on behalf of their owners.
             </p>
           </div>
 
@@ -57,6 +58,17 @@ export function Footer() {
             </Link>
             <Link href="/terms" className="text-stone-600 transition hover:text-[#c76f55]">Terms</Link>
           </nav>
+        </div>
+
+        <div className="border-t border-stone-200/70">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4 text-xs text-stone-500 md:px-6">
+            <span className="font-bold uppercase tracking-widest text-stone-500">Yom Tov</span>
+            {YOM_TOV_LINKS.map((link) => (
+              <Link key={link.href} href={link.href} className="transition hover:text-[#c76f55]">
+                {link.label}
+              </Link>
+            ))}
+          </div>
         </div>
 
         <div className="border-t border-stone-200/70">

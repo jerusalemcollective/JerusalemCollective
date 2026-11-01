@@ -12,6 +12,7 @@ import {
   calculateShulDistances,
   saveShulDistances,
 } from '@/lib/shul-distances'
+import { readStayTermsFromForm, writeWithStayTermsFallback } from '@/lib/stay-terms'
 
 // The "Other amenities" box submits one comma-separated string under the same
 // field name as the checkboxes. Store each amenity as its own item (trimmed,
@@ -244,6 +245,8 @@ async function saveHostListing(formData: FormData) {
   const shabbatClock = formData.get('shabbatClock') === 'on'
   const sukkahBalcony = formData.get('sukkahBalcony') === 'on'
   const nearSynagogue = formData.get('nearSynagogue') === 'on'
+  // Only when the editor showed the fields (null otherwise: leave the columns alone).
+  const stayTerms = readStayTermsFromForm(formData)
 
   if (!listingId) {
     throw new Error('Missing listing id.')
@@ -269,9 +272,8 @@ async function saveHostListing(formData: FormData) {
     throw error
   }
 
-  const { error: communicationError } = await supabase
-    .from('listings')
-    .update({
+  const { error: communicationError } = await writeWithStayTermsFallback(
+    {
       house_rules: houseRules,
       welcome_message: welcomeMessage,
       check_in_instructions: checkInInstructions,
@@ -289,9 +291,10 @@ async function saveHostListing(formData: FormData) {
       extra_guest_fee: extraGuestFee,
       extra_guest_fee_ils: extraGuestFeeIls,
       extra_guest_fee_usd: extraGuestFeeUsd,
-    })
-    .eq('id', listingId)
-    .in('host_id', hostIds)
+      ...(stayTerms ?? {}),
+    },
+    (payload) => supabase.from('listings').update(payload).eq('id', listingId).in('host_id', hostIds),
+  )
 
   if (communicationError) {
     throw communicationError

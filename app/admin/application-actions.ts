@@ -8,6 +8,8 @@ import { logAdminAction } from '@/lib/audit'
 import { sendHostAdminUpdateEmail } from '@/lib/transactional-email'
 import { toLegacyPrices } from '@/lib/fx'
 import { isHostPriceCurrency } from '@/lib/currencies'
+import { STAY_TERMS_COLUMNS, isMissingColumnError as isStayTermsColumnMissing, readStayTerms } from '@/lib/stay-terms'
+import { writeListingExactAddress } from '@/lib/listing-private-details'
 import {
   calculateShulDistances,
   saveShulDistances,
@@ -53,11 +55,12 @@ const applicationEditableFields = [
   'description',
 ] as const
 
+// No exact_address here on purpose: listings is publicly readable, so the
+// address is saved to listing_private_details via writeListingExactAddress().
 type ListingWritePayload = {
   host_id: string
   title: string
   area: string
-  exact_address: string | null
   latitude: number | null
   longitude: number | null
   bedrooms: number
@@ -256,7 +259,6 @@ export async function updateAdminApplicationDetails(formData: FormData) {
       .update({
         title: update.apartment_title,
         area: update.area,
-        exact_address: update.exact_address,
         bedrooms: update.bedrooms || 0,
         bathrooms: update.bathrooms,
         max_guests: update.sleeps || 1,
@@ -271,6 +273,13 @@ export async function updateAdminApplicationDetails(formData: FormData) {
       .eq('id', linkedListing.id)
 
     if (listingUpdateError) throw listingUpdateError
+
+    const { error: addressError } = await writeListingExactAddress(
+      supabase,
+      linkedListing.id,
+      update.exact_address,
+    )
+    if (addressError) throw addressError
 
     revalidatePath(`/listings/${linkedListing.id}`)
   }
@@ -356,7 +365,6 @@ async function approveApplication(supabase: AdminSupabase, applicationId: string
     host_id: hostApplication.host_id,
     title: hostApplication.apartment_title,
     area: hostApplication.area,
-    exact_address: hostApplication.exact_address,
     latitude: hostApplication.latitude ?? null,
     longitude: hostApplication.longitude ?? null,
     bedrooms: hostApplication.bedrooms || 0,
@@ -433,6 +441,35 @@ async function approveApplication(supabase: AdminSupabase, applicationId: string
     throw new Error('Listing was not created.')
   }
 
+  const { error: addressError } = await writeListingExactAddress(
+    supabase,
+    listingId,
+    hostApplication.exact_address,
+  )
+  if (addressError) throw addressError
+
+  // Check-in/out and cancellation terms from the become-a-host Pricing step
+  // (migration 118). Copied only the ones the host filled in, in their own update
+  // so a missing column can never block the approval.
+  const applicationStayTerms = readStayTerms(application as Record<string, unknown>)
+  const stayTermsUpdate = Object.fromEntries(
+    STAY_TERMS_COLUMNS.filter((column) => applicationStayTerms[column] != null).map((column) => [
+      column,
+      applicationStayTerms[column],
+    ]),
+  )
+  if (Object.keys(stayTermsUpdate).length > 0) {
+    const { error: stayTermsError } = await supabase.from('listings').update(stayTermsUpdate).eq('id', listingId)
+    if (stayTermsError) {
+      console.error(
+        isStayTermsColumnMissing(stayTermsError)
+          ? 'Stay terms not copied to the listing: run migration 118.'
+          : 'Could not copy stay terms to the listing — listing still approved:',
+        stayTermsError,
+      )
+    }
+  }
+
   if (
     hostApplication.latitude &&
     hostApplication.longitude &&
@@ -465,12 +502,14 @@ async function approveApplication(supabase: AdminSupabase, applicationId: string
 
   if (photoUpdateError) throw photoUpdateError
 
+  // Approval does not touch id_verified or hosts.is_verified: the "Verified
+  // host" badge means an admin has checked the host's ID, which is recorded
+  // separately with "Mark ID as verified" (setApplicationIdVerified).
   const { error: approvalError } = await supabase
     .from('host_applications')
     .update({
       status: 'approved',
       verification_status: 'approved',
-      id_verified: true,
     })
     .eq('id', applicationId)
 
@@ -484,13 +523,6 @@ async function approveApplication(supabase: AdminSupabase, applicationId: string
   } else if (approvalError) {
     throw approvalError
   }
-
-  const { error: hostVerificationError } = await supabase
-    .from('hosts')
-    .update({ is_verified: true })
-    .eq('id', hostApplication.host_id)
-
-  if (hostVerificationError) throw hostVerificationError
 
   await logAdminAction(supabase, 'approve_application', 'application', applicationId)
   await sendHostAdminUpdateEmail({
@@ -606,7 +638,7 @@ export async function setApplicationIdVerified(
     .from('host_applications')
     .update({ id_verified: verified })
     .eq('id', applicationId)
-    .select('id')
+    .select('id, host_id')
     .maybeSingle()
 
   if (error && isMissingColumnError(error, 'id_verified')) {
@@ -625,11 +657,39 @@ export async function setApplicationIdVerified(
     applicationId,
   )
 
+  // The public "Verified host" badge (hosts.is_verified) follows the ID check:
+  // on when an ID is checked, off only when none of the host's applications
+  // still has a checked ID.
+  const hostId = (data as { host_id?: string | null }).host_id
+  let hostMessage = ''
+  if (hostId) {
+    try {
+      const hostVerified = verified || (await hostHasCheckedId(supabase, hostId))
+      const { error: hostError } = await supabase
+        .from('hosts')
+        .update({ is_verified: hostVerified })
+        .eq('id', hostId)
+      if (hostError) throw hostError
+      revalidatePath(`/hosts/${hostId}`)
+      revalidatePath('/listings/[id]', 'page')
+      revalidatePath('/admin/hosts')
+      if (!verified && hostVerified) {
+        hostMessage = ' The host keeps the Verified host badge because another of their applications has a checked ID.'
+      }
+    } catch (hostError) {
+      console.error('Could not update the host verified badge', hostError)
+      hostMessage = ' The Verified host badge could not be updated — set it from the host’s page in Admin → Users.'
+    }
+  }
+
   revalidatePath('/admin')
   revalidatePath('/admin/applications')
   revalidatePath(`/admin/applications/${applicationId}`)
 
-  return { status: 'success', message: verified ? 'ID marked as verified.' : 'ID marked as not verified.' }
+  return {
+    status: 'success',
+    message: (verified ? 'ID marked as verified.' : 'ID marked as not verified.') + hostMessage,
+  }
 }
 
 // Throws AdminFacingError when the application is already in the target state,
@@ -768,6 +828,17 @@ async function notifyHostOfApplicationStatus(
     ctaPath: `/host/dashboard/applications/${applicationId}`,
     ctaLabel: 'View update',
   })
+}
+
+async function hostHasCheckedId(supabase: AdminSupabase, hostId: string) {
+  const { data, error } = await supabase
+    .from('host_applications')
+    .select('id')
+    .eq('host_id', hostId)
+    .eq('id_verified', true)
+    .limit(1)
+  if (error) throw error
+  return (data ?? []).length > 0
 }
 
 function isMissingOptionalApplicationColumnError(error: unknown) {

@@ -40,7 +40,7 @@ export function GoogleAuthButton({
 
       if (error) throw error
     } catch (signInError: unknown) {
-      setError(signInError instanceof Error ? signInError.message : 'Unable to continue with Google.')
+      setError(signInError instanceof Error ? signInError.message : 'We couldn\u2019t connect to Google. Please try again.')
       setIsLoading(false)
     }
   }

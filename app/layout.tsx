@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter, Playfair_Display } from 'next/font/google'
+import { DM_Sans, Inter, Playfair_Display } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Header } from '@/components/header'
 import { Footer } from '@/components/footer'
@@ -12,6 +12,15 @@ import './globals.css'
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
+  display: 'swap',
+})
+
+// Section headings (h2/h3 and heading-like labels). Exposed as --font-heading in
+// globals.css; Playfair (font-display) is kept for page titles only.
+const heading = DM_Sans({
+  subsets: ['latin'],
+  weight: ['500', '600', '700'],
+  variable: '--font-dm-sans',
   display: 'swap',
 })
 
@@ -74,7 +83,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${display.variable} font-sans antialiased bg-[#F8F5F2] text-[#252525]`}>
+      <body className={`${inter.variable} ${heading.variable} ${display.variable} font-sans antialiased bg-[#F8F5F2] text-[#252525]`}>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

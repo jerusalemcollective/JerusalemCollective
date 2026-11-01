@@ -14,7 +14,7 @@ export function ErrorState({
   error,
   reset,
   title = 'Something went wrong',
-  message = 'We hit an unexpected error. You can try again, or go back to where you were.',
+  message = 'Sorry, something went wrong on our side. Please try again, or go back to where you were.',
 }: ErrorStateProps) {
   const router = useRouter()
 

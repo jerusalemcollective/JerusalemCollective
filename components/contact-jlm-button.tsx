@@ -21,7 +21,8 @@ export function ContactJlmButton() {
       if (rpcError) throw rpcError
       router.push('/account/messages')
     } catch (openError) {
-      setError(openError instanceof Error ? openError.message : 'Could not open the chat. Please try again.')
+      console.error('Could not open JLM chat', openError)
+      setError('We couldn’t open the chat. Please try again, or email info@jlmcollective.co.')
       setIsOpening(false)
     }
   }
@@ -35,7 +36,7 @@ export function ContactJlmButton() {
         className="inline-flex items-center gap-2 rounded-full bg-[#252525] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#111111] disabled:cursor-not-allowed disabled:opacity-60"
       >
         <LifeBuoy className="h-4 w-4" />
-        {isOpening ? 'Opening…' : 'Contact JLM'}
+        {isOpening ? 'Opening…' : 'Message JLM Collective'}
       </button>
       {error && <p className="text-xs text-rose-600">{error}</p>}
     </div>
