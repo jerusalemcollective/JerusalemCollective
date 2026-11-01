@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import type { User } from '@supabase/supabase-js'
@@ -9,6 +9,8 @@ import { ensureHostProfile } from '@/lib/host-profile'
 import { allNeighborhoods } from '@/lib/neighborhoods'
 import { HOST_TERMS, HOST_TERMS_LAST_UPDATED, HOST_TERMS_VERSION } from '@/lib/host-terms'
 import { GoogleAddressField } from '@/components/google-address-field'
+import { useDragSort, moveItem } from '@/components/use-drag-sort'
+import { requestPhotoLabel, shrinkImageForLabel } from '@/lib/photo-labels'
 import { SleepingSetupBuilder, followRooms } from '@/components/sleeping-setup-builder'
 import { KOSHER_LEVEL_OPTIONS, normalizeKosherLevel } from '@/lib/kosher'
 import { AmenitySelector } from '@/components/amenity-selector'
@@ -793,12 +795,14 @@ const idDocTypes = [
 
 const steps = [
   'Contact details',
-  'Stay details',
-  'Photos',
   'Amenities',
+  'Photos',
+  'Stay details',
   'Pricing',
   'Verification',
 ]
+const AMENITIES_STEP = 1
+const STAY_DETAILS_STEP = 3
 
 const minimumPhotoCount = 5
 const maxListingPhotoCount = 20
@@ -841,6 +845,7 @@ const AGENCY_AGREEMENT_STORAGE_KEY = 'jlm.agencyAgreementAccepted'
 export default function BecomeAHostPage() {
   const [step, setStep] = useState(0)
   const [form, setForm] = useState<FormState>(initialForm)
+  const [labellingPreviews, setLabellingPreviews] = useState<string[]>([])
   // Bedrooms / Sleeps follow the sleeping setup until the host types in them.
   const [roomNumbersTyped, setRoomNumbersTyped] = useState({ bedrooms: false, sleeps: false })
   const [sameWhatsapp, setSameWhatsapp] = useState(true)
@@ -873,7 +878,6 @@ export default function BecomeAHostPage() {
     title: string
     description: string
   } | null>(null)
-  const [draggingPhotoIndex, setDraggingPhotoIndex] = useState<number | null>(null)
   const [isPhotoDropActive, setIsPhotoDropActive] = useState(false)
   const [photoUploadError, setPhotoUploadError] = useState('')
   const [idDocError, setIdDocError] = useState('')
@@ -887,7 +891,6 @@ export default function BecomeAHostPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restoredDraft])
-  const photoSwipeStartRef = useRef<{ index: number; x: number; pointerId: number } | null>(null)
   // F4: reuse the created application + resume photo uploads on retry, so a
   // failed-then-retried submit can't create duplicate applications/photos.
   const submittedApplicationIdRef = useRef<string | null>(null)
@@ -1119,14 +1122,10 @@ export default function BecomeAHostPage() {
     })
   }
 
-  function reorderPhotos(fromIndex: number, toIndex: number) {
-    if (fromIndex === toIndex) return
-
-    const nextPhotos = [...form.photos]
-    const [photo] = nextPhotos.splice(fromIndex, 1)
-    nextPhotos.splice(toIndex, 0, photo)
-    updateField('photos', nextPhotos)
-  }
+  const photoSort = useDragSort({
+    onMove: (fromIndex, toIndex) =>
+      setForm((current) => ({ ...current, photos: moveItem(current.photos, fromIndex, toIndex) })),
+  })
 
   function addPhotoFiles(files: File[]) {
     setPhotoUploadError('')
@@ -1173,10 +1172,29 @@ export default function BecomeAHostPage() {
 
     if (nextPhotos.length > 0) {
       updateField('photos', [...form.photos, ...nextPhotos])
+      void autoLabelPhotos(nextPhotos)
     }
 
     if (messages.length > 0) {
       setPhotoUploadError(messages.join(' '))
+    }
+  }
+
+  // Suggest a label for each new photo. The host can change it, and a label
+  // they type before the suggestion arrives is never overwritten.
+  async function autoLabelPhotos(targets: PhotoUpload[]) {
+    for (const photo of targets) {
+      setLabellingPreviews((previews) => [...previews, photo.preview])
+      const data = await shrinkImageForLabel(photo.file)
+      const label = data ? await requestPhotoLabel({ data }) : null
+      setLabellingPreviews((previews) => previews.filter((preview) => preview !== photo.preview))
+      if (!label) continue
+      setForm((current) => ({
+        ...current,
+        photos: current.photos.map((item) =>
+          item.preview === photo.preview && !item.label.trim() ? { ...item, label } : item,
+        ),
+      }))
     }
   }
 
@@ -1218,78 +1236,6 @@ export default function BecomeAHostPage() {
       type: file.type,
     })
     event.target.value = ''
-  }
-
-  function dropPhoto(targetIndex: number) {
-    if (draggingPhotoIndex === null) return
-    reorderPhotos(draggingPhotoIndex, targetIndex)
-    setDraggingPhotoIndex(null)
-  }
-
-  function dragPhotoOver(targetIndex: number) {
-    if (draggingPhotoIndex === null || draggingPhotoIndex === targetIndex) return
-    reorderPhotos(draggingPhotoIndex, targetIndex)
-    setDraggingPhotoIndex(targetIndex)
-  }
-
-  function startPhotoSwipe(index: number, event: PointerEvent<HTMLDivElement>) {
-    if (event.target instanceof HTMLElement && event.target.closest('input,button,textarea,select,a')) {
-      return
-    }
-
-    photoSwipeStartRef.current = {
-      index,
-      x: event.clientX,
-      pointerId: event.pointerId,
-    }
-    setDraggingPhotoIndex(index)
-    event.currentTarget.setPointerCapture(event.pointerId)
-  }
-
-  function movePhotoWithPointer(event: PointerEvent<HTMLDivElement>) {
-    const start = photoSwipeStartRef.current
-
-    if (!start || start.pointerId !== event.pointerId) return
-
-    const targetElement = document.elementFromPoint(event.clientX, event.clientY)
-    const photoElement = targetElement instanceof HTMLElement
-      ? targetElement.closest('[data-photo-index]')
-      : null
-    const photoIndexValue = photoElement?.getAttribute('data-photo-index')
-    const targetIndex = photoIndexValue ? Number(photoIndexValue) : Number.NaN
-
-    if (!Number.isInteger(targetIndex) || targetIndex < 0 || targetIndex >= form.photos.length) {
-      return
-    }
-
-    if (targetIndex === start.index) return
-
-    reorderPhotos(start.index, targetIndex)
-    photoSwipeStartRef.current = {
-      ...start,
-      index: targetIndex,
-      x: event.clientX,
-    }
-    setDraggingPhotoIndex(targetIndex)
-  }
-
-  function finishPhotoSwipe(index: number, event: PointerEvent<HTMLDivElement>) {
-    const start = photoSwipeStartRef.current
-    photoSwipeStartRef.current = null
-    setDraggingPhotoIndex(null)
-
-    if (!start || start.index !== index || start.pointerId !== event.pointerId) return
-
-    const deltaX = event.clientX - start.x
-
-    if (Math.abs(deltaX) < 45) return
-
-    const direction = deltaX < 0 ? 1 : -1
-    const targetIndex = index + direction
-
-    if (targetIndex < 0 || targetIndex >= form.photos.length) return
-
-    reorderPhotos(index, targetIndex)
   }
 
   function updatePhotoLabel(index: number, label: string) {
@@ -1444,7 +1390,7 @@ export default function BecomeAHostPage() {
     }
 
     // Step 1 — Stay details (name, description, location, guests & rooms)
-    if (stepIndex === 1) {
+    if (stepIndex === STAY_DETAILS_STEP) {
       if (!form.apartment_title.trim()) {
         issues.push('Add a name for the stay.')
       }
@@ -1477,7 +1423,7 @@ export default function BecomeAHostPage() {
     }
 
     // Step 3 — Amenities
-    if (stepIndex === 3 && form.amenities.length === 0) {
+    if (stepIndex === AMENITIES_STEP && form.amenities.length === 0) {
       issues.push('Select at least one amenity.')
     }
 
@@ -2201,77 +2147,12 @@ async function handleSubmit() {
               </StepShell>
             )}
 
-              {step === 1 && (
+              {step === STAY_DETAILS_STEP && (
                 <StepShell
                   eyebrow="Stay details"
-                  title="Start with the basics"
-                  description="Add a clear name and description for the stay."
+                  title="Tell us about the home"
+                  description="Where it is, the rooms and beds, then a name and description."
                 >
-                  <div className="mb-6">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                      <p className="text-sm text-stone-600">
-                        Write it in your own words. You can polish it with AI after choosing amenities.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={translateToEnglish}
-                        disabled={translateLoading}
-                        className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-bold text-stone-800 transition hover:border-stone-500 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {translateLoading ? 'Translating...' : 'Translate Hebrew → English'}
-                      </button>
-                    </div>
-
-                    {translateError && (
-                      <p className="mt-4 text-sm text-red-600">{translateError}</p>
-                    )}
-
-                    {translateResult && (
-                      <div className="mt-5 rounded-2xl bg-white p-4 ring-1 ring-stone-200">
-                        <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
-                          English translation
-                        </p>
-                        <h3 className="mt-3 text-lg font-bold text-stone-950" dir="auto">
-                          {translateResult.title}
-                        </h3>
-                        <p className="mt-3 whitespace-pre-line text-sm leading-6 text-stone-700" dir="auto">
-                          {translateResult.description}
-                        </p>
-                        <button
-                          type="button"
-                          onClick={applyTranslation}
-                          className="mt-5 rounded-full border border-stone-300 px-4 py-2 text-sm font-bold text-stone-800 transition hover:border-stone-500"
-                        >
-                          Use this English
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  <Field label="Give your stay a name" required>
-                  <input
-                    value={form.apartment_title}
-                    onChange={(e) =>
-                      updateField('apartment_title', e.target.value)
-                    }
-                    type="text"
-                    dir="auto"
-                    placeholder="Example: Rechavia family apartment"
-                    className={inputClass}
-                  />
-                </Field>
-
-                <Field label="Tell guests what makes this stay useful">
-                  <textarea
-                    value={form.description}
-                    onChange={(e) => updateField('description', e.target.value)}
-                    rows={6}
-                    dir="auto"
-                    placeholder="Example: Bright 3-bedroom apartment, close to shuls, suitable for families, elevator building..."
-                    className={inputClass}
-                  />
-                </Field>
-
                 <div className="mt-8 border-t border-stone-100 pt-8">
                   <h3 className="text-sm font-bold uppercase tracking-widest text-stone-500">
                     Location
@@ -2383,6 +2264,124 @@ async function handleSubmit() {
                     Bedrooms and Sleeps fill in from your rooms. You can change them, e.g. to allow fewer guests than the beds fit.
                   </p>
                 </div>
+                <div className="mt-8 border-t border-stone-100 pt-8">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold uppercase tracking-widest text-stone-500">
+                        Name &amp; description
+                      </h3>
+                      <p className="mt-1 text-xs text-stone-500">
+                        Write a few lines in your own words. Improve with AI tidies them using your rooms and amenities, and never adds anything new.
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={translateToEnglish}
+                      disabled={translateLoading}
+                      className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-bold text-stone-800 transition hover:border-stone-500 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {translateLoading ? 'Translating...' : 'Translate Hebrew → English'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={generateListingCopy}
+                      disabled={aiLoading || !form.description.trim()}
+                      className="shrink-0 rounded-full bg-[#252525] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#111111] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {aiLoading ? 'Improving...' : 'Improve with AI'}
+                    </button>
+                    </div>
+                  </div>
+
+                  {!form.description.trim() && (
+                    <p className="mt-3 text-xs text-stone-500">
+                      Write a few lines below first, then Improve with AI can tidy them up.
+                    </p>
+                  )}
+
+                    {translateError && (
+                    <p className="mt-4 text-sm text-red-600">{translateError}</p>
+                  )}
+
+                  {translateResult && (
+                    <div className="mt-5 rounded-2xl bg-white p-4 ring-1 ring-stone-200">
+                      <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
+                        English translation
+                      </p>
+                      <h3 className="mt-3 text-lg font-bold text-stone-950" dir="auto">
+                        {translateResult.title}
+                      </h3>
+                      <p className="mt-3 whitespace-pre-line text-sm leading-6 text-stone-700" dir="auto">
+                        {translateResult.description}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={applyTranslation}
+                        className="mt-5 rounded-full border border-stone-300 px-4 py-2 text-sm font-bold text-stone-800 transition hover:border-stone-500"
+                      >
+                        Use this English
+                      </button>
+                    </div>
+                  )}
+                  {aiError && (
+                    <p className="mt-4 text-sm text-red-600">{aiError}</p>
+                  )}
+
+                  {aiSuggestion && (
+                    <div className="mt-5 rounded-2xl bg-white p-4 ring-1 ring-stone-200">
+                      <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
+                        Suggested copy
+                      </p>
+                      <h3 className="mt-3 text-lg font-bold text-stone-950">
+                        {aiSuggestion.title}
+                      </h3>
+                      <p className="mt-3 whitespace-pre-line text-sm leading-6 text-stone-700">
+                        {aiSuggestion.description}
+                      </p>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {aiSuggestion.highlights?.map((highlight) => (
+                          <span
+                            key={highlight}
+                            className="rounded-full bg-stone-100 px-3 py-1.5 text-xs font-semibold text-stone-700"
+                          >
+                            {highlight}
+                          </span>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={applyAiSuggestion}
+                        className="mt-5 rounded-full border border-stone-300 px-4 py-2 text-sm font-bold text-stone-800 transition hover:border-stone-500"
+                      >
+                        Use this wording
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="mt-5 grid gap-5">
+                    <Field label="Give your stay a name" required>
+                      <input
+                        value={form.apartment_title}
+                        onChange={(e) => updateField('apartment_title', e.target.value)}
+                        type="text"
+                        dir="auto"
+                        placeholder="Example: Rechavia family apartment"
+                        className={inputClass}
+                      />
+                    </Field>
+                    <Field label="Tell guests what makes this stay useful">
+                      <textarea
+                        value={form.description}
+                        onChange={(e) => updateField('description', e.target.value)}
+                        rows={6}
+                        dir="auto"
+                        placeholder="A few lines in your own words, e.g. bright, close to shuls, good for families"
+                        className={inputClass}
+                      />
+                    </Field>
+                  </div>
+                </div>
               </StepShell>
             )}
 
@@ -2436,7 +2435,7 @@ async function handleSubmit() {
               </StepShell>
             )}
 
-            {step === 3 && (
+            {step === AMENITIES_STEP && (
               <StepShell
                 eyebrow="Amenities"
                 title="What does the stay include?"
@@ -2515,88 +2514,6 @@ async function handleSubmit() {
                   </div>
                 </div>
 
-                <div className="mt-8 border-t border-stone-100 pt-8">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <h3 className="text-sm font-bold uppercase tracking-widest text-stone-500">
-                        Polish your description
-                      </h3>
-                      <p className="mt-1 text-xs text-stone-500">
-                        AI rewrites what you wrote, using the amenities above. It does not add anything new.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={generateListingCopy}
-                      disabled={aiLoading || !form.description.trim()}
-                      className="shrink-0 rounded-full bg-[#252525] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#111111] disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {aiLoading ? 'Improving...' : 'Improve with AI'}
-                    </button>
-                  </div>
-
-                  {!form.description.trim() && (
-                    <p className="mt-3 text-xs text-stone-500">
-                      Add a description in Stay details first.
-                    </p>
-                  )}
-
-                  {aiError && (
-                    <p className="mt-4 text-sm text-red-600">{aiError}</p>
-                  )}
-
-                  {aiSuggestion && (
-                    <div className="mt-5 rounded-2xl bg-white p-4 ring-1 ring-stone-200">
-                      <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
-                        Suggested copy
-                      </p>
-                      <h3 className="mt-3 text-lg font-bold text-stone-950">
-                        {aiSuggestion.title}
-                      </h3>
-                      <p className="mt-3 whitespace-pre-line text-sm leading-6 text-stone-700">
-                        {aiSuggestion.description}
-                      </p>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {aiSuggestion.highlights?.map((highlight) => (
-                          <span
-                            key={highlight}
-                            className="rounded-full bg-stone-100 px-3 py-1.5 text-xs font-semibold text-stone-700"
-                          >
-                            {highlight}
-                          </span>
-                        ))}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={applyAiSuggestion}
-                        className="mt-5 rounded-full border border-stone-300 px-4 py-2 text-sm font-bold text-stone-800 transition hover:border-stone-500"
-                      >
-                        Use this wording
-                      </button>
-                    </div>
-                  )}
-
-                  <div className="mt-5 grid gap-5">
-                    <Field label="Stay name">
-                      <input
-                        value={form.apartment_title}
-                        onChange={(e) => updateField('apartment_title', e.target.value)}
-                        type="text"
-                        dir="auto"
-                        className={inputClass}
-                      />
-                    </Field>
-                    <Field label="Description">
-                      <textarea
-                        value={form.description}
-                        onChange={(e) => updateField('description', e.target.value)}
-                        rows={6}
-                        dir="auto"
-                        className={inputClass}
-                      />
-                    </Field>
-                  </div>
-                </div>
               </StepShell>
             )}
 
@@ -2657,34 +2574,35 @@ async function handleSubmit() {
                     {form.photos.length > 0 && (
                       <div>
                         <p className="mb-3 text-xs font-semibold text-stone-500">
-                          Drag photos to reorder them. On touch screens, press and drag. Move a photo into the first position to make it the cover.
+                          Drag photos to reorder them. On a phone, drag the dotted handle. The first photo is the cover.
                         </p>
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
                           {form.photos.map((photo, index) => (
                             <div
-                              key={`${photo.preview}-${index}`}
-                              data-photo-index={index}
-                              draggable
-                              onDragStart={() => setDraggingPhotoIndex(index)}
-                              onDragOver={(event) => event.preventDefault()}
-                              onDragEnter={() => dragPhotoOver(index)}
-                              onDrop={() => dropPhoto(index)}
-                              onDragEnd={() => setDraggingPhotoIndex(null)}
-                              onPointerDown={(event) => startPhotoSwipe(index, event)}
-                              onPointerMove={movePhotoWithPointer}
-                              onPointerUp={(event) => finishPhotoSwipe(index, event)}
-                              onPointerCancel={() => {
-                                photoSwipeStartRef.current = null
-                                setDraggingPhotoIndex(null)
-                              }}
-                              className={`touch-pan-y cursor-grab overflow-hidden rounded-xl bg-stone-100 active:cursor-grabbing ${draggingPhotoIndex === index ? 'opacity-60' : ''}`}
+                              key={photo.preview}
+                              {...photoSort.itemProps(index)}
+                              className={`cursor-grab overflow-hidden rounded-xl bg-stone-100 transition-shadow active:cursor-grabbing ${
+                                photoSort.draggingIndex === index ? 'opacity-60 shadow-lg ring-2 ring-[#c76f55]' : ''
+                              }`}
                             >
                             <div className="group relative aspect-square">
                               <img
                                 src={photo.preview}
                                 alt={photo.label || `Upload ${index + 1}`}
+                                draggable={false}
                                 className="h-full w-full object-cover"
                               />
+                              <button
+                                type="button"
+                                {...photoSort.handleProps(index)}
+                                className="absolute bottom-2 left-2 flex h-9 w-9 cursor-grab items-center justify-center rounded-full bg-white/90 text-stone-700 shadow-sm"
+                              >
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                  <circle cx="5.5" cy="3.5" r="1.4" /><circle cx="10.5" cy="3.5" r="1.4" />
+                                  <circle cx="5.5" cy="8" r="1.4" /><circle cx="10.5" cy="8" r="1.4" />
+                                  <circle cx="5.5" cy="12.5" r="1.4" /><circle cx="10.5" cy="12.5" r="1.4" />
+                                </svg>
+                              </button>
                               {index === 0 && (
                                 <span className="absolute left-2 top-2 rounded-full bg-[#c76f55] px-2 py-0.5 text-xs font-bold text-white">
                                   Cover
@@ -2697,7 +2615,8 @@ async function handleSubmit() {
                                   setPhotoUploadError('')
                                   updateField('photos', form.photos.filter((_, i) => i !== index))
                                 }}
-                                className="absolute right-2 top-2 rounded-full bg-white/90 p-1.5 text-stone-600 opacity-0 shadow-sm transition hover:bg-white hover:text-red-600 group-hover:opacity-100"
+                                aria-label="Remove photo"
+                                className="absolute right-2 top-2 rounded-full bg-white/90 p-1.5 text-stone-600 shadow-sm transition hover:bg-white hover:text-red-600 md:opacity-0 md:group-hover:opacity-100"
                               >
                                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -2708,7 +2627,7 @@ async function handleSubmit() {
                               <input
                                 value={photo.label}
                                 onChange={(event) => updatePhotoLabel(index, event.target.value)}
-                                placeholder="Photo label, e.g. Bedroom 1"
+                                placeholder={labellingPreviews.includes(photo.preview) ? 'Labelling…' : 'Photo label, e.g. Bedroom 1'}
                                 className="w-full rounded-xl border border-stone-200 px-3 py-2 text-xs text-stone-900 outline-none transition placeholder:text-stone-500 focus:border-[#c76f55]"
                               />
                             </div>

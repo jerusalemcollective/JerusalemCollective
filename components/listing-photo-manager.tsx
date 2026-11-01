@@ -1,6 +1,8 @@
 'use client'
 
-import { useRef, useState, useTransition, type PointerEvent } from 'react'
+import { useRef, useState, useTransition } from 'react'
+import { useDragSort, moveItem } from '@/components/use-drag-sort'
+import { requestPhotoLabel } from '@/lib/photo-labels'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
@@ -57,9 +59,8 @@ export function ListingPhotoManager({
   const [message, setMessage] = useState('')
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null)
   const [isPending, startTransition] = useTransition()
-  const [draggingPhotoIndex, setDraggingPhotoIndex] = useState<number | null>(null)
   const [removingPhotoId, setRemovingPhotoId] = useState<string | null>(null)
-  const photoSwipeStartRef = useRef<{ index: number; x: number; pointerId: number } | null>(null)
+  const [labellingIds, setLabellingIds] = useState<string[]>([])
   const supabase = createClient()
 
   async function handleUpload(files: FileList | null) {
@@ -67,6 +68,7 @@ export function ListingPhotoManager({
 
     setMessage('')
     let nextSortOrder = photos.length
+    const uploaded: ListingPhoto[] = []
     const fileList = Array.from(files)
     let processed = 0
     setUploadProgress({ done: 0, total: fileList.length })
@@ -125,6 +127,7 @@ export function ListingPhotoManager({
 
         if (insertedPhoto) {
           setPhotos((current) => [...current, insertedPhoto as ListingPhoto])
+          uploaded.push(insertedPhoto as ListingPhoto)
           nextSortOrder += 1
         }
       }
@@ -134,6 +137,22 @@ export function ListingPhotoManager({
 
     if (inputRef.current) inputRef.current.value = ''
     startTransition(() => router.refresh())
+    void autoLabel(uploaded)
+  }
+
+  // Suggest a label for each photo that has none. Hosts can change it; a photo
+  // they have labelled meanwhile is left alone.
+  async function autoLabel(targets: ListingPhoto[]) {
+    const unlabelled = targets.filter((photo) => !photo.label?.trim())
+    for (const photo of unlabelled) {
+      setLabellingIds((ids) => [...ids, photo.id])
+      const label = await requestPhotoLabel({ url: photo.photo_url })
+      setLabellingIds((ids) => ids.filter((id) => id !== photo.id))
+      const current = photosRef.current.find((item) => item.id === photo.id)
+      if (label && current && !current.label?.trim()) {
+        await updatePhotoLabel(photo.id, label)
+      }
+    }
   }
 
   async function persistPhotoOrder(nextPhotos: ListingPhoto[]) {
@@ -157,56 +176,20 @@ export function ListingPhotoManager({
     startTransition(() => router.refresh())
   }
 
-  async function reorderPhotos(fromIndex: number, toIndex: number) {
-    if (fromIndex === toIndex) return
-
-    const nextPhotos = [...photos]
-    const [photo] = nextPhotos.splice(fromIndex, 1)
-    nextPhotos.splice(toIndex, 0, photo)
-    await persistPhotoOrder(nextPhotos.map((item, itemIndex) => ({
-      ...item,
-      sort_order: itemIndex,
-      is_cover: itemIndex === 0,
-    })))
-  }
-
-  async function dropPhoto(targetIndex: number) {
-    if (draggingPhotoIndex === null) return
-    await reorderPhotos(draggingPhotoIndex, targetIndex)
-    setDraggingPhotoIndex(null)
-  }
-
-  function startPhotoSwipe(index: number, event: PointerEvent<HTMLDivElement>) {
-    // Never start a swipe from a button or text field: capturing the pointer on
-    // the card would swallow the click (e.g. the Remove button with a mouse).
-    const target = event.target as HTMLElement | null
-    if (target?.closest('button, input, textarea, select, a, label')) return
-
-    photoSwipeStartRef.current = {
-      index,
-      x: event.clientX,
-      pointerId: event.pointerId,
-    }
-    event.currentTarget.setPointerCapture(event.pointerId)
-  }
-
-  async function finishPhotoSwipe(index: number, event: PointerEvent<HTMLDivElement>) {
-    const start = photoSwipeStartRef.current
-    photoSwipeStartRef.current = null
-
-    if (!start || start.index !== index || start.pointerId !== event.pointerId) return
-
-    const deltaX = event.clientX - start.x
-
-    if (Math.abs(deltaX) < 45) return
-
-    const direction = deltaX < 0 ? 1 : -1
-    const targetIndex = index + direction
-
-    if (targetIndex < 0 || targetIndex >= photos.length) return
-
-    await reorderPhotos(index, targetIndex)
-  }
+  // Reorder live while dragging; save the final order once, on drop.
+  const photosRef = useRef(photos)
+  photosRef.current = photos
+  const photoSort = useDragSort({
+    onMove: (fromIndex, toIndex) => setPhotos((current) => moveItem(current, fromIndex, toIndex)),
+    onDrop: () =>
+      void persistPhotoOrder(
+        photosRef.current.map((item, itemIndex) => ({
+          ...item,
+          sort_order: itemIndex,
+          is_cover: itemIndex === 0,
+        })),
+      ),
+  })
 
   async function updatePhotoLabel(photoId: string, label: string) {
     setMessage('')
@@ -297,26 +280,40 @@ export function ListingPhotoManager({
       {photos.length > 0 && (
         <div className="mt-5">
           <p className="mb-3 text-xs font-semibold text-stone-500">
-            Drag a photo to the front to make it your cover — it&rsquo;s the photo shown on your listing card.
+            Drag photos to reorder them (on a phone, use the dotted handle). The first photo is your cover, shown on your listing card.
           </p>
+          {photos.some((photo) => !photo.label?.trim()) && (
+            <button
+              type="button"
+              onClick={() => void autoLabel(photos)}
+              disabled={labellingIds.length > 0}
+              className="mb-3 rounded-full border border-stone-300 bg-white px-4 py-2 text-xs font-bold text-stone-800 transition hover:border-stone-500 disabled:opacity-60"
+            >
+              {labellingIds.length > 0 ? 'Labelling photos…' : 'Label photos without a label'}
+            </button>
+          )}
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {photos.map((photo, index) => (
               <div
                 key={photo.id}
-                draggable
-                onDragStart={() => setDraggingPhotoIndex(index)}
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={() => void dropPhoto(index)}
-                onDragEnd={() => setDraggingPhotoIndex(null)}
-                onPointerDown={(event) => startPhotoSwipe(index, event)}
-                onPointerUp={(event) => void finishPhotoSwipe(index, event)}
-                onPointerCancel={() => {
-                  photoSwipeStartRef.current = null
-                }}
-                className={`touch-pan-y cursor-grab overflow-hidden rounded-2xl bg-[#F8F5F2] active:cursor-grabbing ${draggingPhotoIndex === index ? 'opacity-60' : ''}`}
+                {...photoSort.itemProps(index)}
+                className={`cursor-grab overflow-hidden rounded-2xl bg-[#F8F5F2] transition-shadow active:cursor-grabbing ${
+                  photoSort.draggingIndex === index ? 'opacity-60 shadow-lg ring-2 ring-[#c76f55]' : ''
+                }`}
               >
               <div className="group relative">
-                <img src={photo.photo_url} alt={photo.label || 'Listing photo'} className="aspect-[4/3] w-full object-cover" />
+                <img src={photo.photo_url} alt={photo.label || 'Listing photo'} draggable={false} className="aspect-[4/3] w-full object-cover" />
+                <button
+                  type="button"
+                  {...photoSort.handleProps(index)}
+                  className="absolute bottom-3 right-3 flex h-9 w-9 cursor-grab items-center justify-center rounded-full bg-white/90 text-stone-700 shadow-sm"
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                    <circle cx="5.5" cy="3.5" r="1.4" /><circle cx="10.5" cy="3.5" r="1.4" />
+                    <circle cx="5.5" cy="8" r="1.4" /><circle cx="10.5" cy="8" r="1.4" />
+                    <circle cx="5.5" cy="12.5" r="1.4" /><circle cx="10.5" cy="12.5" r="1.4" />
+                  </svg>
+                </button>
                 <button
                   type="button"
                   onClick={() => void removePhoto(photo)}
@@ -337,9 +334,13 @@ export function ListingPhotoManager({
               </div>
               <div className="space-y-2 p-3">
                 <input
-                  defaultValue={photo.label || ''}
+                  value={photo.label || ''}
+                  onChange={(event) => {
+                    const label = event.target.value
+                    setPhotos((current) => current.map((item) => (item.id === photo.id ? { ...item, label } : item)))
+                  }}
                   onBlur={(event) => void updatePhotoLabel(photo.id, event.target.value)}
-                  placeholder="Photo label, e.g. Bedroom 1"
+                  placeholder={labellingIds.includes(photo.id) ? 'Labelling…' : 'Photo label, e.g. Bedroom 1'}
                   className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs text-stone-900 outline-none transition placeholder:text-stone-500 focus:border-[#c76f55]"
                 />
               </div>
