@@ -11,8 +11,9 @@ import { StaysMapView } from '@/components/stays-map-view'
 import { StaysNeighborhoodNav } from '@/components/stays-neighborhood-nav'
 import { RecentlyViewed } from '@/components/recently-viewed'
 import { Pagination, normalizePaginationSearchParams } from '@/components/pagination'
-import { getListingRatings, type ListingRating } from '@/lib/reviews'
-import { ListingCard } from '@/components/listing-card'
+import { getListingCardExtras, toListingCardData } from '@/lib/listing-cards'
+import { getLiveNeighborhoods, pickFeaturedAreas } from '@/lib/live-areas'
+import { ListingCard, LISTING_GRID_CLASS } from '@/components/listing-card'
 
 const STAYS_PAGE_SIZE = 24
 
@@ -37,7 +38,6 @@ export const metadata = {
 
 export const revalidate = 1800
 
-const neighborhoods = ['All', ...allNeighborhoods]
 const defaultFeaturedNeighborhoods = ['Romema', 'Ramat Eshkol', 'Rechavia']
 
 type SearchParams = Record<string, string>
@@ -118,7 +118,7 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
   const maxPrice = parsePositiveNumber(params.maxPrice)
   const amenityLabels = parseAmenityLabels(params.amenities)
   const page = Math.max(1, Number(params.page) || 1)
-  const [listingsResult, totalPublished] = await Promise.all([
+  const [listingsResult, totalPublished, liveNeighborhoods] = await Promise.all([
     loadListings({
       selectedArea,
       checkIn,
@@ -139,9 +139,15 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
       page: view === 'list' ? page : undefined,
     }),
     loadPublishedCount(),
+    loadLiveNeighborhoods(),
   ])
   // Reuse the published count instead of re-running the identical COUNT query.
-  const featuredNeighborhoods = await loadFeaturedNeighborhoods(totalPublished)
+  // Only areas with at least one published stay get a chip or a menu entry.
+  const featuredNeighborhoods = pickFeaturedAreas(
+    await loadFeaturedNeighborhoods(totalPublished),
+    liveNeighborhoods,
+    3,
+  )
   const listings = listingsResult.listings
   const totalMatching = listingsResult.total
   const totalPages = Math.max(1, Math.ceil(totalMatching / STAYS_PAGE_SIZE))
@@ -179,7 +185,7 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
 
       <div className="mx-auto max-w-7xl px-4 pt-4 pb-4 sm:px-6">
         <StaysNeighborhoodNav
-          neighborhoods={neighborhoods}
+          neighborhoods={['All', ...liveNeighborhoods]}
           featuredNeighborhoods={featuredNeighborhoods}
           selectedArea={selectedArea}
           baseQuery={params}
@@ -256,25 +262,9 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
             )
           ) : (
             <>
-              <div className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              <div className={LISTING_GRID_CLASS}>
                 {listings.map((listing, index) => (
-                  <ListingCard
-                    key={listing.id}
-                    priority={index < 4}
-                    listing={{
-                      id: listing.id,
-                      title: listing.title,
-                      area: listing.area,
-                      bedrooms: listing.bedrooms,
-                      max_guests: listing.max_guests,
-                      coverPhotoUrl: listing.cover_photo_url ?? null,
-                      rating: listing.rating,
-                      priceLabel: formatDualCurrencyPrice(listing),
-                      priceUsd: listing.price_usd,
-                      priceIls: listing.price_ils,
-                      hasPrice: Boolean(listing.price_ils || listing.price_usd),
-                    }}
-                  />
+                  <ListingCard key={listing.id} priority={index < 4} listing={listing.card} />
                 ))}
               </div>
               {totalPages > 1 && (
@@ -325,6 +315,14 @@ async function loadPublishedCount() {
     return count || 0
   } catch {
     return 0
+  }
+}
+
+async function loadLiveNeighborhoods() {
+  try {
+    return await getLiveNeighborhoods(createPublicClient())
+  } catch {
+    return allNeighborhoods
   }
 }
 
@@ -495,14 +493,17 @@ async function loadListings({
 
   const { data: listingsData, count } = await listingsQuery
   const listingRows = z.array(listingSchema).parse(listingsData ?? [])
-  const listingIds = listingRows.map((listing) => listing.id)
-  const ratings = await getListingRatings(supabase, listingIds)
+  // The map view only needs markers, so card photos and ratings load for the
+  // paginated list view alone.
+  const extras = typeof page === 'number'
+    ? await getListingCardExtras(supabase, listingRows.map((listing) => listing.id))
+    : { photos: new Map<string, string[]>(), ratings: new Map() }
 
   return {
     listings: listingRows.map((listing) => ({
       ...listing,
       cover_photo_url: listing.cover_photo_url ?? null,
-      rating: ratings.get(listing.id) ?? null,
+      card: toListingCardData(listing, extras),
     })),
     total: count ?? listingRows.length,
   }

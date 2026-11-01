@@ -1,9 +1,16 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { neighborhoodDescriptions, slugifyNeighborhood } from '@/lib/neighborhood-pages'
+import {
+  findNeighborhoodBySlug,
+  neighborhoodDescriptions,
+  slugifyNeighborhood,
+} from '@/lib/neighborhood-pages'
 import { ogImages, ogTwitterImages } from '@/lib/og'
+import { createPublicClient } from '@/lib/supabase/public'
+import { getLiveAreaSet } from '@/lib/live-areas'
 
-export const revalidate = 86400
+// Hourly so a neighbourhood appears soon after its first stay is published.
+export const revalidate = 3600
 
 export const metadata: Metadata = {
   title: 'Jerusalem Neighbourhoods for Short-Term Stays',
@@ -25,7 +32,19 @@ function firstSentence(text: string): string {
   return match ? match[0] : text
 }
 
-export default function NeighbourhoodsIndexPage() {
+async function loadLiveAreaSet() {
+  try {
+    return await getLiveAreaSet(createPublicClient())
+  } catch {
+    return null
+  }
+}
+
+export default async function NeighbourhoodsIndexPage() {
+  // Only neighbourhoods with at least one published stay; every one if the read
+  // fails. Match on the area name the neighbourhood page itself queries, so an
+  // alternate spelling (e.g. "Talbieh") counts its canonical area's listings.
+  const liveAreas = await loadLiveAreaSet()
   const seen = new Set<string>()
   const neighbourhoods = Object.entries(neighborhoodDescriptions)
     .filter(([, description]) => {
@@ -38,6 +57,11 @@ export default function NeighbourhoodsIndexPage() {
       slug: slugifyNeighborhood(name),
       teaser: firstSentence(description),
     }))
+    .filter((neighbourhood) => {
+      if (!liveAreas) return true
+      const pageArea = findNeighborhoodBySlug(neighbourhood.slug) ?? neighbourhood.name
+      return liveAreas.has(pageArea)
+    })
     .sort((a, b) => a.name.localeCompare(b.name))
 
   return (
@@ -60,23 +84,39 @@ export default function NeighbourhoodsIndexPage() {
           distance to the Kotel, and its pace of life. Explore them below to find the right base for your stay.
         </p>
 
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {neighbourhoods.map((neighbourhood) => (
+        {neighbourhoods.length === 0 ? (
+          <div className="mt-10 rounded-3xl bg-[#F8F5F2] p-8 text-center">
+            <p className="font-heading text-lg font-semibold text-stone-950">No neighbourhoods have stays yet</p>
+            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-stone-600">
+              We&apos;re curating our first Jerusalem stays. Check back soon, or send an enquiry and our
+              local team will help you find the right place.
+            </p>
             <Link
-              key={neighbourhood.slug}
-              href={`/neighbourhoods/${neighbourhood.slug}`}
-              className="group rounded-2xl border border-stone-200 bg-white p-5 transition hover:border-[#c76f55] hover:shadow-sm"
+              href="/stays"
+              className="mt-5 inline-flex rounded-full bg-[#252525] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#111111]"
             >
-              <p className="font-display text-lg font-bold text-stone-950 transition group-hover:text-[#c76f55]">
-                {neighbourhood.name}
-              </p>
-              <p className="mt-2 line-clamp-3 text-sm leading-6 text-stone-600">{neighbourhood.teaser}</p>
-              <span className="mt-3 inline-flex text-sm font-semibold text-[#c76f55]">
-                View stays {'→'}
-              </span>
+              Browse all stays
             </Link>
-          ))}
-        </div>
+          </div>
+        ) : (
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {neighbourhoods.map((neighbourhood) => (
+              <Link
+                key={neighbourhood.slug}
+                href={`/neighbourhoods/${neighbourhood.slug}`}
+                className="group rounded-2xl border border-stone-200 bg-white p-5 transition hover:border-[#c76f55] hover:shadow-sm"
+              >
+                <p className="font-display text-lg font-bold text-stone-950 transition group-hover:text-[#c76f55]">
+                  {neighbourhood.name}
+                </p>
+                <p className="mt-2 line-clamp-3 text-sm leading-6 text-stone-600">{neighbourhood.teaser}</p>
+                <span className="mt-3 inline-flex text-sm font-semibold text-[#c76f55]">
+                  View stays {'→'}
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
