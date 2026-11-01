@@ -11,8 +11,20 @@ import {
 const inputClass =
   'mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-stone-900 outline-none transition placeholder:text-stone-500 focus:border-[#c76f55]'
 
+// Controlled values (strings, '' = not set) for client forms that keep their own
+// state, such as the become-a-host wizard.
+export type StayTermsDraft = {
+  check_in_time: string
+  check_out_time: string
+  cancellation_policy: string
+  cancellation_policy_notes: string
+}
+
 type StayTermsFieldsProps = {
   terms?: Partial<StayTerms> | null
+  // Controlled mode: pass both. No hidden marker is rendered; the caller saves.
+  value?: StayTermsDraft
+  onChange?: (field: keyof StayTermsDraft, value: string) => void
   // False when the columns don't exist yet (migration 118 not run): renders
   // `unavailableNote` instead of the fields, and no marker, so saving leaves the
   // columns alone.
@@ -28,6 +40,8 @@ type StayTermsFieldsProps = {
 // the server action the fields were shown (see readStayTermsFromForm).
 export function StayTermsFields({
   terms,
+  value,
+  onChange,
   available = true,
   unavailableNote,
   audience = 'host',
@@ -41,7 +55,17 @@ export function StayTermsFields({
     ) : null
   }
 
-  const currentPolicy = terms?.cancellation_policy || ''
+  const controlled = Boolean(value && onChange)
+  const currentPolicy = (controlled ? value?.cancellation_policy : terms?.cancellation_policy) || ''
+  // Props for one input: value/onChange when controlled, defaultValue otherwise.
+  const bind = (field: keyof StayTermsDraft, initial: string) =>
+    controlled
+      ? {
+          value: value?.[field] ?? '',
+          onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+            onChange?.(field, event.target.value),
+        }
+      : { defaultValue: initial }
   const agreedLabel = audience === 'admin' ? 'Agreed with the host per booking' : CANCELLATION_AGREED_LABEL
   const agreedExplanation =
     audience === 'admin'
@@ -59,7 +83,7 @@ export function StayTermsFields({
 
   return (
     <div className={className}>
-      <input type="hidden" name={STAY_TERMS_FIELDS.marker} value="1" />
+      {!controlled && <input type="hidden" name={STAY_TERMS_FIELDS.marker} value="1" />}
 
       <h3 className="text-sm font-bold text-stone-950">Check-in and check-out</h3>
       <p className="mt-1 text-sm leading-6 text-stone-600">
@@ -71,7 +95,7 @@ export function StayTermsFields({
           <input
             type="time"
             name={STAY_TERMS_FIELDS.checkIn}
-            defaultValue={toTimeInputValue(terms?.check_in_time)}
+            {...bind('check_in_time', toTimeInputValue(terms?.check_in_time))}
             className={inputClass}
           />
         </label>
@@ -80,7 +104,7 @@ export function StayTermsFields({
           <input
             type="time"
             name={STAY_TERMS_FIELDS.checkOut}
-            defaultValue={toTimeInputValue(terms?.check_out_time)}
+            {...bind('check_out_time', toTimeInputValue(terms?.check_out_time))}
             className={inputClass}
           />
         </label>
@@ -98,7 +122,12 @@ export function StayTermsFields({
                 type="radio"
                 name={STAY_TERMS_FIELDS.policy}
                 value={choice.value}
-                defaultChecked={currentPolicy === choice.value}
+                {...(controlled
+                  ? {
+                      checked: currentPolicy === choice.value,
+                      onChange: () => onChange?.('cancellation_policy', choice.value),
+                    }
+                  : { defaultChecked: currentPolicy === choice.value })}
                 className="mt-1"
               />
               <span>
@@ -116,7 +145,7 @@ export function StayTermsFields({
           name={STAY_TERMS_FIELDS.notes}
           rows={3}
           maxLength={2000}
-          defaultValue={terms?.cancellation_policy_notes || ''}
+          {...bind('cancellation_policy_notes', terms?.cancellation_policy_notes || '')}
           placeholder="e.g. Date changes are free if requested at least 14 days before arrival."
           dir="auto"
           className={`${inputClass} resize-y`}
