@@ -618,7 +618,10 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
       <ListingDetailClient
         listing={{
           ...listing,
+          // Card checkout (/api/book-now) books instantly, so it is only live on
+          // instant-book listings; request listings always go through host accept.
           online_payment_enabled:
+            listing.booking_type === 'instant' &&
             paymentRoutes.jlmPaymentsEnabled &&
             listing.online_payment_enabled &&
             Boolean(paymentProfile?.accepts_jlm_payment) &&
