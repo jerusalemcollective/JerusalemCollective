@@ -9,46 +9,16 @@ import {
 } from 'lucide-react'
 import { createPublicClient } from '@/lib/supabase/public'
 import { allNeighborhoods, defaultExploreNeighborhoods } from '@/lib/neighborhoods'
+import { getLiveNeighborhoods, pickFeaturedAreas } from '@/lib/live-areas'
 import { StaysFilterBar } from '@/components/stays-filter-bar'
 import { StaysNeighborhoodNav } from '@/components/stays-neighborhood-nav'
 import { RecentlyViewed } from '@/components/recently-viewed-home'
-import { getListingRatings, type ListingRating } from '@/lib/reviews'
-import { ListingCard } from '@/components/listing-card'
-import { formatPreferredNightlyPrice } from '@/lib/utils/currency'
+import { HomeFeaturedStays, HomeFeaturedStaysSkeleton } from '@/components/home-featured-stays'
 
 // Public, global content only (featured listings + neighbourhoods; the
 // recently-viewed strip is client-side). Cache it via ISR instead of
 // re-rendering on every visit — see createPublicClient (cookieless) below.
 export const revalidate = 300
-
-type ListingRow = {
-  id: string
-  title: string
-  area: string
-  bedrooms: number | null
-  max_guests: number | null
-  price_ils: number | null
-  price_usd: number | null
-  booking_type: string | null
-  amenities: string[] | null
-  latitude: number | null
-  longitude: number | null
-  is_featured?: boolean | null
-  cover_photo_url: string | null
-}
-
-type FeaturedStay = {
-  id: string
-  title: string
-  area: string
-  bedrooms: number | null
-  max_guests: number | null
-  price_ils: number | null
-  price_usd: number | null
-  is_featured?: boolean | null
-  coverPhotoUrl: string | null
-  rating: ListingRating | null
-}
 
 type PopularNeighborhoodRow = {
   neighborhood: string | null
@@ -82,81 +52,41 @@ export const metadata: Metadata = {
   },
 }
 
-function toFeaturedStay(
-  listing: ListingRow & { cover_photo_url?: string | null; rating?: ListingRating | null },
-): FeaturedStay {
-  return {
-    id: listing.id,
-    title: listing.title,
-    area: listing.area,
-    bedrooms: listing.bedrooms,
-    max_guests: listing.max_guests,
-    price_ils: listing.price_ils,
-    price_usd: listing.price_usd,
-    is_featured: listing.is_featured ?? null,
-    coverPhotoUrl: listing.cover_photo_url || null,
-    rating: listing.rating ?? null,
-  }
-}
-
+// Area chips: only neighbourhoods with at least one published stay. The
+// featured listings themselves stream in via HomeFeaturedStays.
 async function getHomepageData() {
   try {
     const supabase = createPublicClient()
-    const [{ data: listingsData }, { data: neighborhoodsData }] = await Promise.all([
-      supabase
-        .from('listings')
-        .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, amenities, latitude, longitude, is_featured, cover_photo_url')
-        .eq('is_published', true)
-        .eq('is_featured', true)
-        .limit(8),
+    const [{ data: neighborhoodsData }, liveNeighborhoods] = await Promise.all([
       supabase.rpc('popular_neighborhoods', {
         result_limit: 6,
         lookback_days: 30,
       }),
+      getLiveNeighborhoods(supabase),
     ])
 
-    let featuredRows = (listingsData || []) as ListingRow[]
-    if (featuredRows.length === 0) {
-      const { data: fallbackListingsData } = await supabase
-        .from('listings')
-        .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, amenities, latitude, longitude, is_featured, cover_photo_url')
-        .eq('is_published', true)
-        .order('created_at', { ascending: false })
-        .limit(8)
-
-      featuredRows = (fallbackListingsData || []) as ListingRow[]
-    }
-    const featuredIds = featuredRows.map((listing) => listing.id)
-    const ratings = await getListingRatings(supabase, featuredIds)
-    const featuredStays = featuredRows.length
-      ? featuredRows.map((listing) =>
-          toFeaturedStay({
-            ...listing,
-            rating: ratings.get(listing.id) ?? null,
-          }),
-        )
-      : []
-    const liveNeighborhoods = ((neighborhoodsData || []) as PopularNeighborhoodRow[])
+    const popularFromSearches = ((neighborhoodsData || []) as PopularNeighborhoodRow[])
       .map((row) => row.neighborhood)
       .filter((item): item is string => Boolean(item))
-    const popularNeighborhoods = [
-      ...liveNeighborhoods,
-      ...defaultExploreNeighborhoods,
-    ].filter((item, index, items) => items.indexOf(item) === index).slice(0, 6)
+    const popularNeighborhoods = pickFeaturedAreas(
+      [...popularFromSearches, ...defaultExploreNeighborhoods],
+      liveNeighborhoods,
+      4,
+    )
 
-    return { featuredStays, popularNeighborhoods }
+    return { liveNeighborhoods, popularNeighborhoods }
   } catch (error) {
     console.error('Failed to load homepage data', error)
 
     return {
-      featuredStays: [],
-      popularNeighborhoods: defaultExploreNeighborhoods.slice(0, 6),
+      liveNeighborhoods: allNeighborhoods,
+      popularNeighborhoods: defaultExploreNeighborhoods.slice(0, 4),
     }
   }
 }
 
 export default async function JLMCollectiveHomePage() {
-  const { featuredStays, popularNeighborhoods } = await getHomepageData()
+  const { liveNeighborhoods, popularNeighborhoods } = await getHomepageData()
 
   return (
     <div className="min-h-screen bg-[#F8F5F2] text-[#2D2D2D] antialiased">
@@ -195,8 +125,8 @@ export default async function JLMCollectiveHomePage() {
         <section aria-label="Browse by neighbourhood" className="mx-auto max-w-7xl px-6">
           <div className="border-b border-stone-200 pb-6">
             <StaysNeighborhoodNav
-              neighborhoods={['All', ...allNeighborhoods]}
-              featuredNeighborhoods={popularNeighborhoods.slice(0, 4)}
+              neighborhoods={['All', ...liveNeighborhoods]}
+              featuredNeighborhoods={popularNeighborhoods}
               selectedArea="All"
               baseQuery={{}}
             />
@@ -217,36 +147,9 @@ export default async function JLMCollectiveHomePage() {
             </Link>
           </div>
 
-          {featuredStays.length > 0 ? (
-            <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4">
-              {featuredStays.map((stay) => (
-                <ListingCard
-                  key={stay.id}
-                  listing={{
-                    id: stay.id,
-                    title: stay.title,
-                    area: stay.area,
-                    bedrooms: stay.bedrooms,
-                    max_guests: stay.max_guests,
-                    coverPhotoUrl: stay.coverPhotoUrl ?? null,
-                    rating: stay.rating,
-                    priceLabel: formatPreferredNightlyPrice(stay),
-                    priceUsd: stay.price_usd,
-                    priceIls: stay.price_ils,
-                    hasPrice: Boolean(stay.price_ils || stay.price_usd),
-                  }}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-3xl border border-stone-200 bg-white/60 px-6 py-16 text-center">
-              <p className="font-display text-xl font-bold text-stone-950">New stays coming soon</p>
-              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-stone-600">
-                We&apos;re adding beautiful Jerusalem stays. Check back shortly, or send an enquiry
-                and our local team will help you find the right place.
-              </p>
-            </div>
-          )}
+          <Suspense fallback={<HomeFeaturedStaysSkeleton />}>
+            <HomeFeaturedStays />
+          </Suspense>
 
           <div className="pt-10">
             <RecentlyViewed />
