@@ -278,7 +278,7 @@ export function Header({
                   <div role="menu" className="absolute right-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl">
                     {/* User Info */}
                     <div className="border-b border-stone-100 px-4 py-3">
-                      <p className="font-semibold text-stone-900">{user.fullName || 'User'}</p>
+                      <p className="font-semibold text-stone-900">{user.fullName || 'Your account'}</p>
                       <p className="text-sm text-stone-500">{user.email}</p>
                     </div>
 
@@ -302,7 +302,7 @@ export function Header({
                         <svg className="h-4 w-4 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
                         </svg>
-                        My Trips
+                        My trips
                       </Link>
                     </div>
 
@@ -328,7 +328,7 @@ export function Header({
                           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                           </svg>
-                          Become a Host
+                          Become a host
                         </Link>
                       )}
                       <Link

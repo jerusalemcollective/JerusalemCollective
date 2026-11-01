@@ -31,7 +31,7 @@ export async function generateMetadata({
     }
   }
 
-  const description = `Browse verified short-term stays in ${name}, Jerusalem. Curated by JLM Collective.`
+  const description = `Short-term stays in ${name}, Jerusalem, each one checked by the JLM Collective team.`
 
   // Don't index a neighbourhood page with neither editorial content nor live
   // listings — it reads as thin/near-duplicate and drags site-quality signals.
@@ -164,7 +164,7 @@ export default async function NeighbourhoodPage({
           </p>
         ) : (
           <p className="mt-4 text-base text-stone-500">
-            Verified stays in {name}, Jerusalem {'\u2014'} curated by JLM Collective.
+            Stays in {name}, Jerusalem, each one checked by our team.
           </p>
         )}
 
@@ -173,7 +173,7 @@ export default async function NeighbourhoodPage({
             href={`/stays?neighborhood=${encodeURIComponent(name)}`}
             className="text-sm font-semibold text-[#c76f55] hover:underline"
           >
-            View all {name} listings {'\u2192'}
+            See all stays in {name} {'→'}
           </Link>
         </div>
 
@@ -186,7 +186,7 @@ export default async function NeighbourhoodPage({
         ) : (
           <div className="mt-16 text-center">
             <p className="text-stone-500">
-              No listings available in {name} right now.
+              There are no stays in {name} on the site right now.
             </p>
             <Link
               href="/stays"

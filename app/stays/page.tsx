@@ -20,13 +20,13 @@ const STAYS_PAGE_SIZE = 24
 
 export const metadata = {
   title: 'Jerusalem Stays',
-  description: 'Find curated short-term stays in Jerusalem.',
+  description: 'Find a short-term stay in Jerusalem. Every apartment is checked by our local team.',
   alternates: {
     canonical: '/stays',
   },
   openGraph: {
     title: 'Jerusalem Stays | JLM Collective',
-    description: 'Find curated short-term stays in Jerusalem.',
+    description: 'Find a short-term stay in Jerusalem. Every apartment is checked by our local team.',
     url: '/stays',
     type: 'website',
     ...ogImages('Curated short-term stays in Jerusalem'),
@@ -203,7 +203,7 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
             </h1>
             {totalPublished > 0 && (
               <p className="mt-2 text-stone-500">
-                {totalMatching} apartment{totalMatching === 1 ? '' : 's'} available
+                {totalMatching} stay{totalMatching === 1 ? '' : 's'} to choose from
               </p>
             )}
           </div>
@@ -212,11 +212,11 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
             totalPublished === 0 ? (
               <div className="py-16 text-center">
                 <p className="font-heading text-2xl font-semibold text-stone-950">
-                  New Jerusalem stays are coming soon
+                  Our first Jerusalem stays are on the way
                 </p>
                 <p className="mx-auto mt-3 max-w-md leading-7 text-stone-600">
-                  We&apos;re curating and verifying our first apartments. Have a look at the
-                  neighbourhoods in the meantime, or list your own place with us.
+                  We&apos;re checking our first apartments now. In the meantime, have a look
+                  around the neighbourhoods, or list your own place with us.
                 </p>
                 <div className="mt-6 flex flex-wrap justify-center gap-3">
                   <Link
@@ -236,10 +236,10 @@ export default async function StaysPage({ searchParams }: StaysPageProps) {
             ) : (
               <div className="py-16 text-center">
                 <p className="text-lg font-semibold text-stone-950">
-                  No stays match your search
+                  We couldn&apos;t find a stay that fits
                 </p>
                 <p className="mt-2 text-stone-500">
-                  Try adjusting your filters or browse all available properties.
+                  Try changing your dates or filters, or have a look at all our stays.
                 </p>
                 <div className="mt-6 flex flex-wrap justify-center gap-3">
                   <Link
