@@ -84,7 +84,7 @@ const faqs: { q: string; a: string }[] = [
   },
   {
     q: 'Are the hosts verified?',
-    a: 'Every property is personally reviewed before we agree to represent it, and hosts are identity-verified, so you can book with confidence.',
+    a: 'Every property is personally reviewed before we agree to represent it. Hosts whose ID our team has checked show a Verified host badge on their profile and listings.',
   },
 ]
 

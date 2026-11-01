@@ -322,7 +322,7 @@ export default async function JLMCollectiveHomePage() {
           <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-3 border-t border-stone-200 pt-8 text-sm text-stone-600">
             <span className="inline-flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-[#c76f55]" aria-hidden="true" />
-              Verified hosts
+              Personally reviewed stays
             </span>
             <span className="inline-flex items-center gap-2">
               <MapPin className="h-4 w-4 text-[#c76f55]" aria-hidden="true" />
