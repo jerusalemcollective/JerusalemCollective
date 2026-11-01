@@ -154,7 +154,18 @@ function formatRequestDate(value: string | null) {
   })
 }
 
-function requestStatusLabel(status: string) {
+// Guests see their own request in plain words; hosts keep their working labels.
+const GUEST_REQUEST_STATUS_LABELS: Record<string, string> = {
+  new: 'Request sent',
+  host_replied: 'Host replied',
+  accepted: 'Accepted',
+  declined: 'Not available',
+  closed: 'Closed',
+  cancelled: 'Cancelled',
+}
+
+function requestStatusLabel(status: string, mode: 'guest' | 'host' = 'host') {
+  if (mode === 'guest') return GUEST_REQUEST_STATUS_LABELS[status] || status.replaceAll('_', ' ')
   const labels: Record<string, string> = {
     new: 'New request',
     host_replied: 'Host replied',
@@ -489,7 +500,7 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
 
         setSelectedConversationId(nextConversationId)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unable to load messages.')
+        setError(err instanceof Error ? err.message : 'We couldn\u2019t load your messages. Please refresh the page.')
       } finally {
         setLoading(false)
       }
@@ -622,7 +633,7 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
         }
       } catch (err) {
         if (isActive) {
-          setError(err instanceof Error ? err.message : 'Unable to load conversation.')
+          setError(err instanceof Error ? err.message : 'We couldn\u2019t load this conversation. Please try again.')
         }
       }
     }
@@ -793,7 +804,7 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
   const handleSend = async () => {
     if (!user || !selectedConversationId || !draft.trim()) return
     if (isRequestOnlyConversationId(selectedConversationId)) {
-      setError('This enquiry does not have a message thread yet.')
+      setError(mode === 'host' ? 'This enquiry does not have a message thread yet.' : 'You can\u2019t reply to this request here yet. Please message the host from the stay\u2019s page.')
       return
     }
 
@@ -878,7 +889,7 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
         )
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to send message.')
+      setError(err instanceof Error ? err.message : 'Your message didn\u2019t send. Please try again.')
       // Put the text back so a failed send never loses what was typed.
       setDraft((current) => current || text)
     } finally {
@@ -968,7 +979,7 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
         <p className="mt-2 text-stone-600">
           {mode === 'host'
             ? 'Guest enquiries will appear here once they start messaging you.'
-            : 'When you message a host, your conversation will appear here.'}
+            : 'When you message a host, you\u2019ll see your conversation here.'}
         </p>
       </div>
     )
@@ -1003,7 +1014,7 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
                 </div>
                 {selectedConversation.request && (
                   <span className={`w-fit shrink-0 rounded-full px-3 py-1.5 text-xs font-bold ring-1 ${requestStatusClass(displayRequestStatus(selectedConversation.request))}`}>
-                    {requestStatusLabel(displayRequestStatus(selectedConversation.request))}
+                    {requestStatusLabel(displayRequestStatus(selectedConversation.request), mode)}
                   </span>
                 )}
               </div>
@@ -1268,7 +1279,7 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
                 </span>
                 {conversation.request && (
                   <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ring-1 ${requestStatusClass(displayRequestStatus(conversation.request))}`}>
-                    {requestStatusLabel(displayRequestStatus(conversation.request))}
+                    {requestStatusLabel(displayRequestStatus(conversation.request), mode)}
                   </span>
                 )}
               </span>

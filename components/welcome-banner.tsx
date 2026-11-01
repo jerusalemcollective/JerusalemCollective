@@ -24,7 +24,7 @@ export function WelcomeBanner() {
         <div>
           <h2 className="font-bold text-stone-950">Welcome to JLM Collective</h2>
           <p className="mt-1 text-sm text-stone-600">
-            Browse verified Jerusalem stays, send an enquiry, and we will match you with the right property for your visit.
+            Find a Jerusalem stay you love, ask the host anything, and send a booking request when you&apos;re ready.
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
             <Link

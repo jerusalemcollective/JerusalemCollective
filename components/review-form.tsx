@@ -24,10 +24,10 @@ const getReviewErrorMessage = (error: unknown) => {
   if (error instanceof Error) {
     const message = error.message.toLowerCase()
     if (message.includes('duplicate') || message.includes('already exists') || message.includes('already')) {
-      return 'You have already submitted a review for this stay.'
+      return 'You’ve already reviewed this stay. Thank you!'
     }
   }
-  return 'We could not save your review. Please try again.'
+  return 'We couldn’t save your review. Please try again.'
 }
 
 export function ReviewForm({
@@ -82,7 +82,7 @@ export function ReviewForm({
       } = await supabase.auth.getUser()
 
       if (!user) {
-        throw new Error('Please sign in again before submitting your review.')
+        throw new Error('Please sign in again to send your review.')
       }
 
       const { data: profile } = await supabase
@@ -106,7 +106,7 @@ export function ReviewForm({
       if (insertError) throw insertError
 
       setSubmitted(true)
-      setMessage('Thank you - your review will appear once approved')
+      setMessage('Thank you! We’ll check your review and then it will go live.')
     } catch (submitError) {
       setError(getReviewErrorMessage(submitError))
     } finally {
@@ -121,7 +121,7 @@ export function ReviewForm({
           {submitted ? 'Thank you' : 'No reviews waiting'}
         </h2>
         <p className="text-stone-600">
-          {message || 'After a completed stay, you will be able to review it here.'}
+          {message || 'After your stay, you can write a review here.'}
         </p>
       </div>
     )
@@ -191,7 +191,7 @@ export function ReviewForm({
             maxLength={500}
             rows={6}
             className={`${inputClass} resize-y`}
-            placeholder="Share what future guests should know."
+            placeholder="What should other families know about this stay?"
           />
           <span className="mt-2 block text-right text-xs text-stone-500">{content.length}/500</span>
         </label>
@@ -203,7 +203,7 @@ export function ReviewForm({
           disabled={submitting}
           className="rounded-full bg-[#252525] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#111111] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {submitting ? 'Submitting...' : 'Submit review'}
+          {submitting ? 'Sending...' : 'Send review'}
         </button>
       </div>
     </form>

@@ -3,14 +3,35 @@ type StatusBadgeScheme = 'support' | 'application' | 'enquiry'
 type StatusBadgeProps = {
   status: string
   scheme: StatusBadgeScheme
+  // Plain words to show instead of the stored status (guest-facing pages).
+  label?: string
 }
 
-export function StatusBadge({ status, scheme }: StatusBadgeProps) {
+// Booking requests are only shown to guests, so they always get plain words.
+const ENQUIRY_STATUS_LABELS: Record<string, string> = {
+  new: 'Request sent',
+  host_replied: 'Host replied',
+  accepted: 'Accepted',
+  declined: 'Not available',
+  closed: 'Closed',
+}
+
+// Plain words for a guest's own help requests.
+export const GUEST_SUPPORT_STATUS_LABELS: Record<string, string> = {
+  open: 'Sent',
+  under_review: 'We’re looking into it',
+  resolved: 'Resolved',
+  closed: 'Closed',
+}
+
+export function StatusBadge({ status, scheme, label }: StatusBadgeProps) {
   const styles = getStatusStyles(status, scheme)
+  const text =
+    label ?? (scheme === 'enquiry' ? ENQUIRY_STATUS_LABELS[status] : undefined) ?? status.replaceAll('_', ' ')
 
   return (
-    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold capitalize ${styles}`}>
-      {status.replaceAll('_', ' ')}
+    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${label || scheme === 'enquiry' ? '' : 'capitalize'} ${styles}`}>
+      {text}
     </span>
   )
 }

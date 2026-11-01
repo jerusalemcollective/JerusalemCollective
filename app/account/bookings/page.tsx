@@ -33,7 +33,7 @@ const bookingRowSchema = z.object({
 
 const statusBadge: Record<string, { label: string; className: string }> = {
   confirmed: { label: 'Confirmed', className: 'bg-green-100 text-green-700' },
-  pending: { label: 'Pending', className: 'bg-amber-100 text-amber-700' },
+  pending: { label: 'Waiting for payment', className: 'bg-amber-100 text-amber-700' },
   cancelled: { label: 'Cancelled', className: 'bg-stone-200 text-stone-500' },
   completed: { label: 'Completed', className: 'bg-stone-100 text-stone-600' },
 }
@@ -146,9 +146,9 @@ export default async function BookingsPage({
             role="status"
             className="mb-6 rounded-2xl border border-green-200 bg-green-50 p-4 text-sm text-green-800"
           >
-            <p className="font-semibold">Payment received — your stay is confirmed.</p>
+            <p className="font-semibold">Thank you, we&rsquo;ve got your payment. Your stay is booked!</p>
             <p className="mt-1 text-green-700">
-              Your booking is listed below. You can add it to your calendar from the booking.
+              You&rsquo;ll find it below, with a link to add it to your calendar.
             </p>
           </div>
         )}
@@ -158,9 +158,9 @@ export default async function BookingsPage({
             role="status"
             className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
           >
-            <p className="font-semibold">Payment received — we&rsquo;re finalising your booking.</p>
+            <p className="font-semibold">Thank you, we&rsquo;ve got your payment. We&rsquo;re just finishing your booking.</p>
             <p className="mt-1 text-amber-800">
-              This usually takes a few moments. Refresh this page shortly and your stay will appear below.
+              This usually takes a moment. Refresh the page soon and your stay will show below.
             </p>
           </div>
         )}
@@ -170,9 +170,9 @@ export default async function BookingsPage({
             role="status"
             className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
           >
-            <p className="font-semibold">Payment received — we&rsquo;re confirming this manually.</p>
+            <p className="font-semibold">Thank you, we&rsquo;ve got your payment. A member of our team is checking it.</p>
             <p className="mt-1 text-amber-800">
-              Something needed a closer look on our end. Your payment is safe, and the JLM Collective team will contact you shortly to confirm your stay.
+              Something needed a closer look on our side. Your payment is safe, and we&rsquo;ll be in touch to confirm your stay.
             </p>
           </div>
         )}
@@ -184,7 +184,7 @@ export default async function BookingsPage({
           >
             <p className="font-semibold">Your payment didn&rsquo;t go through.</p>
             <p className="mt-1 text-red-700">
-              No charge was completed and no booking was made. Please try booking again, or contact us if you need help.
+              You haven&rsquo;t been charged and nothing was booked. Please try again, or email us at info@jlmcollective.co if you need a hand.
             </p>
           </div>
         )}
@@ -194,7 +194,7 @@ export default async function BookingsPage({
             role="status"
             className="mb-6 rounded-2xl border border-green-200 bg-green-50 p-4 text-sm text-green-800"
           >
-            <p className="font-semibold">Balance paid — thank you.</p>
+            <p className="font-semibold">Thank you, your balance is paid.</p>
             <p className="mt-1 text-green-700">Your stay is now paid in full.</p>
           </div>
         )}
@@ -204,9 +204,9 @@ export default async function BookingsPage({
             role="status"
             className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
           >
-            <p className="font-semibold">Balance payment not completed.</p>
+            <p className="font-semibold">Your balance hasn&rsquo;t been paid yet.</p>
             <p className="mt-1 text-amber-800">
-              No charge was made. You can pay your balance any time from the booking below.
+              You haven&rsquo;t been charged. You can pay the balance whenever you&rsquo;re ready from your booking below.
             </p>
           </div>
         )}
@@ -218,7 +218,7 @@ export default async function BookingsPage({
           >
             <p className="font-semibold">We couldn&rsquo;t open your balance payment.</p>
             <p className="mt-1 text-amber-800">
-              It may already be paid, or the booking isn&rsquo;t ready yet. Find your stay below to pay the balance or check its status.
+              It may already be paid, or the booking isn&rsquo;t ready for it yet. Find your stay below to see what&rsquo;s still due.
             </p>
           </div>
         )}
@@ -343,12 +343,12 @@ function EmptyState() {
         <CalendarDays className="h-8 w-8 text-stone-400" />
       </div>
       <h2 className="mb-2 text-xl font-bold text-stone-900">No trips yet</h2>
-      <p className="mb-6 text-stone-600">When you book a stay, it will appear here.</p>
+      <p className="mb-6 text-stone-600">When you book a stay, you&rsquo;ll see it here.</p>
       <Link
         href="/stays"
         className="inline-flex rounded-full bg-[#252525] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#111111]"
       >
-        Start exploring
+        Find a stay
       </Link>
     </div>
   )
