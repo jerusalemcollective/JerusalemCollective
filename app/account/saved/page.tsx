@@ -1,11 +1,11 @@
 import Link from 'next/link'
-import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import { Heart } from 'lucide-react'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { Breadcrumb } from '@/components/breadcrumb'
-import { formatDualCurrencyPrice } from '@/lib/utils/currency'
+import { ListingCard, LISTING_GRID_CLASS } from '@/components/listing-card'
+import { getListingCardExtras, toListingCardData } from '@/lib/listing-cards'
 
 const savedListingSchema = z.object({
   id: z.string(),
@@ -43,6 +43,7 @@ export default async function SavedPage() {
   const savedListings = z.array(savedRowSchema).parse(data ?? [])
     .map((row) => row.listings)
     .filter((listing): listing is SavedListing => Boolean(listing))
+  const extras = await getListingCardExtras(supabase, savedListings.map((listing) => listing.id))
 
   return (
     <div className="min-h-screen">
@@ -56,49 +57,10 @@ export default async function SavedPage() {
         {savedListings.length === 0 ? (
           <EmptyState />
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {savedListings.map((listing) => {
-              const coverPhotoUrl = listing.cover_photo_url
-
-              return (
-                <Link
-                  key={listing.id}
-                  href={`/listings/${listing.id}`}
-                  className="group block"
-                >
-                  <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-stone-100">
-                    {coverPhotoUrl ? (
-                      <Image
-                        src={coverPhotoUrl}
-                        alt={listing.title}
-                        fill
-                        className="object-cover transition group-hover:scale-[1.02]"
-                        sizes="(max-width: 640px) 50vw, 33vw"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-stone-50">
-                        <p className="text-xs text-stone-500">
-                          Photo coming soon
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                  <div className="mt-3">
-                    <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">
-                      {listing.area}
-                    </p>
-                    <h2 className="mt-2 text-xl font-bold text-stone-950">{listing.title}</h2>
-                    <p className="mt-2 text-sm text-stone-600">
-                      {listing.bedrooms ?? '-'} bedrooms | sleeps {listing.max_guests ?? '-'}
-                    </p>
-                    <p className="mt-3 text-sm font-semibold text-stone-900">
-                      {formatDualCurrencyPrice(listing)}
-                    </p>
-                  </div>
-                </Link>
-              )
-            })}
+          <div className={LISTING_GRID_CLASS}>
+            {savedListings.map((listing) => (
+              <ListingCard key={listing.id} listing={toListingCardData(listing, extras)} />
+            ))}
           </div>
         )}
       </div>
