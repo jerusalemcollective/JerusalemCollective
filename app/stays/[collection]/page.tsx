@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { createPublicClient } from '@/lib/supabase/public'
-import { findStayCollection } from '@/lib/stay-collections'
+import { KOSHER_COLLECTION_LEVELS, findStayCollection } from '@/lib/stay-collections'
 import { ListingCard } from '@/components/listing-card'
 import { formatPreferredNightlyPrice } from '@/lib/utils/currency'
 
@@ -72,7 +72,7 @@ export default async function StayCollectionPage({
     .order('is_featured', { ascending: false })
 
   if (collection.filter === 'kosher') {
-    query = query.in('kosher_kitchen_level', ['kosher', 'glatt_kosher', 'chalav_yisrael'])
+    query = query.in('kosher_kitchen_level', KOSHER_COLLECTION_LEVELS)
   } else if (collection.filter === 'sukkah') {
     query = query.eq('sukkah_balcony', true)
   }
