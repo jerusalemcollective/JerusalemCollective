@@ -158,7 +158,7 @@ export default function HowItWorksPage() {
 
       <section className="py-16">
         <div className="mx-auto max-w-3xl px-5 md:px-8">
-          <h2 className="font-display text-2xl font-bold text-stone-950">
+          <h2 className="text-2xl font-semibold text-stone-950">
             Frequently asked questions
           </h2>
           <div className="mt-6 divide-y divide-stone-200 border-y border-stone-200">
@@ -179,7 +179,7 @@ export default function HowItWorksPage() {
 
       <section className="bg-[#F8F5F2] py-16">
         <div className="mx-auto max-w-3xl px-5 md:px-8">
-          <h2 className="font-display text-2xl font-bold text-stone-950">
+          <h2 className="text-2xl font-semibold text-stone-950">
             Why JLM Collective
           </h2>
           <div className="mt-6 space-y-4">

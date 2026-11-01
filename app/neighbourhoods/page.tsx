@@ -67,7 +67,7 @@ export default function NeighbourhoodsIndexPage() {
               href={`/neighbourhoods/${neighbourhood.slug}`}
               className="group rounded-2xl border border-stone-200 bg-white p-5 transition hover:border-[#c76f55] hover:shadow-sm"
             >
-              <p className="font-display text-lg font-bold text-stone-950 transition group-hover:text-[#c76f55]">
+              <p className="font-heading text-lg font-semibold text-stone-950 transition group-hover:text-[#c76f55]">
                 {neighbourhood.name}
               </p>
               <p className="mt-2 line-clamp-3 text-sm leading-6 text-stone-600">{neighbourhood.teaser}</p>

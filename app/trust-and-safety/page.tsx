@@ -38,7 +38,7 @@ export default function TrustAndSafetyPage() {
 
           <div className="space-y-10">
             <section className="rounded-3xl bg-[#F8F5F2] p-6">
-              <h2 className="font-display text-xl font-bold text-stone-950">
+              <h2 className="text-xl font-semibold text-stone-950">
                 How we work
               </h2>
               <p className="mt-3 text-base leading-8 text-stone-700">

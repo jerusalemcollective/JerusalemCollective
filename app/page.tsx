@@ -270,7 +270,7 @@ export default async function JLMCollectiveHomePage() {
 
         <section id="stays" className="mx-auto max-w-7xl px-6 pt-9">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="font-display text-2xl font-bold tracking-tight text-stone-950">
+            <h2 className="text-2xl font-semibold tracking-tight text-stone-950">
               Featured stays
             </h2>
             <Link
@@ -305,7 +305,7 @@ export default async function JLMCollectiveHomePage() {
             </div>
           ) : (
             <div className="rounded-3xl border border-stone-200 bg-white/60 px-6 py-16 text-center">
-              <p className="font-display text-xl font-bold text-stone-950">New stays coming soon</p>
+              <p className="font-heading text-xl font-semibold text-stone-950">New stays coming soon</p>
               <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-stone-600">
                 We&apos;re adding beautiful Jerusalem stays. Check back shortly, or send an enquiry
                 and our local team will help you find the right place.
@@ -343,7 +343,7 @@ export default async function JLMCollectiveHomePage() {
           <div className="overflow-hidden rounded-2xl border border-stone-200 bg-[#252525] shadow-sm">
             <div className="flex flex-col gap-4 p-5 text-white md:flex-row md:items-center md:justify-between md:p-6">
               <div>
-                <h2 className="font-display text-lg font-bold tracking-tight">Have a Jerusalem stay to list?</h2>
+                <h2 className="text-lg font-semibold tracking-tight">Have a Jerusalem stay to list?</h2>
                 <p className="mt-1 max-w-xl text-xs leading-5 text-stone-300">
                   Add your property, set your details, and submit it for approval.
                 </p>

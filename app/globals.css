@@ -100,6 +100,7 @@
 
 @theme inline {
   --font-sans: var(--font-inter), 'Inter', system-ui, sans-serif;
+  --font-heading: var(--font-dm-sans), 'DM Sans', system-ui, sans-serif;
   --font-display: var(--font-playfair), 'Playfair Display', Georgia, serif;
   --font-mono: 'Geist Mono', 'Geist Mono Fallback';
   --color-background: var(--background);
@@ -146,6 +147,14 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* next/font sets --font-dm-sans on <body>, so resolve the heading font here. */
+    --font-heading: var(--font-dm-sans), 'DM Sans', system-ui, sans-serif;
+  }
+  /* Section headings use DM Sans; the Playfair serif (font-display) is only
+     for page titles (each page's main h1 and the homepage hero). */
+  h2,
+  h3 {
+    font-family: var(--font-heading);
   }
 }
 

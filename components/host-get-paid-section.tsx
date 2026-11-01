@@ -72,7 +72,7 @@ export function HostGetPaidSection({
   return (
     <div className="space-y-4">
       <div className="rounded-3xl bg-white p-6 shadow-sm">
-        <h2 className="font-display text-xl font-bold text-stone-950">How you get paid</h2>
+        <h2 className="text-xl font-semibold text-stone-950">How you get paid</h2>
 
         <div className="mt-5">
           <p className="text-sm font-semibold text-stone-800">Currencies you accept</p>
