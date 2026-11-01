@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { normalizeKosherLevel } from '@/lib/kosher'
 import { redirect, unstable_rethrow } from 'next/navigation'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { syncExternalCalendar } from '@/lib/calendar-sync'
@@ -237,7 +238,7 @@ async function saveHostListing(formData: FormData) {
   const houseRules = String(formData.get('houseRules') || '').trim() || null
   const welcomeMessage = String(formData.get('welcomeMessage') || '').trim() || null
   const checkInInstructions = String(formData.get('checkInInstructions') || '').trim() || null
-  const kosherKitchenLevel = String(formData.get('kosherKitchenLevel') || '').trim() || null
+  const kosherKitchenLevel = normalizeKosherLevel(String(formData.get('kosherKitchenLevel') || '').trim()) || null
   const walkingMinutesValue = String(formData.get('walkingMinutesToKotel') || '')
   const walkingMinutesToKotel = walkingMinutesValue ? Number(walkingMinutesValue) : null
   const shabbatElevator = formData.get('shabbatElevator') === 'on'

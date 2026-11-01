@@ -10,6 +10,7 @@ import { allNeighborhoods } from '@/lib/neighborhoods'
 import { HOST_TERMS, HOST_TERMS_LAST_UPDATED, HOST_TERMS_VERSION } from '@/lib/host-terms'
 import { GoogleAddressField } from '@/components/google-address-field'
 import { SleepingSetupBuilder } from '@/components/sleeping-setup-builder'
+import { KOSHER_LEVEL_OPTIONS, normalizeKosherLevel } from '@/lib/kosher'
 import { AmenitySelector } from '@/components/amenity-selector'
 import { HOST_PRICE_CURRENCIES, currencyName, type HostPriceCurrency } from '@/lib/currencies'
 import { toLegacyPrices } from '@/lib/fx'
@@ -1682,7 +1683,7 @@ async function handleSubmit() {
       price_usd: legacyPrices.price_usd,
 
       amenities: form.amenities,
-      kosher_kitchen_level: form.kosher_kitchen_level || null,
+      kosher_kitchen_level: normalizeKosherLevel(form.kosher_kitchen_level) || null,
       shabbat_elevator: form.shabbat_elevator,
       physical_key_entry: form.physical_key_entry,
       shabbat_clock: form.shabbat_clock,
@@ -2431,16 +2432,14 @@ async function handleSubmit() {
                   <div className="mt-4 grid gap-5 md:grid-cols-2">
                     <Field label="Kosher kitchen level">
                       <select
-                        value={form.kosher_kitchen_level}
+                        value={normalizeKosherLevel(form.kosher_kitchen_level)}
                         onChange={(e) => updateField('kosher_kitchen_level', e.target.value)}
                         className={inputClass}
                       >
-                        <option value="">Not specified</option>
-                        <option value="not_kosher">Not kosher</option>
-                        <option value="kosher_friendly">Kosher-friendly</option>
-                        <option value="kosher">Kosher</option>
-                        <option value="glatt_kosher">Glatt kosher</option>
-                        <option value="chalav_yisrael">Chalav Yisrael</option>
+                        <option value="" disabled hidden>Choose…</option>
+                        {KOSHER_LEVEL_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
                       </select>
                     </Field>
                     <Field label="Approximate walking time to the Kotel (minutes)">

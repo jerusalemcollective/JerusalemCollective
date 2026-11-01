@@ -11,6 +11,7 @@ import { MinNightsField } from '@/components/min-nights-field'
 import { ListingAiAssistant } from '@/components/listing-ai-assistant'
 import { AmenitySelector } from '@/components/amenity-selector'
 import { SleepingSetupBuilder } from '@/components/sleeping-setup-builder'
+import { KOSHER_LEVEL_OPTIONS, normalizeKosherLevel } from '@/lib/kosher'
 import { ListingPhotoManager } from '@/components/listing-photo-manager'
 import { SaveStateForm, StickySaveBar } from '@/components/sticky-save-bar'
 import { BookingStyleField } from '@/components/booking-style-field'
@@ -208,10 +209,14 @@ export default async function HostListingEditPage({
               <h3 className="text-sm font-bold text-stone-950">Shabbos &amp; Jewish stay</h3>
               <div className="mt-4 max-w-xs">
                 <Field label="Kosher kitchen level">
-                  <select name="kosherKitchenLevel" defaultValue={listing.kosher_kitchen_level || ''} className={inputClass}>
-                    <option value="">Not kosher</option>
-                    <option value="kosher">Kosher</option>
-                    <option value="mehadrin">Mehadrin</option>
+                  <select
+                    name="kosherKitchenLevel"
+                    defaultValue={normalizeKosherLevel(listing.kosher_kitchen_level) || 'not_kosher'}
+                    className={inputClass}
+                  >
+                    {KOSHER_LEVEL_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
                   </select>
                 </Field>
               </div>
