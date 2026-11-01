@@ -511,7 +511,7 @@ export function ListingDetailClient({
   }
 
   return (
-    <div className="min-h-screen bg-white pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-0">
+    <div className="min-h-screen bg-[#F8F5F2] pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-0">
       <div className="pb-28 lg:pb-8">
         <div className="mx-auto max-w-6xl px-5 py-8 md:px-8">
         <nav aria-label="Breadcrumb" className="mb-4 flex items-center gap-2 text-sm text-stone-500">
@@ -701,7 +701,7 @@ export function ListingDetailClient({
               )}
             </>
           ) : (
-            <div className="flex aspect-[4/3] items-center justify-center rounded-3xl bg-[#F8F5F2] ring-1 ring-stone-100">
+            <div className="flex aspect-[4/3] items-center justify-center rounded-3xl bg-white ring-1 ring-stone-200">
               <div className="text-center">
                 <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">JLM Collective</p>
                 <p className="mt-2 text-sm text-stone-500">Photos coming soon</p>
@@ -788,9 +788,9 @@ export function ListingDetailClient({
 
             {listing.description && (
               <>
-                <hr className="border-stone-100" />
+                <hr className="border-stone-200" />
                 <div className="py-3">
-                  <h2 className="mb-3 text-lg font-bold text-stone-900">About this stay</h2>
+                  <h2 className="mb-3 text-lg font-semibold text-stone-900">About this stay</h2>
                   <p className="whitespace-pre-line text-base leading-8 text-stone-700">{listing.description}</p>
                 </div>
               </>
@@ -798,9 +798,9 @@ export function ListingDetailClient({
 
             {listing.sleeping_setup?.trim() && (
               <>
-                <hr className="border-stone-100" />
+                <hr className="border-stone-200" />
                 <div className="py-3">
-                  <h2 className="mb-3 text-lg font-bold text-stone-900">Room by room</h2>
+                  <h2 className="mb-3 text-lg font-semibold text-stone-900">Room by room</h2>
                   <div className="flex snap-x snap-mandatory gap-3.5 overflow-x-auto pb-2">
                     {listing.sleeping_setup
                       .split('\n')
@@ -849,9 +849,9 @@ export function ListingDetailClient({
 
             {hasGeneralAmenities && (
               <>
-                <hr className="border-stone-100" />
+                <hr className="border-stone-200" />
                 <div className="py-3">
-                  <h2 className="mb-3 text-lg font-bold text-stone-900">Amenities</h2>
+                  <h2 className="mb-3 text-lg font-semibold text-stone-900">Amenities</h2>
                   <AmenityDisplay amenities={listingAmenities} hide={hiddenAmenities} />
                 </div>
               </>
@@ -859,7 +859,7 @@ export function ListingDetailClient({
 
             {jewishStayFeatures.length > 0 && (
               <>
-                <hr className="border-stone-100" />
+                <hr className="border-stone-200" />
                 <div className="py-3">
                   <h2 className="mb-3 text-lg font-bold text-stone-900">Shabbos &amp; Jewish stay</h2>
                   <div className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
@@ -878,10 +878,10 @@ export function ListingDetailClient({
 
             {listing.area && (
               <>
-                <hr className="border-stone-100" />
+                <hr className="border-stone-200" />
                 <div className="py-3">
                   <div className="flex items-center justify-between gap-4">
-                    <h2 className="font-display text-xl font-bold text-stone-950">
+                    <h2 className="text-xl font-semibold text-stone-950">
                       About {listing.area}
                     </h2>
                   </div>
@@ -919,9 +919,9 @@ export function ListingDetailClient({
 
             {listing.latitude !== null && listing.longitude !== null && (
               <>
-                <hr className="border-stone-100" />
+                <hr className="border-stone-200" />
                 <div className="py-3">
-                  <h2 className="font-display text-xl font-bold text-stone-950">
+                  <h2 className="text-xl font-semibold text-stone-950">
                     Location
                   </h2>
                   <div className="mt-4 overflow-hidden rounded-3xl border border-stone-200 bg-[#F8F5F2] shadow-sm">
@@ -938,13 +938,13 @@ export function ListingDetailClient({
 
             {servicesBarEnabled && listing.host_id && (
               <>
-                <hr className="border-stone-100" />
+                <hr className="border-stone-200" />
                 <div className="py-3">
-                  <h2 className="text-lg font-bold text-stone-950">Enhance your stay</h2>
+                  <h2 className="text-lg font-semibold text-stone-950">Enhance your stay</h2>
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
                     <Link
                       href="/services/catering"
-                      className="flex items-center gap-3 rounded-2xl border border-stone-200 bg-[#F8F5F2] px-4 py-4 transition hover:border-[#c76f55] hover:bg-white"
+                      className="flex items-center gap-3 rounded-2xl border border-stone-200 bg-white px-4 py-4 transition hover:border-[#c76f55]"
                     >
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c76f55" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" />
@@ -959,7 +959,7 @@ export function ListingDetailClient({
 
                     <Link
                       href="/services/cleaning"
-                      className="flex items-center gap-3 rounded-2xl border border-stone-200 bg-[#F8F5F2] px-4 py-4 transition hover:border-[#c76f55] hover:bg-white"
+                      className="flex items-center gap-3 rounded-2xl border border-stone-200 bg-white px-4 py-4 transition hover:border-[#c76f55]"
                     >
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c76f55" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
@@ -976,7 +976,7 @@ export function ListingDetailClient({
 
             {reviews.length > 0 && avgRating !== null && (
               <>
-                <hr className="border-stone-100" />
+                <hr className="border-stone-200" />
                 <div id="reviews" className="scroll-mt-24 py-8">
                   <h2 className="mb-3 text-lg font-semibold text-stone-900">Reviews</h2>
                   <div className="mb-6 flex items-center gap-3">
@@ -988,7 +988,7 @@ export function ListingDetailClient({
                   </div>
                   <div className="space-y-3">
                     {reviews.map((review) => (
-                      <div key={review.id} className="rounded-xl bg-[#F8F5F2] p-4">
+                      <div key={review.id} className="rounded-xl bg-white p-4 ring-1 ring-stone-200">
                         <div className="mb-2 flex items-center justify-between">
                           <p className="text-sm font-semibold text-stone-900">{review.reviewer_name}</p>
                           <StarRating rating={review.rating} />
@@ -1003,9 +1003,9 @@ export function ListingDetailClient({
 
             {similarListings.length > 0 && (
               <>
-                <hr className="border-stone-100" />
+                <hr className="border-stone-200" />
                 <div className="py-3">
-                  <h2 className="mb-4 text-xl font-bold text-stone-950">You might also like</h2>
+                  <h2 className="mb-4 text-xl font-semibold text-stone-950">You might also like</h2>
                   <div className="grid gap-4 md:grid-cols-3">
                     {similarListings.map((similarListing) => (
                       <Link
