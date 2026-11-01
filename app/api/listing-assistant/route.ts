@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getClientIp, rateLimit } from '@/lib/rate-limit'
+import { kosherLevelLabel } from '@/lib/kosher'
 
 type ListingAssistantRequest = {
   apartment_title?: string
@@ -18,14 +19,6 @@ type ListingAssistantRequest = {
   description?: string
 }
 
-const kosherLevelLabels: Record<string, string> = {
-  not_kosher: 'Not kosher',
-  kosher_friendly: 'Kosher-friendly',
-  kosher: 'Kosher',
-  glatt_kosher: 'Glatt kosher',
-  chalav_yisrael: 'Chalav Yisrael',
-  mehadrin: 'Mehadrin',
-}
 
 type AnthropicContentBlock = {
   type?: string
@@ -100,8 +93,8 @@ export async function POST(request: Request) {
             sleeping_setup: input.sleeping_setup || '',
             amenities: input.amenities || [],
             shabbos_and_jewish_stay: [
-              input.kosher_kitchen_level && kosherLevelLabels[input.kosher_kitchen_level]
-                ? `Kitchen: ${kosherLevelLabels[input.kosher_kitchen_level]}`
+              kosherLevelLabel(input.kosher_kitchen_level)
+                ? `Kitchen: ${kosherLevelLabel(input.kosher_kitchen_level)}`
                 : '',
               input.shabbat_elevator ? 'Building has a Shabbos elevator' : '',
               input.shabbat_clock ? 'Shabbos clock or timer for lights' : '',
