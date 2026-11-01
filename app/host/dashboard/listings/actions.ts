@@ -7,6 +7,7 @@ import { syncExternalCalendar } from '@/lib/calendar-sync'
 import { getPaymentRouteSettings } from '@/lib/platform-settings'
 import { toLegacyPrices } from '@/lib/fx'
 import { isHostPriceCurrency } from '@/lib/currencies'
+import type { SaveFormState } from '@/components/sticky-save-bar'
 import {
   calculateShulDistances,
   saveShulDistances,
@@ -179,7 +180,26 @@ export async function deleteHostListing(
   redirect('/host/dashboard/listings')
 }
 
-export async function updateHostListing(formData: FormData) {
+// The listing editor's save. Returns a result instead of throwing so the save
+// bar only says "All changes saved" once the server has confirmed it.
+export async function updateHostListing(
+  _prev: SaveFormState,
+  formData: FormData,
+): Promise<SaveFormState> {
+  try {
+    await saveHostListing(formData)
+    return { status: 'success', message: 'All changes saved.' }
+  } catch (error) {
+    unstable_rethrow(error)
+    console.error('Could not save host listing', error)
+    return {
+      status: 'error',
+      message: 'Could not save your changes — please try again or contact JLM.',
+    }
+  }
+}
+
+async function saveHostListing(formData: FormData) {
   const listingId = String(formData.get('listingId') || '')
   const title = String(formData.get('title') || '')
   const area = String(formData.get('area') || '')
@@ -366,6 +386,7 @@ export async function updateHostListing(formData: FormData) {
   revalidatePath(`/host/dashboard/listings/${listingId}`)
   revalidatePath(`/listings/${listingId}`)
   revalidatePath('/stays')
+  revalidatePath('/')
 }
 
 export async function updateHostApplication(formData: FormData) {

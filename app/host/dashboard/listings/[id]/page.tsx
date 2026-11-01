@@ -11,7 +11,7 @@ import { MinNightsField } from '@/components/min-nights-field'
 import { ListingAiAssistant } from '@/components/listing-ai-assistant'
 import { AmenitySelector } from '@/components/amenity-selector'
 import { ListingPhotoManager } from '@/components/listing-photo-manager'
-import { StickySaveBar } from '@/components/sticky-save-bar'
+import { SaveStateForm, StickySaveBar } from '@/components/sticky-save-bar'
 
 type HostPaymentProfile = {
   commission_percent_override: number | null
@@ -125,7 +125,7 @@ export default async function HostListingEditPage({
           hasBookingHistory={hasBookingHistory}
         />
 
-        <form id="host-listing-edit-form" action={updateHostListing} className="space-y-6">
+        <SaveStateForm id="host-listing-edit-form" action={updateHostListing} className="space-y-6">
           <input type="hidden" name="listingId" value={listing.id} />
 
           {/* 1. Stay details — title, description, neighbourhood, capacity */}
@@ -405,7 +405,7 @@ export default async function HostListingEditPage({
           </EditorSection>
 
           <StickySaveBar formId="host-listing-edit-form" />
-        </form>
+        </SaveStateForm>
       </section>
     </div>
   )
