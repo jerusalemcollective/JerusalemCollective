@@ -3,6 +3,13 @@ import Image from 'next/image'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { createPublicClient } from '@/lib/supabase/public'
+import { ListingCard, LISTING_GRID_CLASS } from '@/components/listing-card'
+import {
+  getListingCardExtras,
+  LISTING_CARD_COLUMNS,
+  toListingCardData,
+  type ListingCardRow,
+} from '@/lib/listing-cards'
 
 type HostRow = {
   id: string
@@ -13,18 +20,6 @@ type HostRow = {
   is_verified: boolean | null
   host_type: string | null
   bio: string | null
-}
-
-type ListingWithPhoto = {
-  id: string
-  title: string
-  area: string
-  bedrooms: number
-  max_guests: number
-  price_ils: number | null
-  price_usd: number | null
-  booking_type: string
-  cover_photo_url: string | null
 }
 
 type ReviewRow = {
@@ -105,7 +100,7 @@ export default async function HostProfilePage({ params }: HostPageProps) {
         .single(),
       supabase
         .from('listings')
-        .select('id, title, area, bedrooms, max_guests, price_ils, price_usd, booking_type, cover_photo_url')
+        .select(LISTING_CARD_COLUMNS)
         .eq('host_id', hostId)
         .eq('is_published', true),
       supabase
@@ -130,17 +125,8 @@ export default async function HostProfilePage({ params }: HostPageProps) {
     host_type: hostData.host_type,
     bio: hostData.bio,
   }
-  const listings: ListingWithPhoto[] = (listingsData || []).map((listing: ListingWithPhoto) => ({
-    id: listing.id,
-    title: listing.title,
-    area: listing.area,
-    bedrooms: listing.bedrooms,
-    max_guests: listing.max_guests,
-    price_ils: listing.price_ils,
-    price_usd: listing.price_usd,
-    booking_type: listing.booking_type,
-    cover_photo_url: listing.cover_photo_url ?? null,
-  }))
+  const listings = (listingsData || []) as ListingCardRow[]
+  const extras = await getListingCardExtras(supabase, listings.map((listing) => listing.id))
   const reviews: ReviewRow[] = (reviewsData || []).map((review: ReviewRow) => ({
     id: review.id,
     reviewer_name: review.reviewer_name,
@@ -214,34 +200,9 @@ export default async function HostProfilePage({ params }: HostPageProps) {
           {listings.length === 0 ? (
             <p className="text-stone-500">No listings yet.</p>
           ) : (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className={LISTING_GRID_CLASS}>
               {listings.map((listing) => (
-                <Link key={listing.id} href={`/listings/${listing.id}`} className="group overflow-hidden rounded-2xl bg-white shadow-sm transition hover:shadow-md">
-                  <div className="relative aspect-[4/3] bg-stone-200">
-                    {listing.cover_photo_url ? (
-                      <Image
-                        src={listing.cover_photo_url}
-                        alt={listing.title}
-                        width={600}
-                        height={450}
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 400px"
-                        loading="lazy"
-                        className="h-full w-full object-cover transition group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="h-full w-full bg-gradient-to-br from-stone-200 via-stone-100 to-stone-300" />
-                    )}
-                  </div>
-                  <div className="p-4">
-                    <h3 className="mb-1 font-bold text-stone-900 group-hover:text-[#c76f55]">{listing.title}</h3>
-                    <p className="mb-2 text-sm text-stone-500">{listing.area}</p>
-                    <p className="text-sm text-stone-600">{listing.bedrooms} bed · {listing.max_guests} guests</p>
-                    <p className="mt-2 font-bold text-stone-900">
-                      {listing.price_ils ? `₪${listing.price_ils.toLocaleString()}` : 'Price on request'}
-                      {listing.price_ils && <span className="ml-1 font-normal text-stone-500">/ night</span>}
-                    </p>
-                  </div>
-                </Link>
+                <ListingCard key={listing.id} listing={toListingCardData(listing, extras)} />
               ))}
             </div>
           )}
