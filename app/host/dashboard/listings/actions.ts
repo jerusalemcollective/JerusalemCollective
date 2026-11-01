@@ -11,6 +11,24 @@ import {
   saveShulDistances,
 } from '@/lib/shul-distances'
 
+// The "Other amenities" box submits one comma-separated string under the same
+// field name as the checkboxes. Store each amenity as its own item (trimmed,
+// de-duplicated) so guests see them as a proper list.
+function readAmenities(formData: FormData) {
+  const seen = new Set<string>()
+  const amenities: string[] = []
+  for (const value of formData.getAll('amenities')) {
+    for (const part of String(value).split(',')) {
+      const amenity = part.trim()
+      const key = amenity.toLowerCase()
+      if (!amenity || seen.has(key)) continue
+      seen.add(key)
+      amenities.push(amenity)
+    }
+  }
+  return amenities
+}
+
 type ExternalCalendarState = {
   status: string
   message: string
@@ -142,7 +160,7 @@ export async function updateHostListing(formData: FormData) {
   const paymentRoutes = await getPaymentRouteSettings()
   const onlinePaymentEnabled =
     paymentRoutes.jlmPaymentsEnabled && formData.get('onlinePaymentEnabled') === 'on'
-  const amenities = formData.getAll('amenities').map(String)
+  const amenities = readAmenities(formData)
   const description = String(formData.get('description') || '')
   const houseRules = String(formData.get('houseRules') || '').trim() || null
   const welcomeMessage = String(formData.get('welcomeMessage') || '').trim() || null
@@ -325,7 +343,7 @@ export async function updateHostApplication(formData: FormData) {
   const { price_ils: priceIls, price_usd: priceUsd } = await toLegacyPrices(price, priceCurrency)
   // The legacy currency_preference column only knows ILS/USD/Both.
   const currencyPreference = priceCurrency === 'ILS' ? 'ILS' : 'USD'
-  const amenities = formData.getAll('amenities').map(String)
+  const amenities = readAmenities(formData)
   const description = String(formData.get('description') || '')
   const photoLink = String(formData.get('photoLink') || '').trim()
   const verificationDocType = String(formData.get('verificationDocType') || '').trim()
