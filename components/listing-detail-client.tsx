@@ -13,7 +13,9 @@ import { SaveListingButton } from '@/components/save-listing-button'
 import { AmenityDisplay } from '@/components/amenity-display'
 import { recordListingView } from '@/components/recently-viewed'
 import { recordListingEngagement } from '@/lib/listing-engagement'
-import { formatListingPrice, formatPrice, formatCurrencyAmount } from '@/lib/utils/currency'
+import { formatListingPrice, formatCurrencyAmount } from '@/lib/utils/currency'
+import { ListingPrice } from '@/components/listing-price'
+import { useCurrency } from '@/components/currency-provider'
 import { clearEnquiryDraft, loadEnquiryDraft, saveEnquiryDraft } from '@/lib/enquiry-draft'
 import { formatDateISO, formatBookingDate } from '@/lib/utils/date'
 import { computeDepositPreview } from '@/lib/utils/deposit'
@@ -264,6 +266,13 @@ export function ListingDetailClient({
         })
       : null
 
+  // Every price on the page is shown in the guest's chosen currency, converted
+  // from the one currency the stay is charged in (USD when set, else ILS — the
+  // same rule the checkout uses).
+  const chargeCurrency: ChargeCurrency | null = listing.price_usd ? 'USD' : listing.price_ils ? 'ILS' : null
+  const nightlyPrice = listing.price_usd || listing.price_ils || null
+  const bookingTotal = totalUSD ?? totalILS
+
   // Everything Shabbos/Jewish in one place — the kosher level, the Shabbos
   // booleans, and the Shabbos amenities — mirroring the single merged form section.
   const listingAmenities = listing.amenities || []
@@ -387,8 +396,6 @@ export function ListingDetailClient({
       ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
       : null
   const maxGuests = listing.max_guests || 6
-  const priceIls = formatPrice(listing.price_ils)
-  const priceUsd = formatPrice(listing.price_usd)
   const allowsOnlinePayment = listing.online_payment_enabled
   const isEnquiryOnly = listing.booking_type === 'enquiry'
   // Instant book paid by bank transfer to the host (no live JLM card payment).
@@ -984,11 +991,23 @@ export function ListingDetailClient({
                           {similarListing.bedrooms || 0} bedrooms {'\u00b7'} sleeps {similarListing.max_guests || 0}
                         </p>
                         <p className="mt-4 text-sm font-semibold text-stone-900">
-                          {formatListingPrice(similarListing)}
+                          {similarListing.price_usd || similarListing.price_ils ? (
+                            <>
+                              <ListingPrice
+                                priceUsd={similarListing.price_usd || null}
+                                priceIls={similarListing.price_usd ? null : similarListing.price_ils || null}
+                                fallback={formatListingPrice(similarListing)}
+                              />
+                              <span className="font-normal text-stone-500"> / night</span>
+                            </>
+                          ) : (
+                            formatListingPrice(similarListing)
+                          )}
                         </p>
                       </Link>
                     ))}
                   </div>
+                  <SimilarStaysPriceNote listings={similarListings} />
                 </div>
               </>
             )}
@@ -997,17 +1016,14 @@ export function ListingDetailClient({
           <div className="hidden lg:block">
             <div className="lg:sticky lg:top-8">
               <div className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-xl shadow-stone-200/60">
-                <div className="mb-5 flex items-baseline gap-1.5">
-                  <span className="text-2xl font-bold text-stone-950">
-                    {listing.price_usd
-                      ? `$${Number(listing.price_usd).toLocaleString()}`
-                      : listing.price_ils
-                        ? `\u20aa${Number(listing.price_ils).toLocaleString()}`
-                        : 'Price on request'}
-                  </span>
-                  {(listing.price_usd || listing.price_ils) && (
-                    <span className="text-sm text-stone-500">/ night</span>
-                  )}
+                <div className="mb-5">
+                  <PriceSummary
+                    chargeCurrency={chargeCurrency}
+                    nightlyPrice={nightlyPrice}
+                    total={bookingTotal}
+                    nights={nights}
+                    guests={guestCount}
+                  />
                 </div>
                 <BookingControls
                   listing={listing}
@@ -1041,17 +1057,15 @@ export function ListingDetailClient({
 
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-stone-200 bg-white px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 shadow-lg lg:hidden">
         <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-lg font-bold text-stone-950">
-              {listing.price_usd
-                ? `$${Number(listing.price_usd).toLocaleString()}`
-                : listing.price_ils
-                  ? `\u20aa${Number(listing.price_ils).toLocaleString()}`
-                  : 'Price on request'}
-            </p>
-            {(listing.price_usd || listing.price_ils) && (
-              <p className="text-xs text-stone-500">per night</p>
-            )}
+          <div className="min-w-0">
+            <PriceSummary
+              chargeCurrency={chargeCurrency}
+              nightlyPrice={nightlyPrice}
+              total={bookingTotal}
+              nights={nights}
+              guests={guestCount}
+              compact
+            />
           </div>
           {showContinueAsPrimary ? (
             <Link
@@ -1109,7 +1123,13 @@ export function ListingDetailClient({
                 </button>
               </div>
               <div className="mb-6 rounded-xl bg-[#F8F5F2] p-4">
-                <Pricing priceIls={priceIls} priceUsd={priceUsd} />
+                <PriceSummary
+                  chargeCurrency={chargeCurrency}
+                  nightlyPrice={nightlyPrice}
+                  total={bookingTotal}
+                  nights={nights}
+                  guests={guestCount}
+                />
               </div>
               <BookingControls
                 listing={listing}
@@ -1198,14 +1218,125 @@ function BackToSearchLink() {
   )
 }
 
-function Pricing({ priceIls, priceUsd }: { priceIls: string | null; priceUsd: string | null }) {
+type ChargeCurrency = 'USD' | 'ILS'
+
+// One amount in the guest's chosen currency, converted from the currency the
+// stay is charged in. When the guest already uses the charge currency, show
+// the exact figure (pennies included) rather than the rounded conversion.
+function Money({ amount, currency }: { amount: number; currency: ChargeCurrency }) {
+  const { currency: guestCurrency, ready } = useCurrency()
+  const exact = formatCurrencyAmount(currency, amount)
+
+  if (ready && guestCurrency === currency) return <>{exact}</>
+
   return (
-    <div className="mb-6">
-      <p className="text-2xl font-bold text-stone-900">
-        {priceIls ? `\u20aa${priceIls}` : priceUsd ? `$${priceUsd}` : 'Price on request'}
-        {(priceIls || priceUsd) && <span className="ml-1 text-base font-normal text-stone-500">/ night</span>}
+    <ListingPrice
+      priceUsd={currency === 'USD' ? amount : null}
+      priceIls={currency === 'ILS' ? amount : null}
+      fallback={exact}
+    />
+  )
+}
+
+// True once rates have loaded and the guest's currency is not the one the
+// stay is charged in — converted figures are then only approximate.
+function useShowsConvertedPrices(chargeCurrency: ChargeCurrency | null) {
+  const { currency, ready } = useCurrency()
+  return Boolean(chargeCurrency) && ready && currency !== chargeCurrency
+}
+
+function ConvertedPriceNote({
+  chargeCurrency,
+  className = 'mt-2 text-xs leading-5 text-stone-500',
+}: {
+  chargeCurrency: ChargeCurrency | null
+  className?: string
+}) {
+  const showsConverted = useShowsConvertedPrices(chargeCurrency)
+  if (!showsConverted || !chargeCurrency) return null
+
+  return (
+    <p className={className}>
+      Converted from {chargeCurrency} at today&apos;s rate, so figures are approximate. You pay in {chargeCurrency}.
+    </p>
+  )
+}
+
+function SimilarStaysPriceNote({ listings }: { listings: SimilarListing[] }) {
+  const { currency, ready } = useCurrency()
+  const converted =
+    ready &&
+    listings.some((similarListing) => {
+      const listingCurrency = similarListing.price_usd ? 'USD' : similarListing.price_ils ? 'ILS' : null
+      return listingCurrency !== null && listingCurrency !== currency
+    })
+  if (!converted) return null
+
+  return <p className="mt-3 text-xs text-stone-500">Prices are converted to {currency} and are approximate.</p>
+}
+
+// Nightly price before dates are chosen; the total for the stay once they are,
+// with the nights, guests and nightly rate underneath.
+function PriceSummary({
+  chargeCurrency,
+  nightlyPrice,
+  total,
+  nights,
+  guests,
+  compact = false,
+}: {
+  chargeCurrency: ChargeCurrency | null
+  nightlyPrice: number | null
+  total: number | null
+  nights: number
+  guests: number
+  compact?: boolean
+}) {
+  const showsConverted = useShowsConvertedPrices(chargeCurrency)
+
+  if (!chargeCurrency || !nightlyPrice) {
+    return (
+      <p className={`${compact ? 'text-lg' : 'text-2xl'} font-bold text-stone-950`}>Price on request</p>
+    )
+  }
+
+  if (total !== null && nights > 0) {
+    return (
+      <div>
+        <p className={`${compact ? 'text-lg' : 'text-2xl'} font-bold text-stone-950`}>
+          {compact && showsConverted && <span aria-label="approximately">{'\u2248 '}</span>}
+          <Money amount={total} currency={chargeCurrency} />
+          <span className={`ml-1 ${compact ? 'text-xs' : 'text-sm'} font-normal text-stone-500`}>total</span>
+        </p>
+        <p className={`${compact ? 'truncate text-xs' : 'mt-0.5 text-sm'} text-stone-500`}>
+          {nights} night{nights === 1 ? '' : 's'} {'\u00b7'} {guests} guest{guests === 1 ? '' : 's'} {'\u00b7'}{' '}
+          <Money amount={nightlyPrice} currency={chargeCurrency} /> / night
+        </p>
+        {!compact && <ConvertedPriceNote chargeCurrency={chargeCurrency} />}
+      </div>
+    )
+  }
+
+  if (compact) {
+    return (
+      <div>
+        <p className="text-lg font-bold text-stone-950">
+          <Money amount={nightlyPrice} currency={chargeCurrency} />
+        </p>
+        <p className="text-xs text-stone-500">per night{showsConverted ? ' · approx.' : ''}</p>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <p className="flex items-baseline gap-1.5">
+        <span className="text-2xl font-bold text-stone-950">
+          <Money amount={nightlyPrice} currency={chargeCurrency} />
+        </span>
+        <span className="text-sm text-stone-500">/ night</span>
       </p>
-      {priceIls && priceUsd && <p className="text-sm text-stone-500">~${priceUsd} USD / night</p>}
+      <ConvertedPriceNote chargeCurrency={chargeCurrency} />
     </div>
   )
 }
@@ -1608,24 +1739,20 @@ function BookingControls({
   const belowMin = nights > 0 && nights < minNights
   const minNightsMessage = `Minimum stay is ${minNights} nights.`
 
-  // Base nightly line excludes the extra-guest surcharge, which gets its own line.
-  const perNightILS = totalILS && nights && listing.price_ils ? Math.round(listing.price_ils) : null
-  const perNightUSD = totalUSD && nights && listing.price_usd ? Math.round(listing.price_usd) : null
-  const baseILS = totalILS && listing.price_ils ? nights * listing.price_ils : null
-  const baseUSD = totalUSD && listing.price_usd ? nights * listing.price_usd : null
-  const extraGuests = computeExtraGuests(guestCount, listing.included_guests, listing.max_guests)
-  const extraILS = totalILS != null && baseILS != null ? Math.round((totalILS - baseILS) * 100) / 100 : 0
-  const extraUSD = totalUSD != null && baseUSD != null ? Math.round((totalUSD - baseUSD) * 100) / 100 : 0
-  const formatDual = (ils: number | null, usd: number | null) =>
-    [ils ? `₪${ils.toLocaleString()}` : null, usd ? `$${usd.toLocaleString()}` : null]
-      .filter(Boolean)
-      .join(' / ') || 'Price on request'
-
-  // Pre-checkout deposit/balance preview. Single currency — the one Stripe actually
-  // charges (USD when set, else ILS) — derived from the computed total so currency
-  // and amount can never disagree. Only when a real online booking is possible.
-  const bookingCurrency: 'USD' | 'ILS' = totalUSD != null ? 'USD' : 'ILS'
+  // Pre-checkout breakdown and deposit/balance preview. Single currency — the
+  // one Stripe actually charges (USD when set, else ILS) — derived from the
+  // computed total so currency and amount can never disagree. Shown to the
+  // guest converted into their chosen currency via <Money>.
+  const bookingCurrency: ChargeCurrency = totalUSD != null ? 'USD' : 'ILS'
   const bookingTotal = totalUSD != null ? totalUSD : totalILS
+  const nightlyPrice = bookingCurrency === 'USD' ? listing.price_usd : listing.price_ils
+  // Base nightly line excludes the extra-guest surcharge, which gets its own line.
+  const baseTotal = bookingTotal != null && nightlyPrice ? nights * nightlyPrice : null
+  const extraGuests = computeExtraGuests(guestCount, listing.included_guests, listing.max_guests)
+  const extraTotal =
+    bookingTotal != null && baseTotal != null ? Math.round((bookingTotal - baseTotal) * 100) / 100 : 0
+
+  // The deposit preview only shows when a real online booking is possible.
   const depositPreview =
     allowsOnlinePayment && !belowMin && nights > 0 && bookingTotal && dateRange.from
       ? computeDepositPreview({
@@ -1645,20 +1772,24 @@ function BookingControls({
           setDateRange={setDateRange}
           blockedRanges={blockedRanges}
         />
-        {nights > 0 && (
+        {nights > 0 && bookingTotal != null && nightlyPrice && baseTotal != null && (
           <div className="mt-3 space-y-2 rounded-2xl border border-stone-200 bg-[#F8F5F2] px-4 py-3">
             <div className="flex items-center justify-between gap-3 text-sm text-stone-600">
               <span>
-                {formatDual(perNightILS, perNightUSD)} {'\u00d7'} {nights} night{nights === 1 ? '' : 's'}
+                <Money amount={nightlyPrice} currency={bookingCurrency} /> {'\u00d7'} {nights} night{nights === 1 ? '' : 's'}
               </span>
-              <span className="text-stone-900">{formatDual(baseILS, baseUSD)}</span>
+              <span className="text-stone-900">
+                <Money amount={baseTotal} currency={bookingCurrency} />
+              </span>
             </div>
-            {(extraILS > 0 || extraUSD > 0) && (
+            {extraTotal > 0 && (
               <div className="flex items-center justify-between gap-3 text-sm text-stone-600">
                 <span>
                   {extraGuests} extra guest{extraGuests === 1 ? '' : 's'} {'\u00d7'} {nights} night{nights === 1 ? '' : 's'}
                 </span>
-                <span className="text-stone-900">{formatDual(extraILS || null, extraUSD || null)}</span>
+                <span className="text-stone-900">
+                  <Money amount={extraTotal} currency={bookingCurrency} />
+                </span>
               </div>
             )}
             <div className="flex items-center justify-between gap-3 text-sm text-stone-500">
@@ -1667,17 +1798,23 @@ function BookingControls({
             </div>
             <div className="flex items-center justify-between gap-3 border-t border-stone-200 pt-2 text-sm font-bold text-stone-950">
               <span>Total</span>
-              <span>{formatDual(totalILS, totalUSD)}</span>
+              <span>
+                <Money amount={bookingTotal} currency={bookingCurrency} />
+              </span>
             </div>
             {depositPreview && depositPreview.balanceStatus === 'due' && (
               <>
                 <div className="flex items-center justify-between gap-3 text-sm font-bold text-stone-950">
                   <span>Pay now</span>
-                  <span>{formatCurrencyAmount(bookingCurrency, depositPreview.depositAmount)}</span>
+                  <span>
+                    <Money amount={depositPreview.depositAmount} currency={bookingCurrency} />
+                  </span>
                 </div>
                 <div className="flex items-center justify-between gap-3 text-sm text-stone-600">
                   <span>Balance on {formatBookingDate(formatDateISO(depositPreview.balanceDueDate))}</span>
-                  <span>{formatCurrencyAmount(bookingCurrency, depositPreview.balanceAmount)}</span>
+                  <span>
+                    <Money amount={depositPreview.balanceAmount} currency={bookingCurrency} />
+                  </span>
                 </div>
               </>
             )}
