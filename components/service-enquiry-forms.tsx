@@ -99,13 +99,13 @@ export function CateringEnquiryForm() {
 
       <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
         <button disabled={status === 'submitting'} className={submitClass}>
-          {status === 'submitting' ? 'Sending...' : 'Send catering enquiry'}
+          {status === 'submitting' ? 'Sending...' : 'Send catering request'}
         </button>
         {status === 'success' && (
-          <p className="text-sm font-semibold text-green-700">Thank you — we will be in touch within 24 hours to confirm your order.</p>
+          <p className="text-sm font-semibold text-green-700">Thank you! We&apos;ve got your request and we&apos;ll be in touch to confirm the details.</p>
         )}
         {status === 'error' && (
-          <p className="text-sm font-semibold text-red-700">Something went wrong. Please try again.</p>
+          <p className="text-sm font-semibold text-red-700">That didn&apos;t send. Please try again, or email us at info@jlmcollective.co.</p>
         )}
       </div>
     </form>
@@ -187,13 +187,13 @@ export function CleaningEnquiryForm() {
 
       <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
         <button disabled={status === 'submitting'} className={submitClass}>
-          {status === 'submitting' ? 'Sending...' : 'Send cleaning enquiry'}
+          {status === 'submitting' ? 'Sending...' : 'Send cleaning request'}
         </button>
         {status === 'success' && (
-          <p className="text-sm font-semibold text-green-700">Thank you — we will confirm your booking within a few hours.</p>
+          <p className="text-sm font-semibold text-green-700">Thank you! We&apos;ve got your request and we&apos;ll be in touch to confirm.</p>
         )}
         {status === 'error' && (
-          <p className="text-sm font-semibold text-red-700">Something went wrong. Please try again.</p>
+          <p className="text-sm font-semibold text-red-700">That didn&apos;t send. Please try again, or email us at info@jlmcollective.co.</p>
         )}
       </div>
     </form>

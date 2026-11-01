@@ -4,7 +4,7 @@ import { getServicesBarEnabled } from '@/lib/platform-settings'
 
 export const metadata = {
   title: 'Kosher Catering & Shabbos Meals',
-  description: 'Custom kosher menus and Shabbos packages delivered to your Jerusalem rental. Arranged by JLM Collective.',
+  description: 'Kosher meals and Shabbos packages delivered to your Jerusalem rental, arranged by JLM Collective.',
   alternates: {
     canonical: '/services/catering',
   },
@@ -23,13 +23,13 @@ export default async function CateringPage() {
         <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Food & catering</p>
         <h1 className="font-display mt-3 text-4xl font-bold tracking-tight text-stone-950 md:text-5xl">Custom Menus & Shabbos Packages</h1>
         <p className="mt-4 max-w-3xl text-lg leading-8 text-stone-600">
-          We arrange fresh, kosher meals delivered directly to your property — whether you need a Friday night dinner, a full Yom Tov package, or simple weekday meals.
+          We arrange fresh, kosher meals delivered to where you&apos;re staying. A Friday night dinner, a full Yom Tov package or simple weekday meals: just let us know.
         </p>
 
         <section className="mt-10 grid gap-4 md:grid-cols-3">
-          <Step number="1" title="Tell us your dates" body="Let us know when you arrive, how many guests, and what you need." />
-          <Step number="2" title="Choose your menu" body="We will be in touch to confirm the menu, kashrut level, and dietary requirements." />
-          <Step number="3" title="We deliver to your door" body="Fresh food delivered to your property, ready when you need it." />
+          <Step number="1" title="Tell us your dates" body="Let us know when you arrive, how many of you there are, and what you need." />
+          <Step number="2" title="Choose your menu" body="We&apos;ll get in touch to agree the menu, the kashrut level and any dietary needs." />
+          <Step number="3" title="We deliver to your door" body="Fresh food brought to where you&apos;re staying, ready when you need it." />
         </section>
 
         <section className="mt-10">
