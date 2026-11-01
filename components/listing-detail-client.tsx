@@ -82,7 +82,7 @@ const SHABBOS_FEATURE_ALIASES: Record<ShabbosFeatureField, string[]> = {
   shabbat_clock: ['Shabbos clock', 'Shabbat clock', 'Shabbos timer', 'Shabbat timer'],
   physical_key_entry: ['Physical key entry', 'Physical-key entry'],
   sukkah_balcony: ['Sukkah balcony', 'Sukkah'],
-  near_synagogue: ['Near shul', 'Near synagogue'],
+  near_synagogue: ['Near shul', 'Near shuls', 'Near synagogue', 'Near synagogues'],
 }
 
 // Which of this guest's booking requests matter for the chosen dates.
