@@ -101,6 +101,7 @@ const hostRowSchema = z.object({
   show_full_name: z.boolean(),
   is_verified: z.boolean().nullable(),
   profile_photo_url: z.string().nullable(),
+  bio: z.string().nullish().transform((value) => value ?? null),
 })
 
 const listingPhotoSchema = z.object({
@@ -426,7 +427,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
     listing.host_id
       ? supabase
           .from('hosts')
-          .select('id, name, display_name, show_full_name, is_verified, profile_photo_url')
+          .select('id, name, display_name, show_full_name, is_verified, profile_photo_url, bio')
           .eq('id', listing.host_id)
           .single()
       : Promise.resolve({ data: null }),
@@ -493,6 +494,7 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
         id: hostRecord.id,
         is_verified: hostRecord.is_verified,
         profile_photo_url: hostRecord.profile_photo_url,
+        bio: hostRecord.bio?.trim() || null,
       }
     : null
 

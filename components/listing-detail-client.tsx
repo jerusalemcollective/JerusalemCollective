@@ -116,6 +116,7 @@ export type ListingDetailHost = {
   id: string
   is_verified: boolean | null
   profile_photo_url: string | null
+  bio: string | null
 }
 
 export type ListingDetailReview = {
@@ -1817,28 +1818,33 @@ function HostCard({
 
   return (
     <div className="mt-6 border-t border-stone-100 pt-6">
-      <Link href={`/hosts/${host.id}`} className="flex items-center gap-3 rounded-xl p-2 transition hover:bg-stone-50">
-        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-stone-200">
+      <Link href={`/hosts/${host.id}`} className="flex items-start gap-4 rounded-xl p-2 transition hover:bg-stone-50">
+        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-stone-200">
           {host.profile_photo_url ? (
-            <Image src={host.profile_photo_url} alt={publicHostName} width={48} height={48} className="h-full w-full object-cover" />
+            <Image src={host.profile_photo_url} alt={publicHostName} width={64} height={64} className="h-full w-full object-cover" />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#c76f55] to-[#a85a45] text-lg font-bold text-white">
+            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#c76f55] to-[#a85a45] text-2xl font-bold text-white">
               {publicHostName.charAt(0).toUpperCase()}
             </div>
           )}
         </div>
-        <div className="flex-1">
-          <p className="text-sm font-semibold text-stone-900">Hosted by {publicHostName}</p>
-          <div className="flex items-center gap-2 text-xs text-stone-500">
-            {host.is_verified && (
+        <div className="min-w-0 flex-1">
+          <p className="text-base font-semibold text-stone-900">Hosted by {publicHostName}</p>
+          {host.is_verified && (
+            <div className="mt-0.5 flex items-center gap-2 text-xs text-stone-500">
               <span className="flex items-center gap-1 text-green-600">
                 <CheckCircleIcon />
                 Verified host
               </span>
-            )}
-          </div>
+            </div>
+          )}
+          <p className="mt-1.5 line-clamp-3 text-sm leading-6 text-stone-600">
+            {host.bio || `Message ${publicHostName} with any questions about the stay before you book.`}
+          </p>
         </div>
-        <ChevronRightIcon />
+        <span className="mt-5 shrink-0">
+          <ChevronRightIcon />
+        </span>
       </Link>
       {/* Talk to the host without committing to dates — a plain message,
           separate from "Request to book" (which carries the dates). */}
