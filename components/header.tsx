@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { Menu, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { YOM_TOV_LINKS } from '@/lib/yom-tov-links'
 
 const JLMLogo = ({ variant = 'terracotta', className = '' }) => {
   const src = variant === 'terracotta' 
@@ -209,6 +210,9 @@ export function Header({
           <Link href="/stays" className={navLinkClass('/stays')}>
             Stays
           </Link>
+          <Link href="/#yom-tov" className="text-stone-600 transition hover:text-[#c76f55]">
+            Yom Tov
+          </Link>
           <Link href="/explore" className={navLinkClass('/explore')}>
             Explore
           </Link>
@@ -388,6 +392,31 @@ export function Header({
             >
               Stays
             </Link>
+            <div className="px-5 py-4">
+              <Link
+                href="/#yom-tov"
+                onClick={() => setMobileOpen(false)}
+                className="font-heading block font-semibold text-stone-900"
+              >
+                Yom Tov &amp; kosher stays
+              </Link>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {YOM_TOV_LINKS.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setMobileOpen(false)}
+                    className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+                      pathname === link.href
+                        ? 'border-[#c76f55] text-[#c76f55]'
+                        : 'border-stone-200 text-stone-700 hover:border-stone-300'
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
             <Link
               href="/explore"
               onClick={() => setMobileOpen(false)}

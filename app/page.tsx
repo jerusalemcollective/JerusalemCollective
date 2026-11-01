@@ -16,6 +16,7 @@ import { RecentlyViewed } from '@/components/recently-viewed-home'
 import { getListingRatings, type ListingRating } from '@/lib/reviews'
 import { ListingCard } from '@/components/listing-card'
 import { formatPreferredNightlyPrice } from '@/lib/utils/currency'
+import { getYomTovTiles } from '@/lib/yom-tov'
 
 // Public, global content only (featured listings + neighbourhoods; the
 // recently-viewed strip is client-side). Cache it via ISR instead of
@@ -158,6 +159,7 @@ async function getHomepageData() {
 
 export default async function JLMCollectiveHomePage() {
   const { featuredStays, popularNeighborhoods } = await getHomepageData()
+  const yomTovTiles = getYomTovTiles()
 
   return (
     <div className="min-h-screen bg-[#F8F5F2] text-[#2D2D2D] antialiased">
@@ -205,6 +207,66 @@ export default async function JLMCollectiveHomePage() {
             />
           </div>
         </section>
+
+        {yomTovTiles.length > 0 && (
+          <section id="yom-tov" aria-labelledby="yom-tov-heading" className="mx-auto max-w-7xl scroll-mt-[var(--header-h)] pt-9">
+            <div className="px-6">
+              <h2 id="yom-tov-heading" className="text-2xl font-semibold tracking-tight text-stone-950">
+                Yom Tov &amp; kosher stays
+              </h2>
+            </div>
+            {/* Sideways scroll on phones; three columns from sm. */}
+            <ul className="mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-6 px-6 pb-2 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:pb-0">
+              {yomTovTiles.map((tile, index) => {
+                const featured = index === 0
+                return (
+                  <li key={tile.slug} className="w-[78%] shrink-0 snap-start sm:w-auto">
+                    <Link
+                      href={tile.href}
+                      className={`relative flex h-full flex-col overflow-hidden rounded-2xl p-5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:ring-offset-2 ${
+                        featured
+                          ? 'bg-[#c76f55] text-white shadow-sm hover:bg-[#b9644b]'
+                          : 'border border-stone-200 bg-white text-stone-950 shadow-sm hover:border-stone-300'
+                      }`}
+                    >
+                      <span
+                        aria-hidden="true"
+                        lang="he"
+                        dir="rtl"
+                        className={`pointer-events-none absolute -bottom-3 right-3 select-none text-7xl font-bold leading-none ${
+                          featured ? 'text-white/15' : 'text-[#c76f55]/10'
+                        }`}
+                      >
+                        {tile.hebrewWord}
+                      </span>
+                      <span
+                        className={`text-[11px] font-bold uppercase tracking-widest ${
+                          featured ? 'text-white' : 'text-[#c76f55]'
+                        }`}
+                      >
+                        {tile.timing ?? 'All year'}
+                      </span>
+                      <span className="font-heading mt-2 text-lg font-semibold">{tile.title}</span>
+                      <span className={`mt-1 text-sm leading-6 ${featured ? 'text-white' : 'text-stone-600'}`}>
+                        {tile.blurb}
+                      </span>
+                      {tile.civilDate && tile.hebrewDate ? (
+                        <span className={`relative mt-4 text-xs leading-5 ${featured ? 'text-white' : 'text-stone-500'}`}>
+                          Begins {tile.civilDate}
+                          <span className="block">{tile.hebrewDate}</span>
+                        </span>
+                      ) : (
+                        <span className={`relative mt-4 text-xs leading-5 ${featured ? 'text-white' : 'text-stone-500'}`}>
+                          Every stay shows its kitchen level
+                        </span>
+                      )}
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          </section>
+        )}
 
         <section id="stays" className="mx-auto max-w-7xl px-6 pt-9">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
