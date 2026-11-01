@@ -13,6 +13,8 @@ import { AmenitySelector } from '@/components/amenity-selector'
 import { ListingPhotoManager } from '@/components/listing-photo-manager'
 import { SaveStateForm, StickySaveBar } from '@/components/sticky-save-bar'
 import { BookingStyleField } from '@/components/booking-style-field'
+import { StayTermsFields } from '@/components/stay-terms-fields'
+import { STAY_TERMS_COLUMNS, stayTermsFromResult } from '@/lib/stay-terms'
 
 type HostPaymentProfile = {
   commission_percent_override: number | null
@@ -42,6 +44,7 @@ export default async function HostListingEditPage({
     { data: paymentProfile },
     { count: bookingCount },
     { count: requestCount },
+    stayTermsResult,
   ] =
     await Promise.all([
       supabase
@@ -73,6 +76,13 @@ export default async function HostListingEditPage({
       // checks again on the server before removing anything).
       supabase.from('bookings').select('id', { count: 'exact', head: true }).eq('listing_id', id),
       supabase.from('booking_requests').select('id', { count: 'exact', head: true }).eq('listing_id', id),
+      // Read separately so the editor still loads before migration 118 adds these columns.
+      supabase
+        .from('listings')
+        .select(STAY_TERMS_COLUMNS.join(', '))
+        .eq('id', id)
+        .in('host_id', hostIds)
+        .maybeSingle(),
     ])
 
   if (!listing) notFound()
@@ -85,6 +95,7 @@ export default async function HostListingEditPage({
   const effectiveCommissionPercent = paymentProfile?.commission_percent_override ?? paymentRoutes.commissionPercent
   const jlmPaymentDescription = getJlmPaymentDescription(effectiveCommissionPercent)
   const listingPhotos = (photos || []) as ListingPhotoRow[]
+  const stayTerms = stayTermsFromResult(stayTermsResult)
 
   return (
     <div className="min-h-screen bg-[#F8F5F2] px-5 py-10 text-[#252525] md:px-6">
@@ -336,6 +347,12 @@ export default async function HostListingEditPage({
             />
 
             <MinNightsField minNights={Number(listing.min_nights ?? 1)} />
+
+            <StayTermsFields
+              terms={stayTerms.terms}
+              available={stayTerms.available}
+              unavailableNote="Check-in and check-out times and a cancellation policy can be set here soon."
+            />
 
           </EditorSection>
 

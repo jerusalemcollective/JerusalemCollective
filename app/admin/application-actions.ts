@@ -8,6 +8,7 @@ import { logAdminAction } from '@/lib/audit'
 import { sendHostAdminUpdateEmail } from '@/lib/transactional-email'
 import { toLegacyPrices } from '@/lib/fx'
 import { isHostPriceCurrency } from '@/lib/currencies'
+import { STAY_TERMS_COLUMNS, isMissingColumnError as isStayTermsColumnMissing, readStayTerms } from '@/lib/stay-terms'
 import {
   calculateShulDistances,
   saveShulDistances,
@@ -431,6 +432,28 @@ async function approveApplication(supabase: AdminSupabase, applicationId: string
 
   if (!listingId) {
     throw new Error('Listing was not created.')
+  }
+
+  // Check-in/out and cancellation terms from the become-a-host Pricing step
+  // (migration 118). Copied only the ones the host filled in, in their own update
+  // so a missing column can never block the approval.
+  const applicationStayTerms = readStayTerms(application as Record<string, unknown>)
+  const stayTermsUpdate = Object.fromEntries(
+    STAY_TERMS_COLUMNS.filter((column) => applicationStayTerms[column] != null).map((column) => [
+      column,
+      applicationStayTerms[column],
+    ]),
+  )
+  if (Object.keys(stayTermsUpdate).length > 0) {
+    const { error: stayTermsError } = await supabase.from('listings').update(stayTermsUpdate).eq('id', listingId)
+    if (stayTermsError) {
+      console.error(
+        isStayTermsColumnMissing(stayTermsError)
+          ? 'Stay terms not copied to the listing: run migration 118.'
+          : 'Could not copy stay terms to the listing — listing still approved:',
+        stayTermsError,
+      )
+    }
   }
 
   if (

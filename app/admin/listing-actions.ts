@@ -6,6 +6,21 @@ import { requireAdminPermission } from '@/lib/admin'
 import { logAdminAction } from '@/lib/audit'
 import { sendListingHostAdminUpdateEmail } from '@/lib/transactional-email'
 import type { AdminActionState } from '@/components/admin-confirm-action-form'
+import {
+  STAY_TERMS_COLUMNS,
+  readStayTermsFromForm,
+  stayTermsFromResult,
+  writeWithStayTermsFallback,
+  type StayTerms,
+} from '@/lib/stay-terms'
+
+// Labels for the host email when an admin changes the stay terms (migration 118).
+const STAY_TERMS_LABELS: Record<keyof StayTerms, string> = {
+  check_in_time: 'Check-in time',
+  check_out_time: 'Check-out time',
+  cancellation_policy: 'Cancellation policy',
+  cancellation_policy_notes: 'Cancellation notes',
+}
 
 export type ListingMessageState = {
   status: 'idle' | 'success' | 'error'
@@ -152,6 +167,8 @@ export async function updateAdminListingDetails(
   const description = String(formData.get('description') || '').trim()
   const isFeatured = formData.get('isFeatured') === 'on'
   const adminStatus = String(formData.get('adminStatus') || 'needs_work')
+  // Only when the form showed the fields (it doesn't before migration 118).
+  const stayTerms = readStayTermsFromForm(formData)
 
   if (!listingId) return failure('This form is missing the listing. Please refresh the page and try again.')
   if (!title || !area) return failure('Please fill in the title and neighbourhood.')
@@ -186,16 +203,24 @@ export async function updateAdminListingDetails(
     description: description || null,
   }
 
-  const { data: updated, error } = await supabase
-    .from('listings')
-    .update({
+  // Stay terms are read separately so a missing column (migration 118 not run)
+  // can't block the rest of the save.
+  const beforeStayTerms = stayTerms
+    ? stayTermsFromResult(
+        await supabase.from('listings').select(STAY_TERMS_COLUMNS.join(', ')).eq('id', listingId).maybeSingle(),
+      )
+    : null
+
+  const { data: updated, error } = await writeWithStayTermsFallback(
+    {
       ...hostVisibleUpdate,
+      ...(stayTerms ?? {}),
       is_featured: isFeatured,
       admin_status: adminStatus,
       updated_at: new Date().toISOString(),
-    })
-    .eq('id', listingId)
-    .select('id')
+    },
+    (payload) => supabase.from('listings').update(payload).eq('id', listingId).select('id'),
+  )
 
   if (error) return failure('Could not save these edits. Please check the details and try again.', error)
   if (!updated || updated.length === 0) {
@@ -203,9 +228,14 @@ export async function updateAdminListingDetails(
   }
 
   const beforeValues = before as unknown as Record<HostVisibleField, unknown>
-  const changedLabels = (Object.keys(HOST_VISIBLE_FIELDS) as HostVisibleField[])
+  const changedLabels: string[] = (Object.keys(HOST_VISIBLE_FIELDS) as HostVisibleField[])
     .filter((field) => !sameValue(beforeValues[field], hostVisibleUpdate[field]))
     .map((field) => HOST_VISIBLE_FIELDS[field])
+  if (stayTerms && beforeStayTerms?.available) {
+    for (const field of STAY_TERMS_COLUMNS) {
+      if (!sameValue(beforeStayTerms.terms[field], stayTerms[field])) changedLabels.push(STAY_TERMS_LABELS[field])
+    }
+  }
 
   await logAdminAction(
     supabase,

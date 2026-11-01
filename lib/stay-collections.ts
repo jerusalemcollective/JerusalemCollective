@@ -14,6 +14,11 @@ export type StayCollection = {
   faqs: { q: string; a: string }[]
 }
 
+// kosher_kitchen_level values that count as a kosher kitchen for the
+// 'kosher' collection filter. 'mehadrin' is what the host editor saves today
+// (allowed by migration 119); the others are older values.
+export const KOSHER_COLLECTION_LEVELS = ['kosher', 'mehadrin', 'glatt_kosher', 'chalav_yisrael']
+
 export const stayCollections: Record<string, StayCollection> = {
   pesach: {
     slug: 'pesach',
