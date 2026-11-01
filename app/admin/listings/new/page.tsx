@@ -1,28 +1,48 @@
 import Link from 'next/link'
 import { requireAdminPermission } from '@/lib/admin'
 import { createAdminListing } from '@/app/admin/listing-actions'
+import { AdminActionForm } from '@/components/admin-confirm-action-form'
 
 type HostOption = {
   id: string
   name: string | null
-  listing_blocked: boolean | null
+  email: string | null
+}
+
+type PlatformPersonRow = {
+  email: string | null
+  full_name: string | null
+  host_id: string | null
+  host_name: string | null
 }
 
 export default async function NewAdminListingPage() {
   const { supabase } = await requireAdminPermission('listings')
-  // email intentionally not selected — the authenticated (admin) role can no
-  // longer read hosts.email after migration 074, and the picker only needs a label.
-  const { data } = await supabase
-    .from('hosts')
-    .select('id, name, listing_blocked')
-    .order('name', { ascending: true })
 
-  const hosts: HostOption[] = (data || []).map((host: HostOption) => ({
-    id: host.id,
-    name: host.name,
-    listing_blocked: host.listing_blocked,
-  }))
-  const availableHosts = hosts.filter((host) => !host.listing_blocked)
+  // Only real hosts: signed-up users who have a hosts row. list_platform_people
+  // joins auth.users to hosts, which also gives us the account email (hosts.email
+  // is not readable by the admin role after migration 074).
+  const { data: people, error: peopleError } = await supabase.rpc('list_platform_people')
+  if (peopleError) console.error('Could not load hosts for the create-listing picker', peopleError)
+
+  const hostsById = new Map<string, HostOption>()
+  for (const person of (people || []) as PlatformPersonRow[]) {
+    if (!person.host_id || hostsById.has(person.host_id)) continue
+    hostsById.set(person.host_id, {
+      id: person.host_id,
+      name: person.host_name || person.full_name,
+      email: person.email,
+    })
+  }
+
+  const { data: blockedHosts } = hostsById.size
+    ? await supabase.from('hosts').select('id').in('id', [...hostsById.keys()]).eq('listing_blocked', true)
+    : { data: [] }
+  const blockedIds = new Set(((blockedHosts || []) as { id: string }[]).map((host) => host.id))
+
+  const availableHosts = [...hostsById.values()]
+    .filter((host) => !blockedIds.has(host.id))
+    .sort((a, b) => (a.name || a.email || '').localeCompare(b.name || b.email || ''))
 
   return (
     <div>
@@ -41,17 +61,28 @@ export default async function NewAdminListingPage() {
           Create a basic listing for a host. Photos, house rules, calendar, and richer details can be added after creation.
         </p>
 
-        <form action={createAdminListing} className="mt-8 space-y-5">
+        <AdminActionForm
+          action={createAdminListing}
+          submitLabel="Create listing"
+          pendingLabel="Creating..."
+          className="mt-8 space-y-5"
+          submitClassName="ml-auto block rounded-full bg-stone-950 px-6 py-3 text-sm font-bold text-white transition hover:bg-stone-800"
+        >
           <label className="block">
             <span className="text-sm font-semibold text-stone-800">Host</span>
             <select name="hostId" required className={inputClass}>
               <option value="">Select a host...</option>
               {availableHosts.map((host) => (
                 <option key={host.id} value={host.id}>
-                  {host.name || host.id}
+                  {[host.name || 'Unnamed host', host.email].filter(Boolean).join(' — ')}
                 </option>
               ))}
             </select>
+            {peopleError && (
+              <span role="alert" className="mt-2 block text-xs leading-5 text-red-700">
+                The host list could not be loaded. Please refresh the page.
+              </span>
+            )}
           </label>
 
           <div className="grid gap-5 md:grid-cols-2">
@@ -118,15 +149,7 @@ export default async function NewAdminListingPage() {
             </span>
           </label>
 
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              className="rounded-full bg-stone-950 px-6 py-3 text-sm font-bold text-white transition hover:bg-stone-800"
-            >
-              Create listing
-            </button>
-          </div>
-        </form>
+        </AdminActionForm>
       </section>
     </div>
   )
