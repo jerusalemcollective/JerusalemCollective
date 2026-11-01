@@ -5,100 +5,135 @@ import { redirect } from 'next/navigation'
 import { requireAdminPermission } from '@/lib/admin'
 import { logAdminAction } from '@/lib/audit'
 import { sendListingHostAdminUpdateEmail } from '@/lib/transactional-email'
+import type { AdminActionState } from '@/components/admin-confirm-action-form'
 
 export type ListingMessageState = {
   status: 'idle' | 'success' | 'error'
   message: string
 }
 
-type ListingAdminStatus = 'needs_work' | 'ready_for_launch' | 'live'
+// Internal review marker for the JLM team. It never changes what guests see —
+// visibility is is_published (Hide / Show) and archived_at (Archive / Restore).
+// 'live' is a legacy value from before the split; it reads as Ready.
+type ListingReviewStatus = 'needs_work' | 'ready_for_launch'
 
-const listingAdminStatuses: ListingAdminStatus[] = [
-  'needs_work',
-  'ready_for_launch',
-  'live',
-]
+const listingReviewStatuses: ListingReviewStatus[] = ['needs_work', 'ready_for_launch']
 
-export async function updateListingVisibility(formData: FormData) {
+// Paths that show listing data. The homepage is cached for 5 minutes, so it is
+// included on every change or it keeps showing hidden/deleted listings.
+function revalidateListingPaths(listingId?: string) {
+  revalidatePath('/')
+  revalidatePath('/admin')
+  revalidatePath('/admin/listings')
+  revalidatePath('/stays')
+  if (listingId) {
+    revalidatePath(`/admin/listings/${listingId}`)
+    revalidatePath(`/listings/${listingId}`)
+  }
+}
+
+// Plain message for the admin; the technical detail goes to the server log.
+function failure(message: string, error?: unknown): AdminActionState {
+  if (error) console.error(message, error)
+  return { status: 'error', message }
+}
+
+const NOT_SAVED_PERMISSION =
+  'The listing was not changed. Please refresh and try again. If it keeps happening, ask your developer to check admin permissions on listings.'
+
+export async function updateListingVisibility(
+  _previousState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
   const listingId = String(formData.get('listingId') || '')
   const field = String(formData.get('field') || '')
   const rawValue = String(formData.get('value') || '')
 
-  if (!listingId || !['is_published', 'is_featured'].includes(field)) {
-    throw new Error('Invalid listing update.')
-  }
-
-  if (!['true', 'false'].includes(rawValue)) {
-    throw new Error('Invalid listing visibility value.')
+  if (!listingId || !['is_published', 'is_featured'].includes(field) || !['true', 'false'].includes(rawValue)) {
+    return failure('This update is missing details. Please refresh the page and try again.')
   }
 
   const value = rawValue === 'true'
 
   const { supabase } = await requireAdminPermission('listings')
+  const { data: listing, error: readError } = await supabase
+    .from('listings')
+    .select('id, archived_at')
+    .eq('id', listingId)
+    .maybeSingle()
+
+  if (readError) return failure('Could not load this listing. Please try again.', readError)
+  if (!listing) return failure('This listing no longer exists.')
+
+  if (field === 'is_published' && value && listing.archived_at) {
+    return failure('This listing is archived. Restore it first, then show it on the site.')
+  }
+
   const { data: updated, error } = await supabase
     .from('listings')
     .update({ [field]: value })
     .eq('id', listingId)
     .select('id')
 
-  if (error) throw error
+  if (error) return failure('Could not update this listing. Please try again.', error)
 
   // A row-level-security block returns no error, it simply updates nothing.
   // Without this check the admin UI reports success while nothing changed.
   if (!updated || updated.length === 0) {
-    throw new Error(
-      'The listing was not updated. Your admin account may not have permission to change listings — check the admin update policy on the listings table.',
-    )
+    return failure(NOT_SAVED_PERMISSION, `RLS blocked ${field} update on listing ${listingId}`)
   }
 
   await logAdminAction(supabase, `set_${field}_${value}`, 'listing', listingId)
-  await sendListingHostAdminUpdateEmail({
-    supabase,
-    listingId,
-    subject: 'JLM Collective updated your listing',
-    intro: `JLM Collective updated your listing ${field === 'is_published' ? 'publication status' : 'featured status'}. Please sign in to view the latest status.`,
-    ctaPath: `/host/dashboard/listings/${listingId}`,
-    ctaLabel: 'View listing update',
-  })
 
-  revalidatePath('/admin')
-  revalidatePath('/admin/listings')
-  revalidatePath(`/listings/${listingId}`)
-  revalidatePath('/stays')
-}
-
-export async function updateAdminListingStatus(formData: FormData) {
-  const listingId = String(formData.get('listingId') || '')
-  const status = String(formData.get('adminStatus') || '')
-
-  if (!listingId || !isListingAdminStatus(status)) {
-    throw new Error('Invalid listing status update.')
+  // Featuring is an internal display choice, so the host is only told when the
+  // listing is hidden from or shown on the site.
+  if (field === 'is_published') {
+    await sendListingHostAdminUpdateEmail({
+      supabase,
+      listingId,
+      subject: value ? 'Your listing is now on JLM Collective' : 'Your listing has been hidden on JLM Collective',
+      intro: value
+        ? 'JLM Collective has made your listing visible on the site. Guests can now find and book it.'
+        : 'JLM Collective has hidden your listing from the site for now. Guests cannot see or book it until it is shown again.',
+      ctaPath: `/host/dashboard/listings/${listingId}`,
+      ctaLabel: 'View your listing',
+    })
   }
 
-  const update =
-    status === 'live'
-      ? { admin_status: status, is_published: true }
-      : { admin_status: status }
+  revalidateListingPaths(listingId)
 
-  const { supabase } = await requireAdminPermission('listings')
-  const { error } = await supabase
-    .from('listings')
-    .update(update)
-    .eq('id', listingId)
-
-  if (error) throw error
-
-  await logAdminAction(supabase, `set_listing_admin_status_${status}`, 'listing', listingId)
-
-  revalidatePath('/admin')
-  revalidatePath('/admin/listings')
-  revalidatePath('/admin/readiness')
-  revalidatePath(`/admin/listings/${listingId}`)
-  revalidatePath(`/listings/${listingId}`)
-  revalidatePath('/stays')
+  const message =
+    field === 'is_published'
+      ? value ? 'Listing is now showing on the site.' : 'Listing is now hidden from the site.'
+      : value ? 'Listing featured.' : 'Listing no longer featured.'
+  return { status: 'success', message }
 }
 
-export async function updateAdminListingDetails(formData: FormData) {
+// Host-facing fields of the admin edit form, with the label used in the host's
+// "what changed" email. Featured and the review marker are internal, so they are
+// deliberately not listed.
+const HOST_VISIBLE_FIELDS = {
+  title: 'Title',
+  area: 'Neighbourhood',
+  exact_address: 'Address',
+  bedrooms: 'Bedrooms',
+  bathrooms: 'Bathrooms',
+  max_guests: 'Max guests',
+  sleeping_setup: 'Sleeping setup',
+  price_ils: 'Price (ILS)',
+  price_usd: 'Price (USD)',
+  booking_type: 'Booking type',
+  online_payment_enabled: 'Online payment',
+  amenities: 'Amenities',
+  description: 'Description',
+} as const
+
+type HostVisibleField = keyof typeof HOST_VISIBLE_FIELDS
+
+export async function updateAdminListingDetails(
+  _previousState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
   const listingId = String(formData.get('listingId') || '')
   const title = String(formData.get('title') || '').trim()
   const area = String(formData.get('area') || '').trim()
@@ -113,92 +148,101 @@ export async function updateAdminListingDetails(formData: FormData) {
   const onlinePaymentEnabled = formData.get('onlinePaymentEnabled') === 'on'
   const amenities = formData.getAll('amenities').map(String).filter(Boolean)
   const description = String(formData.get('description') || '').trim()
-  const isPublished = formData.get('isPublished') === 'on'
   const isFeatured = formData.get('isFeatured') === 'on'
   const adminStatus = String(formData.get('adminStatus') || 'needs_work')
 
-  if (!listingId || !title || !area) {
-    throw new Error('Listing id, title, and area are required.')
-  }
-
-  if (!['request', 'enquiry', 'instant'].includes(bookingType)) {
-    throw new Error('Invalid booking type.')
-  }
-
-  if (!isListingAdminStatus(adminStatus)) {
-    throw new Error('Invalid launch status.')
-  }
-
-  const finalPublished = adminStatus === 'live' ? true : isPublished
+  if (!listingId) return failure('This form is missing the listing. Please refresh the page and try again.')
+  if (!title || !area) return failure('Please fill in the title and neighbourhood.')
+  if (!['request', 'enquiry', 'instant'].includes(bookingType)) return failure('Please choose a booking type.')
+  if (!isListingReviewStatus(adminStatus)) return failure('Please choose a review status.')
 
   const { supabase } = await requireAdminPermission('listings')
-  const { error } = await supabase
+
+  // Read the current values first so the host email can list only what changed.
+  const { data: before, error: readError } = await supabase
+    .from('listings')
+    .select(Object.keys(HOST_VISIBLE_FIELDS).join(', '))
+    .eq('id', listingId)
+    .maybeSingle()
+
+  if (readError) return failure('Could not load this listing. Please try again.', readError)
+  if (!before) return failure('This listing no longer exists.')
+
+  const hostVisibleUpdate: Record<HostVisibleField, unknown> = {
+    title,
+    area,
+    exact_address: exactAddress || null,
+    bedrooms,
+    bathrooms,
+    max_guests: maxGuests,
+    sleeping_setup: sleepingSetup || null,
+    price_ils: priceIls,
+    price_usd: priceUsd,
+    booking_type: bookingType,
+    online_payment_enabled: onlinePaymentEnabled,
+    amenities,
+    description: description || null,
+  }
+
+  const { data: updated, error } = await supabase
     .from('listings')
     .update({
-      title,
-      area,
-      exact_address: exactAddress || null,
-      bedrooms,
-      bathrooms,
-      max_guests: maxGuests,
-      sleeping_setup: sleepingSetup || null,
-      price_ils: priceIls,
-      price_usd: priceUsd,
-      booking_type: bookingType,
-      online_payment_enabled: onlinePaymentEnabled,
-      amenities,
-      description: description || null,
-      is_published: finalPublished,
+      ...hostVisibleUpdate,
       is_featured: isFeatured,
       admin_status: adminStatus,
       updated_at: new Date().toISOString(),
     })
     .eq('id', listingId)
+    .select('id')
 
-  if (error) throw error
+  if (error) return failure('Could not save these edits. Please check the details and try again.', error)
+  if (!updated || updated.length === 0) {
+    return failure(NOT_SAVED_PERMISSION, `RLS blocked details update on listing ${listingId}`)
+  }
 
-  await logAdminAction(supabase, 'edit_listing_details', 'listing', listingId)
-  await sendListingHostAdminUpdateEmail({
+  const beforeValues = before as unknown as Record<HostVisibleField, unknown>
+  const changedLabels = (Object.keys(HOST_VISIBLE_FIELDS) as HostVisibleField[])
+    .filter((field) => !sameValue(beforeValues[field], hostVisibleUpdate[field]))
+    .map((field) => HOST_VISIBLE_FIELDS[field])
+
+  await logAdminAction(
     supabase,
+    'edit_listing_details',
+    'listing',
     listingId,
-    subject: 'JLM Collective updated your listing details',
-    intro: 'JLM Collective made an administrative update to your listing details. Please sign in to review the latest version.',
-    ctaPath: `/host/dashboard/listings/${listingId}`,
-    ctaLabel: 'Review listing details',
-  })
+    changedLabels.length ? changedLabels.join(', ') : undefined,
+  )
 
-  revalidatePath('/admin')
-  revalidatePath('/admin/listings')
-  revalidatePath('/admin/readiness')
-  revalidatePath(`/admin/listings/${listingId}`)
-  revalidatePath(`/listings/${listingId}`)
-  revalidatePath('/stays')
+  if (changedLabels.length) {
+    await sendListingHostAdminUpdateEmail({
+      supabase,
+      listingId,
+      subject: 'JLM Collective updated your listing details',
+      intro: `JLM Collective updated your listing "${title}". Changed: ${formatList(changedLabels)}. Please sign in to review the latest version.`,
+      ctaPath: `/host/dashboard/listings/${listingId}`,
+      ctaLabel: 'Review listing details',
+    })
+  }
+
+  revalidateListingPaths(listingId)
   redirect(`/admin/listings/${listingId}?saved=1`)
 }
 
-export type ListingDeleteState = {
-  status: 'idle' | 'error'
-  message: string
-}
-
-// Returns an error state instead of throwing: in production Next.js replaces
-// thrown server-action errors with a generic error page, so the admin never
-// saw why a delete was refused.
+// Delete refuses (and touches nothing) when the listing has any booking
+// history. Photos are removed only after the listing row is gone, so a refused
+// or failed delete never leaves a listing without its photos.
 export async function deleteListing(
-  _previousState: ListingDeleteState,
+  _previousState: AdminActionState,
   formData: FormData,
-): Promise<ListingDeleteState> {
+): Promise<AdminActionState> {
   const listingId = String(formData.get('listingId') || '')
 
-  if (!listingId) {
-    return { status: 'error', message: 'Missing listing id.' }
-  }
+  if (!listingId) return failure('This button is missing the listing. Please refresh the page and try again.')
 
   const { supabase } = await requireAdminPermission('listings')
 
-  // Check for history before touching anything. Previously the photos were
-  // deleted first, so a refused delete still left the listing without photos.
   // booking_requests cascade on delete, so they must be checked explicitly.
+  // Reviews are kept as guest history too.
   const historyChecks = [
     { table: 'bookings', label: 'bookings' },
     { table: 'booking_requests', label: 'booking requests' },
@@ -212,84 +256,101 @@ export async function deleteListing(
       .eq('listing_id', listingId)
 
     if (error) {
-      return {
-        status: 'error',
-        message: `Could not check this listing's ${check.label}, so nothing was deleted. (${error.message})`,
-      }
+      return failure(`Could not check this listing's ${check.label}, so nothing was deleted. Please try again.`, error)
     }
 
     if ((count || 0) > 0) {
-      return {
-        status: 'error',
-        message: `This listing has ${count} ${check.label}, so it can't be deleted. Use Archive instead - it comes off the site immediately and keeps its history.`,
-      }
+      return failure(
+        `This listing has ${count} ${check.label}, so it can't be deleted. Use Archive or Hide from site instead - both keep its history.`,
+      )
     }
   }
 
-  const { error: photoError } = await supabase
+  const { data: photos, error: photoReadError } = await supabase
     .from('listing_photos')
-    .delete()
+    .select('id, photo_url, storage_path')
     .eq('listing_id', listingId)
 
-  if (photoError) {
-    return {
-      status: 'error',
-      message: `The listing photos could not be removed, so nothing was deleted. (${photoError.message})`,
+  if (photoReadError) {
+    return failure('Could not load the listing photos, so nothing was deleted. Please try again.', photoReadError)
+  }
+
+  const photoRows = (photos || []) as { id: string; photo_url: string | null; storage_path: string | null }[]
+  const photoIds = photoRows.map((photo) => photo.id)
+
+  // Detach the photos first so the photo foreign key can't block the delete,
+  // whatever its ON DELETE rule. This is undone below if the delete fails.
+  if (photoIds.length) {
+    const { error: detachError } = await supabase
+      .from('listing_photos')
+      .update({ listing_id: null })
+      .in('id', photoIds)
+
+    if (detachError) {
+      return failure('Could not prepare the listing photos, so nothing was deleted. Please try again.', detachError)
     }
   }
 
-  await supabase
-    .from('listing_unavailable_ranges')
-    .delete()
-    .eq('listing_id', listingId)
-
-  await supabase
-    .from('listing_admin_messages')
-    .delete()
-    .eq('listing_id', listingId)
-
+  // Calendar blocks, admin messages and wishlist entries cascade with the row.
   const { data: deleted, error } = await supabase
     .from('listings')
     .delete()
     .eq('id', listingId)
     .select('id')
 
-  if (error) {
-    return {
-      status: 'error',
-      message: `This listing could not be deleted because other records still reference it. Archive it instead. (${error.message})`,
+  if (error || !deleted || deleted.length === 0) {
+    if (photoIds.length) {
+      const { error: reattachError } = await supabase
+        .from('listing_photos')
+        .update({ listing_id: listingId })
+        .in('id', photoIds)
+      if (reattachError) console.error('Could not re-attach photos after a failed delete', listingId, reattachError)
     }
+
+    return error
+      ? failure('This listing could not be deleted because other records still use it. Archive it or hide it instead.', error)
+      : failure(
+          'Nothing was deleted - your admin account is not allowed to delete listings. Ask your developer to check the listings delete permission.',
+          `RLS blocked delete of listing ${listingId}`,
+        )
   }
 
-  if (!deleted || deleted.length === 0) {
-    return {
-      status: 'error',
-      message:
-        'Nothing was deleted. Your admin account does not have delete permission on listings - run migration 068 in Supabase, which adds the missing policy.',
-    }
+  // The listing is gone; now remove its photo files and rows. A failure here
+  // only leaves orphaned files, so it is logged rather than shown.
+  const storagePaths = photoRows
+    .map((photo) => photo.storage_path || storagePathFromPublicUrl(photo.photo_url))
+    .filter((path): path is string => Boolean(path))
+
+  if (storagePaths.length) {
+    const { error: storageError } = await supabase.storage.from('listing-photos').remove(storagePaths)
+    if (storageError) console.error('Could not remove photo files for deleted listing', listingId, storageError)
+  }
+
+  if (photoIds.length) {
+    const { error: photoDeleteError } = await supabase.from('listing_photos').delete().in('id', photoIds)
+    if (photoDeleteError) console.error('Could not remove photo rows for deleted listing', listingId, photoDeleteError)
   }
 
   await logAdminAction(supabase, 'delete_listing', 'listing', listingId)
 
-  revalidatePath('/admin')
-  revalidatePath('/admin/listings')
-  revalidatePath(`/listings/${listingId}`)
-  revalidatePath('/stays')
+  revalidateListingPaths(listingId)
   redirect('/admin/listings')
 }
 
-export async function archiveListing(formData: FormData) {
+export async function archiveListing(
+  _previousState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
   const listingId = String(formData.get('listingId') || '')
   const restore = String(formData.get('restore') || '') === 'true'
 
-  if (!listingId) {
-    throw new Error('Missing listing id.')
-  }
+  if (!listingId) return failure('This button is missing the listing. Please refresh the page and try again.')
 
   const { supabase } = await requireAdminPermission('listings')
 
   // Archiving also unpublishes, so every public query (which all filter on
   // is_published) hides the listing without needing to know about archiving.
+  // Restoring leaves it hidden so it can be checked before showing it again.
   const { data, error } = await supabase
     .from('listings')
     .update(
@@ -300,12 +361,9 @@ export async function archiveListing(formData: FormData) {
     .eq('id', listingId)
     .select('id')
 
-  if (error) throw error
-
+  if (error) return failure(`Could not ${restore ? 'restore' : 'archive'} this listing. Please try again.`, error)
   if (!data || data.length === 0) {
-    throw new Error(
-      'The listing was not changed. Check that your admin account has update permission on listings.',
-    )
+    return failure(NOT_SAVED_PERMISSION, `RLS blocked archive change on listing ${listingId}`)
   }
 
   await logAdminAction(
@@ -315,14 +373,20 @@ export async function archiveListing(formData: FormData) {
     listingId,
   )
 
-  revalidatePath('/admin')
-  revalidatePath('/admin/listings')
-  revalidatePath(`/admin/listings/${listingId}`)
-  revalidatePath(`/listings/${listingId}`)
-  revalidatePath('/stays')
+  revalidateListingPaths(listingId)
+
+  return {
+    status: 'success',
+    message: restore
+      ? 'Listing restored. It is still hidden - show it on the site when ready.'
+      : 'Listing archived and removed from the site.',
+  }
 }
 
-export async function createAdminListing(formData: FormData) {
+export async function createAdminListing(
+  _previousState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
   const hostId = String(formData.get('hostId') || '')
   const title = String(formData.get('title') || '').trim()
   const area = String(formData.get('area') || '').trim()
@@ -338,28 +402,19 @@ export async function createAdminListing(formData: FormData) {
   const description = String(formData.get('description') || '').trim()
   const isPublished = formData.get('isPublished') === 'on'
 
-  if (!hostId || !title || !area) {
-    throw new Error('Host, title, and area are required.')
-  }
-
-  if (!['request', 'enquiry', 'instant'].includes(bookingType)) {
-    throw new Error('Invalid booking type.')
-  }
+  if (!hostId || !title || !area) return failure('Please choose a host and fill in the title and area.')
+  if (!['request', 'enquiry', 'instant'].includes(bookingType)) return failure('Please choose a booking type.')
 
   const { supabase } = await requireAdminPermission('listings')
   const { data: host, error: hostError } = await supabase
     .from('hosts')
     .select('id, listing_blocked')
     .eq('id', hostId)
-    .single()
+    .maybeSingle()
 
-  if (hostError || !host) {
-    throw hostError || new Error('Host not found.')
-  }
-
-  if (host.listing_blocked) {
-    throw new Error('This host is blocked from creating listings.')
-  }
+  if (hostError) return failure('Could not check this host. Please try again.', hostError)
+  if (!host) return failure('That host could not be found. Please choose another host.')
+  if (host.listing_blocked) return failure('This host is blocked from creating listings.')
 
   const { data: listing, error } = await supabase
     .from('listings')
@@ -380,19 +435,18 @@ export async function createAdminListing(formData: FormData) {
       description: description || null,
       is_published: isPublished,
       is_featured: false,
-      admin_status: isPublished ? 'live' : 'needs_work',
+      admin_status: isPublished ? 'ready_for_launch' : 'needs_work',
     })
     .select('id')
     .single()
 
-  if (error) throw error
-  if (!listing?.id) throw new Error('Listing was not created.')
+  if (error || !listing?.id) {
+    return failure('Could not create the listing. Please check the details and try again.', error)
+  }
 
   await logAdminAction(supabase, 'create_listing', 'listing', listing.id)
 
-  revalidatePath('/admin')
-  revalidatePath('/admin/listings')
-  revalidatePath('/stays')
+  revalidateListingPaths(listing.id)
   redirect(`/admin/listings/${listing.id}`)
 }
 
@@ -410,8 +464,9 @@ export async function sendListingMessage(
     }
   }
 
+  const { supabase } = await requireAdminPermission('listings')
+
   try {
-    const { supabase } = await requireAdminPermission('listings')
     const { error } = await supabase.rpc('send_listing_admin_message', {
       target_listing_id: listingId,
       message_body: message,
@@ -422,9 +477,11 @@ export async function sendListingMessage(
         error.message.includes('Could not find the function') ||
         error.message.includes('send_listing_admin_message')
       ) {
-        throw new Error(
-          'Listing messaging is not installed in Supabase yet. Run the listing message SQL and try again.',
-        )
+        console.error('Listing messaging RPC is missing', error)
+        return {
+          status: 'error',
+          message: 'Messaging is not set up yet. Ask your developer to install listing messages.',
+        }
       }
 
       throw error
@@ -449,9 +506,10 @@ export async function sendListingMessage(
       message: 'Message sent to the host as JLM Collective.',
     }
   } catch (error) {
+    console.error('Unable to send listing message', error)
     return {
       status: 'error',
-      message: error instanceof Error ? error.message : 'Unable to send the message.',
+      message: 'The message could not be sent. Please try again.',
     }
   }
 }
@@ -468,6 +526,35 @@ function parseOptionalNumber(value: FormDataEntryValue | null) {
   return Number.isFinite(parsed) ? parsed : null
 }
 
-function isListingAdminStatus(value: string): value is ListingAdminStatus {
-  return listingAdminStatuses.includes(value as ListingAdminStatus)
+function isListingReviewStatus(value: string): value is ListingReviewStatus {
+  return listingReviewStatuses.includes(value as ListingReviewStatus)
+}
+
+// Compare a stored value with a submitted one, treating null/'' alike, numbers
+// stored as strings (numeric columns) alike, null/false alike for switches, and
+// amenities regardless of order.
+function sameValue(before: unknown, after: unknown) {
+  const normalise = (value: unknown): string => {
+    if (Array.isArray(value)) return JSON.stringify(value.map(String).sort())
+    if (typeof value === 'boolean') return value ? 'true' : ''
+    if (value === null || value === undefined || value === '') return ''
+    if (typeof value === 'number' || (typeof value === 'string' && value.trim() !== '' && !Number.isNaN(Number(value)))) {
+      return String(Number(value))
+    }
+    return String(value)
+  }
+  return normalise(before) === normalise(after)
+}
+
+function formatList(items: string[]) {
+  if (items.length <= 1) return items.join('')
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`
+}
+
+// Older photo rows have no storage_path; recover it from the public URL.
+function storagePathFromPublicUrl(url: string | null) {
+  if (!url) return null
+  const marker = '/storage/v1/object/public/listing-photos/'
+  const index = url.indexOf(marker)
+  return index === -1 ? null : decodeURIComponent(url.slice(index + marker.length).split('?')[0])
 }

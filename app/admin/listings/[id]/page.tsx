@@ -1,8 +1,13 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { requireAdminPermission } from '@/lib/admin'
-import { updateAdminListingDetails, updateAdminListingStatus } from '@/app/admin/listing-actions'
-import { AdminDeleteListingForm } from '@/components/admin-delete-listing-form'
+import {
+  archiveListing,
+  deleteListing,
+  updateAdminListingDetails,
+  updateListingVisibility,
+} from '@/app/admin/listing-actions'
+import { AdminActionForm, AdminConfirmActionForm } from '@/components/admin-confirm-action-form'
 import { AdminListingMessageForm } from '@/components/admin-listing-message-form'
 import { ListingQualityScore } from '@/components/listing-quality-score'
 import { calculateListingScore } from '@/lib/marketplace-rules'
@@ -10,6 +15,7 @@ import { AmenitySelector } from '@/components/amenity-selector'
 import { oneOrNull } from '@/lib/utils/one-or-null'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 
+// 'live' is a legacy value from before review and visibility were split; it reads as Ready.
 type ListingAdminStatus = 'needs_work' | 'ready_for_launch' | 'live'
 
 type AdminListingDetail = {
@@ -21,6 +27,7 @@ type AdminListingDetail = {
   is_published: boolean
   is_featured: boolean
   admin_status: ListingAdminStatus | null
+  archived_at: string | null
   online_payment_enabled: boolean | null
   bedrooms: number | null
   bathrooms: number | null
@@ -71,7 +78,7 @@ export default async function AdminListingDetailPage({
   const [{ data: listingData }, { data: messages, error: messagesError }, { data: photos }] = await Promise.all([
     supabase
       .from('listings')
-      .select('id, title, area, exact_address, host_id, is_published, is_featured, admin_status, online_payment_enabled, bedrooms, bathrooms, max_guests, sleeping_setup, booking_type, amenities, description, price_usd, price_ils, hosts(name)')
+      .select('id, title, area, exact_address, host_id, is_published, is_featured, admin_status, archived_at, online_payment_enabled, bedrooms, bathrooms, max_guests, sleeping_setup, booking_type, amenities, description, price_usd, price_ils, hosts(name)')
       .eq('id', id)
       .single(),
     supabase
@@ -86,6 +93,7 @@ export default async function AdminListingDetailPage({
   ])
 
   if (!listingData) notFound()
+  if (messagesError) console.error('Could not load listing admin messages', id, messagesError)
 
   const listingRow: AdminListingDetailRow = listingData
   const listing: AdminListingDetail = {
@@ -159,7 +167,8 @@ export default async function AdminListingDetailPage({
     price_usd: listing.price_usd,
     price_ils: listing.price_ils,
   })
-  const adminStatus = listing.admin_status || (listing.is_published ? 'live' : 'needs_work')
+  const reviewStatus = listing.admin_status === 'needs_work' || !listing.admin_status ? 'needs_work' : 'ready_for_launch'
+  const visibility = listing.archived_at ? 'Archived' : listing.is_published ? 'On the site' : 'Hidden'
 
   return (
     <div>
@@ -169,6 +178,57 @@ export default async function AdminListingDetailPage({
         <span className="text-stone-900">{listing.title}</span>
       </div>
 
+      <section className="mb-6 rounded-3xl bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-lg font-bold text-stone-950">Listing status</h2>
+          <p className="text-sm text-stone-600">
+            Now: <span className="font-bold text-stone-950">{visibility}</span>
+          </p>
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
+          {!listing.archived_at && (
+            <AdminConfirmActionForm
+              action={updateListingVisibility}
+              fields={{ listingId: listing.id, field: 'is_published', value: String(!listing.is_published) }}
+              label={listing.is_published ? 'Hide from site' : 'Show on site'}
+              pendingLabel={listing.is_published ? 'Hiding...' : 'Showing...'}
+              description={
+                listing.is_published
+                  ? 'Guests can no longer see or book it. You can show it again any time.'
+                  : 'Guests can find and book it. The host is emailed.'
+              }
+              confirmText={listing.is_published ? 'Hide this listing from guests?' : 'Show this listing to guests?'}
+              confirmLabel={listing.is_published ? 'Yes, hide it' : 'Yes, show it'}
+              className="rounded-full bg-stone-950 px-4 py-2 text-xs font-bold text-white transition hover:bg-stone-800"
+            />
+          )}
+          <AdminConfirmActionForm
+            action={archiveListing}
+            fields={listing.archived_at ? { listingId: listing.id, restore: 'true' } : { listingId: listing.id }}
+            label={listing.archived_at ? 'Restore' : 'Archive'}
+            pendingLabel={listing.archived_at ? 'Restoring...' : 'Archiving...'}
+            description={
+              listing.archived_at
+                ? 'Brings it back as hidden, so you can check it before showing it.'
+                : 'Takes it off the site and keeps all its bookings and history. You can restore it.'
+            }
+            confirmText={listing.archived_at ? 'Restore this listing?' : 'Archive this listing?'}
+            confirmLabel={listing.archived_at ? 'Yes, restore' : 'Yes, archive'}
+            className="rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-800 transition hover:bg-amber-100"
+          />
+          <AdminConfirmActionForm
+            action={deleteListing}
+            fields={{ listingId: listing.id }}
+            label="Delete permanently"
+            pendingLabel="Deleting..."
+            description="Removes the listing and its photos forever. Not possible once it has bookings or requests."
+            confirmText="Delete this listing and its photos forever? This cannot be undone."
+            confirmLabel="Yes, delete"
+            className="rounded-full bg-rose-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-rose-700"
+          />
+        </div>
+      </section>
+
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <section className="rounded-3xl bg-white p-6 shadow-sm">
           <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Listing</p>
@@ -176,7 +236,7 @@ export default async function AdminListingDetailPage({
           <p className="mt-2 text-stone-600">{listing.area}</p>
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
             <Info label="Host" value={listing.hosts?.name || 'Host'} />
-            <Info label="Published" value={listing.is_published ? 'Live' : 'Hidden'} />
+            <Info label="On the site" value={visibility} />
             <Info label="Featured" value={listing.is_featured ? 'Featured' : 'Standard'} />
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -199,9 +259,15 @@ export default async function AdminListingDetailPage({
           <div className="mt-8 border-t border-stone-100 pt-8">
             <h2 className="text-lg font-bold text-stone-950">Edit listing details</h2>
             <p className="mt-1 text-sm leading-6 text-stone-600">
-              Admin edits update the live listing directly.
+              Admin edits update the live listing directly. The host is emailed a list of what changed.
             </p>
-            <form action={updateAdminListingDetails} className="mt-5 grid gap-4">
+            <AdminActionForm
+              action={updateAdminListingDetails}
+              submitLabel="Save listing edits"
+              pendingLabel="Saving..."
+              className="mt-5 grid gap-4"
+              submitClassName="rounded-2xl bg-stone-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-stone-800"
+            >
               <input type="hidden" name="listingId" value={listing.id} />
               <div className="grid gap-4 md:grid-cols-2">
                 <EditField label="Title" name="title" defaultValue={listing.title} required />
@@ -224,6 +290,7 @@ export default async function AdminListingDetailPage({
                 >
                   <option value="request">Request to book</option>
                   <option value="instant">Instant book</option>
+                  {listing.booking_type === 'enquiry' && <option value="enquiry">Enquiry only</option>}
                 </select>
               </label>
               <label className="flex items-start gap-3 rounded-2xl bg-[#F8F5F2] p-4 text-sm text-stone-700">
@@ -241,25 +308,20 @@ export default async function AdminListingDetailPage({
                 </span>
               </label>
               <label className="block">
-                <span className="text-xs font-bold uppercase tracking-widest text-stone-500">Launch status</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-stone-500">Review</span>
                 <select
                   name="adminStatus"
-                  defaultValue={adminStatus}
+                  defaultValue={reviewStatus}
                   className="mt-2 w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm text-stone-900 outline-none transition focus:border-[#c76f55]"
                 >
                   <option value="needs_work">Needs work</option>
-                  <option value="ready_for_launch">Ready for launch</option>
-                  <option value="live">Live</option>
+                  <option value="ready_for_launch">Ready</option>
                 </select>
+                <span className="mt-1 block text-xs text-stone-500">
+                  A note for the JLM team only. Use Listing status above to show or hide it.
+                </span>
               </label>
-              <div className="grid gap-3 md:grid-cols-2">
-                <label className="flex items-start gap-3 rounded-2xl bg-[#F8F5F2] p-4 text-sm text-stone-700">
-                  <input type="checkbox" name="isPublished" defaultChecked={listing.is_published} className="mt-1" />
-                  <span>
-                    <span className="block font-bold text-stone-950">Published</span>
-                    <span className="mt-1 block text-xs text-stone-500">Guests can see this listing.</span>
-                  </span>
-                </label>
+              <div className="grid gap-3">
                 <label className="flex items-start gap-3 rounded-2xl bg-[#F8F5F2] p-4 text-sm text-stone-700">
                   <input type="checkbox" name="isFeatured" defaultChecked={listing.is_featured} className="mt-1" />
                   <span>
@@ -297,10 +359,7 @@ export default async function AdminListingDetailPage({
                   Listing edits saved.
                 </p>
               )}
-              <button className="rounded-2xl bg-stone-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-stone-800">
-                Save listing edits
-              </button>
-            </form>
+            </AdminActionForm>
           </div>
 
           <div className="mt-8">
@@ -308,7 +367,7 @@ export default async function AdminListingDetailPage({
             <div className="mt-4 space-y-3">
               {messagesError && (
                 <p className="rounded-2xl bg-red-50 p-4 text-sm text-red-700">
-                  We could not load previous listing messages: {messagesError.message}
+                  We could not load previous listing messages. Please refresh the page.
                 </p>
               )}
               {(messages || []).map((message) => (
@@ -388,51 +447,10 @@ export default async function AdminListingDetailPage({
           </div>
         </section>
 
-        <aside className="rounded-3xl bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-bold text-stone-950">Launch status</h2>
-          <p className="mt-1 text-sm leading-6 text-stone-600">
-            Current status: <span className="font-bold text-stone-950">{adminStatusLabel(adminStatus)}</span>
-          </p>
-          <div className="mt-4 grid gap-2">
-            {([
-              ['needs_work', 'Needs work'],
-              ['ready_for_launch', 'Ready for launch'],
-              ['live', 'Live'],
-            ] as const).map(([value, label]) => (
-              <form key={value} action={updateAdminListingStatus}>
-                <input type="hidden" name="listingId" value={listing.id} />
-                <input type="hidden" name="adminStatus" value={value} />
-                <button
-                  className={`w-full rounded-2xl px-4 py-3 text-sm font-bold transition ${
-                    adminStatus === value
-                      ? 'bg-stone-950 text-white'
-                      : 'border border-stone-200 text-stone-700 hover:border-stone-300'
-                  }`}
-                >
-                  {label}
-                </button>
-              </form>
-            ))}
-          </div>
-
-          <div className="mt-6 border-t border-stone-100 pt-5">
+        <aside className="h-fit rounded-3xl bg-white p-5 shadow-sm">
           <h2 className="text-lg font-bold text-stone-950">Message host</h2>
           <div className="mt-4">
             <AdminListingMessageForm listingId={listing.id} />
-          </div>
-          </div>
-
-          <div className="mt-6 border-t border-stone-100 pt-5">
-            <h2 className="text-sm font-bold text-stone-950">Danger zone</h2>
-            <div className="mt-3">
-              <AdminDeleteListingForm
-                listingId={listing.id}
-                confirmMessage="Remove this listing from the platform? This cannot be undone. If it has bookings or reviews the delete will be refused - archive it instead."
-                className="rounded-full bg-rose-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-rose-700"
-              >
-                Remove listing
-              </AdminDeleteListingForm>
-            </div>
           </div>
         </aside>
       </div>
@@ -482,10 +500,4 @@ function EditField({
       />
     </label>
   )
-}
-
-function adminStatusLabel(status: ListingAdminStatus) {
-  if (status === 'ready_for_launch') return 'Ready for launch'
-  if (status === 'live') return 'Live'
-  return 'Needs work'
 }
