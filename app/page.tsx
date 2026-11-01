@@ -240,14 +240,14 @@ export default async function JLMCollectiveHomePage() {
                         {tile.hebrewWord}
                       </span>
                       <span
-                        className={`text-[11px] font-bold uppercase tracking-widest ${
+                        className={`relative text-[11px] font-bold uppercase tracking-widest ${
                           featured ? 'text-white' : 'text-[#c76f55]'
                         }`}
                       >
                         {tile.timing ?? 'All year'}
                       </span>
-                      <span className="font-heading mt-2 text-lg font-semibold">{tile.title}</span>
-                      <span className={`mt-1 text-sm leading-6 ${featured ? 'text-white' : 'text-stone-600'}`}>
+                      <span className="font-heading relative mt-2 text-lg font-semibold">{tile.title}</span>
+                      <span className={`relative mt-1 text-sm leading-6 ${featured ? 'text-white' : 'text-stone-600'}`}>
                         {tile.blurb}
                       </span>
                       {tile.civilDate && tile.hebrewDate ? (
