@@ -13,6 +13,7 @@ import {
   type ListingDetailReview,
 } from '@/components/listing-detail-client'
 import { neighborhoodDescriptions } from '@/lib/neighborhood-pages'
+import { approximateCoordinate } from '@/lib/utils/approximate-location'
 import { PaymentCancelledBanner } from '@/components/payment-cancelled-banner'
 
 type HostRecord = {
@@ -344,8 +345,8 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
             description: sampleListing.description || null,
             house_rules: null,
             online_payment_enabled: false,
-            latitude: sampleListing.latitude || null,
-            longitude: sampleListing.longitude || null,
+            latitude: approximateCoordinate(sampleListing.latitude || null),
+            longitude: approximateCoordinate(sampleListing.longitude || null),
             shabbat_elevator: false,
             physical_key_entry: false,
             shabbat_clock: false,
@@ -386,9 +387,16 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
 
   const structuredListing = listingDetailListingSchema.parse(listingData)
   const displayTitle = buildListingDisplayTitle(structuredListing)
+  // Guests see the area only: snap the coordinates before they reach the
+  // browser (props and JSON-LD). Server-side maths below still uses the
+  // precise values from structuredListing.
+  const approximateLatitude = approximateCoordinate(structuredListing.latitude)
+  const approximateLongitude = approximateCoordinate(structuredListing.longitude)
   const listing: ListingDetailListing = {
     ...structuredListing,
     title: displayTitle,
+    latitude: approximateLatitude,
+    longitude: approximateLongitude,
   }
   const walkingMinutes =
     listing.walking_minutes_to_kotel ||
@@ -528,11 +536,11 @@ export default async function ListingDetailPage({ params }: ListingPageProps) {
       addressCountry: 'IL',
     },
     geo:
-      structuredListing.latitude && structuredListing.longitude
+      approximateLatitude && approximateLongitude
         ? {
             '@type': 'GeoCoordinates',
-            latitude: structuredListing.latitude,
-            longitude: structuredListing.longitude,
+            latitude: approximateLatitude,
+            longitude: approximateLongitude,
           }
         : undefined,
     numberOfRooms: structuredListing.bedrooms ?? undefined,
