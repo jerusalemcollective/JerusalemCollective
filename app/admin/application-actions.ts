@@ -8,6 +8,7 @@ import { logAdminAction } from '@/lib/audit'
 import { sendHostAdminUpdateEmail } from '@/lib/transactional-email'
 import { toLegacyPrices } from '@/lib/fx'
 import { isHostPriceCurrency } from '@/lib/currencies'
+import { writeListingExactAddress } from '@/lib/listing-private-details'
 import {
   calculateShulDistances,
   saveShulDistances,
@@ -53,11 +54,12 @@ const applicationEditableFields = [
   'description',
 ] as const
 
+// No exact_address here on purpose: listings is publicly readable, so the
+// address is saved to listing_private_details via writeListingExactAddress().
 type ListingWritePayload = {
   host_id: string
   title: string
   area: string
-  exact_address: string | null
   latitude: number | null
   longitude: number | null
   bedrooms: number
@@ -256,7 +258,6 @@ export async function updateAdminApplicationDetails(formData: FormData) {
       .update({
         title: update.apartment_title,
         area: update.area,
-        exact_address: update.exact_address,
         bedrooms: update.bedrooms || 0,
         bathrooms: update.bathrooms,
         max_guests: update.sleeps || 1,
@@ -271,6 +272,13 @@ export async function updateAdminApplicationDetails(formData: FormData) {
       .eq('id', linkedListing.id)
 
     if (listingUpdateError) throw listingUpdateError
+
+    const { error: addressError } = await writeListingExactAddress(
+      supabase,
+      linkedListing.id,
+      update.exact_address,
+    )
+    if (addressError) throw addressError
 
     revalidatePath(`/listings/${linkedListing.id}`)
   }
@@ -356,7 +364,6 @@ async function approveApplication(supabase: AdminSupabase, applicationId: string
     host_id: hostApplication.host_id,
     title: hostApplication.apartment_title,
     area: hostApplication.area,
-    exact_address: hostApplication.exact_address,
     latitude: hostApplication.latitude ?? null,
     longitude: hostApplication.longitude ?? null,
     bedrooms: hostApplication.bedrooms || 0,
@@ -432,6 +439,13 @@ async function approveApplication(supabase: AdminSupabase, applicationId: string
   if (!listingId) {
     throw new Error('Listing was not created.')
   }
+
+  const { error: addressError } = await writeListingExactAddress(
+    supabase,
+    listingId,
+    hostApplication.exact_address,
+  )
+  if (addressError) throw addressError
 
   if (
     hostApplication.latitude &&

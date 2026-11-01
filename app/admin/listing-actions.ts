@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { requireAdminPermission } from '@/lib/admin'
 import { logAdminAction } from '@/lib/audit'
 import { sendListingHostAdminUpdateEmail } from '@/lib/transactional-email'
+import { readListingExactAddress, writeListingExactAddress } from '@/lib/listing-private-details'
 import type { AdminActionState } from '@/components/admin-confirm-action-form'
 
 export type ListingMessageState = {
@@ -132,6 +133,13 @@ const HOST_VISIBLE_FIELDS = {
 
 type HostVisibleField = keyof typeof HOST_VISIBLE_FIELDS
 
+// Columns read from / written to public.listings. exact_address is private and
+// lives in listing_private_details (lib/listing-private-details.ts), so it is
+// read and written separately.
+const LISTING_COLUMN_FIELDS = (Object.keys(HOST_VISIBLE_FIELDS) as HostVisibleField[]).filter(
+  (field) => field !== 'exact_address',
+)
+
 export async function updateAdminListingDetails(
   _previousState: AdminActionState,
   formData: FormData,
@@ -163,12 +171,15 @@ export async function updateAdminListingDetails(
   // Read the current values first so the host email can list only what changed.
   const { data: before, error: readError } = await supabase
     .from('listings')
-    .select(Object.keys(HOST_VISIBLE_FIELDS).join(', '))
+    .select(LISTING_COLUMN_FIELDS.join(', '))
     .eq('id', listingId)
     .maybeSingle()
 
   if (readError) return failure('Could not load this listing. Please try again.', readError)
   if (!before) return failure('This listing no longer exists.')
+
+  const { address: beforeAddress, error: addressReadError } = await readListingExactAddress(supabase, listingId)
+  if (addressReadError) return failure('Could not load this listing. Please try again.', addressReadError)
 
   const hostVisibleUpdate: Record<HostVisibleField, unknown> = {
     title,
@@ -186,10 +197,14 @@ export async function updateAdminListingDetails(
     description: description || null,
   }
 
+  const listingColumnUpdate = Object.fromEntries(
+    LISTING_COLUMN_FIELDS.map((field) => [field, hostVisibleUpdate[field]]),
+  )
+
   const { data: updated, error } = await supabase
     .from('listings')
     .update({
-      ...hostVisibleUpdate,
+      ...listingColumnUpdate,
       is_featured: isFeatured,
       admin_status: adminStatus,
       updated_at: new Date().toISOString(),
@@ -202,7 +217,13 @@ export async function updateAdminListingDetails(
     return failure(NOT_SAVED_PERMISSION, `RLS blocked details update on listing ${listingId}`)
   }
 
-  const beforeValues = before as unknown as Record<HostVisibleField, unknown>
+  const { error: addressError } = await writeListingExactAddress(supabase, listingId, exactAddress)
+  if (addressError) return failure('The details were saved, but the address could not be saved. Please try again.', addressError)
+
+  const beforeValues = {
+    ...(before as unknown as Record<HostVisibleField, unknown>),
+    exact_address: beforeAddress,
+  }
   const changedLabels = (Object.keys(HOST_VISIBLE_FIELDS) as HostVisibleField[])
     .filter((field) => !sameValue(beforeValues[field], hostVisibleUpdate[field]))
     .map((field) => HOST_VISIBLE_FIELDS[field])
@@ -424,7 +445,6 @@ export async function createAdminListing(
       host_id: hostId,
       title,
       area,
-      exact_address: exactAddress || null,
       bedrooms,
       bathrooms,
       max_guests: maxGuests,
@@ -444,6 +464,13 @@ export async function createAdminListing(
 
   if (error || !listing?.id) {
     return failure('Could not create the listing. Please check the details and try again.', error)
+  }
+
+  if (exactAddress) {
+    const { error: addressError } = await writeListingExactAddress(supabase, listing.id, exactAddress)
+    if (addressError) {
+      console.error('Listing created but its address was not saved', listing.id, addressError)
+    }
   }
 
   await logAdminAction(supabase, 'create_listing', 'listing', listing.id)
