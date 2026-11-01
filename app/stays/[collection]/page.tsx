@@ -100,7 +100,7 @@ export default async function StayCollectionPage({
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#F8F5F2]">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLd(JSON.stringify(faqJsonLd)) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLd(JSON.stringify(breadcrumbJsonLd)) }} />
 
@@ -158,7 +158,7 @@ export default async function StayCollectionPage({
             })}
           </div>
         ) : (
-          <div className="mt-12 rounded-3xl bg-[#F8F5F2] p-8 text-center">
+          <div className="mt-12 rounded-3xl border border-stone-200 bg-white p-8 text-center">
             <p className="text-stone-600">
               No matching stays are live right now. Browse all stays or message us and we will help you find one.
             </p>

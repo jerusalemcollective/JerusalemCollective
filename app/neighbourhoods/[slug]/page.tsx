@@ -134,7 +134,7 @@ export default async function NeighbourhoodPage({
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#F8F5F2]">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{

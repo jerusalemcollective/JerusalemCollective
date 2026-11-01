@@ -157,7 +157,7 @@ export default async function HostProfilePage({ params }: HostPageProps) {
 
   return (
     <div className="min-h-screen bg-[#F8F5F2]">
-      <header className="border-b border-stone-200 bg-white">
+      <header className="border-b border-stone-200">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <Link href="/" className="text-xl font-bold text-[#c76f55]">JLM Collective</Link>
           <Link href="/stays" className="text-sm font-medium text-stone-600 hover:text-stone-900">Browse stays</Link>

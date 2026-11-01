@@ -94,7 +94,7 @@ function escapeJsonLd(value: string) {
 
 export default function HowItWorksPage() {
   return (
-    <div className="bg-white">
+    <div className="bg-[#F8F5F2]">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -177,7 +177,7 @@ export default function HowItWorksPage() {
         </div>
       </section>
 
-      <section className="bg-[#F8F5F2] py-16">
+      <section className="border-t border-stone-200 py-16">
         <div className="mx-auto max-w-3xl px-5 md:px-8">
           <h2 className="text-2xl font-semibold text-stone-950">
             Why JLM Collective

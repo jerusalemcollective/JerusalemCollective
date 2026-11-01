@@ -41,7 +41,7 @@ export default function NeighbourhoodsIndexPage() {
     .sort((a, b) => a.name.localeCompare(b.name))
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#F8F5F2]">
       <div className="mx-auto max-w-6xl px-5 py-10 md:px-8">
         <nav aria-label="Breadcrumb" className="mb-2 flex items-center gap-2 text-sm text-stone-500">
           <Link href="/stays" className="hover:text-[#c76f55]">
