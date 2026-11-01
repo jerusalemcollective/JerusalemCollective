@@ -121,6 +121,9 @@ type BackupAddressSuggestion = {
 }
 
 type GoogleAddressFieldProps = {
+  // Search addresses in any country (e.g. a host's home address) instead of
+  // only Jerusalem, which is right for property addresses.
+  worldwide?: boolean
   value?: string
   defaultValue?: string
   name?: string
@@ -236,6 +239,7 @@ export function GoogleAddressField({
   placeholder,
   className,
   required = false,
+  worldwide = false,
 }: GoogleAddressFieldProps) {
   const placesLibrary = useRef<PlacesLibrary | null>(null)
   const placesServiceContainerRef = useRef<HTMLDivElement | null>(null)
@@ -254,7 +258,11 @@ export function GoogleAddressField({
   const [loadError, setLoadError] = useState('')
   const addressValue = isControlled ? value || '' : internalValue
 
+  const formatLabel = (label: string) => (worldwide ? label : cleanAddressLabel(label))
+
   async function fetchBackupSuggestions(query: string): Promise<AddressSuggestion[]> {
+    // The backup lookup only covers Jerusalem.
+    if (worldwide) return []
     const response = await fetch(`/api/address-suggestions?q=${encodeURIComponent(query)}`)
     if (!response.ok) return []
 
@@ -328,31 +336,40 @@ export function GoogleAddressField({
           const service = new places.AutocompleteService()
           const predictions = await new Promise<LegacyPlacePrediction[]>((resolve) => {
             service.getPlacePredictions(
-              {
-                input: `${addressValue} Jerusalem`,
-                componentRestrictions: { country: 'il' },
-                types: ['address'],
-                language: 'en',
-                region: 'il',
-              },
+              worldwide
+                ? { input: addressValue, types: ['address'], language: 'en' }
+                : {
+                    input: `${addressValue} Jerusalem`,
+                    componentRestrictions: { country: 'il' },
+                    types: ['address'],
+                    language: 'en',
+                    region: 'il',
+                  },
               (results) => resolve(results || []),
             )
           })
 
           nextSuggestions = predictions.slice(0, 8).map((prediction) => ({
-            label: cleanAddressLabel(prediction.description),
+            label: formatLabel(prediction.description),
             legacyPlaceId: prediction.place_id,
           }))
         } else if (places?.AutocompleteSuggestion) {
-          const request: Record<string, unknown> = {
-            input: `${addressValue} Jerusalem`,
-            sessionToken: sessionToken.current,
-            includedRegionCodes: ['il'],
-            includedPrimaryTypes: ['street_address', 'premise', 'route'],
-            language: 'en',
-          }
+          const request: Record<string, unknown> = worldwide
+            ? {
+                input: addressValue,
+                sessionToken: sessionToken.current,
+                includedPrimaryTypes: ['street_address', 'premise', 'route'],
+                language: 'en',
+              }
+            : {
+                input: `${addressValue} Jerusalem`,
+                sessionToken: sessionToken.current,
+                includedRegionCodes: ['il'],
+                includedPrimaryTypes: ['street_address', 'premise', 'route'],
+                language: 'en',
+              }
 
-          if (mapsWindow.google?.maps?.Circle) {
+          if (!worldwide && mapsWindow.google?.maps?.Circle) {
             request.locationBias = new mapsWindow.google.maps.Circle({
               center: { lat: 31.7683, lng: 35.2137 },
               radius: 18000,
@@ -366,7 +383,7 @@ export function GoogleAddressField({
             .map((suggestion): AddressSuggestion | null => {
               const prediction = suggestion.placePrediction
               const label = prediction?.text?.toString() || prediction?.mainText?.toString() || ''
-              return prediction && label ? { label: cleanAddressLabel(label), newPrediction: prediction } : null
+              return prediction && label ? { label: formatLabel(label), newPrediction: prediction } : null
             })
             .filter((suggestion): suggestion is AddressSuggestion => suggestion !== null)
             .slice(0, 8)
@@ -396,7 +413,7 @@ export function GoogleAddressField({
     }, 120)
 
     return () => window.clearTimeout(timer)
-  }, [addressValue, isLoading, loadError])
+  }, [addressValue, isLoading, loadError, worldwide])
 
   const setAddress = (nextValue: string) => {
     if (!isControlled) setInternalValue(nextValue)
@@ -440,13 +457,13 @@ export function GoogleAddressField({
           )
         })
 
-        nextAddress = cleanAddressLabel(place?.formatted_address || suggestion.label)
+        nextAddress = formatLabel(place?.formatted_address || suggestion.label)
         nextLatitude = place?.geometry?.location?.lat() ?? null
         nextLongitude = place?.geometry?.location?.lng() ?? null
       } else if (suggestion.newPrediction) {
         const place = suggestion.newPrediction.toPlace()
         await place.fetchFields({ fields: ['formattedAddress', 'location'] })
-        nextAddress = cleanAddressLabel(place.formattedAddress || suggestion.label)
+        nextAddress = formatLabel(place.formattedAddress || suggestion.label)
         nextLatitude = place.location?.lat() ?? null
         nextLongitude = place.location?.lng() ?? null
       } else if (suggestion.fallbackLatitude !== undefined && suggestion.fallbackLongitude !== undefined) {

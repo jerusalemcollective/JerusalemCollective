@@ -9,7 +9,21 @@ type ListingAssistantRequest = {
   sleeps?: string | number
   sleeping_setup?: string
   amenities?: string[]
+  kosher_kitchen_level?: string
+  shabbat_elevator?: boolean
+  shabbat_clock?: boolean
+  sukkah_balcony?: boolean
+  near_synagogue?: boolean
+  walking_minutes_to_kotel?: string | number
   description?: string
+}
+
+const kosherLevelLabels: Record<string, string> = {
+  not_kosher: 'Not kosher',
+  kosher_friendly: 'Kosher-friendly',
+  kosher: 'Kosher',
+  glatt_kosher: 'Glatt kosher',
+  chalav_yisrael: 'Chalav Yisrael',
 }
 
 type AnthropicContentBlock = {
@@ -64,8 +78,15 @@ export async function POST(request: Request) {
     body: JSON.stringify({
       model,
       max_tokens: 1024,
-      system:
-        'You are an expert vacation rental editor for JLM Collective, a specialist Jerusalem letting agency. Write polished, trustworthy copy that feels warm, precise, and professional. Use only facts supplied by the host. Do not invent amenities, views, distances, religious facilities, accessibility, or claims that are not provided. Avoid hype, cliches, and salesy language.',
+      system: [
+        "You edit listing copy for JLM Collective, a Jerusalem letting agency. The host has written a title and description; your job is to make the host's own words read clearly and warmly, not to write a new advert.",
+        '',
+        'Use only what is in the input: the host_notes, the title, the numbers, the amenities list and the shabbos_and_jewish_stay facts. You may fix grammar and spelling, reorder sentences, join them up, and mention listed amenities and facts in natural sentences.',
+        '',
+        "Do not add any description, quality or claim the host did not state. Hosts see every added word as a false statement about their home. Words like bright, spacious, newly renovated, modern, central, quiet, beautiful, cosy, family-friendly or perfect for, and any view, distance, condition or atmosphere, may appear only if the host wrote them or they are in the facts. Do not describe the neighbourhood beyond naming it.",
+        '',
+        'Keep the length close to what the host gave. If the host wrote two lines, return a short description; never pad it to reach a length. Plain, specific sentences, no hype.',
+      ].join('\n'),
       messages: [
         {
           role: 'user',
@@ -77,6 +98,18 @@ export async function POST(request: Request) {
             sleeps: input.sleeps || '',
             sleeping_setup: input.sleeping_setup || '',
             amenities: input.amenities || [],
+            shabbos_and_jewish_stay: [
+              input.kosher_kitchen_level && kosherLevelLabels[input.kosher_kitchen_level]
+                ? `Kitchen: ${kosherLevelLabels[input.kosher_kitchen_level]}`
+                : '',
+              input.shabbat_elevator ? 'Building has a Shabbos elevator' : '',
+              input.shabbat_clock ? 'Shabbos clock or timer for lights' : '',
+              input.sukkah_balcony ? 'Balcony suitable for a sukkah' : '',
+              input.near_synagogue ? 'Within 5 minutes walk of a shul' : '',
+              input.walking_minutes_to_kotel
+                ? `About ${input.walking_minutes_to_kotel} minutes walk to the Kotel`
+                : '',
+            ].filter(Boolean),
             host_notes: input.description || '',
           }),
         },
@@ -90,17 +123,19 @@ export async function POST(request: Request) {
             properties: {
               title: {
                 type: 'string',
-                description: 'A clear, professional listing title under 70 characters.',
+                description:
+                  "The host's title, tidied up, under 70 characters. Only words supported by the input.",
               },
               description: {
                 type: 'string',
                 description:
-                  'A polished guest-facing description in two short paragraphs, under 120 words total.',
+                  "The host's description rewritten clearly, at most 120 words and no longer than the input supports. Only facts from the input.",
               },
               highlights: {
                 type: 'array',
                 items: { type: 'string' },
-                description: 'Exactly three concise, factual highlights for the listing.',
+                description:
+                  'Up to three short highlights, each restating a fact from the input. Fewer if the input has fewer facts.',
               },
             },
             required: ['title', 'description', 'highlights'],
