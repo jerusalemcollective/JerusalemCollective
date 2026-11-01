@@ -20,6 +20,8 @@ const ENQUIRY_STATUS_LABELS: Record<string, string> = {
 export const GUEST_SUPPORT_STATUS_LABELS: Record<string, string> = {
   open: 'Sent',
   under_review: 'We’re looking into it',
+  waiting_on_guest: 'Waiting for you',
+  waiting_on_host: 'Waiting for the host',
   resolved: 'Resolved',
   closed: 'Closed',
 }
