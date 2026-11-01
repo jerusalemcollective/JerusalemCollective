@@ -12,7 +12,7 @@ const roles = [
   {
     value: 'operations',
     label: 'Operations',
-    detail: 'Applications, listings, hosts, guests, reviews, analytics',
+    detail: 'Applications, listings, hosts, guests, reviews',
   },
   {
     value: 'support',
@@ -22,12 +22,12 @@ const roles = [
   {
     value: 'content',
     label: 'Content',
-    detail: 'Applications, listings, reviews, and analytics',
+    detail: 'Applications, listings, and reviews',
   },
   {
     value: 'analyst',
     label: 'Analyst',
-    detail: 'Read-focused access to analytics and people views',
+    detail: 'View-only access to hosts, guests, and users',
   },
   {
     value: 'owner',
