@@ -40,7 +40,7 @@ export function Footer() {
               <JLMLogo variant="black" className="h-10 w-auto md:h-12" />
             </Link>
             <p className="mt-3 max-w-xs text-sm leading-6 text-stone-500">
-              JLM Collective is a specialist Jerusalem letting agency. We market and let verified Jerusalem properties on behalf of property owners.
+              JLM Collective is a Jerusalem letting agency. We advertise and let homes we&apos;ve checked, on behalf of their owners.
             </p>
           </div>
 

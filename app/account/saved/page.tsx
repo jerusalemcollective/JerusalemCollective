@@ -74,13 +74,13 @@ function EmptyState() {
       <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-stone-100">
         <Heart className="h-8 w-8 text-stone-400" />
       </div>
-      <h2 className="mb-2 text-xl font-bold text-stone-900">No saved stays</h2>
-      <p className="mb-6 text-stone-600">Save stays you like and they will appear here.</p>
+      <h2 className="mb-2 text-xl font-bold text-stone-900">No saved stays yet</h2>
+      <p className="mb-6 text-stone-600">Tap the heart on any stay you like, and you&apos;ll find it here.</p>
       <Link
         href="/stays"
         className="inline-flex rounded-full bg-[#252525] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#111111]"
       >
-        Explore stays
+        Find a stay
       </Link>
     </div>
   )

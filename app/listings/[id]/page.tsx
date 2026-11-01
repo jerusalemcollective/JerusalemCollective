@@ -212,7 +212,7 @@ function buildListingDescription(listing: ListingTitleInput, title: string): str
     ? ` sleeping up to ${listing.max_guests} guest${listing.max_guests === 1 ? '' : 's'}`
     : ''
 
-  return `${title}${guestText}. Verified Jerusalem short-term stay on JLM Collective.`
+  return `${title}${guestText}. A Jerusalem short-term stay checked by the JLM Collective team.`
 }
 
 function estimateWalkingMinutes(

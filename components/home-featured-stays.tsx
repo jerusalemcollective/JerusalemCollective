@@ -48,9 +48,9 @@ export async function HomeFeaturedStays() {
   if (featuredStays.length === 0) {
     return (
       <div className="rounded-3xl border border-stone-200 bg-white/60 px-6 py-16 text-center">
-        <p className="font-heading text-xl font-semibold text-stone-950">New stays coming soon</p>
+        <p className="font-heading text-xl font-semibold text-stone-950">New stays are on the way</p>
         <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-stone-600">
-          We&apos;re adding beautiful Jerusalem stays. Check back shortly, or send an enquiry
+          We&apos;re adding new Jerusalem stays. Check back soon, or email us at info@jlmcollective.co
           and our local team will help you find the right place.
         </p>
       </div>

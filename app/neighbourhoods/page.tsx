@@ -15,11 +15,11 @@ export const revalidate = 3600
 export const metadata: Metadata = {
   title: 'Jerusalem Neighbourhoods for Short-Term Stays',
   description:
-    'Explore Jerusalem neighbourhood by neighbourhood — Rechavia, the German Colony, Katamon, Baka, Nachlaot, Har Nof, Ramat Eshkol and more — to find the right base for your stay.',
+    'Get to know Jerusalem neighbourhood by neighbourhood, from Rechavia, the German Colony, Katamon and Baka to Nachlaot, Har Nof, Ramat Eshkol and more, and find the right base for your stay.',
   alternates: { canonical: '/neighbourhoods' },
   openGraph: {
     title: 'Jerusalem Neighbourhoods | JLM Collective',
-    description: 'Find the right Jerusalem neighbourhood for your stay — community, shuls, and walking distance to the Kotel.',
+    description: 'Find the right Jerusalem neighbourhood for your stay: the community, the shuls and the walk to the Kotel.',
     url: '/neighbourhoods',
     type: 'website',
     ...ogImages('Jerusalem neighbourhoods for your stay'),
@@ -80,16 +80,16 @@ export default async function NeighbourhoodsIndexPage() {
           Jerusalem neighbourhoods
         </h1>
         <p className="mt-4 max-w-2xl text-base leading-8 text-stone-600">
-          Every Jerusalem neighbourhood has its own character — its community, its shuls, its walking
-          distance to the Kotel, and its pace of life. Explore them below to find the right base for your stay.
+          Every Jerusalem neighbourhood feels different. Each has its own community, its own shuls, its own
+          pace and its own walk to the Kotel. Have a look below and find the right base for your stay.
         </p>
 
         {neighbourhoods.length === 0 ? (
           <div className="mt-10 rounded-3xl border border-stone-200 bg-white p-8 text-center">
             <p className="font-heading text-lg font-semibold text-stone-950">No neighbourhoods have stays yet</p>
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-stone-600">
-              We&apos;re curating our first Jerusalem stays. Check back soon, or send an enquiry and our
-              local team will help you find the right place.
+              We&apos;re adding our first Jerusalem stays. Check back soon, or email us at
+              info@jlmcollective.co and our local team will help you find the right place.
             </p>
             <Link
               href="/stays"

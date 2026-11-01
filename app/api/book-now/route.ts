@@ -59,7 +59,7 @@ function getSiteUrl(request: Request) {
 export async function POST(request: Request) {
   const rawBody = await request.json().catch(() => null)
   if (!isBookNowBody(rawBody)) {
-    return NextResponse.json({ error: 'Invalid booking request.' }, { status: 400 })
+    return NextResponse.json({ error: 'Something was missing from your booking. Please refresh the page and try again.' }, { status: 400 })
   }
 
   const listingId = rawBody.listingId || ''
@@ -68,18 +68,18 @@ export async function POST(request: Request) {
   const guests = rawBody.guests || 1
 
   if (!listingId || !checkIn || !checkOut || guests < 1) {
-    return NextResponse.json({ error: 'Choose dates before booking.' }, { status: 400 })
+    return NextResponse.json({ error: 'Please choose your check-in and check-out dates first.' }, { status: 400 })
   }
 
   const nights = Math.round((dateToUtcMs(checkOut) - dateToUtcMs(checkIn)) / (1000 * 60 * 60 * 24))
   if (nights < 1) {
-    return NextResponse.json({ error: 'Check-out must be after check-in.' }, { status: 400 })
+    return NextResponse.json({ error: 'Your check-out date needs to be after your check-in date.' }, { status: 400 })
   }
 
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY
   if (!stripeSecretKey) {
     return NextResponse.json(
-      { error: 'Online deposit payments are not configured yet.' },
+      { error: 'Online payment isn’t available yet. Please message the host to book.' },
       { status: 503 },
     )
   }
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
   const paymentRoutes = await getPaymentRouteSettings()
   if (!paymentRoutes.jlmPaymentsEnabled) {
     return NextResponse.json(
-      { error: 'Online payments are not available right now.' },
+      { error: 'Online payment isn’t available right now. Please try again later, or message the host.' },
       { status: 503 },
     )
   }
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    return NextResponse.json({ error: 'Please sign in before booking.' }, { status: 401 })
+    return NextResponse.json({ error: 'Please sign in to book this stay.' }, { status: 401 })
   }
 
   const { data: listing, error: listingError } = await supabase
@@ -108,11 +108,12 @@ export async function POST(request: Request) {
     .maybeSingle<InstantListing>()
 
   if (listingError) {
-    return NextResponse.json({ error: listingError.message }, { status: 400 })
+    console.error('[book-now] listing lookup failed', listingError)
+    return NextResponse.json({ error: 'Something went wrong on our side and we couldn’t open the payment page. Please try again in a moment.' }, { status: 400 })
   }
 
   if (!listing || !listing.is_published || !listing.online_payment_enabled) {
-    return NextResponse.json({ error: 'This stay is not available for online booking.' }, { status: 400 })
+    return NextResponse.json({ error: 'This stay can’t be booked online. Please message the host instead.' }, { status: 400 })
   }
 
   // Card checkout books instantly (the Stripe webhook confirms the stay), so it is
@@ -120,18 +121,18 @@ export async function POST(request: Request) {
   // accept first.
   if (listing.booking_type !== 'instant') {
     return NextResponse.json(
-      { error: 'This stay needs the host to accept your request first. Please send a booking request.' },
+      { error: 'The host needs to say yes first for this stay. Please send them a booking request.' },
       { status: 400 },
     )
   }
 
   if (!listing.host_id) {
-    return NextResponse.json({ error: 'Host is not available for this listing.' }, { status: 400 })
+    return NextResponse.json({ error: 'Sorry, this stay can’t be booked right now. Please try another stay.' }, { status: 400 })
   }
 
   if (listing.min_nights && nights < listing.min_nights) {
     return NextResponse.json(
-      { error: `This stay requires a minimum of ${listing.min_nights} nights.` },
+      { error: `This stay needs a booking of at least ${listing.min_nights} nights.` },
       { status: 400 },
     )
   }
@@ -143,11 +144,12 @@ export async function POST(request: Request) {
     .maybeSingle<HostPaymentProfile>()
 
   if (paymentProfileError) {
-    return NextResponse.json({ error: paymentProfileError.message }, { status: 400 })
+    console.error('[book-now] payment profile lookup failed', paymentProfileError)
+    return NextResponse.json({ error: 'Something went wrong on our side and we couldn’t open the payment page. Please try again in a moment.' }, { status: 400 })
   }
 
   if (!paymentProfile?.accepts_jlm_payment) {
-    return NextResponse.json({ error: 'This host has not enabled JLM online payment yet.' }, { status: 400 })
+    return NextResponse.json({ error: 'This host doesn’t take online payment yet. Please message the host to book.' }, { status: 400 })
   }
 
   const { data: blockedRanges, error: blockedError } = await supabase
@@ -159,11 +161,12 @@ export async function POST(request: Request) {
     .limit(1)
 
   if (blockedError) {
-    return NextResponse.json({ error: blockedError.message }, { status: 400 })
+    console.error('[book-now] availability lookup failed', blockedError)
+    return NextResponse.json({ error: 'Something went wrong on our side and we couldn’t open the payment page. Please try again in a moment.' }, { status: 400 })
   }
 
   if ((blockedRanges || []).length > 0) {
-    return NextResponse.json({ error: 'These dates are no longer available.' }, { status: 409 })
+    return NextResponse.json({ error: 'Sorry, those dates have just been taken. Please choose other dates.' }, { status: 409 })
   }
 
   // Every monetary value is recomputed inside this function from the listing
@@ -180,7 +183,7 @@ export async function POST(request: Request) {
 
   if (pendingPaymentError || !isRecord(pendingPayment)) {
     return NextResponse.json(
-      { error: pendingPaymentError?.message || 'Could not start deposit checkout.' },
+      { error: pendingPaymentError?.message || 'Something went wrong on our side and we couldn’t open the payment page. Please try again in a moment.' },
       { status: 400 },
     )
   }
@@ -190,7 +193,7 @@ export async function POST(request: Request) {
   const currency = String(pendingPayment.currency || '').toLowerCase()
 
   if (!paymentId || !currency || !Number.isFinite(depositMajor) || depositMajor <= 0) {
-    return NextResponse.json({ error: 'Could not start deposit checkout.' }, { status: 400 })
+    return NextResponse.json({ error: 'Something went wrong on our side and we couldn’t open the payment page. Please try again in a moment.' }, { status: 400 })
   }
 
   const depositAmount = Math.round(depositMajor * 100)
@@ -229,14 +232,14 @@ export async function POST(request: Request) {
   const stripeSession = (await stripeResponse.json().catch(() => ({}))) as unknown
 
   if (!stripeResponse.ok || !isRecord(stripeSession)) {
-    return NextResponse.json({ error: 'Could not start deposit checkout.' }, { status: 502 })
+    return NextResponse.json({ error: 'Something went wrong on our side and we couldn’t open the payment page. Please try again in a moment.' }, { status: 502 })
   }
 
   const checkoutUrl = typeof stripeSession.url === 'string' ? stripeSession.url : null
   const checkoutSessionId = typeof stripeSession.id === 'string' ? stripeSession.id : null
 
   if (!checkoutUrl || !checkoutSessionId) {
-    return NextResponse.json({ error: 'Checkout did not return a payment link.' }, { status: 502 })
+    return NextResponse.json({ error: 'Something went wrong on our side and we couldn’t open the payment page. Please try again in a moment.' }, { status: 502 })
   }
 
   const { error: attachError } = await supabase.rpc('attach_checkout_session_to_payment', {
@@ -245,7 +248,8 @@ export async function POST(request: Request) {
   })
 
   if (attachError) {
-    return NextResponse.json({ error: attachError.message }, { status: 400 })
+    console.error('[book-now] could not attach checkout session', attachError)
+    return NextResponse.json({ error: 'Something went wrong on our side and we couldn’t open the payment page. Please try again in a moment.' }, { status: 400 })
   }
 
   return NextResponse.json({ checkoutUrl })

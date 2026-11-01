@@ -6,13 +6,13 @@ import { ogImages, ogTwitterImages } from '@/lib/og'
 
 export const metadata = {
   title: 'Guest Services',
-  description: 'Enhance your Jerusalem stay with custom catering, Shabbos meal packages, and housekeeping arranged by JLM Collective.',
+  description: 'Kosher catering, Shabbos meals and cleaning for your Jerusalem stay, arranged by JLM Collective.',
   alternates: {
     canonical: '/services',
   },
   openGraph: {
     title: 'Guest Services | JLM Collective',
-    description: 'Enhance your Jerusalem stay with custom catering, Shabbos meal packages, and housekeeping arranged by JLM Collective.',
+    description: 'Kosher catering, Shabbos meals and cleaning for your Jerusalem stay, arranged by JLM Collective.',
     url: '/services',
     type: 'website',
     ...ogImages('Guest services in Jerusalem'),
@@ -36,22 +36,22 @@ export default async function ServicesPage() {
         <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">For guests & hosts</p>
         <h1 className="font-display mt-3 text-4xl font-bold tracking-tight text-stone-950 md:text-5xl">JLM Services</h1>
         <p className="mt-4 max-w-2xl text-lg leading-8 text-stone-600">
-          Everything you need for a perfect Jerusalem stay — arranged by us, delivered to your door.
+          A little extra help for your Jerusalem stay. Tell us what you need and we&apos;ll arrange it.
         </p>
 
         <div className="mt-10 grid gap-5 md:grid-cols-2">
           <ServiceCard
             href="/services/catering"
             title="Custom Menus & Shabbos Packages"
-            description="Kosher meals, Shabbos packages, and Yom Tov menus delivered to your property. Tell us your dates and we arrange the rest."
-            buttonLabel="Order food"
+            description="Kosher meals, Shabbos packages and Yom Tov menus, delivered to where you're staying. Tell us your dates and we'll take care of the rest."
+            buttonLabel="Ask about catering"
             icon={<ForkKnifeIcon />}
           />
           <ServiceCard
             href="/services/cleaning"
             title="Housekeeping & Property Care"
-            description="Mid-stay cleaning for guests and turnaround cleaning for hosts. Available across Jerusalem."
-            buttonLabel="Book cleaning"
+            description="A clean during your stay for guests, and cleaning between bookings for hosts, all across Jerusalem."
+            buttonLabel="Ask about cleaning"
             icon={<SparklesIcon />}
           />
         </div>

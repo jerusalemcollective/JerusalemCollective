@@ -26,7 +26,7 @@ function UpdatePasswordForm() {
     }
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match.')
+      setError('The two passwords don\u2019t match. Please type them again.')
       return
     }
 
@@ -38,7 +38,7 @@ function UpdatePasswordForm() {
       if (error) throw error
       setSaved(true)
     } catch (submitError: unknown) {
-      setError(submitError instanceof Error ? submitError.message : 'Unable to update password.')
+      setError(submitError instanceof Error ? submitError.message : 'We couldn\u2019t save your new password. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -50,19 +50,19 @@ function UpdatePasswordForm() {
         <div className="rounded-3xl bg-white p-8 shadow-sm">
           <h1 className="font-display mb-2 text-2xl font-bold text-stone-900">Choose a new password</h1>
           <p className="mb-6 text-sm text-stone-600">
-            Set a new password for your JLM Collective account.
+            Choose a new password for your JLM Collective account.
           </p>
 
           {saved ? (
             <div className="space-y-4">
               <div className="rounded-xl bg-green-50 p-4 text-sm leading-6 text-green-700">
-                Your password has been updated.
+                All done. Your new password is saved.
               </div>
               <Link
                 href={`/login?redirect=${encodeURIComponent(redirect)}`}
                 className="inline-flex text-sm font-medium text-[#c76f55] hover:underline"
               >
-                Continue to sign in
+                Go to sign in
               </Link>
             </div>
           ) : (

@@ -136,7 +136,7 @@ export default async function StayCollectionPage({
         ) : (
           <div className="mt-12 rounded-3xl border border-stone-200 bg-white p-8 text-center">
             <p className="text-stone-600">
-              No matching stays are live right now. Browse all stays or message us and we will help you find one.
+              There are no stays like this on the site right now. Have a look at all our stays, or email us at info@jlmcollective.co and we'll help you find one.
             </p>
             <Link
               href="/stays"

@@ -9,8 +9,8 @@ export default function Error(props: {
   return (
     <ErrorState
       {...props}
-      title="This listing couldn't be loaded"
-      message="The stay may be unavailable, or we hit a temporary error. Try again, or browse other stays."
+      title="We couldn't load this stay"
+      message="It may no longer be on the site, or we had a short hiccup. Please try again, or have a look at other stays."
     />
   )
 }

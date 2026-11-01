@@ -28,7 +28,7 @@ const MAP_MAX_LISTINGS = 500
 
 export const metadata = {
   title: 'Jerusalem Map',
-  description: 'Browse curated Jerusalem stays on the map.',
+  description: 'See our Jerusalem stays on a map and find one in the area you want.',
   alternates: {
     canonical: '/map',
   },

@@ -77,7 +77,7 @@ export function AccountMenu({ hasStay, isAdmin }: { hasStay: boolean; isAdmin: b
     <nav className="flex gap-1 overflow-x-auto pb-1 md:block md:space-y-1 md:overflow-visible md:pb-0">
       <MenuLink href="/account/bookings" label="My trips" icon={<CalendarDays className="h-5 w-5" />} active={pathname === '/account/bookings'} />
       <MenuLink href="/account/reviews" label="Reviews" icon={<Star className="h-5 w-5" />} active={pathname === '/account/reviews'} />
-      <MenuLink href="/account/enquiries" label="Enquiries" icon={<MessageSquare className="h-5 w-5" />} active={pathname === '/account/enquiries'} />
+      <MenuLink href="/account/enquiries" label="Booking requests" icon={<MessageSquare className="h-5 w-5" />} active={pathname === '/account/enquiries'} />
       <MenuLink href="/account/saved" label="Saved" icon={<Heart className="h-5 w-5" />} active={pathname === '/account/saved'} />
       <MenuLink
         href="/account/messages"
@@ -86,7 +86,7 @@ export function AccountMenu({ hasStay, isAdmin }: { hasStay: boolean; isAdmin: b
         active={pathname === '/account/messages'}
         badge={guestUnreadCount}
       />
-      <MenuLink href="/account/support" label="Support" icon={<LifeBuoy className="h-5 w-5" />} active={pathname === '/account/support'} />
+      <MenuLink href="/account/support" label="Help" icon={<LifeBuoy className="h-5 w-5" />} active={pathname === '/account/support'} />
 
       <div className="flex shrink-0 gap-1 md:mt-3 md:block md:space-y-2 md:border-t md:border-stone-200 md:pt-4">
         {hasStay ? (

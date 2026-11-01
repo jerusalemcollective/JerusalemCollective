@@ -30,7 +30,7 @@ const CHAGIM: ChagDefinition[] = [
   {
     slug: 'sukkot',
     title: 'Sukkot',
-    blurb: 'Stays with a balcony that takes a sukkah.',
+    blurb: 'Homes with a balcony big enough for a sukkah.',
     hebrewWord: 'סוכות',
     month: months.TISHREI,
     startDay: 15,
@@ -116,7 +116,7 @@ export function getYomTovTiles(today: Date = jerusalemToday()): YomTovTile[] {
           slug: 'kosher-kitchen',
           href: '/stays/kosher-kitchen',
           title: 'Kosher kitchen',
-          blurb: 'Kosher, glatt and Chalav Yisrael kitchens.',
+          blurb: 'Kitchens from kosher to glatt and Chalav Yisrael.',
           hebrewWord: 'כשר',
           timing: null,
           civilDate: null,

@@ -67,7 +67,7 @@ export async function generateMetadata({
 
   return {
     title: `${displayName} Host`,
-    description: `View ${displayName}'s listings on JLM Collective, curated Jerusalem stays.`,
+    description: `See ${displayName}'s Jerusalem stays and reviews on JLM Collective.`,
     alternates: {
       canonical: `/hosts/${id}`,
     },
@@ -168,17 +168,17 @@ export default async function HostProfilePage({ params }: HostPageProps) {
               {host.is_verified && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
                   <CheckIcon className="h-3.5 w-3.5" />
-                  Verified Host
+                  Verified host
                 </span>
               )}
             </div>
             <p className="mb-4 text-stone-500">
-              {host.host_type === 'property_manager' ? 'Property Manager' : host.host_type === 'agency' ? 'Rental Agency' : 'Individual Host'}
+              {host.host_type === 'property_manager' ? 'Property manager' : host.host_type === 'agency' ? 'Letting agency' : 'Host'}
             </p>
             <div className="mb-4 flex flex-wrap justify-center gap-6 text-sm sm:justify-start">
               <div>
                 <span className="font-bold text-stone-900">{listings.length}</span>
-                <span className="ml-1 text-stone-500">{listings.length === 1 ? 'listing' : 'listings'}</span>
+                <span className="ml-1 text-stone-500">{listings.length === 1 ? 'stay' : 'stays'}</span>
               </div>
               <div>
                 <span className="font-bold text-stone-900">{reviews.length}</span>
@@ -196,9 +196,9 @@ export default async function HostProfilePage({ params }: HostPageProps) {
         </div>
 
         <section className="mb-12">
-          <h2 className="mb-6 text-xl font-bold text-stone-900">{host.name}&apos;s Listings</h2>
+          <h2 className="mb-6 text-xl font-bold text-stone-900">Stays from {publicName}</h2>
           {listings.length === 0 ? (
-            <p className="text-stone-500">No listings yet.</p>
+            <p className="text-stone-500">No stays on the site yet.</p>
           ) : (
             <div className={LISTING_GRID_CLASS}>
               {listings.map((listing) => (
@@ -221,7 +221,7 @@ export default async function HostProfilePage({ params }: HostPageProps) {
                       <p className="font-bold text-stone-900">{review.reviewer_name}</p>
                       {review.stay_date && (
                         <p className="text-sm text-stone-500">
-                          Stayed {new Date(review.stay_date).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                          Stayed {new Date(review.stay_date).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
                         </p>
                       )}
                     </div>

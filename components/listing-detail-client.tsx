@@ -199,10 +199,11 @@ type ListingDetailClientProps = {
 }
 
 function formatResponseTime(hours: number): string {
-  if (hours < 1) return 'Usually responds within an hour'
-  if (hours < 3) return 'Usually responds within a few hours'
-  if (hours < 24) return 'Usually responds same day'
-  return 'Usually responds within 1-2 days'
+  if (hours < 1) return 'Usually replies within an hour'
+  if (hours < 3) return 'Usually replies within a few hours'
+  if (hours < 24) return 'Usually replies the same day'
+  if (hours < 48) return 'Usually replies within a day or two'
+  return 'Usually replies within a few days'
 }
 
 function getListingPhotoAlt(
@@ -479,7 +480,7 @@ export function ListingDetailClient({
     allowsOnlinePayment || isInstantTransfer
       ? 'Book now'
       : listing.booking_type === 'enquiry'
-        ? 'Message host'
+        ? 'Message the host'
         : 'Request to book'
 
   const handleMobilePhotoDragStart = (event: PointerLikeEvent) => {
@@ -553,7 +554,7 @@ export function ListingDetailClient({
                 type="button"
                 onClick={handleShare}
                 className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-[#c76f55] hover:text-[#c76f55]"
-                aria-label="Share listing"
+                aria-label="Share this stay"
               >
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
@@ -930,7 +931,7 @@ export function ListingDetailClient({
                     </p>
                   ) : (
                     <p className="mt-3 text-sm text-stone-500">
-                      {listing.area} is one of Jerusalem&apos;s most sought-after neighbourhoods for short-term stays.
+                      Want to know more about {listing.area}? Message the host and ask.
                     </p>
                   )}
                   {shulDistances.length > 0 && (
@@ -979,7 +980,7 @@ export function ListingDetailClient({
               <>
                 <hr className="border-stone-200" />
                 <div className="py-3">
-                  <h2 className="text-lg font-semibold text-stone-950">Enhance your stay</h2>
+                  <h2 className="text-lg font-semibold text-stone-950">Extras for your stay</h2>
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
                     <Link
                       href="/services/catering"
@@ -992,7 +993,7 @@ export function ListingDetailClient({
                       </svg>
                       <div>
                         <p className="text-sm font-bold text-stone-950">Catering & meals</p>
-                        <p className="text-xs text-stone-500">Shabbos packages, custom menus</p>
+                        <p className="text-xs text-stone-500">Shabbos meals and menus made for you</p>
                       </div>
                     </Link>
 
@@ -1005,7 +1006,7 @@ export function ListingDetailClient({
                       </svg>
                       <div>
                         <p className="text-sm font-bold text-stone-950">Housekeeping</p>
-                        <p className="text-xs text-stone-500">Mid-stay cleaning arranged</p>
+                        <p className="text-xs text-stone-500">A clean during your stay</p>
                       </div>
                     </Link>
                   </div>
@@ -1221,9 +1222,9 @@ export function ListingDetailClient({
               <PaymentClarityNote allowsOnlinePayment={allowsOnlinePayment} instantTransfer={isInstantTransfer} cancellationSummary={cancellation?.summary} />
               <div className="mt-5 space-y-2.5 border-t border-stone-100 pt-5">
                 {[
-                  'Personally reviewed by JLM Collective',
+                  'Checked in person by JLM Collective',
                   'Every stay is checked before it goes live',
-                  'Support available throughout your stay',
+                  'Real people to help if something isn\u2019t right',
                 ].map((point) => (
                   <div key={point} className="flex items-center gap-2.5">
                     <svg
@@ -1425,35 +1426,35 @@ function PaymentClarityNote({
       {instantTransfer ? (
         <>
           <p className="text-xs leading-5 text-stone-500">
-            No card payment is taken. Your stay is confirmed as soon as you book.
+            You don&rsquo;t pay by card here. Your stay is booked as soon as you tap Book now.
           </p>
           <p className="mt-1 text-xs leading-5 text-stone-500">
-            You pay the host directly by bank transfer, on the schedule we email you.
+            You pay the host by bank transfer, on the dates we email you.
           </p>
         </>
       ) : allowsOnlinePayment ? (
         <>
           <p className="text-xs leading-5 text-stone-500">
-            You will review the payment step before anything is charged.
+            You&rsquo;ll see the payment details before anything is charged.
           </p>
           <p className="mt-1 text-xs leading-5 text-stone-500">
-            Your stay is confirmed once payment is complete.
+            Your stay is booked once your payment goes through.
           </p>
         </>
       ) : (
         <>
           <p className="text-xs leading-5 text-stone-500">
-            No payment is taken when you send a request.
+            Sending a request is free. You won&rsquo;t pay anything yet.
           </p>
           <p className="mt-1 text-xs leading-5 text-stone-500">
-            Your stay is confirmed only after the host accepts your dates and the agreed payment step is complete.
+            Your stay is booked once the host says yes to your dates and you&rsquo;ve paid as agreed.
           </p>
         </>
       )}
       <p className="mt-1 text-xs leading-5 text-stone-500">
         {cancellationSummary
           ? `Cancellation: ${cancellationSummary}.`
-          : 'Cancellation and refund terms are agreed with the host before you pay.'}
+          : 'You\u2019ll agree cancellation and refund terms with the host before you pay.'}
       </p>
     </div>
   )
@@ -1494,7 +1495,7 @@ function BookNowButton({
 
   const handleBookNow = async () => {
     if (!dateRange.from || !dateRange.to) {
-      setPaymentError('Choose check-in and check-out dates first.')
+      setPaymentError('Please choose your check-in and check-out dates first.')
       return
     }
 
@@ -1518,7 +1519,7 @@ function BookNowButton({
       }
 
       if (!response.ok || !result.checkoutUrl) {
-        throw new Error(result.error || 'Could not start checkout.')
+        throw new Error(result.error || 'We couldn\u2019t open the payment page. Please try again.')
       }
 
       window.location.href = result.checkoutUrl
@@ -1526,7 +1527,7 @@ function BookNowButton({
       setPaymentError(
         error instanceof Error
           ? error.message
-          : 'Could not start checkout.',
+          : 'We couldn\u2019t open the payment page. Please try again.',
       )
     } finally {
       setIsStartingPayment(false)
@@ -1541,14 +1542,14 @@ function BookNowButton({
         onClick={handleBookNow}
         className="flex min-h-11 w-full items-center justify-center rounded-full bg-stone-950 px-5 py-0 text-center text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-500 disabled:shadow-none"
       >
-        {isStartingPayment ? 'Opening checkout...' : 'Book now'}
+        {isStartingPayment ? 'Opening payment...' : 'Book now'}
       </button>
       {paymentError && (
         <p className="mt-2 text-center text-xs text-rose-600">{paymentError}</p>
       )}
       {!paymentError && (
         <p className="mt-2 text-center text-xs text-stone-500">
-          {disabled ? 'Choose dates to continue' : 'Deposit due at checkout'}
+          {disabled ? 'Choose your dates to book' : 'You\u2019ll pay the deposit on the next page'}
         </p>
       )}
     </div>
@@ -1604,7 +1605,7 @@ function InstantBookButton({
   const handleBook = async () => {
     if (isBooking) return
     if (!dateRange.from || !dateRange.to) {
-      setBookingError('Choose check-in and check-out dates first.')
+      setBookingError('Please choose your check-in and check-out dates first.')
       return
     }
 
@@ -1685,7 +1686,7 @@ function InstantBookButton({
           {booked.guests} guest{booked.guests === 1 ? '' : 's'}
         </p>
         <p className="mt-1 text-sm leading-6 text-stone-700">
-          Your stay is confirmed and the host has been notified. We&rsquo;ve emailed you the confirmation.
+          Your stay is booked and we&rsquo;ve let the host know. We&rsquo;re also emailing you the details.
         </p>
 
         <div className="mt-3 rounded-xl bg-white p-3 text-sm ring-1 ring-emerald-100">
@@ -1705,7 +1706,7 @@ function InstantBookButton({
             ))}
             {payment.howToPay.length > 0 && (
               <div className="border-t border-stone-100 pt-2">
-                <span className="text-stone-500">Bank transfer &mdash; tap any detail to copy</span>
+                <span className="text-stone-500">Bank transfer: tap any detail to copy it</span>
                 <PayoutCopyRows rows={payment.howToPay} />
               </div>
             )}
@@ -1713,7 +1714,7 @@ function InstantBookButton({
               <p className="whitespace-pre-line border-t border-stone-100 pt-2">{payment.instructions}</p>
             )}
             {!hasTransferDetails && (
-              <p className="text-stone-600">The host will send you their bank transfer details.</p>
+              <p className="text-stone-600">The host will send you their bank details.</p>
             )}
           </div>
         </div>
@@ -1755,7 +1756,7 @@ function InstantBookButton({
         <p className="mt-2 text-center text-xs text-stone-500">{disabledReason}</p>
       )}
       <p className="mt-1.5 text-center text-xs text-stone-500">
-        Confirmed instantly · pay the host by bank transfer
+        Booked straight away · pay the host by bank transfer
       </p>
     </div>
   )
@@ -1806,12 +1807,12 @@ function BookingControls({
     !allowsOnlinePayment &&
     listing.booking_type !== 'instant' &&
     (isEnquiryOnly || hasEnquiry)
-  const alreadyAskedMessage = 'You already asked for these dates. Choose different dates, or open your conversation.'
+  const alreadyAskedMessage = 'You\u2019ve already asked about these dates. Choose other dates, or open your messages with the host.'
   const hasDates = Boolean(dateRange.from && dateRange.to)
-  const dateRequiredMessage = 'Choose dates first.'
+  const dateRequiredMessage = 'Choose your dates first.'
   const minNights = listing.min_nights || 1
   const belowMin = nights > 0 && nights < minNights
-  const minNightsMessage = `Minimum stay is ${minNights} nights.`
+  const minNightsMessage = `This stay needs at least ${minNights} nights.`
 
   // Pre-checkout breakdown and deposit/balance preview. Single currency — the
   // one Stripe actually charges (USD when set, else ILS) — derived from the
@@ -1867,7 +1868,7 @@ function BookingControls({
               </div>
             )}
             <div className="flex items-center justify-between gap-3 text-sm text-stone-500">
-              <span>Booking fees</span>
+              <span>Booking fee</span>
               <span>None</span>
             </div>
             <div className="flex items-center justify-between gap-3 border-t border-stone-200 pt-2 text-sm font-bold text-stone-950">
@@ -1900,7 +1901,7 @@ function BookingControls({
               <path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
             </svg>
             <span>
-              Minimum stay is {minNights} nights &mdash; add {minNights - nights} more night
+              This stay needs at least {minNights} nights. Please add {minNights - nights} more night
               {minNights - nights === 1 ? '' : 's'}.
             </span>
           </div>
@@ -1948,7 +1949,7 @@ function BookingControls({
                 dateRange={dateRange}
                 guests={guestCount}
                 disabled={!hasDates || belowMin}
-                disabledReason={belowMin ? minNightsMessage : 'Choose dates to continue'}
+                disabledReason={belowMin ? minNightsMessage : 'Choose your dates to book'}
               />
             )}
             {!allowsOnlinePayment && !isEnquiryOnly && !isInstantTransfer && (
@@ -1992,7 +1993,7 @@ function BookingControls({
                 hostId={listing.host_id}
                 guests={guestCount}
                 intent="message"
-                buttonLabel="Message host"
+                buttonLabel="Message the host"
                 showIcon={false}
                 buttonClassName="flex min-h-11 w-full items-center justify-center rounded-full bg-stone-950 px-5 py-0 text-center text-sm font-semibold leading-none text-white shadow-sm transition hover:bg-stone-800"
                 onConversationCreated={onConversationCreated}
@@ -2000,7 +2001,7 @@ function BookingControls({
             )}
             {!hasDates && !isEnquiryOnly && !isInstantTransfer && (
               <p className="text-center text-xs text-stone-500">
-                Choose dates to request this stay.
+                Choose your dates to send a booking request.
               </p>
             )}
           </div>
@@ -2050,7 +2051,7 @@ function HostCard({
             </div>
           )}
           <p className="mt-1.5 line-clamp-3 text-sm leading-6 text-stone-600">
-            {host.bio || `Message ${publicHostName} with any questions about the stay before you book.`}
+            {host.bio || `Got a question before you book? Send ${publicHostName} a message.`}
           </p>
         </div>
         <span className="mt-5 shrink-0">
@@ -2066,7 +2067,7 @@ function HostCard({
           hostId={hostUserId}
           guests={guests}
           intent="message"
-          buttonLabel="Message host"
+          buttonLabel="Message the host"
           buttonClassName="flex w-full items-center justify-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2.5 text-sm font-semibold text-stone-700 transition hover:border-[#c76f55] hover:text-[#c76f55]"
         />
       </div>

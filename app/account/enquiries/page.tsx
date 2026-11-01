@@ -29,7 +29,7 @@ const enquiryRowSchema = z.object({
 type EnquiryRow = z.infer<typeof enquiryRowSchema>
 
 export const metadata = {
-  title: 'My enquiries',
+  title: 'My booking requests',
   robots: { index: false, follow: false },
 }
 
@@ -54,10 +54,11 @@ export default async function EnquiriesPage() {
   return (
     <div className="min-h-screen">
       <div className="mx-auto max-w-5xl px-5 py-10 md:px-6">
-        <Breadcrumb items={[{ label: 'Account', href: '/account' }, { label: 'Enquiries' }]} />
+        <Breadcrumb items={[{ label: 'Account', href: '/account' }, { label: 'Booking requests' }]} />
 
         <header className="mb-8 border-b border-stone-200 pb-6">
-          <h1 className="font-display text-3xl font-bold tracking-tight text-stone-950">Enquiries</h1>
+          <h1 className="font-display text-3xl font-bold tracking-tight text-stone-950">Booking requests</h1>
+          <p className="mt-2 text-sm text-stone-600">The stays you&apos;ve asked about, and where each request is up to.</p>
         </header>
 
         {enquiries.length === 0 ? (
@@ -85,7 +86,7 @@ export default async function EnquiriesPage() {
                         {enquiry.listings.title}
                       </Link>
                     ) : (
-                      <p className="font-bold text-stone-950">Stay enquiry</p>
+                      <p className="font-bold text-stone-950">Booking request</p>
                     )}
                     <p className="mt-1 text-sm text-stone-600">{enquiry.listings?.area || 'Jerusalem'}</p>
                     <div className="mt-2 flex items-center gap-2 text-sm text-stone-600">
@@ -124,7 +125,7 @@ export default async function EnquiriesPage() {
                         href={similarStaysHref}
                         className="mt-2 inline-flex text-xs font-semibold text-[#c76f55] hover:underline"
                       >
-                        Browse similar stays →
+                        See similar stays →
                       </Link>
                     )}
                   </div>
@@ -144,13 +145,13 @@ function EmptyState() {
       <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-stone-100">
         <CalendarDays className="h-8 w-8 text-stone-400" />
       </div>
-      <h2 className="mb-2 text-xl font-bold text-stone-900">No enquiries yet</h2>
-      <p className="mb-6 text-stone-600">When you enquire about a stay, it will appear here.</p>
+      <h2 className="mb-2 text-xl font-bold text-stone-900">No booking requests yet</h2>
+      <p className="mb-6 text-stone-600">When you ask a host about a stay, you&apos;ll see your request here.</p>
       <Link
         href="/stays"
         className="inline-flex rounded-full bg-[#252525] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#111111]"
       >
-        Start exploring
+        Find a stay
       </Link>
     </div>
   )

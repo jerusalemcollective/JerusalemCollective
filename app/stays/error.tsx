@@ -10,7 +10,7 @@ export default function Error(props: {
     <ErrorState
       {...props}
       title="We couldn't load stays"
-      message="Something went wrong while fetching listings. Try again in a moment."
+      message="Something went wrong on our side while loading the stays. Please try again in a moment."
     />
   )
 }

@@ -29,13 +29,13 @@ type PopularNeighborhoodRow = {
 export const metadata: Metadata = {
   title: 'Jerusalem Short-Term Stays',
   description:
-    'Discover curated, verified short-term stays in Jerusalem. Browse apartments by neighbourhood, dates, and amenities — with expert local support.',
+    'Short-term stays in Jerusalem, each one checked by our local team. Find a family apartment by neighbourhood, dates and what you need for Shabbos and Yom Tov.',
   alternates: {
     canonical: '/',
   },
   openGraph: {
     title: 'Jerusalem Short-Term Stays | JLM Collective',
-    description: 'Curated verified stays in Jerusalem with local expertise and real human support.',
+    description: 'Jerusalem stays checked by our local team, with real people to help when you need us.',
     url: '/',
     siteName: 'JLM Collective',
     images: [
@@ -187,7 +187,7 @@ export default async function JLMCollectiveHomePage() {
                         </span>
                       ) : (
                         <span className={`relative mt-4 text-xs leading-5 ${featured ? 'text-white' : 'text-stone-500'}`}>
-                          Every stay shows its kitchen level
+                          Each stay tells you its kitchen level
                         </span>
                       )}
                     </Link>
@@ -237,7 +237,7 @@ export default async function JLMCollectiveHomePage() {
             </span>
             <span className="inline-flex items-center gap-2">
               <MessageCircle className="h-4 w-4 text-[#c76f55]" aria-hidden="true" />
-              Real human support
+              Real people to help
             </span>
           </div>
         </section>
@@ -248,7 +248,7 @@ export default async function JLMCollectiveHomePage() {
               <div>
                 <h2 className="text-lg font-semibold tracking-tight">Have a Jerusalem stay to list?</h2>
                 <p className="mt-1 max-w-xl text-xs leading-5 text-stone-300">
-                  Add your property, set your details, and submit it for approval.
+                  Add your home and its details, then send it to us. We'll look it over before it goes live.
                 </p>
               </div>
               <div className="flex shrink-0 flex-wrap gap-2">

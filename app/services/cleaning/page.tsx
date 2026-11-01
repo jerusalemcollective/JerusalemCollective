@@ -24,7 +24,7 @@ export default async function CleaningPage() {
         <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">Cleaning & housekeeping</p>
         <h1 className="font-display mt-3 text-4xl font-bold tracking-tight text-stone-950 md:text-5xl">Housekeeping & Property Care</h1>
         <p className="mt-4 max-w-3xl text-lg leading-8 text-stone-600">
-          Professional, reliable cleaning arranged through JLM Collective — for guests who want a fresh mid-stay clean and hosts who need a fast turnaround between bookings.
+          Cleaning arranged by JLM Collective. For guests who&apos;d like a fresh clean during their stay, and for hosts who need the home ready between bookings.
         </p>
 
         <section className="mt-10 grid gap-5 md:grid-cols-2">
@@ -32,7 +32,7 @@ export default async function CleaningPage() {
             <p className="text-xs font-bold uppercase tracking-widest text-[#c76f55]">For guests</p>
             <h2 className="mt-3 text-2xl font-bold text-stone-950">Mid-stay cleaning</h2>
             <p className="mt-3 text-sm leading-6 text-stone-600">
-              Staying for a week or more? We can arrange a fresh clean during your stay — linen change, bathroom clean, kitchen tidy, and rubbish removal.
+              Staying for a week or more? We can arrange a clean during your stay: fresh linen, the bathroom cleaned, the kitchen tidied and the rubbish taken out.
             </p>
           </article>
 

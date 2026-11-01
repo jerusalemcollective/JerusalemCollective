@@ -33,13 +33,13 @@ export function AvatarUpload({
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      setError('Please select an image file')
+      setError('Please choose a photo (an image file).')
       return
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      setError('Image must be less than 5MB')
+      setError('That photo is too big. Please choose one under 5MB.')
       return
     }
 
@@ -81,7 +81,7 @@ export function AvatarUpload({
       onUploadComplete?.(newUrl)
     } catch (err) {
       console.error('Upload error:', err)
-      setError('Failed to upload image. Please try again.')
+      setError('We couldn’t upload your photo. Please try again.')
     } finally {
       setIsUploading(false)
     }
@@ -144,7 +144,7 @@ export function AvatarUpload({
       />
 
       <p className="text-xs text-stone-500">
-        {isUploading ? 'Uploading...' : 'Click to change photo'}
+        {isUploading ? 'Uploading...' : 'Change photo'}
       </p>
 
       {error && (
