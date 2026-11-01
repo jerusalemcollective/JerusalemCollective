@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     isRecord(rawBody) && typeof rawBody.bookingPaymentId === 'string' ? rawBody.bookingPaymentId : ''
 
   if (!bookingPaymentId) {
-    return NextResponse.json({ error: 'Missing booking.' }, { status: 400 })
+    return NextResponse.json({ error: 'We couldn’t tell which booking to pay for. Please refresh the page and try again.' }, { status: 400 })
   }
 
   const supabase = await createClient()
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    return NextResponse.json({ error: 'Please sign in first.' }, { status: 401 })
+    return NextResponse.json({ error: 'Please sign in to pay your balance.' }, { status: 401 })
   }
 
   const result = await startBalanceCheckout(supabase, bookingPaymentId, user.id, getSiteUrl(request))

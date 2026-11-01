@@ -35,19 +35,19 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 const ERROR_MESSAGES: Array<[RegExp, string | ((match: RegExpMatchArray) => string), number]> = [
   [/not authenticated/i, 'Please sign in to book.', 401],
   [/no longer available/i, 'Sorry, those dates are no longer available. Please choose other dates.', 409],
-  [/already being processed/i, 'Your booking is already being processed. Please refresh in a moment.', 409],
-  [/check-out must be after check-in/i, 'Check-out must be after check-in.', 400],
-  [/in the past/i, 'Check-in can’t be in the past.', 400],
+  [/already being processed/i, 'We’re already working on this booking. Please refresh the page in a moment.', 409],
+  [/check-out must be after check-in/i, 'Your check-out date needs to be after your check-in date.', 400],
+  [/in the past/i, 'Please choose a check-in date that hasn’t passed yet.', 400],
   [/choose check-in/i, 'Choose check-in and check-out dates first.', 400],
-  [/minimum stay is (\d+) nights/i, (match) => `This stay requires a minimum of ${match[1]} nights.`, 400],
-  [/sleeps up to (\d+) guests/i, (match) => `This stay sleeps up to ${match[1]} guests.`, 400],
+  [/minimum stay is (\d+) nights/i, (match) => `This stay needs a booking of at least ${match[1]} nights.`, 400],
+  [/sleeps up to (\d+) guests/i, (match) => `This stay sleeps up to ${match[1]} guests. Please choose fewer guests.`, 400],
   [/guest count/i, 'Choose at least 1 guest.', 400],
-  [/does not offer instant booking/i, 'This stay can’t be booked instantly. Please send a booking request instead.', 400],
-  [/online card payment/i, 'This stay is booked with online card payment. Please refresh the page.', 400],
+  [/does not offer instant booking/i, 'This stay can’t be booked straight away. Please send the host a booking request instead.', 400],
+  [/online card payment/i, 'This stay is paid for online by card. Please refresh the page to book it that way.', 400],
   [/does not have a price/i, 'This stay doesn’t have a price yet. Please message the host.', 400],
-  [/declined these dates/i, 'The host has declined these dates. Please choose other dates or message the host.', 409],
+  [/declined these dates/i, 'These dates aren’t available with this host. Please choose other dates, or message the host.', 409],
   [/your own listing/i, 'You can’t book your own listing.', 400],
-  [/listing not available|listing is required|host not available/i, 'This stay isn’t available to book right now.', 400],
+  [/listing not available|listing is required|host not available/i, 'Sorry, this stay can’t be booked right now. Please try another stay, or message the host.', 400],
 ]
 
 function mapRpcError(message: string): { error: string; status: number } {
