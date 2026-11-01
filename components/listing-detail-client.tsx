@@ -392,7 +392,7 @@ export function ListingDetailClient({
   }
 
   const avgRating =
-    reviews.length >= 2
+    reviews.length > 0
       ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
       : null
   const maxGuests = listing.max_guests || 6
@@ -940,22 +940,18 @@ export function ListingDetailClient({
               </>
             )}
 
-            <hr className="border-stone-100" />
-            <div id="reviews" className="scroll-mt-24 py-8">
-              <h2 className="mb-3 text-lg font-bold text-stone-900">Reviews ({reviews.length})</h2>
-              {reviews.length === 0 ? (
-                <p className="text-sm text-stone-500">No reviews yet.</p>
-              ) : (
-                <>
-                  {avgRating !== null && (
-                    <div className="mb-6 flex items-center gap-3">
-                      <StarRating rating={Math.round(avgRating)} />
-                      <span className="text-sm font-bold text-stone-950">{avgRating.toFixed(1)}</span>
-                      <span className="text-sm text-stone-500">
-                        ({reviews.length} review{reviews.length === 1 ? '' : 's'})
-                      </span>
-                    </div>
-                  )}
+            {reviews.length > 0 && avgRating !== null && (
+              <>
+                <hr className="border-stone-100" />
+                <div id="reviews" className="scroll-mt-24 py-8">
+                  <h2 className="mb-3 text-lg font-semibold text-stone-900">Reviews</h2>
+                  <div className="mb-6 flex items-center gap-3">
+                    <StarRating rating={Math.round(avgRating)} />
+                    <span className="text-sm font-bold text-stone-950">{avgRating.toFixed(1)}</span>
+                    <span className="text-sm text-stone-500">
+                      ({reviews.length} review{reviews.length === 1 ? '' : 's'})
+                    </span>
+                  </div>
                   <div className="space-y-3">
                     {reviews.map((review) => (
                       <div key={review.id} className="rounded-xl bg-[#F8F5F2] p-4">
@@ -967,9 +963,9 @@ export function ListingDetailClient({
                       </div>
                     ))}
                   </div>
-                </>
-              )}
-            </div>
+                </div>
+              </>
+            )}
 
             {similarListings.length > 0 && (
               <>
