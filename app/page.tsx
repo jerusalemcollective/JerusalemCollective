@@ -10,6 +10,7 @@ import {
 import { createPublicClient } from '@/lib/supabase/public'
 import { allNeighborhoods, defaultExploreNeighborhoods } from '@/lib/neighborhoods'
 import { StaysFilterBar } from '@/components/stays-filter-bar'
+import { MobileSearchSheet } from '@/components/mobile-search-sheet'
 import { StaysNeighborhoodNav } from '@/components/stays-neighborhood-nav'
 import { RecentlyViewed } from '@/components/recently-viewed-home'
 import { getListingRatings, type ListingRating } from '@/lib/reviews'
@@ -185,8 +186,10 @@ export default async function JLMCollectiveHomePage() {
             </h1>
 
             <div className="mx-auto mt-6 max-w-4xl">
-              <Suspense fallback={<div className="h-16 rounded-3xl bg-white shadow-sm" />}>
-                <StaysFilterBar />
+              <Suspense fallback={<div className="h-14 rounded-full bg-white shadow-sm md:h-16 md:rounded-3xl" />}>
+                <MobileSearchSheet>
+                  <StaysFilterBar />
+                </MobileSearchSheet>
               </Suspense>
             </div>
           </div>
