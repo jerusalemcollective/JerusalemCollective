@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
+import { redirect, unstable_rethrow } from 'next/navigation'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { getPaymentRouteSettings } from '@/lib/platform-settings'
 
@@ -121,33 +121,33 @@ export async function updateBookingPayment(
   }
 
   try {
-    const { supabase, hostIds } = await requireHostDashboardAccess()
+    const { supabase } = await requireHostDashboardAccess()
 
-    const { error } = await supabase
-      .from('bookings')
-      .update({
-        payment_status: paymentStatus,
-        payment_notes: paymentNotes || null,
-        payment_updated_at: new Date().toISOString(),
-      })
-      .eq('id', bookingId)
-      .in('host_id', hostIds)
+    // Hosts have no UPDATE policy on bookings, so this goes through an
+    // ownership-checked SECURITY DEFINER function (migration 115). Only report
+    // success when it actually returns the updated booking.
+    const { data, error } = await supabase.rpc('set_booking_payment_tracking', {
+      booking_uuid: bookingId,
+      new_payment_status: paymentStatus,
+      new_payment_notes: paymentNotes,
+    })
 
     if (error) throw error
+    const updatedBooking = Array.isArray(data) ? data[0] : data
+    if (!updatedBooking) throw new Error('No booking was updated')
 
     revalidatePath('/host/dashboard/payments')
 
     return {
       status: 'success',
-      message: 'Payment status updated.',
+      message: 'Payment status saved.',
     }
   } catch (error) {
+    unstable_rethrow(error)
+    console.error('Could not save booking payment tracking', error)
     return {
       status: 'error',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Could not update payment status.',
+      message: 'Could not save the payment status. Please try again or contact JLM.',
     }
   }
 }
