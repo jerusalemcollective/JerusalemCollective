@@ -118,7 +118,10 @@ export function Header({
             email: authUser.email,
             avatarUrl: profile?.avatar_url || null,
             fullName: profile?.full_name || null,
-            hasStay: Boolean(host || ownedApplication || ownedListing),
+            // Every signup gets a hosts row (migration 079), so only a submitted
+            // application or an owned listing counts as being a host. Someone still
+            // filling in their first listing sees "Become a host", not a dashboard.
+            hasStay: Boolean(ownedApplication || ownedListing),
             isAdmin: profile?.is_admin || false,
           }
 
