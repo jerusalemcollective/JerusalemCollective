@@ -983,14 +983,14 @@ export default function BecomeAHostPage() {
     loadDraftPhotos(listingDraftStorageKey)
       .then((stored) => {
         if (stored.length > 0) {
-          setForm((current) => ({
-            ...current,
-            photos: stored.map((item) => ({
-              file: item.file,
-              preview: URL.createObjectURL(item.file),
-              label: item.label,
-            })),
+          const restored = stored.map((item) => ({
+            file: item.file,
+            preview: URL.createObjectURL(item.file),
+            label: item.label,
           }))
+          setForm((current) => ({ ...current, photos: restored }))
+          // Photos saved before labelling existed come back without a label.
+          void autoLabelPhotos(restored.filter((photo) => !photo.label?.trim()))
         }
       })
       .finally(() => {
@@ -1183,7 +1183,7 @@ export default function BecomeAHostPage() {
   // Suggest a label for each new photo. The host can change it, and a label
   // they type before the suggestion arrives is never overwritten.
   async function autoLabelPhotos(targets: PhotoUpload[]) {
-    for (const photo of targets) {
+    for (const photo of targets.filter((item) => !item.label?.trim())) {
       setLabellingPreviews((previews) => [...previews, photo.preview])
       const data = await shrinkImageForLabel(photo.file)
       const label = data ? await requestPhotoLabel({ data }) : null
@@ -2576,6 +2576,16 @@ async function handleSubmit() {
                         <p className="mb-3 text-xs font-semibold text-stone-500">
                           Drag photos to reorder them. On a phone, drag the dotted handle. The first photo is the cover.
                         </p>
+                        {form.photos.some((photo) => !photo.label.trim()) && (
+                          <button
+                            type="button"
+                            onClick={() => void autoLabelPhotos(form.photos)}
+                            disabled={labellingPreviews.length > 0}
+                            className="mb-3 rounded-full border border-stone-300 bg-white px-4 py-2 text-xs font-bold text-stone-800 transition hover:border-stone-500 disabled:opacity-60"
+                          >
+                            {labellingPreviews.length > 0 ? 'Labelling photos…' : 'Label photos without a label'}
+                          </button>
+                        )}
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
                           {form.photos.map((photo, index) => (
                             <div

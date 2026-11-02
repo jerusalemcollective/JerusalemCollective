@@ -83,14 +83,16 @@ export async function POST(request: Request) {
   }
 }
 
-// Only label photos already stored in our own Supabase bucket, so this route
-// can't be used to fetch arbitrary images.
+// Only label photos in the listing-photos storage bucket, so this route can't
+// be used to label arbitrary images. Matching on the path (not the host) keeps
+// it working if Supabase storage is served from a custom domain.
 function isOwnStorageUrl(url: string) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  if (!supabaseUrl) return false
   try {
     const target = new URL(url)
-    return target.origin === new URL(supabaseUrl).origin && target.pathname.startsWith('/storage/v1/object/public/')
+    return (
+      target.protocol === 'https:' &&
+      target.pathname.startsWith('/storage/v1/object/public/listing-photos/')
+    )
   } catch {
     return false
   }
