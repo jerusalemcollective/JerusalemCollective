@@ -11,7 +11,7 @@ import { HOST_TERMS, HOST_TERMS_LAST_UPDATED, HOST_TERMS_VERSION } from '@/lib/h
 import { GoogleAddressField } from '@/components/google-address-field'
 import { useDragSort, moveItem } from '@/components/use-drag-sort'
 import { requestPhotoLabel, shrinkImageForLabel } from '@/lib/photo-labels'
-import { SleepingSetupBuilder, followRooms } from '@/components/sleeping-setup-builder'
+import { SleepingSetupBuilder } from '@/components/sleeping-setup-builder'
 import { normalizeKosherLevel } from '@/lib/kosher'
 import { AmenitySelector } from '@/components/amenity-selector'
 import { ShabbosAmenities } from '@/components/shabbos-amenities'
@@ -854,8 +854,6 @@ export default function BecomeAHostPage() {
   const [step, setStep] = useState(0)
   const [form, setForm] = useState<FormState>(initialForm)
   const [labellingPreviews, setLabellingPreviews] = useState<string[]>([])
-  // Bedrooms / Sleeps follow the sleeping setup until the host types in them.
-  const [roomNumbersTyped, setRoomNumbersTyped] = useState({ bedrooms: false, sleeps: false })
   const [sameWhatsapp, setSameWhatsapp] = useState(true)
   const [draftReady, setDraftReady] = useState(false)
   const [restoredDraft, setRestoredDraft] = useState(false)
@@ -1411,17 +1409,11 @@ export default function BecomeAHostPage() {
       if (!form.exact_address.trim()) {
         issues.push('Add the exact address manually or choose it from Google suggestions.')
       }
-      if (!form.bedrooms || Number(form.bedrooms) < 0) {
-        issues.push('Add the number of bedrooms.')
-      }
       if (!form.bathrooms || Number(form.bathrooms) < 0) {
         issues.push('Add the number of bathrooms.')
       }
-      if (!form.sleeps || Number(form.sleeps) < 1) {
-        issues.push('Add how many guests the stay sleeps.')
-      }
       if (!form.sleeping_setup.trim()) {
-        issues.push('Add the sleeping setup so guests know exactly where everyone sleeps.')
+        issues.push('Add your rooms and beds under Sleeping setup.')
       }
     }
 
@@ -2223,27 +2215,14 @@ async function handleSubmit() {
                         onSummaryChange={(next) =>
                           setForm((current) => ({
                             ...current,
-                            bedrooms: followRooms(current.bedrooms, next.bedrooms, roomNumbersTyped.bedrooms),
-                            sleeps: followRooms(current.sleeps, next.sleeps, roomNumbersTyped.sleeps),
+                            bedrooms: String(next.bedrooms),
+                            sleeps: String(next.sleeps),
                           }))
                         }
                       />
                     </Field>
                   </div>
                   <div className="mt-5 grid gap-5 md:grid-cols-3">
-                    <Field label="Bedrooms">
-                      <input
-                        value={form.bedrooms}
-                        onChange={(e) => {
-                          setRoomNumbersTyped((typed) => ({ ...typed, bedrooms: true }))
-                          updateField('bedrooms', e.target.value)
-                        }}
-                        type="number"
-                        min="0"
-                        className={inputClass}
-                      />
-                    </Field>
-
                     <Field label="Bathrooms">
                       <input
                         value={form.bathrooms}
@@ -2254,23 +2233,7 @@ async function handleSubmit() {
                         className={inputClass}
                       />
                     </Field>
-
-                    <Field label="Sleeps">
-                      <input
-                        value={form.sleeps}
-                        onChange={(e) => {
-                          setRoomNumbersTyped((typed) => ({ ...typed, sleeps: true }))
-                          updateField('sleeps', e.target.value)
-                        }}
-                        type="number"
-                        min="1"
-                        className={inputClass}
-                      />
-                    </Field>
                   </div>
-                  <p className="mt-2 text-xs text-stone-500">
-                    Bedrooms and Sleeps fill in from your rooms. You can change them, e.g. to allow fewer guests than the beds fit.
-                  </p>
                 </div>
                 <div className="mt-8 border-t border-stone-100 pt-8">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

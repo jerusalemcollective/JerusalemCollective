@@ -188,19 +188,12 @@ export default async function HostListingEditPage({
             </div>
 
             <div className="mt-5 grid gap-4 md:grid-cols-3">
-              <Field label="Bedrooms">
-                <input name="bedrooms" type="number" min="0" defaultValue={listing.bedrooms} className={inputClass} />
-              </Field>
+              <input type="hidden" name="bedrooms" defaultValue={listing.bedrooms ?? ''} />
+              <input type="hidden" name="maxGuests" defaultValue={listing.max_guests ?? ''} />
               <Field label="Bathrooms">
                 <input name="bathrooms" type="number" min="0" step="0.5" defaultValue={listing.bathrooms ?? ''} className={inputClass} />
               </Field>
-              <Field label="Maximum guests">
-                <input name="maxGuests" type="number" min="1" defaultValue={listing.max_guests} className={inputClass} />
-              </Field>
             </div>
-            <p className="mt-2 text-xs text-stone-500">
-              Bedrooms and Maximum guests fill in from your rooms. You can change them, e.g. to allow fewer guests than the beds fit.
-            </p>
           </EditorSection>
 
           {/* 2. Photos */}
