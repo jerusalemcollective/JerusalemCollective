@@ -68,28 +68,49 @@ export function ShabbosAmenities({ values, onChange }: ShabbosAmenitiesProps) {
         </span>
       </div>
 
-      <p className="mb-2 text-xs font-semibold text-stone-500">Kosher kitchen</p>
-      <div role="radiogroup" aria-label="Kosher kitchen" className="mb-4 grid gap-2 sm:grid-cols-3">
-        {KOSHER_LEVEL_OPTIONS.map((option) => (
-          <label key={option.value} className="group cursor-pointer">
+      <div className="mb-2 grid gap-2 sm:grid-cols-2">
+        <label className="flex min-h-14 items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-[#F8F5F2] px-4 py-2 text-sm font-semibold text-stone-700">
+          <span>Kosher kitchen</span>
+          <select
+            name="kosherKitchenLevel"
+            aria-label="Kosher kitchen"
+            className="rounded-xl border border-stone-200 bg-white px-2 py-1.5 text-sm font-semibold text-stone-900 outline-none focus:border-[#c76f55]"
+            {...(controlled
+              ? {
+                  value: kosher,
+                  onChange: (event: React.ChangeEvent<HTMLSelectElement>) =>
+                    onChange?.kosherKitchenLevel(event.target.value),
+                }
+              : { defaultValue: kosher })}
+          >
+            {KOSHER_LEVEL_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex min-h-14 items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-[#F8F5F2] px-4 py-2 text-sm font-semibold text-stone-700">
+          <span>Walk to the Kotel</span>
+          <span className="flex items-center gap-1.5">
             <input
-              type="radio"
-              name="kosherKitchenLevel"
-              value={option.value}
-              className="peer sr-only"
+              type="number"
+              min="0"
+              name="walkingMinutesToKotel"
+              placeholder="—"
+              aria-label="Walking minutes to the Kotel"
+              className="w-16 rounded-xl border border-stone-200 bg-white px-2 py-1.5 text-center text-sm font-semibold text-stone-900 outline-none focus:border-[#c76f55]"
               {...(controlled
                 ? {
-                    checked: kosher === option.value,
-                    onChange: () => onChange?.kosherKitchenLevel(option.value),
+                    value: values.walkingMinutesToKotel,
+                    onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
+                      onChange?.walkingMinutesToKotel(event.target.value),
                   }
-                : { defaultChecked: kosher === option.value })}
+                : { defaultValue: values.walkingMinutesToKotel })}
             />
-            <span className={tileClass}>
-              <span>{option.label}</span>
-              <TileMark />
-            </span>
-          </label>
-        ))}
+            <span className="text-xs text-stone-500">min</span>
+          </span>
+        </label>
       </div>
 
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -135,27 +156,6 @@ export function ShabbosAmenities({ values, onChange }: ShabbosAmenitiesProps) {
           </label>
         ))}
 
-        <label className="flex min-h-14 items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-[#F8F5F2] px-4 py-2 text-sm font-semibold text-stone-700">
-          <span>Walk to the Kotel</span>
-          <span className="flex items-center gap-1.5">
-            <input
-              type="number"
-              min="0"
-              name="walkingMinutesToKotel"
-              placeholder="—"
-              aria-label="Walking minutes to the Kotel"
-              className="w-16 rounded-xl border border-stone-200 bg-white px-2 py-1.5 text-center text-sm font-semibold text-stone-900 outline-none focus:border-[#c76f55]"
-              {...(controlled
-                ? {
-                    value: values.walkingMinutesToKotel,
-                    onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                      onChange?.walkingMinutesToKotel(event.target.value),
-                  }
-                : { defaultValue: values.walkingMinutesToKotel })}
-            />
-            <span className="text-xs text-stone-500">min</span>
-          </span>
-        </label>
       </div>
     </section>
   )
