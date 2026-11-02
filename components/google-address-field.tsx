@@ -252,7 +252,12 @@ export function GoogleAddressField({
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [highlightedIndex, setHighlightedIndex] = useState(-1)
-  const [isValidated, setIsValidated] = useState(false)
+  // An address that already has coordinates was picked from Google before
+  // (e.g. the host is coming back to this step): show it as validated.
+  const [isValidated, setIsValidated] = useState(defaultLatitude !== null && defaultLongitude !== null)
+  // Only search once the host types here, so returning to a filled-in field
+  // doesn't pop the suggestions open again.
+  const hasTypedRef = useRef(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isSearching, setIsSearching] = useState(false)
   const [loadError, setLoadError] = useState('')
@@ -317,7 +322,7 @@ export function GoogleAddressField({
   }, [])
 
   useEffect(() => {
-    if (isLoading || loadError || addressValue.trim().length < 3) {
+    if (!hasTypedRef.current || isLoading || loadError || addressValue.trim().length < 3) {
       setSuggestions([])
       setIsSearching(false)
       return
@@ -427,6 +432,7 @@ export function GoogleAddressField({
   }
 
   const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    hasTypedRef.current = true
     setIsValidated(false)
     setAddress(event.target.value)
     setCoordinates(null, null)
