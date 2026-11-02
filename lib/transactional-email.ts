@@ -1347,6 +1347,46 @@ export async function sendHostApplicationReceivedEmail({
   }
 }
 
+// Tells the JLM team a host has submitted a new listing to review.
+export async function sendAdminNewApplicationEmail({
+  applicationId,
+  title,
+  hostName,
+  hostEmail,
+  area,
+}: {
+  applicationId: string
+  title: string | null
+  hostName: string | null
+  hostEmail: string | null
+  area: string | null
+}) {
+  try {
+    const listingTitle = title?.trim() || 'A new listing'
+    const details = [
+      hostName?.trim() ? `from ${escapeHtml(hostName.trim())}` : null,
+      hostEmail ? `(${escapeHtml(hostEmail)})` : null,
+      area?.trim() ? `in ${escapeHtml(area.trim())}` : null,
+    ]
+      .filter(Boolean)
+      .join(' ')
+    return await sendEmail({
+      to: 'info@jlmcollective.co',
+      subject: `New listing to review: ${listingTitle}`,
+      html: baseEmailHtml({
+        greeting: 'Hi JLM team,',
+        intro: `${escapeHtml(listingTitle)} has just been submitted${details ? ` ${details}` : ''}. It's waiting for your review in Admin.`,
+        ctaLabel: 'Review the listing',
+        ctaUrl: `${siteUrl}/admin/applications/${applicationId}`,
+        showSignInHint: false,
+      }),
+    })
+  } catch (error) {
+    console.error('Unable to send admin new application email', error)
+    return false
+  }
+}
+
 export async function sendGuestBalanceReminderEmail({
   guestId,
   bookingPaymentId,

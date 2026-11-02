@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
-import { sendHostApplicationReceivedEmail } from '@/lib/transactional-email'
+import { sendAdminNewApplicationEmail, sendHostApplicationReceivedEmail } from '@/lib/transactional-email'
 
 // "We've received your listing" — called by /become-a-host after a successful
 // submit. The submit never waits on this; every failure is a quiet no-op.
@@ -24,6 +24,7 @@ type ApplicationRow = {
   host_name: string | null
   email: string | null
   created_at: string | null
+  area: string | null
 }
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -63,7 +64,7 @@ export async function POST(request: Request) {
 
     const { data: application } = await reader
       .from('host_applications')
-      .select('id, host_id, apartment_title, display_name, host_name, email, created_at')
+      .select('id, host_id, apartment_title, display_name, host_name, email, created_at, area')
       .eq('id', applicationId)
       .maybeSingle<ApplicationRow>()
 
@@ -120,6 +121,16 @@ export async function POST(request: Request) {
         return NextResponse.json({ ok: true, skipped: true })
       }
     }
+
+    // Let the JLM team know there's a new listing to review. Same once-only
+    // guard as the host email; never affects the host's result.
+    await sendAdminNewApplicationEmail({
+      applicationId,
+      title: application.apartment_title,
+      hostName: application.display_name || application.host_name,
+      hostEmail: to,
+      area: application.area,
+    })
 
     const emailSent = await sendHostApplicationReceivedEmail({
       to,
