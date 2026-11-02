@@ -2060,6 +2060,7 @@ async function handleSubmit() {
     // Clean up preview URLs
     form.photos.forEach(photo => URL.revokeObjectURL(photo.preview))
 
+    const receivedApplicationId = applicationId
     submittedApplicationIdRef.current = null
     uploadedPhotoCountRef.current = 0
     successRef.current = true
@@ -2087,6 +2088,14 @@ async function handleSubmit() {
     } else {
       notifyListingDraftChanged()
     }
+    // "We've received your listing" email. Fire-and-forget: never holds up or
+    // fails the submit.
+    void fetch('/api/notify-host-application-received', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ applicationId: receivedApplicationId }),
+      keepalive: true,
+    }).catch(() => undefined)
     setForm(initialForm)
     setStep(0)
     window.scrollTo({ top: 0, behavior: 'smooth' })
