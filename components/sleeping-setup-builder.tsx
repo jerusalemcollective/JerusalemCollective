@@ -277,13 +277,6 @@ function summarize(rooms: Room[]): SleepingSummary {
   }
 }
 
-// The new value for a Bedrooms/Sleeps box: it follows the rooms until the host
-// types in it themselves (e.g. to allow fewer guests than the beds fit).
-export function followRooms(current: string, next: number, typedByHost: boolean) {
-  if (typedByHost) return current
-  return next > 0 ? String(next) : ''
-}
-
 function plural(count: number, one: string, many: string) {
   return `${count} ${count === 1 ? one : many}`
 }
@@ -321,19 +314,22 @@ export function SleepingSetupBuilder({
     if (value !== serializeRooms(rooms)) setRooms(parseRooms(value))
   }
 
-  // In a plain form, remember which number boxes the host typed in.
+  // Bedrooms and Sleeps are always worked out from the rooms: report them to
+  // React state, or write them into the named inputs of a plain form. Runs on
+  // load (including a restored draft) and after every change to the rooms.
+  // Until a room has a bed, the stored numbers are left alone.
+  const summary = summarize(rooms)
   useEffect(() => {
+    if (summary.sleeps === 0) return
+    onSummaryChange?.(summary)
     const form = rootRef.current?.closest('form')
     if (!form || !fillFields) return
-    const inputs = [fillFields.bedrooms, fillFields.sleeps]
-      .map((fieldName) => (fieldName ? form.elements.namedItem(fieldName) : null))
-      .filter((input): input is HTMLInputElement => input instanceof HTMLInputElement)
-    const markTyped = (event: Event) => {
-      ;(event.currentTarget as HTMLInputElement).dataset.typedByHost = 'true'
-    }
-    inputs.forEach((input) => input.addEventListener('input', markTyped))
-    return () => inputs.forEach((input) => input.removeEventListener('input', markTyped))
-  }, [fillFields?.bedrooms, fillFields?.sleeps]) // eslint-disable-line react-hooks/exhaustive-deps
+    ;(['bedrooms', 'sleeps'] as const).forEach((key) => {
+      const fieldName = fillFields[key]
+      const input = fieldName ? form.elements.namedItem(fieldName) : null
+      if (input instanceof HTMLInputElement) input.value = String(summary[key])
+    })
+  }, [summary.bedrooms, summary.sleeps, rooms.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!editing) return
@@ -346,22 +342,9 @@ export function SleepingSetupBuilder({
 
   const commit = (nextRooms: Room[]) => {
     const text = serializeRooms(nextRooms)
-    const next = summarize(nextRooms)
     setRooms(nextRooms)
     setLastSeenValue(text)
     onChange?.(text)
-    onSummaryChange?.(next)
-
-    const form = rootRef.current?.closest('form')
-    if (form && fillFields) {
-      ;(['bedrooms', 'sleeps'] as const).forEach((key) => {
-        const fieldName = fillFields[key]
-        const input = fieldName ? form.elements.namedItem(fieldName) : null
-        if (input instanceof HTMLInputElement) {
-          input.value = followRooms(input.value, next[key], input.dataset.typedByHost === 'true')
-        }
-      })
-    }
   }
 
   const changeBed = (key: BedKey, change: (entry: BedEntry) => BedEntry) => {
@@ -403,7 +386,7 @@ export function SleepingSetupBuilder({
 
       {rooms.length > 0 && (
         <p className="mb-3 text-sm text-stone-600">
-          {plural(rooms.length, 'room', 'rooms')} · {plural(totalBeds, 'bed', 'beds')} ·{' '}
+          {plural(summary.bedrooms, 'bedroom', 'bedrooms')} · {plural(totalBeds, 'bed', 'beds')} ·{' '}
           <span className="font-bold text-stone-900">sleeps {totalSleeps}</span>
         </p>
       )}
