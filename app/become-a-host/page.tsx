@@ -12,8 +12,9 @@ import { GoogleAddressField } from '@/components/google-address-field'
 import { useDragSort, moveItem } from '@/components/use-drag-sort'
 import { requestPhotoLabel, shrinkImageForLabel } from '@/lib/photo-labels'
 import { SleepingSetupBuilder, followRooms } from '@/components/sleeping-setup-builder'
-import { KOSHER_LEVEL_OPTIONS, normalizeKosherLevel } from '@/lib/kosher'
+import { normalizeKosherLevel } from '@/lib/kosher'
 import { AmenitySelector } from '@/components/amenity-selector'
+import { ShabbosAmenities } from '@/components/shabbos-amenities'
 import { HOST_PRICE_CURRENCIES, currencyName, type HostPriceCurrency } from '@/lib/currencies'
 import { toLegacyPrices } from '@/lib/fx'
 import { saveDraftPhotos, loadDraftPhotos, clearDraftPhotos } from '@/lib/listing-draft-photos'
@@ -802,6 +803,13 @@ const steps = [
   'Verification',
 ]
 const AMENITIES_STEP = 1
+const SHABBOS_FLAG_FIELDS = {
+  shabbatElevator: 'shabbat_elevator',
+  shabbatClock: 'shabbat_clock',
+  nearSynagogue: 'near_synagogue',
+  sukkahBalcony: 'sukkah_balcony',
+  physicalKeyEntry: 'physical_key_entry',
+} as const
 const STAY_DETAILS_STEP = 3
 
 const minimumPhotoCount = 5
@@ -2442,76 +2450,25 @@ async function handleSubmit() {
                 description="Select the features guests commonly look for when choosing a short-term stay."
               >
                 <AmenitySelector selectedAmenities={form.amenities} onToggle={toggleAmenity} />
-                <div className="mt-8 border-t border-stone-100 pt-8">
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-stone-500">
-                    Shabbos &amp; Jewish stay
-                  </h3>
-                  <div className="mt-4 grid gap-5 md:grid-cols-2">
-                    <Field label="Kosher kitchen level">
-                      <select
-                        value={normalizeKosherLevel(form.kosher_kitchen_level)}
-                        onChange={(e) => updateField('kosher_kitchen_level', e.target.value)}
-                        className={inputClass}
-                      >
-                        <option value="" disabled hidden>Choose…</option>
-                        {KOSHER_LEVEL_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>{option.label}</option>
-                        ))}
-                      </select>
-                    </Field>
-                    <Field label="Approximate walking time to the Kotel (minutes)">
-                      <input
-                        type="number"
-                        min="0"
-                        value={form.walking_minutes_to_kotel}
-                        onChange={(e) => updateField('walking_minutes_to_kotel', e.target.value)}
-                        className={inputClass}
-                        placeholder="Optional"
-                      />
-                    </Field>
-                  </div>
-                  <div className="mt-5 grid gap-3 md:grid-cols-2">
-                    <LifestyleCheckbox
-                      checked={form.shabbat_elevator}
-                      label="Building has a Shabbos elevator"
-                      onChange={(checked) => updateField('shabbat_elevator', checked)}
-                    />
-                    <LifestyleCheckbox
-                      checked={form.physical_key_entry}
-                      label="Property uses a physical key (no digital keypad or smartlock)"
-                      onChange={(checked) => updateField('physical_key_entry', checked)}
-                    />
-                    <LifestyleCheckbox
-                      checked={form.shabbat_clock}
-                      label="Apartment has a Shabbos clock or timer for lights"
-                      onChange={(checked) => updateField('shabbat_clock', checked)}
-                    />
-                    <LifestyleCheckbox
-                      checked={form.sukkah_balcony}
-                      label="Has a balcony suitable for a sukkah"
-                      onChange={(checked) => updateField('sukkah_balcony', checked)}
-                    />
-                    <LifestyleCheckbox
-                      checked={form.near_synagogue}
-                      label="Within 5 minutes walk of a shul"
-                      onChange={(checked) => updateField('near_synagogue', checked)}
-                    />
-                    <LifestyleCheckbox
-                      checked={form.amenities.includes('Hot plate')}
-                      label="Hot plate"
-                      onChange={() => toggleAmenity('Hot plate')}
-                    />
-                    <LifestyleCheckbox
-                      checked={form.amenities.includes('Hot water urn')}
-                      label="Hot water urn"
-                      onChange={() => toggleAmenity('Hot water urn')}
-                    />
-                    <LifestyleCheckbox
-                      checked={form.amenities.includes('In eruv')}
-                      label="In eruv"
-                      onChange={() => toggleAmenity('In eruv')}
-                    />
-                  </div>
+                <div className="mt-5">
+                  <ShabbosAmenities
+                    values={{
+                      kosherKitchenLevel: form.kosher_kitchen_level,
+                      walkingMinutesToKotel: form.walking_minutes_to_kotel,
+                      shabbatElevator: form.shabbat_elevator,
+                      shabbatClock: form.shabbat_clock,
+                      nearSynagogue: form.near_synagogue,
+                      sukkahBalcony: form.sukkah_balcony,
+                      physicalKeyEntry: form.physical_key_entry,
+                      amenities: form.amenities,
+                    }}
+                    onChange={{
+                      kosherKitchenLevel: (value) => updateField('kosher_kitchen_level', value),
+                      walkingMinutesToKotel: (value) => updateField('walking_minutes_to_kotel', value),
+                      flag: (key, checked) => updateField(SHABBOS_FLAG_FIELDS[key], checked),
+                      toggleAmenity,
+                    }}
+                  />
                 </div>
 
               </StepShell>
@@ -3081,27 +3038,6 @@ function Field({
   )
 }
 
-function LifestyleCheckbox({
-  checked,
-  label,
-  onChange,
-}: {
-  checked: boolean
-  label: string
-  onChange: (checked: boolean) => void
-}) {
-  return (
-    <label className="flex cursor-pointer items-start gap-3">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-        className="mt-0.5 rounded border-stone-300"
-      />
-      <span className="text-sm text-stone-700">{label}</span>
-    </label>
-  )
-}
 
 function ChoiceCard({
   active,
