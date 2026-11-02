@@ -3,9 +3,13 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { FileText } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import { fetchServerDraft, LISTING_DRAFT_CHANGED_EVENT } from '@/lib/listing-draft-server'
 
-// Matches the autosave key in app/become-a-host/page.tsx. The draft is a
-// browser-only JSON blob (no photos/docs) cleared on a successful submit.
+// Matches the autosave key in app/become-a-host/page.tsx. The browser draft is
+// a JSON blob (photos live in IndexedDB) cleared on a successful submit. A
+// signed-in host also has a server copy (public.listing_drafts) so the draft
+// shows up on any device; the newer of the two wins.
 const listingDraftStorageKey = 'jlm-listing-draft-v1'
 
 type DraftPreview = {
@@ -14,41 +18,114 @@ type DraftPreview = {
   savedLabel: string | null
 }
 
-// Reads the in-progress listing saved by /become-a-host in this browser.
-// null until loaded, or when there is no meaningful draft.
+type DraftSummary = {
+  title: string
+  area: string
+  step: number
+  savedAt: string | null
+}
+
+function readLocalDraft(): DraftSummary | null {
+  try {
+    const raw = window.localStorage.getItem(listingDraftStorageKey)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Record<string, unknown>
+    return {
+      title: typeof parsed.apartment_title === 'string' ? parsed.apartment_title.trim() : '',
+      area: typeof parsed.area === 'string' ? parsed.area.trim() : '',
+      step: typeof parsed.step === 'number' ? parsed.step : 0,
+      savedAt: typeof parsed.saved_at === 'string' ? parsed.saved_at : null,
+    }
+  } catch {
+    // Malformed draft — treat as no draft.
+    return null
+  }
+}
+
+// One request per page load, shared by the header, banner and dashboard card.
+let serverDraftPromise: Promise<DraftSummary | null> | null = null
+
+function loadServerDraft(): Promise<DraftSummary | null> {
+  if (!serverDraftPromise) {
+    serverDraftPromise = (async () => {
+      try {
+        const supabase = createClient()
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+        const userId = session?.user?.id
+        if (!userId) return null
+        const row = await fetchServerDraft(supabase, userId)
+        if (!row) return null
+        return {
+          title: (row.title || '').trim(),
+          area: (row.area || '').trim(),
+          step: typeof row.step === 'number' ? row.step : 0,
+          savedAt: row.updated_at,
+        }
+      } catch {
+        // Supabase not configured, or signed out — browser draft only.
+        return null
+      }
+    })()
+  }
+  return serverDraftPromise
+}
+
+function savedTime(summary: DraftSummary | null) {
+  const time = summary?.savedAt ? new Date(summary.savedAt).getTime() : NaN
+  return Number.isNaN(time) ? 0 : time
+}
+
+function toPreview(summary: DraftSummary | null): DraftPreview | null {
+  // Ignore an empty autosave from someone who opened the form and left.
+  if (!summary || !(summary.title || summary.area || summary.step > 0)) return null
+  let savedLabel: string | null = null
+  const time = savedTime(summary)
+  if (time) {
+    savedLabel = new Date(time).toLocaleDateString(undefined, {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    })
+  }
+  return { title: summary.title || 'Untitled stay', area: summary.area || null, savedLabel }
+}
+
+// The in-progress listing from /become-a-host: this browser's draft, or the
+// signed-in user's server draft if that one is newer. null until loaded, or
+// when there is no meaningful draft.
 export function useListingDraft() {
   const [draft, setDraft] = useState<DraftPreview | null>(null)
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(listingDraftStorageKey)
-      if (raw) {
-        const parsed = JSON.parse(raw) as Record<string, unknown>
-        const title = typeof parsed.apartment_title === 'string' ? parsed.apartment_title.trim() : ''
-        const area = typeof parsed.area === 'string' ? parsed.area.trim() : ''
-        const step = typeof parsed.step === 'number' ? parsed.step : 0
+    let cancelled = false
 
-        // Ignore an empty autosave from someone who opened the form and left.
-        if (title || area || step > 0) {
-          let savedLabel: string | null = null
-          if (typeof parsed.saved_at === 'string') {
-            const date = new Date(parsed.saved_at)
-            if (!Number.isNaN(date.getTime())) {
-              savedLabel = date.toLocaleDateString(undefined, {
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric',
-              })
-            }
-          }
-          setDraft({ title: title || 'Untitled stay', area: area || null, savedLabel })
-        }
+    const refresh = (refetchServer: boolean) => {
+      if (refetchServer) serverDraftPromise = null
+      const local = readLocalDraft()
+      if (!cancelled) {
+        setDraft(toPreview(local))
+        setReady(true)
       }
-    } catch {
-      // Malformed draft — treat as no draft.
+      void loadServerDraft().then((server) => {
+        if (cancelled || !server) return
+        const localPreview = toPreview(local)
+        const serverPreview = toPreview(server)
+        if (serverPreview && (!localPreview || savedTime(server) > savedTime(local))) {
+          setDraft(serverPreview)
+        }
+      })
     }
-    setReady(true)
+
+    refresh(false)
+    const onChanged = () => refresh(true)
+    window.addEventListener(LISTING_DRAFT_CHANGED_EVENT, onChanged)
+    return () => {
+      cancelled = true
+      window.removeEventListener(LISTING_DRAFT_CHANGED_EVENT, onChanged)
+    }
   }, [])
 
   return ready ? draft : null

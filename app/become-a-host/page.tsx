@@ -18,6 +18,17 @@ import { ShabbosAmenities } from '@/components/shabbos-amenities'
 import { HOST_PRICE_CURRENCIES, currencyName, type HostPriceCurrency } from '@/lib/currencies'
 import { toLegacyPrices } from '@/lib/fx'
 import { saveDraftPhotos, loadDraftPhotos, clearDraftPhotos } from '@/lib/listing-draft-photos'
+import {
+  clearServerDraft,
+  downloadDraftPhoto,
+  fetchServerDraft,
+  notifyListingDraftChanged,
+  readDraftPhotoList,
+  removeDraftPhotos,
+  saveServerDraft,
+  serverDraftsAvailable,
+  uploadDraftPhoto,
+} from '@/lib/listing-draft-server'
 import { StayTermsFields } from '@/components/stay-terms-fields'
 import {
   cancellationPreset,
@@ -816,6 +827,10 @@ const minimumPhotoCount = 5
 const maxListingPhotoCount = 20
 const maxListingPhotoSizeMb = 10
 const listingDraftStorageKey = 'jlm-listing-draft-v1'
+// updated_at of the last server draft this browser saved, so on reload we can
+// tell a server draft written from here (keep the local one) from one written
+// on another device (use it if it's newer).
+const serverDraftSyncedAtKey = 'jlm-listing-draft-server-synced-v1'
 const listingPhotoTypes = ['image/jpeg', 'image/png', 'image/webp']
 const isSupabaseEnvReady = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -888,6 +903,32 @@ export default function BecomeAHostPage() {
   const [photoUploadError, setPhotoUploadError] = useState('')
   const [idDocError, setIdDocError] = useState('')
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null)
+  // Shown on the photos step when a draft from another device came without
+  // (some of) its photos.
+  const [draftPhotoNotice, setDraftPhotoNotice] = useState('')
+
+  // Server copy of the draft (public.listing_drafts) for a signed-in host, so it
+  // follows them to any device. See lib/listing-draft-server.ts.
+  const [draftUserId, setDraftUserId] = useState<string | null>(null)
+  const [serverDraftReady, setServerDraftReady] = useState(false)
+  // saved_at of this browser's draft as found on arrival (before autosave
+  // rewrites it), to decide whether the server draft is newer.
+  const localDraftSavedAtRef = useRef(0)
+  const localPhotosLoadRef = useRef<Promise<void>>(Promise.resolve())
+  // Draft photo File -> its drafts/<uid>/... storage path.
+  const photoPathsRef = useRef(new Map<File, string>())
+  // Photo paths in the last saved server draft (to remove ones taken out).
+  const serverPhotoPathsRef = useRef<Set<string>>(new Set())
+  const serverDraftExistsRef = useRef(false)
+  const formRef = useRef(form)
+  const stepRef = useRef(step)
+  const successRef = useRef(false)
+  const serverSyncRef = useRef<Promise<void> | null>(null)
+  const serverSyncPendingRef = useRef(false)
+  useEffect(() => {
+    formRef.current = form
+    stepRef.current = step
+  }, [form, step])
 
   // Reflect a restored draft: if it stored a WhatsApp number different from the
   // phone, keep them as separate fields; otherwise the phone doubles as WhatsApp.
@@ -965,7 +1006,9 @@ export default function BecomeAHostPage() {
       }
 
       const parsedDraft = JSON.parse(savedDraft) as Partial<SavedListingDraft>
-      const { step: savedStep, saved_at: _savedAt, ...draftFields } = parsedDraft
+      const { step: savedStep, saved_at: savedAt, ...draftFields } = parsedDraft
+      const savedTime = savedAt ? new Date(savedAt).getTime() : NaN
+      localDraftSavedAtRef.current = Number.isNaN(savedTime) ? 0 : savedTime
       setRestoredDraft(true)
       setForm((current) => ({
         ...current,
@@ -986,14 +1029,17 @@ export default function BecomeAHostPage() {
 
     // Photos are File objects and can't live in localStorage, so they're kept in
     // IndexedDB. Restore them here so a reload no longer wipes the uploads.
-    loadDraftPhotos(listingDraftStorageKey)
+    localPhotosLoadRef.current = loadDraftPhotos(listingDraftStorageKey)
       .then((stored) => {
         if (stored.length > 0) {
-          const restored = stored.map((item) => ({
-            file: item.file,
-            preview: URL.createObjectURL(item.file),
-            label: item.label,
-          }))
+          const restored = stored.map((item) => {
+            if (item.remotePath) photoPathsRef.current.set(item.file, item.remotePath)
+            return {
+              file: item.file,
+              preview: URL.createObjectURL(item.file),
+              label: item.label,
+            }
+          })
           setForm((current) => ({ ...current, photos: restored }))
           // Photos saved before labelling existed come back without a label.
           void autoLabelPhotos(restored.filter((photo) => !photo.label?.trim()))
@@ -1026,7 +1072,11 @@ export default function BecomeAHostPage() {
   useEffect(() => {
     if (!photosHydratedRef.current || success) return
     const timer = window.setTimeout(() => {
-      const stored = form.photos.map((photo) => ({ file: photo.file, label: photo.label }))
+      const stored = form.photos.map((photo) => ({
+        file: photo.file,
+        label: photo.label,
+        remotePath: photoPathsRef.current.get(photo.file),
+      }))
       if (stored.length > 0) {
         void saveDraftPhotos(listingDraftStorageKey, stored)
       } else {
@@ -1035,6 +1085,193 @@ export default function BecomeAHostPage() {
     }, 400)
     return () => window.clearTimeout(timer)
   }, [form.photos, success])
+
+  // On arrival (signed in): if the server draft is newer than this browser's,
+  // use it — including its photos, downloaded from drafts/<uid>/. Otherwise
+  // keep the browser draft and just note which photos the server already has.
+  async function loadServerDraftOnArrival(supabase: ReturnType<typeof createClient>, userId: string) {
+    let photosRestoring = false
+    try {
+      const server = await fetchServerDraft(supabase, userId)
+      serverDraftExistsRef.current = Boolean(server)
+      // Let the browser photos (IndexedDB) finish loading first, so they can't
+      // land on top of the server's.
+      await localPhotosLoadRef.current.catch(() => undefined)
+      if (!server) return
+
+      const serverPhotos = readDraftPhotoList(server.data.photos)
+      serverPhotoPathsRef.current = new Set(serverPhotos.map((photo) => photo.path))
+      const serverTime = server.updated_at ? new Date(server.updated_at).getTime() : NaN
+      let syncedFromHere = 0
+      try {
+        syncedFromHere = new Date(window.localStorage.getItem(serverDraftSyncedAtKey) || '').getTime() || 0
+      } catch {
+        // Storage unavailable — compare with the local draft only.
+      }
+      if (
+        Number.isNaN(serverTime) ||
+        serverTime <= localDraftSavedAtRef.current ||
+        serverTime <= syncedFromHere
+      ) {
+        return
+      }
+
+      const {
+        step: savedStep,
+        saved_at: _savedAt,
+        photos: _photos,
+        photo_count: photoCountValue,
+        verification_doc: _verificationDoc,
+        id_doc: _idDoc,
+        ...draftFields
+      } = server.data as Partial<SavedListingDraft> & {
+        photos?: unknown
+        photo_count?: unknown
+        verification_doc?: unknown
+        id_doc?: unknown
+      }
+      const photoCount = typeof photoCountValue === 'number' ? photoCountValue : serverPhotos.length
+
+      setRestoredDraft(true)
+      setForm((current) => {
+        current.photos.forEach((photo) => URL.revokeObjectURL(photo.preview))
+        return { ...current, ...draftFields, photos: [] }
+      })
+      setSameWhatsapp(!draftFields.whatsapp_number || draftFields.whatsapp_number === draftFields.phone)
+      if (typeof savedStep === 'number') {
+        setStep(Math.min(Math.max(savedStep, 0), steps.length - 1))
+      }
+
+      // Download the photos in the background; server autosave waits for them
+      // so it can't remove photos that are still on their way.
+      photosRestoring = true
+      void (async () => {
+        const downloaded: PhotoUpload[] = []
+        try {
+          for (const photo of serverPhotos) {
+            const file = await downloadDraftPhoto(supabase, photo.path)
+            if (!file) continue
+            photoPathsRef.current.set(file, photo.path)
+            downloaded.push({ file, preview: URL.createObjectURL(file), label: photo.label })
+          }
+          if (downloaded.length > 0) {
+            // Keep anything added while the download ran, after the restored photos.
+            setForm((current) => ({ ...current, photos: [...downloaded, ...current.photos] }))
+          }
+        } finally {
+          if (photoCount > downloaded.length) {
+            const notice =
+              downloaded.length === 0
+                ? 'Your photos were added on another device — please add them again here.'
+                : 'Some of your photos were added on another device — please add the missing ones again here.'
+            setDraftPhotoNotice(notice)
+            toast(notice)
+          }
+          setServerDraftReady(true)
+        }
+      })()
+    } catch (serverDraftError) {
+      console.warn('[listing-drafts] Could not load the server draft.', serverDraftError)
+    } finally {
+      if (!photosRestoring) setServerDraftReady(true)
+    }
+  }
+
+  // Mirror the draft (fields + photos) to the server. One run at a time; a
+  // change during a run queues one more run with the latest form.
+  function syncServerDraft(supabase: ReturnType<typeof createClient>, userId: string) {
+    if (serverSyncRef.current) {
+      serverSyncPendingRef.current = true
+      return
+    }
+    const run = (async () => {
+      do {
+        serverSyncPendingRef.current = false
+        if (successRef.current || !serverDraftsAvailable()) return
+        const current = formRef.current
+        const currentStep = stepRef.current
+        const meaningful =
+          Boolean(current.apartment_title.trim() || current.area.trim()) ||
+          currentStep > 0 ||
+          current.photos.length > 0
+        // Don't create a server draft for someone who opened the form and left.
+        if (!meaningful && !serverDraftExistsRef.current) continue
+
+        let uploadedNew = false
+        for (const photo of current.photos) {
+          if (successRef.current) return
+          if (photoPathsRef.current.has(photo.file)) continue
+          const path = await uploadDraftPhoto(supabase, userId, photo.file)
+          if (!path) break
+          photoPathsRef.current.set(photo.file, path)
+          uploadedNew = true
+        }
+        if (successRef.current) return
+
+        const photos = current.photos.flatMap((photo) => {
+          const path = photoPathsRef.current.get(photo.file)
+          return path ? [{ path, label: photo.label }] : []
+        })
+        const { photos: _photos, verification_doc: _verificationDoc, id_doc: _idDoc, ...draftFields } = current
+        const savedAt = await saveServerDraft(supabase, userId, {
+          data: {
+            ...draftFields,
+            step: currentStep,
+            saved_at: new Date().toISOString(),
+            photos,
+            photo_count: current.photos.length,
+          },
+          step: currentStep,
+          title: current.apartment_title.trim(),
+          area: current.area.trim(),
+        })
+        if (!savedAt) return
+        serverDraftExistsRef.current = true
+        try {
+          window.localStorage.setItem(serverDraftSyncedAtKey, savedAt)
+        } catch {
+          // Storage unavailable — at worst the same draft reloads from the server.
+        }
+
+        const keep = new Set(photos.map((photo) => photo.path))
+        const removed = [...serverPhotoPathsRef.current].filter((path) => !keep.has(path))
+        serverPhotoPathsRef.current = keep
+        void removeDraftPhotos(supabase, removed)
+
+        // Remember the new storage paths in IndexedDB so a reload doesn't
+        // upload the same photos again.
+        if (uploadedNew && photosHydratedRef.current && !successRef.current) {
+          void saveDraftPhotos(
+            listingDraftStorageKey,
+            formRef.current.photos.map((photo) => ({
+              file: photo.file,
+              label: photo.label,
+              remotePath: photoPathsRef.current.get(photo.file),
+            })),
+          )
+        }
+      } while (serverSyncPendingRef.current)
+    })()
+      .catch((syncError) => console.warn('[listing-drafts] Could not save the server draft.', syncError))
+      .finally(() => {
+        serverSyncRef.current = null
+      })
+    serverSyncRef.current = run
+  }
+
+  // Autosave to the server 1.5s after changes, and straight away on a step change.
+  const lastSyncedStepRef = useRef<number | null>(null)
+  useEffect(() => {
+    if (!draftUserId || !serverDraftReady || success || !isSupabaseEnvReady) return
+    const stepChanged = lastSyncedStepRef.current !== null && lastSyncedStepRef.current !== step
+    lastSyncedStepRef.current = step
+    const timer = window.setTimeout(
+      () => syncServerDraft(createClient(), draftUserId),
+      stepChanged ? 0 : 1500,
+    )
+    return () => window.clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftUserId, serverDraftReady, form, step, success])
 
   useEffect(() => {
     async function loadHost() {
@@ -1052,6 +1289,11 @@ export default function BecomeAHostPage() {
         window.location.href = `/login?redirect=${encodeURIComponent('/become-a-host')}`
         return
       }
+
+      // Use the server draft if it's newer than this browser's (photos keep
+      // downloading in the background), then let the profile pre-fill below.
+      setDraftUserId(user.id)
+      await loadServerDraftOnArrival(supabase, user.id)
 
       try {
         const hostProfile = await ensureHostProfile(supabase, user)
@@ -1818,13 +2060,42 @@ async function handleSubmit() {
     // Clean up preview URLs
     form.photos.forEach(photo => URL.revokeObjectURL(photo.preview))
 
+    const receivedApplicationId = applicationId
     submittedApplicationIdRef.current = null
     uploadedPhotoCountRef.current = 0
+    successRef.current = true
     setSuccess(true)
     setLoading(false)
     setUploadProgress(null)
     window.localStorage.removeItem(listingDraftStorageKey)
+    try {
+      window.localStorage.removeItem(serverDraftSyncedAtKey)
+    } catch {
+      // Storage unavailable — nothing to clear.
+    }
     void clearDraftPhotos(listingDraftStorageKey)
+    setDraftPhotoNotice('')
+    // Clear the server draft too, after any autosave still running, so it
+    // can't come back. Then let the header/banner know the draft is gone.
+    if (draftUserId) {
+      const userId = draftUserId
+      const pendingSync = serverSyncRef.current
+      void (async () => {
+        await pendingSync?.catch(() => undefined)
+        await clearServerDraft(supabase, userId)
+        notifyListingDraftChanged()
+      })()
+    } else {
+      notifyListingDraftChanged()
+    }
+    // "We've received your listing" email. Fire-and-forget: never holds up or
+    // fails the submit.
+    void fetch('/api/notify-host-application-received', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ applicationId: receivedApplicationId }),
+      keepalive: true,
+    }).catch(() => undefined)
     setForm(initialForm)
     setStep(0)
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -1912,14 +2183,14 @@ async function handleSubmit() {
               Thank you for your listing
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-stone-600">
-              We have received your stay and JLM Collective will review it carefully. You can follow the status from your host dashboard. Your account now has both a guest and a host side — choose where you&apos;d like to go.
+              We have received your stay and JLM Collective will review it carefully. You can follow how it&apos;s going from your host dashboard whenever you like.
             </p>
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <Link
-                href="/choose-dashboard"
+                href="/host/dashboard"
                 className="rounded-full bg-[#252525] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#111111]"
               >
-                Choose where to go
+                Go to my host dashboard
               </Link>
               <Link
                 href="/"
@@ -2486,6 +2757,12 @@ async function handleSubmit() {
                         className="hidden"
                       />
                     </div>
+
+                    {draftPhotoNotice && (
+                      <div className="rounded-2xl bg-amber-50 p-4 text-sm font-semibold text-amber-800">
+                        {draftPhotoNotice}
+                      </div>
+                    )}
 
                     {photoUploadError && (
                       <div className="rounded-2xl border border-red-100 bg-red-50 p-3 text-sm font-semibold text-red-700">

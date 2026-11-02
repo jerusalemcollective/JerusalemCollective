@@ -1316,6 +1316,37 @@ export async function sendSupportCaseStatusEmail({
   }
 }
 
+// Sent to a host right after they submit a listing on /become-a-host.
+// Returns whether the email went out (the caller records it to avoid repeats).
+export async function sendHostApplicationReceivedEmail({
+  to,
+  name,
+  title,
+}: {
+  to: string
+  name: string | null
+  title: string | null
+}) {
+  try {
+    const listingTitle = title?.trim() ? `"${title.trim()}"` : 'your listing'
+    const ctaUrl = await recipientMagicLink(to, '/host/dashboard')
+    return await sendEmail({
+      to,
+      subject: "We've received your listing",
+      html: baseEmailHtml({
+        greeting: `Hi ${escapeHtml(name?.trim() || 'there')},`,
+        intro: `Thank you for sending us ${listingTitle}. We'll review it carefully, usually within a few days, and email you when it's live or if we need anything.`,
+        ctaLabel: 'View your host dashboard',
+        ctaUrl,
+        showSignInHint: false,
+      }),
+    })
+  } catch (error) {
+    console.error('Unable to send host application received email', error)
+    return false
+  }
+}
+
 export async function sendGuestBalanceReminderEmail({
   guestId,
   bookingPaymentId,
