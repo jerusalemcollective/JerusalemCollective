@@ -8,7 +8,9 @@ const DB_NAME = 'jlm-listing-draft'
 const DB_VERSION = 1
 const STORE = 'photos'
 
-export type StoredDraftPhoto = { file: File; label: string }
+// remotePath: where this photo's server-draft copy lives (drafts/<uid>/...), so
+// a reload doesn't upload it again. See lib/listing-draft-server.ts.
+export type StoredDraftPhoto = { file: File; label: string; remotePath?: string }
 
 function openDb(): Promise<IDBDatabase | null> {
   return new Promise((resolve) => {
