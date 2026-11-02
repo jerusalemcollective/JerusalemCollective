@@ -14,7 +14,9 @@ type DraftPreview = {
   savedLabel: string | null
 }
 
-export function DraftListingCard() {
+// Reads the in-progress listing saved by /become-a-host in this browser.
+// null until loaded, or when there is no meaningful draft.
+export function useListingDraft() {
   const [draft, setDraft] = useState<DraftPreview | null>(null)
   const [ready, setReady] = useState(false)
 
@@ -49,7 +51,13 @@ export function DraftListingCard() {
     setReady(true)
   }, [])
 
-  if (!ready || !draft) return null
+  return ready ? draft : null
+}
+
+export function DraftListingCard() {
+  const draft = useListingDraft()
+
+  if (!draft) return null
 
   const meta = [draft.area, 'Draft', draft.savedLabel ? `saved ${draft.savedLabel}` : null]
     .filter(Boolean)
