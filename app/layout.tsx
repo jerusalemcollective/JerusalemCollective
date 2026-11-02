@@ -1,3 +1,4 @@
+import { CompleteListingBanner } from '@/components/complete-listing-banner'
 import type { Metadata, Viewport } from 'next'
 import { DM_Sans, Inter, Playfair_Display } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
@@ -104,6 +105,7 @@ export default async function RootLayout({
         </a>
         <CurrencyProvider>
           <Header servicesBarEnabled={servicesBarEnabled} />
+          <CompleteListingBanner />
           <SessionTimeout />
           <main id="main-content">{children}</main>
           <Footer />
