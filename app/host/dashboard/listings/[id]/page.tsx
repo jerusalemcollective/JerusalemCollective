@@ -93,7 +93,9 @@ export default async function HostListingEditPage({
   // refuses (deleting nothing) if its own check fails.
   const hasBookingHistory = (bookingCount || 0) > 0 || (requestCount || 0) > 0
 
-  const depositCurrency = listing.price_usd != null ? 'USD' : 'ILS'
+  // Match the price currency the host chose; only fall back to the legacy
+  // USD/ILS columns for listings saved before price_currency existed.
+  const depositCurrency = listing.price_currency || (listing.price_usd != null ? 'USD' : 'ILS')
   const effectiveCommissionPercent = paymentProfile?.commission_percent_override ?? paymentRoutes.commissionPercent
   const jlmPaymentDescription = getJlmPaymentDescription(effectiveCommissionPercent)
   const listingPhotos = (photos || []) as ListingPhotoRow[]
@@ -247,7 +249,7 @@ export default async function HostListingEditPage({
               <Field label="Currency">
                 <select
                   name="priceCurrency"
-                  defaultValue={listing.price_currency || (listing.price_usd != null ? 'USD' : 'ILS')}
+                  defaultValue={depositCurrency}
                   className={inputClass}
                 >
                   {HOST_PRICE_CURRENCIES.map((code) => (
