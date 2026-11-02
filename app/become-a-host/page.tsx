@@ -2173,6 +2173,8 @@ async function handleSubmit() {
                     <Field label="Exact address" required>
                       <GoogleAddressField
                         value={form.exact_address}
+                        defaultLatitude={form.address_latitude}
+                        defaultLongitude={form.address_longitude}
                         onAddressChange={(val) => {
                           updateField('exact_address', val)
                           updateField('address_latitude', null)
