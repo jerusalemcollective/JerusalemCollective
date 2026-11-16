@@ -25,7 +25,8 @@ import { PayoutCopyRows } from '@/components/payout-copy-rows'
 import {
   CANCELLATION_AGREED_GUEST_SENTENCE,
   DIRECT_PAYMENT_REFUND_NOTE,
-  cancellationPreset,
+  guestCancellationSummary,
+  guestCancellationText,
   stayTimesLine,
   type StayTerms,
 } from '@/lib/stay-terms'
@@ -235,7 +236,8 @@ export function ListingDetailClient({
   stayTerms = null,
 }: ListingDetailClientProps) {
   const stayTimes = stayTimesLine(stayTerms?.check_in_time, stayTerms?.check_out_time)
-  const cancellation = cancellationPreset(stayTerms?.cancellation_policy)
+  const cancellation = guestCancellationText(stayTerms)
+  const cancellationShort = guestCancellationSummary(stayTerms)
   const cancellationNotes = stayTerms?.cancellation_policy_notes?.trim() || null
   const [copiedLink, setCopiedLink] = useState(false)
   const [showGallery, setShowGallery] = useState(false)
@@ -868,10 +870,7 @@ export function ListingDetailClient({
             <div className="py-3">
               <h2 className="text-lg font-semibold text-stone-950">Cancellation policy</h2>
               {cancellation ? (
-                <>
-                  <p className="mt-3 text-sm font-semibold text-stone-900">{cancellation.label}</p>
-                  <p className="mt-1 text-sm leading-7 text-stone-700">{cancellation.guestSentence}</p>
-                </>
+                <p className="mt-3 text-sm leading-7 text-stone-700">{cancellation}</p>
               ) : (
                 <p className="mt-3 text-sm leading-7 text-stone-700">{CANCELLATION_AGREED_GUEST_SENTENCE}</p>
               )}
@@ -1110,7 +1109,7 @@ export function ListingDetailClient({
                   onEnquiryCreated={handleEnquiryCreated}
                   blockedRanges={availability}
                 />
-                <PaymentClarityNote allowsOnlinePayment={allowsOnlinePayment} instantTransfer={isInstantTransfer} cancellationSummary={cancellation?.summary} />
+                <PaymentClarityNote allowsOnlinePayment={allowsOnlinePayment} instantTransfer={isInstantTransfer} cancellationSummary={cancellationShort} />
                 {avgResponseHours !== null && (
                   <p className="mt-4 text-center text-xs text-stone-500">
                     {formatResponseTime(avgResponseHours)}
@@ -1217,7 +1216,7 @@ export function ListingDetailClient({
                 blockedRanges={availability}
                 mobile
               />
-              <PaymentClarityNote allowsOnlinePayment={allowsOnlinePayment} instantTransfer={isInstantTransfer} cancellationSummary={cancellation?.summary} />
+              <PaymentClarityNote allowsOnlinePayment={allowsOnlinePayment} instantTransfer={isInstantTransfer} cancellationSummary={cancellationShort} />
               <div className="mt-5 space-y-2.5 border-t border-stone-100 pt-5">
                 {[
                   'Checked in person by JLM Collective',

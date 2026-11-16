@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { AvatarUpload } from '@/components/avatar-upload'
 import { CurrencySelect } from '@/components/currency-select'
-import { normalizeCurrency } from '@/lib/currencies'
+import Link from 'next/link'
+import { HOST_PRICE_CURRENCIES, isHostPriceCurrency, normalizeCurrency } from '@/lib/currencies'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
@@ -30,12 +31,20 @@ export function AccountProfileForm({ user, profile, hasStay }: AccountProfileFor
   const [phone, setPhone] = useState(profile?.phone || '')
   const [address, setAddress] = useState(profile?.address || '')
   const [currency, setCurrency] = useState(normalizeCurrency(profile?.preferred_currency))
+  const [savedCurrency, setSavedCurrency] = useState(normalizeCurrency(profile?.preferred_currency))
+  const [currencyChangedOnSave, setCurrencyChangedOnSave] = useState(false)
+  // Hosts price their listings in this currency, so it must be one they can price in.
+  const hostCurrencyInvalid = hasStay && !isHostPriceCurrency(currency)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const router = useRouter()
 
   const handleSave = async () => {
+    if (hostCurrencyInvalid) {
+      setError(`Hosts can use ${HOST_PRICE_CURRENCIES.join(', ')}. Choose one of these as your currency.`)
+      return
+    }
     setIsSaving(true)
     setError(null)
     setSuccess(false)
@@ -54,6 +63,8 @@ export function AccountProfileForm({ user, profile, hasStay }: AccountProfileFor
 
       if (error) throw error
 
+      setCurrencyChangedOnSave(hasStay && currency !== savedCurrency)
+      setSavedCurrency(currency)
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
     } catch {
@@ -136,8 +147,27 @@ export function AccountProfileForm({ user, profile, hasStay }: AccountProfileFor
         </div>
 
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-stone-700">Preferred currency</label>
+          <label className="mb-1.5 block text-sm font-medium text-stone-700">Your currency</label>
           <CurrencySelect value={currency} onChange={setCurrency} />
+          <p className="mt-1.5 text-xs leading-5 text-stone-500">
+            {hasStay
+              ? 'Your listing prices, deposits and payouts are all in this currency. Other currencies you accept are set on your Payments page.'
+              : 'Prices on the site are shown in this currency.'}
+          </p>
+          {hostCurrencyInvalid && (
+            <p className="mt-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+              Listings can’t be priced in {currency}. Choose {HOST_PRICE_CURRENCIES.join(', ')}.
+            </p>
+          )}
+          {currencyChangedOnSave && (
+            <p role="status" className="mt-2 rounded-lg bg-amber-50 p-3 text-sm leading-6 text-amber-900">
+              Your listing prices weren’t converted. Each listing switches to {currency} when you next save it, so
+              open each one and check the price.{' '}
+              <Link href="/host/dashboard/listings" className="font-semibold underline">
+                Review your listings
+              </Link>
+            </p>
+          )}
         </div>
 
         {error && <div role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>}

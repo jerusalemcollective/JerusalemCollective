@@ -21,6 +21,8 @@ const STAY_TERMS_LABELS: Record<keyof StayTerms, string> = {
   check_out_time: 'Check-out time',
   cancellation_policy: 'Cancellation policy',
   cancellation_policy_notes: 'Cancellation notes',
+  cancellation_free_days: 'Free cancellation',
+  cancellation_keep: 'What is kept after a late cancellation',
 }
 
 export type ListingMessageState = {
@@ -254,6 +256,7 @@ export async function updateAdminListingDetails(
     .map((field) => HOST_VISIBLE_FIELDS[field])
   if (stayTerms && beforeStayTerms?.available) {
     for (const field of STAY_TERMS_COLUMNS) {
+      if (field === 'cancellation_policy') continue
       if (!sameValue(beforeStayTerms.terms[field], stayTerms[field])) changedLabels.push(STAY_TERMS_LABELS[field])
     }
   }

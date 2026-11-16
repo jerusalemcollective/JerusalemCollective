@@ -15,7 +15,7 @@ import { SleepingSetupBuilder } from '@/components/sleeping-setup-builder'
 import { normalizeKosherLevel } from '@/lib/kosher'
 import { AmenitySelector } from '@/components/amenity-selector'
 import { ShabbosAmenities } from '@/components/shabbos-amenities'
-import { HOST_PRICE_CURRENCIES, currencyName, type HostPriceCurrency } from '@/lib/currencies'
+import { currencyName, hostCurrencyFromProfile, type HostPriceCurrency } from '@/lib/currencies'
 import { toLegacyPrices } from '@/lib/fx'
 import { saveDraftPhotos, loadDraftPhotos, clearDraftPhotos } from '@/lib/listing-draft-photos'
 import {
@@ -31,8 +31,14 @@ import {
 } from '@/lib/listing-draft-server'
 import { StayTermsFields } from '@/components/stay-terms-fields'
 import {
-  cancellationPreset,
-  isCancellationPolicy,
+  DEFAULT_DEPOSIT_CANCELLATION,
+  DepositCancellationFields,
+  depositCancellationSummary,
+  type DepositCancellationDraft,
+} from '@/components/deposit-cancellation-fields'
+import {
+  isCancellationKeep,
+  parseFreeDays,
   parseStayTime,
   stayTimesLine,
   writeWithStayTermsFallback,
@@ -79,8 +85,8 @@ type FormState = {
   // Optional stay terms ('' = not set; migration 118).
   check_in_time: string
   check_out_time: string
-  cancellation_policy: string
-  cancellation_policy_notes: string
+  // Deposit schedule and cancellation rule (migration 123).
+  deposit_cancellation: DepositCancellationDraft
   amenities: string[]
   kosher_kitchen_level: string
   shabbat_elevator: boolean
@@ -768,8 +774,7 @@ apartment_title: '',
   price: '',
   check_in_time: '',
   check_out_time: '',
-  cancellation_policy: '',
-  cancellation_policy_notes: '',
+  deposit_cancellation: DEFAULT_DEPOSIT_CANCELLATION,
 
 amenities: [],
   kosher_kitchen_level: '',
@@ -885,6 +890,11 @@ export default function BecomeAHostPage() {
   const [hostId, setHostId] = useState<string | null>(null)
   const [checkingHost, setCheckingHost] = useState(true)
   const [accountUser, setAccountUser] = useState<User | null>(null)
+  // The profile currency as stored, and whether hosts can price in it.
+  const [profileCurrency, setProfileCurrency] = useState<{ code: string | null; supported: boolean }>({
+    code: null,
+    supported: true,
+  })
   const [requiresHostTermsAcceptance, setRequiresHostTermsAcceptance] = useState(true)
   const [hostTermsAcceptedAt, setHostTermsAcceptedAt] = useState<string | null>(null)
   const [showHostTermsModal, setShowHostTermsModal] = useState(false)
@@ -1326,6 +1336,16 @@ export default function BecomeAHostPage() {
             '',
           host_terms_accepted: Boolean(hostProfile.host_terms_accepted_at),
         }))
+
+        // The host's currency lives on their profile only; listing prices use it.
+        const { data: currencyRow } = await supabase
+          .from('profiles')
+          .select('preferred_currency')
+          .eq('id', user.id)
+          .maybeSingle<{ preferred_currency: string | null }>()
+        const hostCurrency = hostCurrencyFromProfile(currencyRow?.preferred_currency)
+        setProfileCurrency({ code: currencyRow?.preferred_currency || null, supported: hostCurrency.supported })
+        setForm((current) => ({ ...current, price_currency: hostCurrency.currency }))
 
         // Address lives on the shared account profile (serves guest + host).
         // Pre-fill it here; a draft value already typed takes precedence.
@@ -1899,12 +1919,35 @@ async function handleSubmit() {
     // them if migration 118 hasn't added the columns yet.
     const checkInTime = parseStayTime(form.check_in_time)
     const checkOutTime = parseStayTime(form.check_out_time)
-    const cancellationNotes = form.cancellation_policy_notes.trim()
+    const terms = form.deposit_cancellation ?? DEFAULT_DEPOSIT_CANCELLATION
+    const cancellationNotes = terms.cancellation_policy_notes.trim()
+    const freeDays = parseFreeDays(terms.cancellation_free_days)
+    const depositValue = Number(terms.deposit_value)
+    const depositType = terms.deposit_type === 'fixed' ? 'fixed' : 'percent'
+    const depositValid =
+      Number.isFinite(depositValue) && depositValue > 0 && (depositType === 'fixed' || depositValue <= 100)
+    const dueDays = (value: string) => {
+      const n = Number(value)
+      return value === '' || !Number.isFinite(n) ? null : Math.min(Math.max(Math.trunc(n), 0), 365)
+    }
     const stayTermsPayload = {
       ...(checkInTime ? { check_in_time: checkInTime } : {}),
       ...(checkOutTime ? { check_out_time: checkOutTime } : {}),
-      ...(isCancellationPolicy(form.cancellation_policy) ? { cancellation_policy: form.cancellation_policy } : {}),
       ...(cancellationNotes ? { cancellation_policy_notes: cancellationNotes.slice(0, 2000) } : {}),
+      ...(freeDays != null
+        ? {
+            cancellation_free_days: freeDays,
+            cancellation_keep: isCancellationKeep(terms.cancellation_keep) ? terms.cancellation_keep : 'deposit',
+          }
+        : {}),
+      ...(depositValid
+        ? {
+            deposit_type: depositType,
+            deposit_value: depositValue,
+            deposit_due_days_before_checkin: dueDays(terms.deposit_due_days),
+            balance_due_days_before_checkin: dueDays(terms.balance_due_days) ?? 0,
+          }
+        : {}),
     }
 
     let applicationId = submittedApplicationIdRef.current
@@ -2632,47 +2675,49 @@ async function handleSubmit() {
             {step === 4 && (
 <StepShell
                 eyebrow="Pricing"
-                title="Set your nightly rate"
-                description="Choose the currency you want to be paid in, then set one price per night. Guests see it converted to their own currency automatically."
+                title="Price, deposit and cancellation"
+                description="Set one price per night. Guests see it converted to their own currency automatically."
               >
-                <div className="grid gap-5 md:grid-cols-2">
-                  <Field label="Currency">
-                    <select
-                      value={form.price_currency}
-                      onChange={(e) => {
-                        const value = e.target.value
-                        if ((HOST_PRICE_CURRENCIES as readonly string[]).includes(value)) {
-                          updateField('price_currency', value as HostPriceCurrency)
-                        }
-                      }}
-                      className={inputClass}
-                    >
-                      {HOST_PRICE_CURRENCIES.map((code) => (
-                        <option key={code} value={code}>
-                          {code} — {currencyName(code)}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-
-                  <Field label="Price per night">
+                <Field label="Price per night">
+                  <div className="mt-2 flex overflow-hidden rounded-2xl border border-stone-200 bg-white focus-within:border-[#c76f55]">
+                    <span className="flex items-center border-r border-stone-200 bg-[#F8F5F2] px-4 text-sm font-bold text-stone-600">
+                      {form.price_currency}
+                    </span>
                     <input
                       value={form.price}
                       onChange={(e) => updateField('price', e.target.value)}
                       type="number"
                       inputMode="decimal"
                       placeholder="Example: 650"
-                      className={inputClass}
+                      className="w-full bg-transparent px-4 py-3 text-stone-900 outline-none"
                     />
-                  </Field>
-                </div>
+                  </div>
+                </Field>
+                <p className="mt-2 text-xs leading-5 text-stone-500">
+                  Prices are in your currency, {currencyName(form.price_currency)}.{' '}
+                  <Link href="/profile" className="font-semibold text-[#c76f55] hover:underline">
+                    Change it in your profile
+                  </Link>
+                  .
+                </p>
+                {!profileCurrency.supported && profileCurrency.code && (
+                  <p className="mt-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900">
+                    Your profile currency ({profileCurrency.code}) can’t be used for listing prices, so this listing is
+                    priced in {form.price_currency}. To use another, choose ILS, USD, GBP, EUR, CAD, CHF or AUD in your
+                    profile.
+                  </p>
+                )}
+
+                <DepositCancellationFields
+                  value={form.deposit_cancellation ?? DEFAULT_DEPOSIT_CANCELLATION}
+                  onChange={(next) => updateField('deposit_cancellation', next)}
+                  currency={form.price_currency}
+                />
 
                 <StayTermsFields
                   value={{
                     check_in_time: form.check_in_time,
                     check_out_time: form.check_out_time,
-                    cancellation_policy: form.cancellation_policy,
-                    cancellation_policy_notes: form.cancellation_policy_notes,
                   }}
                   onChange={(field, value) => updateField(field, value)}
                 />
@@ -3024,8 +3069,13 @@ async function handleSubmit() {
                   />
 
                   <ReviewItem
-                    label="Cancellation policy"
-                    value={cancellationPreset(form.cancellation_policy)?.label || 'Agreed with me per booking'}
+                    label="Deposit and cancellation"
+                    value={
+                      depositCancellationSummary(form.deposit_cancellation ?? DEFAULT_DEPOSIT_CANCELLATION, {
+                        currency: form.price_currency,
+                        showDeposit: true,
+                      }).join(' ') || 'Not set'
+                    }
                   />
 
                   <ReviewItem

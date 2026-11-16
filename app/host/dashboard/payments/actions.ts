@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect, unstable_rethrow } from 'next/navigation'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { getPaymentRouteSettings } from '@/lib/platform-settings'
+import { hostCurrencyFromProfile } from '@/lib/currencies'
 
 // Reads the structured payout (bank) fields for the chosen region. Returns null if
 // the host filled nothing, so a host who hasn't entered bank details yet doesn't get
@@ -56,12 +57,22 @@ export async function updateHostPaymentPreferences(formData: FormData) {
   const paymentRoutes = await getPaymentRouteSettings()
   const acceptsDirect = paymentRoutes.directPaymentsEnabled && formData.get('acceptsDirect') === 'on'
   const acceptsJlm = paymentRoutes.jlmPaymentsEnabled && formData.get('acceptsJlm') === 'on'
-  const preferredCurrency = String(formData.get('preferredCurrency') || '')
-  const payoutCurrencies = formData.getAll('payoutCurrencies').map(String)
   const payoutMethod = String(formData.get('payoutMethod') || '')
   const payout = composePayout(formData)
 
-  const { supabase, hostIds } = await requireHostDashboardAccess()
+  const { supabase, hostIds, user } = await requireHostDashboardAccess()
+
+  // The host's own currency comes from their profile, not this form; it is
+  // always accepted, plus whichever other currencies they ticked.
+  const { data: ownProfile } = await supabase
+    .from('profiles')
+    .select('preferred_currency')
+    .eq('id', user.id)
+    .maybeSingle<{ preferred_currency: string | null }>()
+  const preferredCurrency = hostCurrencyFromProfile(ownProfile?.preferred_currency).currency
+  const payoutCurrencies = Array.from(
+    new Set([preferredCurrency, ...formData.getAll('payoutCurrencies').map(String)]),
+  )
 
   // The deposit/balance schedule now lives per-listing (listings.deposit_* columns),
   // edited in the listing editor. This page no longer edits the legacy host-level

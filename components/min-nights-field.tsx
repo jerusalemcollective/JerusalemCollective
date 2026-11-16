@@ -1,5 +1,6 @@
 type MinNightsFieldProps = {
   minNights: number
+  className?: string
 }
 
 const inputClass =
@@ -8,9 +9,9 @@ const inputClass =
 // A single minimum-night input, no <form> of its own, so it rides inside the
 // listing-edit form and saves with the shared "Save changes" button. Default 1
 // means no minimum, matching the previous behaviour.
-export function MinNightsField({ minNights }: MinNightsFieldProps) {
+export function MinNightsField({ minNights, className = 'mt-6 block border-t border-stone-100 pt-6' }: MinNightsFieldProps) {
   return (
-    <label className="mt-6 block border-t border-stone-100 pt-6">
+    <label className={className}>
       <span className="text-sm font-bold text-stone-950">Minimum nights</span>
       <input
         name="minNights"

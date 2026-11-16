@@ -5,6 +5,7 @@ import { getPaymentRouteSettings } from '@/lib/platform-settings'
 import { oneOrNull } from '@/lib/utils/one-or-null'
 import { resolveHostPayout } from '@/lib/direct-payment'
 import { updateHostPaymentPreferences } from './actions'
+import { hostCurrencyFromProfile } from '@/lib/currencies'
 
 type PaymentBooking = {
   id: string
@@ -45,8 +46,9 @@ export default async function HostPaymentsPage({
   searchParams: Promise<{ saved?: string }>
 }) {
   const { saved } = await searchParams
-  const { supabase, hostIds } = await requireHostDashboardAccess()
-  const [{ data: profile }, { data: bookingsData }, paymentRoutes, { data: payoutRows }] = await Promise.all([
+  const { supabase, hostIds, user } = await requireHostDashboardAccess()
+  const [{ data: profile }, { data: bookingsData }, paymentRoutes, { data: payoutRows }, { data: ownProfile }] =
+    await Promise.all([
     supabase
       .from('host_payment_profiles')
       .select(
@@ -75,7 +77,10 @@ export default async function HostPaymentsPage({
       .neq('status', 'pending')
       .order('created_at', { ascending: false })
       .limit(50),
+    // The host's currency lives on their profile only.
+    supabase.from('profiles').select('preferred_currency').eq('id', user.id).maybeSingle(),
   ])
+  const hostCurrency = hostCurrencyFromProfile(ownProfile?.preferred_currency).currency
   const bookings: PaymentBooking[] = (bookingsData || []).map((booking: PaymentBookingRow) => ({
     id: booking.id,
     status: booking.status,
@@ -157,7 +162,7 @@ export default async function HostPaymentsPage({
         <form action={updateHostPaymentPreferences}>
           <HostGetPaidSection
             payoutCurrenciesDefault={profile?.payout_currencies || []}
-            initialCurrency={profile?.preferred_currency || 'USD'}
+            profileCurrency={hostCurrency}
             jlmPaymentsEnabled={paymentRoutes.jlmPaymentsEnabled}
             acceptsJlmDefault={profile?.accepts_jlm_payment || false}
             directPaymentsEnabled={paymentRoutes.directPaymentsEnabled}

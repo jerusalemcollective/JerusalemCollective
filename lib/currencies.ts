@@ -48,6 +48,18 @@ export function isHostPriceCurrency(code: string | null | undefined): code is Ho
   return Boolean(code && (HOST_PRICE_CURRENCIES as readonly string[]).includes(code))
 }
 
+// A host's currency is the one on their profile (profiles.preferred_currency):
+// every listing price, deposit and payout is in it. Profile currencies a host
+// can't price in fall back to ILS, and `supported` is false so the editors can
+// say so.
+export function hostCurrencyFromProfile(profileCurrency: string | null | undefined): {
+  currency: HostPriceCurrency
+  supported: boolean
+} {
+  const code = (profileCurrency || '').toUpperCase()
+  return isHostPriceCurrency(code) ? { currency: code, supported: true } : { currency: 'ILS', supported: false }
+}
+
 export const DEFAULT_CURRENCY = 'USD'
 
 export function isSupportedCurrency(code: string | null | undefined): code is string {

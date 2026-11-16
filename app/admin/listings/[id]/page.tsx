@@ -15,6 +15,7 @@ import { AmenitySelector } from '@/components/amenity-selector'
 import { oneOrNull } from '@/lib/utils/one-or-null'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { StayTermsFields } from '@/components/stay-terms-fields'
+import { DepositCancellationFields, depositCancellationDraftFrom } from '@/components/deposit-cancellation-fields'
 import { STAY_TERMS_COLUMNS, stayTermsFromResult } from '@/lib/stay-terms'
 import { readListingExactAddress } from '@/lib/listing-private-details'
 
@@ -380,10 +381,18 @@ export default async function AdminListingDetailPage({
               <StayTermsFields
                 terms={stayTerms.terms}
                 available={stayTerms.available}
-                audience="admin"
                 className="border-t border-stone-100 pt-4"
-                unavailableNote="Check-in time, check-out time and cancellation policy can be edited here once database migration 118 has been run."
+                unavailableNote="Check-in time, check-out time and the cancellation rule can be edited here once database migrations 118 and 123 have been run."
               />
+              {stayTerms.available && (
+                <DepositCancellationFields
+                  initial={depositCancellationDraftFrom(null, stayTerms.terms)}
+                  currency="ILS"
+                  showDeposit={false}
+                  audience="admin"
+                  className="border-t border-stone-100 pt-4"
+                />
+              )}
               {saved === '1' && (
                 <p role="status" className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
                   Listing edits saved.

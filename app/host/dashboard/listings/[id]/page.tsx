@@ -2,11 +2,14 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { getPaymentRouteSettings } from '@/lib/platform-settings'
-import { HOST_PRICE_CURRENCIES, currencyName } from '@/lib/currencies'
+import { currencyName, hostCurrencyFromProfile } from '@/lib/currencies'
 import { allNeighborhoods } from '@/lib/neighborhoods'
 import { updateHostListing } from '../actions'
 import { HostListingVisibilityDelete } from '@/components/host-listing-visibility-delete'
-import { DepositFields } from '@/components/deposit-fields'
+import {
+  DepositCancellationFields,
+  depositCancellationDraftFrom,
+} from '@/components/deposit-cancellation-fields'
 import { MinNightsField } from '@/components/min-nights-field'
 import { ListingAiAssistant } from '@/components/listing-ai-assistant'
 import { AmenitySelector } from '@/components/amenity-selector'
@@ -37,7 +40,7 @@ export default async function HostListingEditPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const { supabase, hostIds } = await requireHostDashboardAccess()
+  const { supabase, hostIds, user } = await requireHostDashboardAccess()
   const [
     { data: listing },
     { data: adminMessages },
@@ -47,6 +50,7 @@ export default async function HostListingEditPage({
     { count: bookingCount },
     { count: requestCount },
     stayTermsResult,
+    { data: ownProfile },
   ] =
     await Promise.all([
       supabase
@@ -85,6 +89,8 @@ export default async function HostListingEditPage({
         .eq('id', id)
         .in('host_id', hostIds)
         .maybeSingle(),
+      // The host's currency lives on their profile only.
+      supabase.from('profiles').select('preferred_currency').eq('id', user.id).maybeSingle(),
     ])
 
   if (!listing) notFound()
@@ -93,7 +99,11 @@ export default async function HostListingEditPage({
   // refuses (deleting nothing) if its own check fails.
   const hasBookingHistory = (bookingCount || 0) > 0 || (requestCount || 0) > 0
 
-  const depositCurrency = listing.price_usd != null ? 'USD' : 'ILS'
+  const hostCurrency = hostCurrencyFromProfile(ownProfile?.preferred_currency)
+  const listingCurrency = listing.price_currency || (listing.price_usd != null ? 'USD' : 'ILS')
+  // Saving prices this listing in the profile currency, so warn when it is
+  // currently in another one: the number is kept, not converted.
+  const currencyChanges = listingCurrency !== hostCurrency.currency
   const effectiveCommissionPercent = paymentProfile?.commission_percent_override ?? paymentRoutes.commissionPercent
   const jlmPaymentDescription = getJlmPaymentDescription(effectiveCommissionPercent)
   const listingPhotos = (photos || []) as ListingPhotoRow[]
@@ -243,30 +253,41 @@ export default async function HostListingEditPage({
 
           {/* 4. Pricing and booking (incl. deposit) */}
           <EditorSection title="Pricing and booking">
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Currency">
-                <select
-                  name="priceCurrency"
-                  defaultValue={listing.price_currency || (listing.price_usd != null ? 'USD' : 'ILS')}
-                  className={inputClass}
-                >
-                  {HOST_PRICE_CURRENCIES.map((code) => (
-                    <option key={code} value={code}>
-                      {code} — {currencyName(code)}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Price per night">
+            <input type="hidden" name="priceCurrency" value={hostCurrency.currency} />
+            <Field label="Price per night">
+              <div className="mt-2 flex overflow-hidden rounded-2xl border border-stone-200 bg-white focus-within:border-[#c76f55]">
+                <span className="flex items-center border-r border-stone-200 bg-[#F8F5F2] px-4 text-sm font-bold text-stone-600">
+                  {hostCurrency.currency}
+                </span>
                 <input
                   name="price"
                   type="number"
                   min="0"
                   defaultValue={listing.price ?? listing.price_usd ?? listing.price_ils ?? ''}
-                  className={inputClass}
+                  className="w-full bg-transparent px-4 py-3 text-stone-900 outline-none"
                 />
-              </Field>
-            </div>
+              </div>
+            </Field>
+            <p className="mt-2 text-xs leading-5 text-stone-500">
+              Prices are in your currency, {currencyName(hostCurrency.currency)}.{' '}
+              <Link href="/profile" className="font-semibold text-[#c76f55] hover:underline">
+                Change it in your profile
+              </Link>
+              .
+            </p>
+            {!hostCurrency.supported && (
+              <p className="mt-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900">
+                Your profile currency ({ownProfile?.preferred_currency}) can’t be used for listing prices, so this
+                listing is priced in {hostCurrency.currency}. Choose ILS, USD, GBP, EUR, CAD, CHF or AUD in your profile.
+              </p>
+            )}
+            {currencyChanges && (
+              <p className="mt-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900">
+                This listing is priced in {listingCurrency}. When you save, its prices switch to{' '}
+                {hostCurrency.currency} without converting the numbers. Check the price per night, the extra
+                guest fee and any fixed deposit before saving.
+              </p>
+            )}
             <BookingStyleField defaultValue={listing.booking_type} />
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <Field label="Price includes up to (guests)">
@@ -302,29 +323,26 @@ export default async function HostListingEditPage({
               <input type="hidden" name="onlinePaymentEnabled" value="" />
             )}
 
-            <DepositFields
-              depositType={listing.deposit_type || 'percent'}
-              depositValue={Number(listing.deposit_value ?? 10)}
-              balanceDueDays={Number(listing.balance_due_days_before_checkin ?? 0)}
-              depositDueDays={
-                listing.deposit_due_days_before_checkin == null
-                  ? null
-                  : Number(listing.deposit_due_days_before_checkin)
-              }
-              currency={depositCurrency}
+            <DepositCancellationFields
+              initial={depositCancellationDraftFrom(listing, stayTerms.terms)}
+              currency={hostCurrency.currency}
+              cancellationAvailable={stayTerms.available}
             />
+          </EditorSection>
 
-            <MinNightsField minNights={Number(listing.min_nights ?? 1)} />
+          {/* 5. Stay rules */}
+          <EditorSection title="Stay rules">
+            <MinNightsField minNights={Number(listing.min_nights ?? 1)} className="block" />
 
             <StayTermsFields
               terms={stayTerms.terms}
               available={stayTerms.available}
-              unavailableNote="Check-in and check-out times and a cancellation policy can be set here soon."
+              unavailableNote="Check-in and check-out times and the cancellation rule can be set here once the latest database update has run."
             />
 
           </EditorSection>
 
-          {/* 5. Guest info */}
+          {/* 6. Guest info */}
           <EditorSection title="Guest info">
             <label className="block text-sm font-semibold text-stone-800">
               House rules
@@ -360,7 +378,7 @@ export default async function HostListingEditPage({
             </label>
           </EditorSection>
 
-          {/* 6. Messages from JLM Collective */}
+          {/* 7. Messages from JLM Collective */}
           <EditorSection title="Messages from JLM Collective">
             {adminMessages?.length ? (
               <div className="space-y-3">

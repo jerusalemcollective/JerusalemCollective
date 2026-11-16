@@ -3,8 +3,13 @@
 // Plain TS with no imports so it runs in the host/admin editors, the listing page
 // and `node --test` alike.
 //
-// NULL means "not set". For cancellation_policy, NULL keeps today's rule: terms
-// are agreed with the host for each booking.
+// NULL means "not set".
+//
+// Cancellation is set as "free cancellation until N days before check-in, then
+// the host keeps the deposit / everything paid" (cancellation_free_days and
+// cancellation_keep, migration 123). The older presets (cancellation_policy) are
+// still read for listings that haven't been saved since, and migration 123
+// copies them into the new columns.
 
 export const CANCELLATION_POLICIES = ['flexible', 'moderate', 'strict', 'non_refundable'] as const
 
@@ -54,6 +59,79 @@ export const CANCELLATION_AGREED_HOST_EXPLANATION =
   'No fixed policy: you and the guest agree cancellation terms before they pay.'
 // Listing page text when no preset is set.
 export const CANCELLATION_AGREED_GUEST_SENTENCE = 'Cancellation terms are agreed with the host before you pay.'
+
+// ---- Free-cancellation rule (migration 123) ----
+
+export const CANCELLATION_KEEP_OPTIONS = ['deposit', 'all'] as const
+export type CancellationKeep = (typeof CANCELLATION_KEEP_OPTIONS)[number]
+
+// Choices in the editors. 0 = no free cancellation.
+export const CANCELLATION_FREE_DAY_CHOICES = [1, 2, 3, 5, 7, 14, 21, 30, 0] as const
+export const DEFAULT_CANCELLATION_FREE_DAYS = 14
+export const DEFAULT_CANCELLATION_KEEP: CancellationKeep = 'deposit'
+
+export function isCancellationKeep(value: unknown): value is CancellationKeep {
+  return typeof value === 'string' && (CANCELLATION_KEEP_OPTIONS as readonly string[]).includes(value)
+}
+
+// Whole days 0-365, or null for blank/invalid.
+export function parseFreeDays(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null
+  const n = Number(value)
+  if (!Number.isFinite(n)) return null
+  return Math.min(Math.max(Math.trunc(n), 0), 365)
+}
+
+export function daysText(days: number): string {
+  return days === 1 ? '1 day' : `${days} days`
+}
+
+// The rule as one or two sentences for guests, or null when no rule is set.
+// `keep` 'deposit' only makes sense when the listing takes a deposit; pass
+// hasDeposit=false to word it as "what you've paid".
+export function cancellationRuleSentence(
+  freeDays: number | null | undefined,
+  keep: CancellationKeep | null | undefined,
+  hasDeposit = true,
+): string | null {
+  if (freeDays == null) return null
+  const what = keep === 'deposit' && hasDeposit ? 'the host keeps the deposit' : 'the host keeps what you have paid'
+  if (freeDays === 0) return `There is no free cancellation. If you cancel, ${what}.`
+  return `Free cancellation until ${daysText(freeDays)} before check-in. After that, ${what}.`
+}
+
+// The older preset as an equivalent rule, for listings saved before migration 123.
+export function presetAsRule(policy: unknown): { freeDays: number; keep: CancellationKeep } | null {
+  switch (policy) {
+    case 'flexible':
+      return { freeDays: 1, keep: 'all' }
+    case 'moderate':
+      return { freeDays: 5, keep: 'all' }
+    case 'strict':
+      return { freeDays: 7, keep: 'all' }
+    case 'non_refundable':
+      return { freeDays: 0, keep: 'all' }
+    default:
+      return null
+  }
+}
+
+// What the listing page shows: the new rule if set, else the older preset's
+// sentence, else null (no policy set).
+export function guestCancellationText(terms: Partial<StayTerms> | null | undefined): string | null {
+  if (!terms) return null
+  const rule = cancellationRuleSentence(terms.cancellation_free_days, terms.cancellation_keep)
+  if (rule) return rule
+  return cancellationPreset(terms.cancellation_policy)?.guestSentence ?? null
+}
+
+// Short form for the booking box ("Cancellation: <summary>."), or null.
+export function guestCancellationSummary(terms: Partial<StayTerms> | null | undefined): string | null {
+  if (!terms) return null
+  const days = terms.cancellation_free_days
+  if (days != null) return days === 0 ? 'no free cancellation' : `free until ${daysText(days)} before check-in`
+  return cancellationPreset(terms.cancellation_policy)?.summary ?? null
+}
 
 // Shown under a preset on the listing page.
 export const DIRECT_PAYMENT_REFUND_NOTE =
@@ -118,8 +196,11 @@ export function stayTimesLine(
 export type StayTerms = {
   check_in_time: string | null
   check_out_time: string | null
+  // Older preset, read-only now: the editors leave it alone and the rule below wins.
   cancellation_policy: CancellationPolicy | null
   cancellation_policy_notes: string | null
+  cancellation_free_days: number | null
+  cancellation_keep: CancellationKeep | null
 }
 
 export const STAY_TERMS_COLUMNS = [
@@ -127,6 +208,18 @@ export const STAY_TERMS_COLUMNS = [
   'check_out_time',
   'cancellation_policy',
   'cancellation_policy_notes',
+  'cancellation_free_days',
+  'cancellation_keep',
+] as const
+
+// Deposit schedule columns. listings has had them since migrations 086/108;
+// host_applications gets them in migration 123 so the become-a-host wizard can
+// ask for the deposit too. Approval copies them into the listing.
+export const DEPOSIT_COLUMNS = [
+  'deposit_type',
+  'deposit_value',
+  'deposit_due_days_before_checkin',
+  'balance_due_days_before_checkin',
 ] as const
 
 // Form field names used by components/stay-terms-fields.tsx.
@@ -134,8 +227,9 @@ export const STAY_TERMS_FIELDS = {
   marker: 'stayTermsShown',
   checkIn: 'checkInTime',
   checkOut: 'checkOutTime',
-  policy: 'cancellationPolicy',
   notes: 'cancellationPolicyNotes',
+  freeDays: 'cancellationFreeDays',
+  keep: 'cancellationKeep',
 } as const
 
 // Normalises a row (from select('*') or similar) into StayTerms. Missing columns
@@ -147,12 +241,18 @@ export function readStayTerms(row: Record<string, unknown> | null | undefined): 
     check_out_time: parseStayTime(row?.check_out_time),
     cancellation_policy: isCancellationPolicy(row?.cancellation_policy) ? row.cancellation_policy : null,
     cancellation_policy_notes: notes || null,
+    cancellation_free_days: parseFreeDays(row?.cancellation_free_days),
+    cancellation_keep: isCancellationKeep(row?.cancellation_keep) ? row.cancellation_keep : null,
   }
 }
 
 export function hasAnyStayTerms(terms: StayTerms): boolean {
   return Boolean(
-    terms.check_in_time || terms.check_out_time || terms.cancellation_policy || terms.cancellation_policy_notes,
+    terms.check_in_time ||
+      terms.check_out_time ||
+      terms.cancellation_policy ||
+      terms.cancellation_policy_notes ||
+      terms.cancellation_free_days != null,
   )
 }
 
@@ -160,16 +260,22 @@ type FormDataLike = { get(name: string): unknown }
 
 // Reads the stay-terms fields from a submitted form. Returns null when the form
 // did not show them (no marker field), so the caller leaves the columns alone.
-export function readStayTermsFromForm(formData: FormDataLike): StayTerms | null {
+// The older preset (cancellation_policy) is not part of the form any more, so it
+// is left out and keeps whatever is stored; the rule takes priority when shown.
+export type StayTermsFormValues = Omit<StayTerms, 'cancellation_policy'>
+
+export function readStayTermsFromForm(formData: FormDataLike): StayTermsFormValues | null {
   if (formData.get(STAY_TERMS_FIELDS.marker) !== '1') return null
-  const policy = formData.get(STAY_TERMS_FIELDS.policy)
   const notesRaw = formData.get(STAY_TERMS_FIELDS.notes)
   const notes = typeof notesRaw === 'string' ? notesRaw.trim().slice(0, 2000) : ''
+  const freeDays = parseFreeDays(formData.get(STAY_TERMS_FIELDS.freeDays))
+  const keep = formData.get(STAY_TERMS_FIELDS.keep)
   return {
     check_in_time: parseStayTime(formData.get(STAY_TERMS_FIELDS.checkIn)),
     check_out_time: parseStayTime(formData.get(STAY_TERMS_FIELDS.checkOut)),
-    cancellation_policy: isCancellationPolicy(policy) ? policy : null,
     cancellation_policy_notes: notes || null,
+    cancellation_free_days: freeDays,
+    cancellation_keep: freeDays == null ? null : isCancellationKeep(keep) ? keep : DEFAULT_CANCELLATION_KEEP,
   }
 }
 
@@ -182,11 +288,19 @@ export function isMissingColumnError(error: unknown): boolean {
   return code === '42703' || code === 'PGRST204'
 }
 
+// Columns added by migration 123, dropped first when a write fails because
+// that migration hasn't run yet.
+const MIGRATION_123_COLUMNS = ['cancellation_free_days', 'cancellation_keep', ...DEPOSIT_COLUMNS] as const
+
+function omitColumns<T extends Record<string, unknown>>(payload: T, columns: readonly string[]): T {
+  const copy: Record<string, unknown> = { ...payload }
+  for (const column of columns) delete copy[column]
+  return copy as T
+}
+
 // A copy of `payload` without the stay-terms columns.
 export function omitStayTerms<T extends Record<string, unknown>>(payload: T): T {
-  const copy: Record<string, unknown> = { ...payload }
-  for (const column of STAY_TERMS_COLUMNS) delete copy[column]
-  return copy as T
+  return omitColumns(payload, STAY_TERMS_COLUMNS)
 }
 
 // Runs an insert/update with `payload`; if it fails only because the stay-terms
@@ -197,14 +311,20 @@ export async function writeWithStayTermsFallback<T extends Record<string, unknow
   write: (payload: T) => PromiseLike<R>,
 ): Promise<R> {
   const result = await write(payload)
+  if (!isMissingColumnError(result.error)) return result
+  if (MIGRATION_123_COLUMNS.some((column) => column in payload)) {
+    console.warn('Cancellation/deposit columns are missing (run migration 123); saving without them.')
+    const retry = await write(omitColumns(payload, MIGRATION_123_COLUMNS))
+    if (!isMissingColumnError(retry.error)) return retry
+  }
   const hasStayTerms = STAY_TERMS_COLUMNS.some((column) => column in payload)
-  if (!hasStayTerms || !isMissingColumnError(result.error)) return result
+  if (!hasStayTerms) return result
   console.warn('Stay terms columns are missing (run migration 118); saving without them.')
-  return write(omitStayTerms(payload))
+  return write(omitColumns(payload, [...STAY_TERMS_COLUMNS, ...DEPOSIT_COLUMNS]))
 }
 
 // Result of a tolerant read of the stay-terms columns. `available` is false when
-// the columns don't exist yet (migration 118 not run).
+// the columns don't exist yet (migration 118 or 123 not run).
 export type StayTermsLoad = { available: boolean; terms: StayTerms }
 
 export function stayTermsFromResult(result: {

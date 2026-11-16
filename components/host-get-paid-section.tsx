@@ -1,22 +1,24 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { StripeConnectCard } from '@/components/stripe-connect-card'
 import { PayoutAccountFields } from '@/components/payout-account-fields'
 import { type PayoutDetails } from '@/lib/direct-payment'
 
 const CURRENCIES = ['USD', 'GBP', 'EUR', 'ILS']
 
-// The whole "How you get paid" + "Payment schedule" block. The host picks which
-// currencies they accept, a preferred one, and turns on either or both pay routes:
+// The whole "How you get paid" block. The host's own currency is set on their
+// profile (not here); this block picks which OTHER currencies they also accept,
+// and turns on either or both pay routes:
 // "Through JLM · card" (accepts_jlm → Stripe payout) and "Paid directly · bank/Zelle"
 // (accepts_direct → bank details). Each route's account setup appears ONLY when its
-// box is ticked. Field name= attributes (payoutCurrencies, preferredCurrency,
-// acceptsJlm, acceptsDirect, payoutMethod, payout*, deposit*) are read by the
-// updateHostPaymentPreferences action.
+// box is ticked. Field name= attributes (payoutCurrencies, acceptsJlm,
+// acceptsDirect, payoutMethod, payout*) are read by the
+// updateHostPaymentPreferences action, which adds the profile currency itself.
 export function HostGetPaidSection({
   payoutCurrenciesDefault,
-  initialCurrency,
+  profileCurrency,
   jlmPaymentsEnabled,
   acceptsJlmDefault,
   directPaymentsEnabled,
@@ -26,7 +28,8 @@ export function HostGetPaidSection({
   legacyMethod,
 }: {
   payoutCurrenciesDefault: string[]
-  initialCurrency: string
+  // The host's currency, from their profile.
+  profileCurrency: string
   jlmPaymentsEnabled: boolean
   acceptsJlmDefault: boolean
   directPaymentsEnabled: boolean
@@ -35,10 +38,10 @@ export function HostGetPaidSection({
   payoutDefault: PayoutDetails | null
   legacyMethod?: string | null
 }) {
+  const otherCurrencies = CURRENCIES.filter((c) => c !== profileCurrency)
   const [accepted, setAccepted] = useState<string[]>(
-    payoutCurrenciesDefault.filter((c) => CURRENCIES.includes(c)),
+    payoutCurrenciesDefault.filter((c) => otherCurrencies.includes(c)),
   )
-  const [currency, setCurrency] = useState(initialCurrency)
   const [acceptsJlm, setAcceptsJlm] = useState(acceptsJlmDefault)
   const [acceptsDirect, setAcceptsDirect] = useState(acceptsDirectDefault)
 
@@ -50,18 +53,7 @@ export function HostGetPaidSection({
   }, [])
 
   function toggleCurrency(code: string) {
-    setAccepted((prev) => {
-      const next = prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
-      // Keep the preferred currency valid: if it just got removed, fall back to the
-      // first still-accepted one.
-      if (!next.includes(currency) && next.length > 0) setCurrency(next[0])
-      return next
-    })
-  }
-
-  function cycleCurrency() {
-    const pool = accepted.length > 0 ? accepted : CURRENCIES
-    setCurrency(pool[(pool.indexOf(currency) + 1) % pool.length])
+    setAccepted((prev) => (prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]))
   }
 
   // Advisory only (admin display + future auto-payout readiness): which route the
@@ -75,9 +67,16 @@ export function HostGetPaidSection({
         <h2 className="text-xl font-semibold text-stone-950">How you get paid</h2>
 
         <div className="mt-5">
-          <p className="text-sm font-semibold text-stone-800">Currencies you accept</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {CURRENCIES.map((code) => {
+          <p className="text-sm font-semibold text-stone-800">Other currencies you accept</p>
+          <p className="mt-1 text-sm leading-6 text-stone-600">
+            Your prices are in {profileCurrency}, set in your{' '}
+            <Link href="/profile" className="font-semibold text-[#c76f55] hover:underline">
+              profile
+            </Link>
+            . Guests can also pay in the currencies you tick here.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {otherCurrencies.map((code) => {
               const on = accepted.includes(code)
               return (
                 <button
@@ -100,23 +99,6 @@ export function HostGetPaidSection({
           {accepted.map((code) => (
             <input key={code} type="hidden" name="payoutCurrencies" value={code} />
           ))}
-        </div>
-
-        <div className="mt-5 flex items-center gap-3">
-          <span className="text-sm font-semibold text-stone-800">Preferred currency</span>
-          <button
-            type="button"
-            onClick={cycleCurrency}
-            className="inline-flex items-center gap-1.5 rounded-full border border-stone-300 bg-white px-3 py-1 text-sm font-bold text-stone-900 transition hover:border-[#c76f55] hover:bg-stone-50"
-            aria-label={`Preferred currency ${currency}. Click to switch.`}
-          >
-            {currency}
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="text-stone-400" aria-hidden="true">
-              <path d="m7 15 5 5 5-5" />
-              <path d="m7 9 5-5 5 5" />
-            </svg>
-          </button>
-          <input type="hidden" name="preferredCurrency" value={currency} />
         </div>
 
         <div className="mt-6">

@@ -8,7 +8,12 @@ import { logAdminAction } from '@/lib/audit'
 import { sendHostAdminUpdateEmail } from '@/lib/transactional-email'
 import { toLegacyPrices } from '@/lib/fx'
 import { isHostPriceCurrency } from '@/lib/currencies'
-import { STAY_TERMS_COLUMNS, isMissingColumnError as isStayTermsColumnMissing, readStayTerms } from '@/lib/stay-terms'
+import {
+  DEPOSIT_COLUMNS,
+  STAY_TERMS_COLUMNS,
+  isMissingColumnError as isStayTermsColumnMissing,
+  readStayTerms,
+} from '@/lib/stay-terms'
 import { writeListingExactAddress } from '@/lib/listing-private-details'
 import {
   calculateShulDistances,
@@ -451,19 +456,31 @@ async function approveApplication(supabase: AdminSupabase, applicationId: string
   // Check-in/out and cancellation terms from the become-a-host Pricing step
   // (migration 118). Copied only the ones the host filled in, in their own update
   // so a missing column can never block the approval.
+  // The deposit schedule from the same step (migration 123) is copied the same way.
   const applicationStayTerms = readStayTerms(application as Record<string, unknown>)
-  const stayTermsUpdate = Object.fromEntries(
-    STAY_TERMS_COLUMNS.filter((column) => applicationStayTerms[column] != null).map((column) => [
-      column,
-      applicationStayTerms[column],
-    ]),
-  )
+  const applicationRow = application as Record<string, unknown>
+  const stayTermsUpdate = {
+    ...Object.fromEntries(
+      STAY_TERMS_COLUMNS.filter((column) => applicationStayTerms[column] != null).map((column) => [
+        column,
+        applicationStayTerms[column],
+      ]),
+    ),
+    ...(applicationRow.deposit_type === 'percent' || applicationRow.deposit_type === 'fixed'
+      ? Object.fromEntries(
+          DEPOSIT_COLUMNS.filter((column) => applicationRow[column] != null).map((column) => [
+            column,
+            applicationRow[column],
+          ]),
+        )
+      : {}),
+  }
   if (Object.keys(stayTermsUpdate).length > 0) {
     const { error: stayTermsError } = await supabase.from('listings').update(stayTermsUpdate).eq('id', listingId)
     if (stayTermsError) {
       console.error(
         isStayTermsColumnMissing(stayTermsError)
-          ? 'Stay terms not copied to the listing: run migration 118.'
+          ? 'Stay terms not copied to the listing: run migrations 118 and 123.'
           : 'Could not copy stay terms to the listing — listing still approved:',
         stayTermsError,
       )
