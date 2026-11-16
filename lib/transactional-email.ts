@@ -1371,7 +1371,7 @@ export async function sendAdminNewApplicationEmail({
       .filter(Boolean)
       .join(' ')
     return await sendEmail({
-      to: 'info@jlmcollective.co',
+      to: 'listings@jlmcollective.co',
       subject: `New listing to review: ${listingTitle}`,
       html: baseEmailHtml({
         greeting: 'Hi JLM team,',
