@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { after } from 'next/server'
 import { normalizeKosherLevel } from '@/lib/kosher'
 import { redirect, unstable_rethrow } from 'next/navigation'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
@@ -14,6 +15,30 @@ import {
   saveShulDistances,
 } from '@/lib/shul-distances'
 import { readStayTermsFromForm, writeWithStayTermsFallback } from '@/lib/stay-terms'
+import { sendAdminListingResubmittedEmail, sendAdminListingVisibilityEmail } from '@/lib/transactional-email'
+import { alertListingEdited } from '@/lib/listing-alerts'
+import { diffListing, type ListingRow } from '@/lib/utils/listing-changes'
+
+// The host's name as the JLM team knows it, for the team alerts below.
+function hostDisplayName(host: { display_name?: string | null; name?: string | null }) {
+  return host.display_name?.trim() || host.name?.trim() || null
+}
+
+// Team alerts run after the response is sent, so they never slow down or
+// break the host's action; failures are only logged.
+function alertTeamLater(label: string, task: () => Promise<unknown>) {
+  try {
+    after(async () => {
+      try {
+        await task()
+      } catch (error) {
+        console.error(`Could not send the ${label} alert`, error)
+      }
+    })
+  } catch (error) {
+    console.error(`Could not schedule the ${label} alert`, error)
+  }
+}
 
 // The "Other amenities" box submits one comma-separated string under the same
 // field name as the checkboxes. Store each amenity as its own item (trimmed,
@@ -57,7 +82,15 @@ export async function setHostListingVisibility(
   const publish = rawValue === 'true'
 
   try {
-    const { supabase, hostIds } = await requireHostDashboardAccess()
+    const { supabase, hostIds, host } = await requireHostDashboardAccess()
+
+    // Read first, so the team is only told when the visibility really changes.
+    const { data: before } = await supabase
+      .from('listings')
+      .select('title, area, is_published')
+      .eq('id', listingId)
+      .in('host_id', hostIds)
+      .maybeSingle<{ title: string | null; area: string | null; is_published: boolean | null }>()
 
     const { data, error } = await supabase
       .from('listings')
@@ -71,6 +104,18 @@ export async function setHostListingVisibility(
     // Row-level security refusals return no error, they just change nothing.
     if (!data || data.length === 0) {
       throw new Error('No listing rows were updated (host update policy on listings, migration 069).')
+    }
+
+    if (before && Boolean(before.is_published) !== publish) {
+      alertTeamLater('listing visibility', () =>
+        sendAdminListingVisibilityEmail({
+          listingId,
+          title: before.title,
+          area: before.area,
+          hostName: hostDisplayName(host),
+          change: publish ? 'shown' : 'hidden',
+        }),
+      )
     }
 
     revalidatePath('/host/dashboard')
@@ -110,15 +155,15 @@ export async function deleteHostListing(
   }
 
   try {
-    const { supabase, hostIds } = await requireHostDashboardAccess()
+    const { supabase, hostIds, host } = await requireHostDashboardAccess()
 
     // Confirm the listing belongs to this host before touching anything.
     const { data: owned, error: ownedError } = await supabase
       .from('listings')
-      .select('id')
+      .select('id, title, area')
       .eq('id', listingId)
       .in('host_id', hostIds)
-      .maybeSingle()
+      .maybeSingle<{ id: string; title: string | null; area: string | null }>()
 
     if (ownedError) throw ownedError
     if (!owned) {
@@ -165,6 +210,16 @@ export async function deleteHostListing(
     if (!deleted || deleted.length === 0) {
       throw new Error('No listing rows were deleted (host delete policy on listings, migration 069).')
     }
+
+    alertTeamLater('listing deleted', () =>
+      sendAdminListingVisibilityEmail({
+        listingId,
+        title: owned.title,
+        area: owned.area,
+        hostName: hostDisplayName(host),
+        change: 'deleted',
+      }),
+    )
 
     revalidatePath('/host/dashboard')
     revalidatePath('/host/dashboard/listings')
@@ -253,7 +308,17 @@ async function saveHostListing(formData: FormData) {
     throw new Error('Missing listing id.')
   }
 
-  const { supabase, hostIds } = await requireHostDashboardAccess()
+  const { supabase, hostIds, host } = await requireHostDashboardAccess()
+
+  // The listing as it was, to tell the JLM team what changed (live listings
+  // only). A failed read just means no alert.
+  const { data: before } = await supabase
+    .from('listings')
+    .select('*')
+    .eq('id', listingId)
+    .in('host_id', hostIds)
+    .maybeSingle<ListingRow>()
+
   const { error } = await supabase.rpc('update_current_host_listing', {
     listing_uuid: listingId,
     new_title: title,
@@ -385,6 +450,30 @@ async function saveHostListing(formData: FormData) {
     }
   }
 
+  if (before?.is_published) {
+    try {
+      const { data: saved } = await supabase
+        .from('listings')
+        .select('*')
+        .eq('id', listingId)
+        .in('host_id', hostIds)
+        .maybeSingle<ListingRow>()
+      const changes = saved?.is_published ? diffListing(before, saved) : null
+      if (saved && changes && changes.fields.length > 0) {
+        alertTeamLater('listing edited', () =>
+          alertListingEdited({
+            listingId,
+            title: typeof saved.title === 'string' ? saved.title : null,
+            hostName: hostDisplayName(host),
+            changes,
+          }),
+        )
+      }
+    } catch (error) {
+      console.error('Could not check what changed for the listing edited alert', listingId, error)
+    }
+  }
+
   revalidatePath('/host/dashboard')
   revalidatePath('/host/dashboard/listings')
   revalidatePath(`/host/dashboard/listings/${listingId}`)
@@ -429,7 +518,17 @@ export async function updateHostApplication(formData: FormData) {
     throw new Error('Missing application id.')
   }
 
-  const { supabase } = await requireHostDashboardAccess()
+  const { supabase, hostIds } = await requireHostDashboardAccess()
+
+  // Saving moves the application back to 'in_review' (see the RPC). If the team
+  // had asked for changes, this save is the host sending it back: tell them.
+  const { data: beforeApplication } = await supabase
+    .from('host_applications')
+    .select('status')
+    .eq('id', applicationId)
+    .in('host_id', hostIds)
+    .maybeSingle<{ status: string | null }>()
+
   const { error } = await supabase.rpc('update_current_host_application', {
     application_uuid: applicationId,
     new_host_name: hostName,
@@ -471,6 +570,17 @@ export async function updateHostApplication(formData: FormData) {
   })
   if (priceError) {
     throw priceError
+  }
+
+  if (beforeApplication?.status === 'changes_requested') {
+    alertTeamLater('listing resubmitted', () =>
+      sendAdminListingResubmittedEmail({
+        applicationId,
+        title,
+        hostName: displayName || hostName || null,
+        hostEmail: email || null,
+      }),
+    )
   }
 
   revalidatePath('/host/dashboard')
