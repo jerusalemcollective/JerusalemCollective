@@ -3,8 +3,13 @@ import { createServiceRoleClient } from '@/lib/supabase/service'
 import { formatPayoutRows, legacyPaymentInstructions, resolveHostPayout } from '@/lib/direct-payment'
 import { oneOrNull } from '@/lib/utils/one-or-null'
 import { computeDepositPreview } from '@/lib/utils/deposit'
+import { fullChangePhrase, shortChangePhrase, type ListingChangeSet } from '@/lib/utils/listing-changes'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.jlmcollective.co'
+
+// The JLM team inbox for everything about hosts' listings: new listings,
+// listings sent back for review, and hosts' changes to live listings.
+export const LISTINGS_TEAM_EMAIL = 'listings@jlmcollective.co'
 
 // After migration 074 the authenticated role can no longer read hosts.email, so
 // reads that need a host's email must use the service role (this is a server-only
@@ -1363,19 +1368,20 @@ export async function sendAdminNewApplicationEmail({
 }) {
   try {
     const listingTitle = title?.trim() || 'A new listing'
+    // No escapeHtml here: baseEmailHtml escapes the intro itself.
     const details = [
-      hostName?.trim() ? `from ${escapeHtml(hostName.trim())}` : null,
-      hostEmail ? `(${escapeHtml(hostEmail)})` : null,
-      area?.trim() ? `in ${escapeHtml(area.trim())}` : null,
+      hostName?.trim() ? `from ${hostName.trim()}` : null,
+      hostEmail ? `(${hostEmail})` : null,
+      area?.trim() ? `in ${area.trim()}` : null,
     ]
       .filter(Boolean)
       .join(' ')
     return await sendEmail({
-      to: 'listings@jlmcollective.co',
+      to: LISTINGS_TEAM_EMAIL,
       subject: `New listing to review: ${listingTitle}`,
       html: baseEmailHtml({
         greeting: 'Hi JLM team,',
-        intro: `${escapeHtml(listingTitle)} has just been submitted${details ? ` ${details}` : ''}. It's waiting for your review in Admin.`,
+        intro: `${listingTitle} has just been submitted${details ? ` ${details}` : ''}. It's waiting for your review in Admin.`,
         ctaLabel: 'Review the listing',
         ctaUrl: `${siteUrl}/admin/applications/${applicationId}`,
         showSignInHint: false,
@@ -1383,6 +1389,167 @@ export async function sendAdminNewApplicationEmail({
     })
   } catch (error) {
     console.error('Unable to send admin new application email', error)
+    return false
+  }
+}
+
+function hostLabel(hostName: string | null | undefined) {
+  return hostName?.trim() || 'A host'
+}
+
+function listingLabel(title: string | null | undefined) {
+  return title?.trim() || 'their listing'
+}
+
+// Tells the JLM team a host has edited a listing the team asked them to change
+// and sent it back for review.
+export async function sendAdminListingResubmittedEmail({
+  applicationId,
+  title,
+  hostName,
+  hostEmail,
+}: {
+  applicationId: string
+  title: string | null
+  hostName: string | null
+  hostEmail: string | null
+}) {
+  try {
+    const host = hostLabel(hostName)
+    const listingTitle = listingLabel(title)
+    return await sendEmail({
+      to: LISTINGS_TEAM_EMAIL,
+      subject: `Listing sent back for review: ${listingTitle}`,
+      html: baseEmailHtml({
+        greeting: 'Hi JLM team,',
+        intro: `${host}${hostEmail ? ` (${hostEmail})` : ''} has updated ${listingTitle} after your request for changes and sent it back to you. It's waiting for your review in Admin.`,
+        ctaLabel: 'Review the listing',
+        ctaUrl: `${siteUrl}/admin/applications/${applicationId}`,
+        showSignInHint: false,
+      }),
+    })
+  } catch (error) {
+    console.error('Unable to send admin listing resubmitted email', error)
+    return false
+  }
+}
+
+// Tells the JLM team a host has changed the details of a live listing.
+export async function sendAdminListingEditedEmail({
+  listingId,
+  title,
+  hostName,
+  changes,
+}: {
+  listingId: string
+  title: string | null
+  hostName: string | null
+  changes: ListingChangeSet
+}) {
+  try {
+    if (changes.fields.length === 0) return false
+    const host = hostLabel(hostName)
+    const listingTitle = listingLabel(title)
+    return await sendEmail({
+      to: LISTINGS_TEAM_EMAIL,
+      subject: `${host} changed ${shortChangePhrase(changes)} of ${listingTitle}`,
+      html: baseEmailHtml({
+        greeting: 'Hi JLM team,',
+        intro: `${host} changed ${fullChangePhrase(changes)} of ${listingTitle}. The changes are already live on the site.`,
+        ctaLabel: 'See the listing',
+        ctaUrl: `${siteUrl}/admin/listings/${listingId}`,
+        showSignInHint: false,
+      }),
+    })
+  } catch (error) {
+    console.error('Unable to send admin listing edited email', error)
+    return false
+  }
+}
+
+// Tells the JLM team a host has added, removed or reordered a live listing's
+// photos (sent at most once an hour per listing).
+export async function sendAdminListingPhotosChangedEmail({
+  listingId,
+  title,
+  hostName,
+}: {
+  listingId: string
+  title: string | null
+  hostName: string | null
+}) {
+  try {
+    const host = hostLabel(hostName)
+    const listingTitle = listingLabel(title)
+    return await sendEmail({
+      to: LISTINGS_TEAM_EMAIL,
+      subject: `${host} changed the photos of ${listingTitle}`,
+      html: baseEmailHtml({
+        greeting: 'Hi JLM team,',
+        intro: `${host} changed the photos of ${listingTitle}. The new photos are already live on the site. Any more photo changes in the next hour won't get their own email.`,
+        ctaLabel: 'See the listing',
+        ctaUrl: `${siteUrl}/admin/listings/${listingId}`,
+        showSignInHint: false,
+      }),
+    })
+  } catch (error) {
+    console.error('Unable to send admin listing photos changed email', error)
+    return false
+  }
+}
+
+// Tells the JLM team a host has hidden, re-shown or deleted their listing.
+export async function sendAdminListingVisibilityEmail({
+  listingId,
+  title,
+  area,
+  hostName,
+  change,
+}: {
+  listingId: string
+  title: string | null
+  area: string | null
+  hostName: string | null
+  change: 'hidden' | 'shown' | 'deleted'
+}) {
+  try {
+    const host = hostLabel(hostName)
+    const listingTitle = listingLabel(title)
+    const where = area?.trim() ? ` in ${area.trim()}` : ''
+    const email =
+      change === 'deleted'
+        ? {
+            subject: `${host} deleted ${listingTitle}`,
+            intro: `${host} deleted their listing ${listingTitle}${where}. It's gone from the site and from Admin, so there's nothing to link to.`,
+            ctaLabel: 'Open listings in Admin',
+            ctaUrl: `${siteUrl}/admin/listings`,
+          }
+        : change === 'hidden'
+          ? {
+              subject: `${host} hid ${listingTitle} from the site`,
+              intro: `${host} hid ${listingTitle}${where} from the site. Guests can't see or book it until it's shown again.`,
+              ctaLabel: 'See the listing',
+              ctaUrl: `${siteUrl}/admin/listings/${listingId}`,
+            }
+          : {
+              subject: `${host} put ${listingTitle} back on the site`,
+              intro: `${host} put ${listingTitle}${where} back on the site. Guests can see and book it again.`,
+              ctaLabel: 'See the listing',
+              ctaUrl: `${siteUrl}/admin/listings/${listingId}`,
+            }
+    return await sendEmail({
+      to: LISTINGS_TEAM_EMAIL,
+      subject: email.subject,
+      html: baseEmailHtml({
+        greeting: 'Hi JLM team,',
+        intro: email.intro,
+        ctaLabel: email.ctaLabel,
+        ctaUrl: email.ctaUrl,
+        showSignInHint: false,
+      }),
+    })
+  } catch (error) {
+    console.error('Unable to send admin listing visibility email', error)
     return false
   }
 }

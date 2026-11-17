@@ -22,6 +22,18 @@ type ListingPhotoManagerProps = {
 
 const maxListingPhotoSizeMb = 10
 
+// Lets the JLM team know a live listing's photos changed. The server checks
+// ownership and sends at most one email per listing per hour; it never
+// affects the photo change, so any failure is ignored.
+function notifyPhotosChanged(listingId: string) {
+  void fetch('/api/notify-listing-photos-changed', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ listingId }),
+    keepalive: true,
+  }).catch(() => {})
+}
+
 function getImageExtension(file: File) {
   if (file.type === 'image/png') return 'png'
   if (file.type === 'image/webp') return 'webp'
@@ -136,6 +148,7 @@ export function ListingPhotoManager({
     }
 
     if (inputRef.current) inputRef.current.value = ''
+    if (uploaded.length > 0) notifyPhotosChanged(listingId)
     startTransition(() => router.refresh())
     void autoLabel(uploaded)
   }
@@ -173,6 +186,7 @@ export function ListingPhotoManager({
       return
     }
 
+    notifyPhotosChanged(listingId)
     startTransition(() => router.refresh())
   }
 
@@ -247,11 +261,13 @@ export function ListingPhotoManager({
 
     setPhotos(remainingPhotos)
 
+    // persistPhotoOrder notifies the team; with no photos left, notify here.
     if (remainingPhotos.length > 0) {
       await persistPhotoOrder(remainingPhotos)
       return
     }
 
+    notifyPhotosChanged(listingId)
     startTransition(() => router.refresh())
   }
 
