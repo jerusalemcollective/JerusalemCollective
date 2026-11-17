@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { sendHostNewEnquiryEmail } from '@/lib/transactional-email'
+import { sendTeamNewBookingRequestEmail } from '@/lib/booking-team-email'
 
 // Server-side host-enquiry notification, fired by a Supabase Database Webhook on
 // INSERT into booking_requests. Unlike the guest-browser path (/api/notify-host-
@@ -69,6 +70,12 @@ export async function POST(request: Request) {
       console.error('[webhook/notify-host-enquiry] could not mark host_notified_at', requestId, markError)
     }
   }
+
+  // Team copy, behind the same host_notified_at gate as the host email. This
+  // route fires once per INSERT, so it also sends when the host email failed
+  // (the guest-browser route only copies the team when the host email went).
+  // Only dated requests to book are copied; the helper skips plain enquiries.
+  await sendTeamNewBookingRequestEmail({ requestId })
 
   return NextResponse.json({ ok: true, emailSent })
 }

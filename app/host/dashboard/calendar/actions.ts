@@ -4,6 +4,13 @@ import { revalidatePath } from 'next/cache'
 import { unstable_rethrow } from 'next/navigation'
 import { requireHostDashboardAccess } from '@/lib/host-dashboard'
 import { sendManualBookingGuestEmail } from '@/lib/transactional-email'
+import {
+  sendTeamBookingCancelledEmail,
+  sendTeamBookingConfirmedEmail,
+  sendTeamManualBookingCancelledEmail,
+  sendTeamManualBookingEmail,
+  sendTeamRequestDeclinedEmail,
+} from '@/lib/booking-team-email'
 
 export async function addUnavailableRange(formData: FormData) {
   return blockDateRange(formData)
@@ -101,14 +108,50 @@ export async function removeUnavailableRange(formData: FormData) {
     throw new Error('Missing unavailable range id.')
   }
 
-  const { supabase, hostIds } = await requireHostDashboardAccess()
-  const { error } = await supabase
+  const { supabase, host, hostIds } = await requireHostDashboardAccess()
+  const { data: removed, error } = await supabase
     .from('listing_unavailable_ranges')
     .delete()
     .eq('id', rangeId)
     .in('host_id', hostIds)
+    .select('source, listing_id, start_date, end_date, guest_name, guest_email, guest_count')
 
   if (error) throw error
+
+  // Removing a host-recorded manual booking cancels it: copy the team. Only the
+  // call that actually deleted the row sends, so a repeat click sends nothing.
+  const removedBooking = (removed || []).find(
+    (row: { source?: string | null }) => row.source === 'manual_booking',
+  ) as
+    | {
+        listing_id: string
+        start_date: string
+        end_date: string
+        guest_name: string | null
+        guest_email: string | null
+        guest_count: number | null
+      }
+    | undefined
+  if (removedBooking) {
+    try {
+      const { data: listing } = await supabase
+        .from('listings')
+        .select('title')
+        .eq('id', removedBooking.listing_id)
+        .maybeSingle<{ title: string | null }>()
+      await sendTeamManualBookingCancelledEmail({
+        hostName: host?.name ?? null,
+        listingTitle: listing?.title || 'Untitled listing',
+        guestName: removedBooking.guest_name,
+        guestEmail: removedBooking.guest_email,
+        checkIn: removedBooking.start_date,
+        checkOut: removedBooking.end_date,
+        guests: removedBooking.guest_count,
+      })
+    } catch (teamError) {
+      console.error('Manual booking removed, but team copy failed', teamError)
+    }
+  }
 
   revalidatePath('/host/dashboard/calendar')
 }
@@ -178,9 +221,36 @@ export async function addManualBooking(formData: FormData) {
     })
   }
 
+  // Team copy. A repeat submit of the same dates fails the overlap constraint
+  // above, so this only runs once per saved booking. Never throws.
+  await sendTeamManualBookingEmail({
+    hostName: host?.name ?? null,
+    listingTitle: (listing as { title?: string }).title || 'Untitled listing',
+    guestName: guestName || null,
+    guestEmail,
+    checkIn: startDate,
+    checkOut: endDate,
+    guests: guestCount,
+  })
+
   revalidatePath('/host/dashboard/calendar')
   revalidatePath(`/host/dashboard/listings/${listingId}`)
   revalidatePath(`/listings/${listingId}`)
+}
+
+// Current status of a booking / request, read before a change so the team copy
+// is sent only on a real transition (a resubmit of the same status sends none).
+async function currentStatus(
+  supabase: Awaited<ReturnType<typeof requireHostDashboardAccess>>['supabase'],
+  table: 'bookings' | 'booking_requests',
+  id: string,
+): Promise<string | null> {
+  try {
+    const { data } = await supabase.from(table).select('status').eq('id', id).maybeSingle<{ status: string | null }>()
+    return data?.status ?? null
+  } catch {
+    return null
+  }
 }
 
 const overlapMessage = 'Those dates overlap another booking or blocked dates on this stay.'
@@ -242,6 +312,7 @@ export async function updateBookingAsHost(_prev: EditState, formData: FormData):
 
   try {
     const { supabase } = await requireHostDashboardAccess()
+    const previousStatus = await currentStatus(supabase, 'bookings', bookingId)
     const { error } = await supabase.rpc('host_update_booking', {
       p_booking_id: bookingId,
       p_check_in: checkIn,
@@ -250,6 +321,9 @@ export async function updateBookingAsHost(_prev: EditState, formData: FormData):
       p_status: status,
     })
     if (error) return { error: error.message }
+    if (status === 'cancelled' && previousStatus !== 'cancelled') {
+      await sendTeamBookingCancelledEmail({ bookingId, cancelledBy: 'host' })
+    }
     revalidatePath('/host/dashboard/calendar')
     return { ok: true }
   } catch (error) {
@@ -271,6 +345,7 @@ export async function updateRequestAsHost(_prev: EditState, formData: FormData):
 
   try {
     const { supabase } = await requireHostDashboardAccess()
+    const previousStatus = await currentStatus(supabase, 'booking_requests', requestId)
     const { error } = await supabase.rpc('host_update_booking_request', {
       p_request_id: requestId,
       p_check_in: checkIn,
@@ -279,6 +354,9 @@ export async function updateRequestAsHost(_prev: EditState, formData: FormData):
       p_status: status,
     })
     if (error) return { error: error.message }
+    if (status === 'declined' && previousStatus !== 'declined') {
+      await sendTeamRequestDeclinedEmail({ requestId })
+    }
     revalidatePath('/host/dashboard/calendar')
     return { ok: true }
   } catch (error) {
@@ -297,11 +375,16 @@ export async function acceptRequestAsHost(_prev: EditState, formData: FormData):
 
   try {
     const { supabase } = await requireHostDashboardAccess()
+    const previousStatus = await currentStatus(supabase, 'booking_requests', requestId)
     const { error } = await supabase.rpc('update_booking_request_status', {
       request_uuid: requestId,
       new_status: 'accepted',
     })
     if (error) return { error: error.message }
+    // Team copy only on the real accept, not a repeat on an accepted request.
+    if (previousStatus !== 'accepted') {
+      await sendTeamBookingConfirmedEmail({ requestId, how: 'accepted' })
+    }
     revalidatePath('/host/dashboard/calendar')
     return { ok: true }
   } catch (error) {
