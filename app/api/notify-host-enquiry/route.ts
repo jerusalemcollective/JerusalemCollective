@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { sendHostNewEnquiryEmail } from '@/lib/transactional-email'
+import { sendTeamNewBookingRequestEmail } from '@/lib/booking-team-email'
 
 type NotifyHostEnquiryBody = {
   requestId?: string
@@ -55,6 +56,12 @@ export async function POST(request: Request) {
     if (markError) {
       console.error('Could not record host notification for request', requestId, markError)
     }
+
+    // Team copy rides on the same once-only gate as the host email: it goes only
+    // when this call is the one that notified the host (host_notified_at, set
+    // just above, makes a repeat call skip). If the host email failed, the
+    // Supabase webhook route sends the team copy instead.
+    await sendTeamNewBookingRequestEmail({ requestId })
   }
 
   return NextResponse.json({ ok: true, emailSent })

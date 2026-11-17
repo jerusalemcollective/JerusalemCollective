@@ -905,10 +905,20 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
     }).catch((notifyError) => console.error('Unable to send guest confirmation email', notifyError))
   }
 
+  // Copies the JLM team inbox on a decline. Fire-and-forget: never blocks the UI.
+  const notifyRequestDeclined = (requestId: string) => {
+    void fetch('/api/notify-request-declined', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requestId }),
+    }).catch((notifyError) => console.error('Unable to send declined request copy', notifyError))
+  }
+
   const handleRequestStatus = async (status: 'accepted' | 'declined') => {
     if (!selectedConversation?.request?.id) return
 
     const requestId = selectedConversation.request.id
+    const previousStatus = selectedConversation.request.status
     setSending(true)
     setPendingRequestStatus(status)
     setError(null)
@@ -917,6 +927,7 @@ export function MessagesInbox({ mode, initialConversationId = null, participantI
       const supabase = createClient()
       await updateBookingRequestStatus(supabase, requestId, status)
       if (status === 'accepted') notifyGuestConfirmation(requestId)
+      if (status === 'declined' && previousStatus !== 'declined') notifyRequestDeclined(requestId)
       setConversations((current) =>
         current.map((conversation) =>
           conversation.id === selectedConversationId

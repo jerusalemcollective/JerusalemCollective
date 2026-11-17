@@ -6,6 +6,7 @@ import {
   sendHostNewInstantBookingEmail,
   type InstantBookingDetails,
 } from '@/lib/transactional-email'
+import { sendTeamBookingConfirmedEmail } from '@/lib/booking-team-email'
 
 // Instant book for listings paid by bank transfer to the host (booking_type =
 // 'instant' and no live JLM card payment). The card flow stays on /api/book-now.
@@ -146,6 +147,12 @@ export async function POST(request: Request) {
     } catch (emailError) {
       console.error('[instant-book] email failed', emailError)
     }
+  }
+
+  // Team copy, on the same already_booked guard as the guest/host emails so a
+  // double click doesn't send it twice. Never throws.
+  if (!result.already_booked) {
+    await sendTeamBookingConfirmedEmail({ requestId: result.request_id, route: 'transfer', how: 'instant' })
   }
 
   return NextResponse.json({

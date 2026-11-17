@@ -1090,7 +1090,7 @@ export async function sendHostNewInstantBookingEmail({
   }
 }
 
-function detailTableHtml(rows: [string, string][]) {
+export function detailTableHtml(rows: [string, string][]) {
   const rowHtml = rows
     .map(
       ([label, value]) =>
@@ -1642,7 +1642,7 @@ export async function sendManualBookingGuestEmail({
   }
 }
 
-async function sendEmail({
+export async function sendEmail({
   to,
   subject,
   html,
@@ -1691,7 +1691,7 @@ async function sendEmail({
   }
 }
 
-async function getAuthUserEmail(userId: string) {
+export async function getAuthUserEmail(userId: string) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
@@ -1789,7 +1789,7 @@ function baseEmailHtml({
   `
 }
 
-function escapeHtml(value: string) {
+export function escapeHtml(value: string) {
   return value
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')

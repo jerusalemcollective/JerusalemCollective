@@ -6,6 +6,7 @@ import {
   sendGuestPaidBookingConfirmedEmail,
   sendPaymentFailureAdminAlert,
 } from '@/lib/transactional-email'
+import { sendTeamBookingConfirmedEmail } from '@/lib/booking-team-email'
 
 export const runtime = 'nodejs'
 
@@ -395,6 +396,12 @@ export async function POST(request: Request) {
   // finalised booking.
   if (newlyRecorded) {
     await sendGuestPaidBookingConfirmedEmail({ supabase, sessionId })
+    // Team copy on the same once-per-event gate. Best-effort, never throws.
+    // Card instant books only: a request-linked session pays for a request the
+    // host already accepted, and that accept already copied the team.
+    if (!meta.booking_request_id) {
+      await sendTeamBookingConfirmedEmail({ sessionId, route: 'card', how: 'card' })
+    }
   }
 
   return NextResponse.json({ ok: true })
